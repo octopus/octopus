@@ -32,6 +32,11 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
+  !TODO: This case need to be implemented
+  if(present(mask)) then
+    ASSERT(.not. mesh%use_curvilinear)
+  end if
+
   dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
     !$omp parallel do reduction(+:dd)
@@ -158,6 +163,12 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   PUSH_SUB(X(mf_dotp_1))
 
   np_ = optional_default(np, mesh%np)
+
+  if(np_ == 0) then
+    POP_SUB(X(mf_dotp_1))
+    return
+  end if
+
   ASSERT(ubound(f1, dim = 1) == np_ .or. ubound(f1, dim = 1) == mesh%np_part)
   ASSERT(ubound(f2, dim = 1) == np_ .or. ubound(f2, dim = 1) == mesh%np_part)
 
@@ -452,10 +463,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   PUSH_SUB(X(mf_interpolate_on_plane))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -501,10 +512,10 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   PUSH_SUB(X(mf_interpolate_on_line))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -647,15 +658,15 @@ end function X(mf_line_integral_vector)
 !!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
 !! And so on.
 !! -----------------------------------------------------------------------------
-subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:) !< ((lmax + 1)**2)
-  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+  logical, optional, intent(in)  :: mask(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
-  FLOAT   :: xx(MAX_DIM), rr, ylm
+  FLOAT   :: xx(mesh%sb%dim), rr, ylm
   R_TYPE, allocatable :: ff2(:)
 
   PUSH_SUB(X(mf_multipoles))
@@ -665,16 +676,24 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   SAFE_ALLOCATE(ff2(1:mesh%np))
 
   ff2(1:mesh%np) = ff(1:mesh%np)
-  multipole(1) = X(mf_integrate)(mesh, ff2, mask = inside)
+  multipole(1) = X(mf_integrate)(mesh, ff2, mask = mask)
   
   if(lmax > 0) then
     do idim = 1, 3
-      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-      multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
+      if (idim <= mesh%sb%dim) then
+        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+        multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
+      else
+        multipole(idim+1) = M_ZERO
+      end if
     end do
   end if
   
   if(lmax>1) then
+    if (mesh%sb%dim /= 3) then
+      message(1) = "multipoles for l > 1 are only available in 3D."
+      call messages_fatal(1)
+    end if
     add_lm = 5
     do ll = 2, lmax
       do lm = -ll, ll
@@ -683,7 +702,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
           call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
           ff2(ip) = ff(ip) * ylm * rr**ll
         end do
-        multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = inside)
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = mask)
         add_lm = add_lm + 1
       end do
     end do
@@ -695,11 +714,11 @@ end subroutine X(mf_multipoles)
 
 ! -----------------------------------------------------------------------------
 !> This routine calculates the dipole of a function ff, for arbitrary dimensions
-subroutine X(mf_dipole) (mesh, ff, dipole, inside)
+subroutine X(mf_dipole) (mesh, ff, dipole, mask)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   R_TYPE,            intent(out) :: dipole(:) !< (mesh%sb%dim)
-  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+  logical, optional, intent(in)  :: mask(:)   !< (mesh%np)
 
   integer :: idim
   R_TYPE, allocatable :: ff2(:)
@@ -712,33 +731,12 @@ subroutine X(mf_dipole) (mesh, ff, dipole, inside)
 
   do idim = 1, mesh%sb%dim
     ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = inside)
+    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = mask)
   end do
 
   SAFE_DEALLOCATE_A(ff2)
   POP_SUB(X(mf_dipole))
 end subroutine X(mf_dipole)
-
-!--------------------------------------------------------------
-subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
-  type(mesh_t),      intent(in)  :: mesh
-  integer,           intent(in)  :: n_domains
-  R_TYPE,            intent(in)  :: ff(:)
-  integer,           intent(in)  :: lmax
-  R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
-  logical,           intent(in)  :: inside(:,:) !< (mesh%np, n_domains)
-
-  integer :: idom
-
-  PUSH_SUB(X(mf_local_multipoles))
-
-  do idom = 1, n_domains
-    call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
-  end do
-
-  POP_SUB(X(mf_local_multipoles))
-end subroutine X(mf_local_multipoles)
-
 
 !! Local Variables:
 !! mode: f90

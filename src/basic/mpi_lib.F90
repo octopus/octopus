@@ -82,11 +82,6 @@ contains
 #include "undef.F90"
 #include "integer.F90"
 #include "mpi_lib_inc.F90"
-#else
-  subroutine this_module_is_not_empty()
-    integer :: neither_is_this_subroutine
-    neither_is_this_subroutine = 0
-  end subroutine this_module_is_not_empty
 #endif
 end module mpi_lib_oct_m
 

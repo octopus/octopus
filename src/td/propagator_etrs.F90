@@ -88,7 +88,7 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt, dt)
 
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -165,7 +165,7 @@ contains
     !Propagate the states to t+dt/2 and compute the density at t+dt
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt, dt)
 
-    call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
+    call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -201,7 +201,8 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
 
-      call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false., &
+                                           calc_energy = .false., calc_eigenval = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed

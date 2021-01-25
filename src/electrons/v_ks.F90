@@ -20,7 +20,6 @@
  
 module v_ks_oct_m
   use accel_oct_m
-  use berry_oct_m
   use comm_oct_m
   use current_oct_m
   use density_oct_m
@@ -62,7 +61,7 @@ module v_ks_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
   use xc_ks_inversion_oct_m
   use xc_OEP_oct_m
@@ -107,7 +106,6 @@ module v_ks_oct_m
     FLOAT,                pointer :: vxc(:, :)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
-    FLOAT,                pointer :: vberry(:, :)
     FLOAT,                pointer :: a_ind(:, :)
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
@@ -237,7 +235,7 @@ contains
       if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
         default = pseudo_x_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = XC_LDA_X   
         case(2); default = XC_LDA_X_2D
         case(1); default = XC_LDA_X_1D
@@ -251,7 +249,7 @@ contains
       if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
         default = default + 1000*pseudo_c_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = default + 1000*XC_LDA_C_PZ_MOD
         case(2); default = default + 1000*XC_LDA_C_2D_AMGB
         case(1); default = default + 1000*XC_LDA_C_1D_CSC
@@ -319,7 +317,7 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, namespace, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, namespace, gr%sb%dim, gr%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
@@ -362,13 +360,13 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
-      if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
+      if(gr%sb%periodic_dim == gr%sb%dim) &
         call messages_experimental("Hartree in fully periodic system")
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE
@@ -408,7 +406,7 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
         if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER) then 
-          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, geo, mc)
+          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc)
         else
           ks%oep%level = XC_OEP_NONE
         end if
@@ -607,9 +605,8 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks, gr)
+  subroutine v_ks_end(ks)
     type(v_ks_t),     intent(inout) :: ks
-    type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
     
@@ -618,12 +615,10 @@ contains
       call vdw_ts_end(ks%vdw_ts)
     end select
 
-    call current_end(ks%current_calculator)
-
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion, gr)
+        call xc_ks_inversion_end(ks%ks_inversion)
       end if
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
@@ -730,7 +725,7 @@ contains
   end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
     type(namespace_t),          intent(in)    :: namespace
     type(hamiltonian_elec_t),   intent(inout) :: hm
@@ -738,7 +733,6 @@ contains
     type(geometry_t),           intent(in)    :: geo
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
-    logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
     logical,          optional, intent(in)    :: calc_current
 
@@ -748,7 +742,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -764,14 +758,13 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current) 
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_elec_t),               intent(inout) :: st
     type(geometry_t) ,         target, intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
-    logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
     logical,                 optional, intent(in)    :: calc_current
 
@@ -797,33 +790,16 @@ contains
       call messages_info(1)
     end if
 
-    ks%calc%time_present = present(time) 
-
-    if(present(time)) then
-      ks%calc%time = time
-    end if
+    ks%calc%time_present = present(time)
+    ks%calc%time = optional_default(time, M_ZERO)
 
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
-
-    nullify(ks%calc%vberry)
-    if(associated(hm%vberry)) then
-      SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
-      if(optional_default(calc_berry, .true.)) then
-        if(st%parallel_in_states) then
-          call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
-        end if
-        call berry_potential(st, namespace, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
-      else
-        ! before wfns are initialized, cannot calculate this term
-        ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
-      end if
-    end if
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
       end if
 
       POP_SUB(v_ks_calc_start)
@@ -858,7 +834,7 @@ contains
 
     if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
     end if
 
     nullify(ks%calc%hf_st)
@@ -1199,11 +1175,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
     hm%energy => ks%calc%energy
 
-    if(associated(hm%vberry)) then
-      hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
-      SAFE_DEALLOCATE_P(ks%calc%vberry)
-    end if
-
     if(hm%self_induced_magnetic) then
       hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
       hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
@@ -1299,6 +1270,25 @@ contains
           if(hm%exxop%st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%exxop%st)
           call states_elec_end(hm%exxop%st)
           SAFE_DEALLOCATE_P(hm%exxop%st)
+        end if
+
+        !At the moment this block is called before the reinit call. This way the LCAO does not call the 
+        !exchange operator.
+        !This should be changed and the CAM parameters should also be obtained from the restart information
+        !Maybe the parameters should be mixed too.
+        if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
+          if(states_are_real(ks%calc%hf_st)) then
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+          else
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            if(associated(hm%hm_base%phase)) then
+              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
+                    hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
+            else
+              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+            end if
+          end if
         end if
 
         select case(ks%theory_level)
@@ -1535,7 +1525,7 @@ contains
 
     rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
     rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
-    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    cross = (TOCMPLX(betar, betai))**2 * TOCMPLX(mat(3), -mat(4))
     rot_mat(3) = alpha2 * mat(3) + alpha * betar * (mat(2)-mat(1)) - real(cross)
     rot_mat(4) = alpha2 * mat(4) + alpha * betai * (mat(2)-mat(1)) - aimag(cross)
 
@@ -1553,7 +1543,7 @@ contains
 
     rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
     rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
-    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    cross = (TOCMPLX(betar, betai))**2 * TOCMPLX(mat(3), -mat(4))
     rot_mat(3) = alpha2 * mat(3) - alpha * betar * (mat(2)-mat(1)) - real(cross)
     rot_mat(4) = alpha2 * mat(4) - alpha * betai * (mat(2)-mat(1)) - aimag(cross)
 

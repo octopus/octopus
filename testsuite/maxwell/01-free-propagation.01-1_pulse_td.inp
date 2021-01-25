@@ -74,13 +74,13 @@
  kx     = omega / c
  Ez     = 0.05
  pw     = 10.0
- ps     = - 5 * 5.0
+ p_s     = - 5 * 5.0
 
  %MaxwellIncidentWaves
    plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function"
  %
 
  %MaxwellFunctions
-   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | ps | 0 | 0 | pw
+   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | p_s | 0 | 0 | pw
  %
 

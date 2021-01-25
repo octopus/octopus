@@ -81,7 +81,7 @@ module partition_oct_m
     !> The following components are process-dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
     integer :: istart            !< The position of the first point stored in this process.
-    integer, pointer :: part(:)  !< The local portion of the partition.
+    integer, allocatable :: part(:)  !< The local portion of the partition.
 
   end type partition_t
 
@@ -114,7 +114,6 @@ contains
     end if
 
     !Allocate memory for the partition
-    nullify(partition%part)
     SAFE_ALLOCATE(partition%part(1:partition%np_local))
 
     POP_SUB(partition_init)
@@ -126,7 +125,7 @@ contains
 
     PUSH_SUB(partition_end)
 
-    SAFE_DEALLOCATE_P(partition%part)
+    SAFE_DEALLOCATE_A(partition%part)
 
     POP_SUB(partition_end)
   end subroutine partition_end
@@ -184,7 +183,6 @@ contains
       if (err /= 0) ierr = ierr + 1
     end if
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
 
     ASSERT(all(partition%part(:) > 0))
     
@@ -220,7 +218,6 @@ contains
     end if
 #ifdef HAVE_MPI
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
 #endif
 
     SAFE_DEALLOCATE_A(part_global)
@@ -409,6 +406,10 @@ contains
       ASSERT(all(part_global(:) > 0))
     end if
 
+#ifndef HAVE_MPI
+    part_global = partition%part
+#endif
+
     SAFE_DEALLOCATE_A(rdispls)
     SAFE_DEALLOCATE_A(rcounts)
 
@@ -519,10 +520,8 @@ contains
       if (rbuffer(ip) == 0) cycle
       rbuffer(ip) = partition%part(rbuffer(ip) - partition%istart + 1)
     end do
+
 #ifdef HAVE_MPI
-    !Barrier to ensure that a deadlock is not possible
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    
     !Now we send the information backwards
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
@@ -553,9 +552,9 @@ contains
   !! points that each partition has.
   subroutine partition_get_np_local(partition, np_local_vec)
     type(partition_t),    intent(in)  :: partition       !< Current partition
-    integer, pointer,     intent(inout) :: np_local_vec(:) !< Vector of local points (np_local)
+    integer,              intent(inout) :: np_local_vec(:) !< Vector of local points (np_local)
     
-    integer, pointer :: np_local_vec_tmp(:)
+    integer, allocatable :: np_local_vec_tmp(:)
     integer :: ip
 
     PUSH_SUB(partition_get_np_local)
@@ -576,10 +575,9 @@ contains
     call MPI_Allreduce(np_local_vec_tmp, np_local_vec, partition%npart, &
          MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
 #endif
-    SAFE_DEALLOCATE_P(np_local_vec_tmp)
+    SAFE_DEALLOCATE_A(np_local_vec_tmp)
 
     POP_SUB(partition_get_np_local)
-
   end subroutine partition_get_np_local
 
   !---------------------------------------------------------

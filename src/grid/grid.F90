@@ -47,12 +47,10 @@ module grid_oct_m
   private
   public ::                &
     grid_t,                &
-    grid_init_stage_0,     &
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
-    grid_write_info,       &
-    grid_create_multigrid
+    grid_write_info
 
   type grid_t
     ! Components are public by default
@@ -61,7 +59,6 @@ module grid_oct_m
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
-    type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -71,27 +68,11 @@ module grid_oct_m
 contains
 
   !-------------------------------------------------------------------
-  !>
-  !! "Zero-th" stage of grid initialization. It initializes the simulation box.
-  subroutine grid_init_stage_0(gr, namespace, geo, space)
-    type(grid_t),          intent(inout) :: gr
-    type(namespace_t),     intent(in)    :: namespace
-    type(geometry_t),      intent(inout) :: geo
-    type(space_t),         intent(in)    :: space
-
-    PUSH_SUB(grid_init_stage_0)
-
-    call simul_box_init(gr%sb, namespace, geo, space)
-      
-    POP_SUB(grid_init_stage_0)
-  end subroutine grid_init_stage_0
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, namespace, geo)
+  subroutine grid_init_stage_1(gr, namespace, geo, space)
     type(grid_t),      intent(inout) :: gr
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(geometry_t),  intent(inout) :: geo
+    type(space_t),     intent(in)    :: space
 
     type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
@@ -102,6 +83,8 @@ contains
 
     PUSH_SUB(grid_init_stage_1)
 
+    call simul_box_init(gr%sb, namespace, geo, space)
+
     !%Variable UseFineMesh
     !%Type logical
     !%Default no
@@ -111,7 +94,7 @@ contains
     !% of the forces or other sensitive quantities.
     !% Experimental, and incompatible with domain-parallelization.
     !%End
-    if (gr%sb%dim == 3) then 
+    if (space%dim == 3) then 
       call parse_variable(namespace, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
@@ -151,21 +134,21 @@ contains
     !%End
 
     if(parse_block(namespace, 'Spacing', blk) == 0) then
-      if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error(namespace, 'Spacing')
-      do idir = 1, gr%sb%dim
+      if(parse_block_cols(blk,0) < space%dim) call messages_input_error(namespace, 'Spacing')
+      do idir = 1, space%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
         if(def_h > M_ZERO) call messages_check_def(grid_spacing(idir), .true., def_h, 'Spacing', units_out%length)
       end do
       call parse_block_end(blk)
     else
       call parse_variable(namespace, 'Spacing', -M_ONE, grid_spacing(1), units_inp%length)
-      grid_spacing(1:gr%sb%dim) = grid_spacing(1)
+      grid_spacing(1:space%dim) = grid_spacing(1)
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
 #if defined(HAVE_GDLIB)
     if(gr%sb%box_shape == BOX_IMAGE) then 
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         ! default grid_spacing is determined from lsize and the size of the image
         if(grid_spacing(idir) < M_ZERO) then
           grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(gr%sb%image_size(idir))
@@ -174,10 +157,10 @@ contains
     end if
 #endif
 
-    if (any(grid_spacing(1:gr%sb%dim) < M_EPSILON)) then
+    if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
         call geometry_grid_defaults_info(geo)
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
@@ -214,24 +197,22 @@ contains
     ! initialize derivatives
     call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    ! the stencil used to generate the grid is a union of a cube (for
+    ! multigrid) and the Laplacian.
+    call stencil_cube_get_lapl(cube, space%dim, order = 2)
+    call stencil_union(space%dim, cube, gr%der%lapl%stencil, gr%stencil)
+    call stencil_end(cube)
+
 
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
     enlarge = 0
-    enlarge(1:gr%sb%dim) = 2
+    enlarge(1:space%dim) = 2
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
-
-    ! the stencil used to generate the grid is a union of a cube (for
-    ! multigrid) and the Laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
-    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
-    call stencil_end(cube)
-
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
+    call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
 
@@ -239,11 +220,10 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, namespace, mc, geo)
+  subroutine grid_init_stage_2(gr, namespace, mc)
     type(grid_t), target, intent(inout) :: gr
     type(namespace_t),    intent(in)    :: namespace
     type(multicomm_t),    intent(in)    :: mc
-    type(geometry_t),     intent(in)    :: geo
 
     PUSH_SUB(grid_init_stage_2)
 
@@ -260,45 +240,49 @@ contains
     ! multigrid routines
     
     if(gr%have_fine_mesh) then
-
       if(gr%mesh%parallel_in_domains) then
         message(1) = 'UseFineMesh does not work with domain parallelization.'
         call messages_fatal(1)
       end if
 
-      SAFE_ALLOCATE(gr%fine%mesh)
-      SAFE_ALLOCATE(gr%fine%der)
-      
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
-
-      call derivatives_nullify(gr%fine%der)      
-      call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
-      
-      call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
-      
-      call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-      
-      message(1) = "Info: fine mesh"
-      call messages_info(1)
-      call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
-
-      gr%fine%der%coarser => gr%der
-      gr%der%finer =>  gr%fine%der
-      gr%fine%der%to_coarser => gr%fine%tt
-      gr%der%to_finer => gr%fine%tt
-
+      call initialize_fine_grid()
     else
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
 
-    ! multigrids are not initialized by default
-    nullify(gr%mgrid)
-
     ! print info concerning the grid
-    call grid_write_info(gr, geo, stdout)
+    call grid_write_info(gr, stdout)
 
     POP_SUB(grid_init_stage_2)
+
+    contains
+      subroutine initialize_fine_grid()
+        PUSH_SUB(grid_init_stage_2.initialize_fine_grid)
+
+        SAFE_ALLOCATE(gr%fine%mesh)
+        SAFE_ALLOCATE(gr%fine%der)
+
+        call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+
+        call derivatives_nullify(gr%fine%der)
+        call derivatives_init(gr%fine%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+
+        call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+
+        call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
+
+        message(1) = "Info: fine mesh"
+        call messages_info(1)
+        call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
+
+        gr%fine%der%coarser => gr%der
+        gr%der%finer =>  gr%fine%der
+        gr%fine%der%to_coarser => gr%fine%tt
+        gr%der%to_finer => gr%fine%tt
+
+        POP_SUB(grid_init_stage_2.initialize_fine_grid)
+      end subroutine initialize_fine_grid
   end subroutine grid_init_stage_2
 
 
@@ -315,12 +299,12 @@ contains
       call mesh_end(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_coarse)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine1)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine2)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine4)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine8)
-      SAFE_DEALLOCATE_P(gr%fine%tt%fine_i)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_coarse)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine1)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine2)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine4)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine8)
+      SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)
@@ -329,11 +313,6 @@ contains
     call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
 
-    if(associated(gr%mgrid)) then
-      call multigrid_end(gr%mgrid)
-      SAFE_DEALLOCATE_P(gr%mgrid)
-    end if
-
     call stencil_end(gr%stencil)
 
     POP_SUB(grid_end)
@@ -341,9 +320,8 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_write_info(gr, geo, iunit)
+  subroutine grid_write_info(gr, iunit)
     type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iunit
 
     PUSH_SUB(grid_write_info)
@@ -355,7 +333,7 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, geo, iunit)
+    call simul_box_write_info(gr%sb, iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"
@@ -376,22 +354,6 @@ contains
 
     POP_SUB(grid_write_info)
   end subroutine grid_write_info
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, namespace, geo, mc)
-    type(grid_t),      intent(inout) :: gr
-    type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
-    type(multicomm_t), intent(in)    :: mc
-
-    PUSH_SUB(grid_create_multigrid)
-
-    SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
-
-    POP_SUB(grid_create_multigrid)
-  end subroutine grid_create_multigrid
 
 end module grid_oct_m
 

@@ -28,6 +28,7 @@ module forces_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
+  use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -310,12 +311,12 @@ contains
       end do
     end if
 
-    SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
-    SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
-    SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
-    SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
-    SAFE_ALLOCATE(force_scf(1:gr%mesh%sb%dim, 1:geo%natoms))
-    SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force(1:gr%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_loc(1:gr%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_nl(1:gr%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_u(1:gr%sb%dim, 1:geo%natoms)) 
+    SAFE_ALLOCATE(force_scf(1:gr%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_nlcc(1:gr%sb%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
       call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
@@ -344,7 +345,7 @@ contains
     end if
 
     do iatom = 1, geo%natoms
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) &
             + force_scf(idir, iatom) + force_nlcc(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
@@ -371,9 +372,9 @@ contains
           call laser_field(hm%ep%lasers(j), x(1:gr%sb%dim), t)
           do iatom = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
-            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) &
+             + species_zval(geo%atom(iatom)%species)*x(1:gr%sb%dim)
+            geo%atom(iatom)%f_fields(1:gr%sb%dim) = species_zval(geo%atom(iatom)%species)*x(1:gr%sb%dim)
           end do
     
         case(E_FIELD_VECTOR_POTENTIAL)
@@ -382,14 +383,15 @@ contains
           ! The full force taking account of the spatial dependence of A should be:
           ! F = q [- dA/dt + v x \nabla x A]
 
+          !TODO: Add the gauge-field here
           x(1:gr%sb%dim) = M_ZERO
           call laser_electric_field(hm%ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do iatom = 1, geo%natoms
             ! Also here the proton charge is +1
-            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
-               + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) &
+             + species_zval(geo%atom(iatom)%species)*x(1:gr%sb%dim)
+            geo%atom(iatom)%f_fields(1:gr%sb%dim) = geo%atom(iatom)%f_fields(1:gr%sb%dim) &
+               + species_zval(geo%atom(iatom)%species)*x(1:gr%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
@@ -403,13 +405,25 @@ contains
     if(associated(hm%ep%E_field)) then
       do iatom = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
-        geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
-          + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
-               + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) &
+          + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%sb%dim)
+        geo%atom(iatom)%f_fields(1:gr%sb%dim) = geo%atom(iatom)%f_fields(1:gr%sb%dim) &
+               + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%sb%dim)
       end do
     end if
-    
+
+    if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+      write(message(1),'(a)') 'The forces are currently not properly calculated if static'
+      write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      write(message(1),'(a)') 'The forces are currently not properly calculated if gauge-field'
+      write(message(2),'(a)') 'is applied.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+
     POP_SUB(forces_calculate)
     call profiling_out(forces_prof)
 
@@ -525,14 +539,14 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 
   call profiling_in(prof, "FORCES_NLCC")
 
-  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%sb%dim))
 
   force_nlcc = M_ZERO
 
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
     call species_get_nlcc_grad(geo%atom(iatom)%species, geo%atom(iatom)%x, gr%mesh, drho)
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       do is = 1, hm%d%spin_channels
         force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
                        -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is), reduce = .false.)&
@@ -545,13 +559,11 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
 
-#if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(gr%mesh%mpi_grp%comm, force_nlcc)
     call profiling_out(prof_comm)
   end if
-#endif
  
   call profiling_out(prof)
 
@@ -580,7 +592,7 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
   call profiling_in(prof, "FORCES_SCF")
 
   SAFE_ALLOCATE(dvhxc(1:gr%mesh%np, 1:hm%d%spin_channels))
-  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:hm%d%spin_channels, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:hm%d%spin_channels, 1:gr%sb%dim))
 
   !We average over spin channels
   do is = 1, hm%d%spin_channels
@@ -595,10 +607,10 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
       if(ps_has_density(species_ps(geo%atom(iatom)%species))) then
 
-        call species_atom_density_grad(gr%mesh, gr%mesh%sb, geo%atom(iatom), &
+        call species_atom_density_grad(gr%mesh, gr%sb, geo%atom(iatom), &
                  namespace, hm%d%spin_channels, drho)
 
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           do is = 1, hm%d%spin_channels
             force_scf(idir, iatom) = force_scf(idir, iatom) &
                                       -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is), reduce = .false.)
@@ -613,13 +625,11 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_scf) 
 
-#if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(gr%mesh%mpi_grp%comm, force_scf)
     call profiling_out(prof_comm)
   end if
-#endif
 
   call profiling_out(prof)
   
@@ -638,12 +648,12 @@ subroutine total_force_from_local_potential(gr, ep, gdensity, force)
 
   PUSH_SUB(total_force_from_local_potential)
 
-  do idir = 1, gr%mesh%sb%dim
+  do idir = 1, gr%sb%dim
     force_tmp(idir) = dmf_dotp(gr%mesh, ep%vpsl(1:gr%mesh%np), gdensity(:, idir), reduce = .false.)
   end do
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
-  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%sb%dim)
+  force(1:gr%sb%dim) = force(1:gr%sb%dim) + force_tmp(1:gr%sb%dim)
 
   POP_SUB(total_force_from_local_potential)
 end subroutine total_force_from_local_potential

@@ -31,7 +31,6 @@ module blacs_proc_grid_oct_m
 
   public ::                      &
     blacs_proc_grid_t,           &
-    blacs_proc_grid_nullify,     &
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
     blacs_proc_grid_copy,        &
@@ -39,29 +38,17 @@ module blacs_proc_grid_oct_m
 
   type blacs_proc_grid_t
     ! Components are public by default
-    integer          :: context       !< The blacs context, -1 is object is null.
+    integer          :: context = -1  !< The blacs context, -1 is object is null.
     integer          :: nprocs        !< Number of processors.
     integer          :: nprow         !< Number of processors per row.
     integer          :: npcol         !< Number of processors per column.
     integer, private :: iam           !< Process indentifier.
     integer          :: myrow         !< The row of the processor in the processor grid.
     integer          :: mycol         !< The column of the processor in the processor grid.
-    integer, pointer :: usermap(:, :) !< The index of each processor in the grid.
+    integer, allocatable :: usermap(:, :) !< The index of each processor in the grid.
   end type blacs_proc_grid_t
 
 contains
-
-  ! ----------------------------------------------------
-
-  subroutine blacs_proc_grid_nullify(this)
-    type(blacs_proc_grid_t), intent(inout) :: this
-
-    PUSH_SUB(blacs_proc_grid_nullify)
-
-    this%context = -1
-
-    POP_SUB(blacs_proc_grid_nullify)
-  end subroutine blacs_proc_grid_nullify
 
   ! -----------------------------------------------------------------------
   !> Initializes a blacs context from an MPI communicator with
@@ -70,9 +57,9 @@ contains
   !! \Warning: For the moment this function only works if mpi_grp holds
   !! all the nodes of mpi_world.
   subroutine blacs_proc_grid_init(this, mpi_grp, procdim)
-    type(blacs_proc_grid_t),           intent(out) :: this
-    type(mpi_grp_t),                   intent(in)  :: mpi_grp
-    integer,                 optional, intent(in)  :: procdim(:)
+    type(blacs_proc_grid_t),           intent(inout) :: this
+    type(mpi_grp_t),                   intent(in)    :: mpi_grp
+    integer,                 optional, intent(in)    :: procdim(:)
 
 #ifdef HAVE_SCALAPACK
     
@@ -87,7 +74,7 @@ contains
 
     call MPI_Topo_test(mpi_grp%comm, topo, mpi_err)
 
-    if(topo /= MPI_CART) then
+    if(topo /= MPI_CART .or. present(procdim)) then
       ! We create a new communicator with Cartesian topology
       if(present(procdim)) then
         dims(1) = procdim(1)
@@ -110,7 +97,6 @@ contains
     SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
     call MPI_Allgather(this%iam, 1, MPI_INTEGER, procmap(0), 1, MPI_INTEGER, comm, mpi_err)
 
-    ASSERT(this%nprocs == mpi_grp%size)
     ASSERT(this%iam == procmap(mpi_grp%rank))
 
     dims = 1
@@ -159,30 +145,33 @@ contains
   subroutine blacs_proc_grid_end(this)
     type(blacs_proc_grid_t), intent(inout) :: this
 
-#ifdef HAVE_SCALAPACK
-
     PUSH_SUB(blacs_proc_grid_end)
 
     if(this%context /= -1) then
+  #ifdef HAVE_SCALAPACK
       call blacs_gridexit(this%context)
-      SAFE_DEALLOCATE_P(this%usermap)
+  #endif
+      SAFE_DEALLOCATE_A(this%usermap)
     end if
 
+    this%context = -1
+
     POP_SUB(blacs_proc_grid_end)
-#endif
   end subroutine blacs_proc_grid_end
 
   ! ----------------------------------------------------
 
   subroutine blacs_proc_grid_copy(cin, cout)
-    type(blacs_proc_grid_t), intent(in)  :: cin
-    type(blacs_proc_grid_t), intent(out) :: cout
+    type(blacs_proc_grid_t), intent(in)    :: cin
+    type(blacs_proc_grid_t), intent(inout) :: cout
 
-#ifdef HAVE_SCALAPACK
-    
     PUSH_SUB(blacs_proc_grid_copy)
 
+    call blacs_proc_grid_end(cout)
+     
     cout%context = cin%context 
+
+#ifdef HAVE_SCALAPACK
     cout%nprocs  = cin%nprocs
     cout%nprow   = cin%nprow
     cout%npcol   = cin%npcol
@@ -193,13 +182,12 @@ contains
     if(cout%context /= -1) then
       ! we have to create a new context
       call blacs_get(-1, what = 0, val = cout%context)
-      SAFE_ALLOCATE(cout%usermap(1:cout%nprow, 1:cout%npcol))
-      cout%usermap = cin%usermap
+      SAFE_ALLOCATE_SOURCE_A(cout%usermap, cin%usermap)
       call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
     end if
     
-    POP_SUB(blacs_proc_grid_copy)
 #endif
+    POP_SUB(blacs_proc_grid_copy)
   end subroutine blacs_proc_grid_copy
 
   ! ----------------------------------------------------

@@ -23,7 +23,6 @@ module xc_oep_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use exchange_operator_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -48,7 +47,7 @@ module xc_oep_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
 
   implicit none
@@ -75,25 +74,25 @@ module xc_oep_oct_m
 
   type xc_oep_t
     private
-    integer,             public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
-    FLOAT                       :: mixing     !< how much of the function S(r) to add to vxc in every iteration
-    type(lr_t)                  :: lr         !< to solve the equation H psi = b
-    type(linear_solver_t)       :: solver
-    type(scf_tol_t)             :: scftol
-    integer                     :: eigen_n
-    integer, pointer            :: eigen_type(:), eigen_index(:)
-    FLOAT                       :: socc, sfact
-    FLOAT,   pointer,    public :: vxc(:,:), uxc_bar(:,:)
-    FLOAT,   pointer            :: dlxc(:, :, :)
-    CMPLX,   pointer            :: zlxc(:, :, :)
-    integer                     :: mixing_scheme
-    logical,             public :: has_photons   ! one-photon OEP
-    type(photon_mode_t), public :: pt
-    type(lr_t)                  :: photon_lr     !< to solve the equation H psi = b
-    FLOAT,               public :: norm2ss
-    FLOAT,   pointer            :: vxc_old(:,:), ss_old(:,:)
-    integer                     :: noccst
-    logical                     :: coc_translation
+    integer,              public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    FLOAT                        :: mixing     !< how much of the function S(r) to add to vxc in every iteration
+    type(lr_t)                   :: lr         !< to solve the equation H psi = b
+    type(linear_solver_t)        :: solver
+    type(scf_tol_t)              :: scftol
+    integer                      :: eigen_n
+    integer, allocatable         :: eigen_type(:), eigen_index(:)
+    FLOAT                        :: socc, sfact
+    FLOAT,   allocatable, public :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,   allocatable         :: dlxc(:, :, :)
+    CMPLX,   allocatable         :: zlxc(:, :, :)
+    integer                      :: mixing_scheme
+    logical,              public :: has_photons   ! one-photon OEP
+    type(photon_mode_t),  public :: pt
+    type(lr_t)                   :: photon_lr     !< to solve the equation H psi = b
+    FLOAT,                public :: norm2ss
+    FLOAT,   allocatable         :: vxc_old(:,:), ss_old(:,:)
+    integer                      :: noccst
+    logical                      :: coc_translation
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -106,13 +105,12 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st, geo, mc)
+  subroutine xc_oep_init(oep, namespace, family, gr, st, mc)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
 
     PUSH_SUB(xc_oep_init)
@@ -148,23 +146,27 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
 
-      !%Variable Photons
+      !%Variable EnablePhotons
       !%Type logical
       !%Default .false.
       !%Section Hamiltonian::XC
       !%Description
       !% Activate the one-photon OEP
       !%End
-      call messages_obsolete_variable(namespace, 'OEPPtX', 'Photons')
-      call parse_variable(namespace, 'Photons', .false., oep%has_photons)
+      call messages_obsolete_variable(namespace, 'OEPPtX', 'EnablePhotons')
+      call parse_variable(namespace, 'EnablePhotons', .false., oep%has_photons)
       if (oep%has_photons) then
-        call messages_experimental("Photons = yes")
+        call messages_experimental("EnablePhotons = yes")
         call photon_mode_init(oep%pt, namespace, gr%mesh, gr%sb%dim, st%qtot)
         if (oep%pt%nmodes > 1) then
           call messages_not_implemented('Photon OEP for more than one photon mode.')
         end if
         if (oep%level == XC_OEP_FULL .and. st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
+        end if
+
+        if (states_are_complex(st)) then
+          call messages_not_implemented('Photon OEP with complex wavefunctions.')
         end if
       end if
 
@@ -240,7 +242,7 @@ contains
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), geo, mc)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc)
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)
@@ -270,7 +272,7 @@ contains
     PUSH_SUB(xc_oep_end)
 
     if(oep%level /= XC_OEP_NONE) then
-      SAFE_DEALLOCATE_P(oep%vxc)
+      SAFE_DEALLOCATE_A(oep%vxc)
       if (oep%level == XC_OEP_FULL .or. oep%has_photons) then
         call lr_dealloc(oep%lr)
         call linear_solver_end(oep%solver)
@@ -280,8 +282,8 @@ contains
         call photon_mode_end(oep%pt)
       end if
       if (oep%level == XC_OEP_FULL .and. oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
-        SAFE_DEALLOCATE_P(oep%vxc_old)
-        SAFE_DEALLOCATE_P(oep%ss_old)
+        SAFE_DEALLOCATE_A(oep%vxc_old)
+        SAFE_DEALLOCATE_A(oep%ss_old)
       end if
     end if
 
@@ -398,6 +400,7 @@ contains
 
 
 #include "xc_kli_pauli_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
@@ -405,7 +408,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -413,7 +415,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 end module xc_oep_oct_m
 

@@ -49,11 +49,11 @@ module hgh_projector_oct_m
 
   type hgh_projector_t
     private
-    integer                :: n_s         !< number of points inside the sphere
-    FLOAT, pointer, public :: dp(:, :)    !< projectors
-    CMPLX, pointer, public :: zp(:, :)
-    FLOAT,          public :: h(3, 3)     !< parameters
-    FLOAT,          public :: k(3, 3)     !< spin-orbit parameters
+    integer                    :: n_s         !< number of points inside the sphere
+    FLOAT, allocatable, public :: dp(:, :)    !< projectors
+    CMPLX, allocatable, public :: zp(:, :)
+    FLOAT,              public :: h(3, 3)     !< parameters
+    FLOAT,              public :: k(3, 3)     !< spin-orbit parameters
   end type hgh_projector_t
 
 
@@ -65,8 +65,6 @@ contains
 
     PUSH_SUB(hgh_projector_null)
 
-    nullify(hgh_p%dp)
-    nullify(hgh_p%zp)
     hgh_p%h = M_ZERO
     hgh_p%k = M_ZERO
 
@@ -121,8 +119,8 @@ contains
 
     PUSH_SUB(hgh_projector_end)
 
-    SAFE_DEALLOCATE_P(hgh_p%dp)
-    SAFE_DEALLOCATE_P(hgh_p%zp)
+    SAFE_DEALLOCATE_A(hgh_p%dp)
+    SAFE_DEALLOCATE_A(hgh_p%zp)
 
     POP_SUB(hgh_projector_end)
   end subroutine hgh_projector_end

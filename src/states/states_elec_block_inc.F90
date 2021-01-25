@@ -21,41 +21,35 @@
 !> Multiplication of two blocks of states:
 !! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
 subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
-  psi1, psi2, res, xpsi1, xpsi2, symm)
-  type(mesh_t),        intent(in)  :: mesh
-  type(states_elec_t), intent(in)  :: st
-  integer,             intent(in)  :: psi1_start
-  integer,             intent(in)  :: psi2_start
-  R_TYPE, target,      intent(in)  :: psi1(:, :, psi1_start:)
-  R_TYPE, target,      intent(in)  :: psi2(:, :, psi2_start:)
-  R_TYPE,              intent(out) :: res(:, :)
-  integer, optional,   intent(in)  :: xpsi1(:)
-  integer, optional,   intent(in)  :: xpsi2(:)
-  logical, optional,   intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
+  psi1, psi2, res, xpsi1, xpsi2)
+  type(mesh_t),                   intent(in)  :: mesh
+  type(states_elec_t),            intent(in)  :: st
+  integer,                        intent(in)  :: psi1_start
+  integer,                        intent(in)  :: psi2_start
+  R_TYPE, target, contiguous,     intent(in)  :: psi1(:, :, psi1_start:)
+  R_TYPE, target, contiguous,     intent(in)  :: psi2(:, :, psi2_start:)
+  R_TYPE,                         intent(out) :: res(:, :)
+  integer, optional, contiguous,  intent(in)  :: xpsi1(:)
+  integer, optional, contiguous,  intent(in)  :: xpsi2(:)
 
-  logical              :: symm_
   integer              :: ii
   integer              :: psi1_col, psi2_col
   integer, pointer     :: xpsi1_(:), xpsi2_(:)
   type(batch_t)        :: psi1b, psi2b
-#if defined(HAVE_MPI)
   integer              :: jj
   integer              :: size, rank, round, res_col_offset, res_row_offset
-  integer              :: dst, src, kk, ll, recvcnt, sendcnt, left, right, max_count
-  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  integer              :: kk, ll, recvcnt, sendcnt, max_count
   integer, pointer     :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
   R_TYPE, allocatable  :: res_tmp(:, :)
   R_TYPE, allocatable  :: psi1_block(:, :, :), res_local(:, :)
+#if defined(HAVE_MPI)
+  integer              :: src, dst, left, right
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
 #endif
 
   call profiling_in(C_PROFILING_BLOCKT, TOSTRING(X(BLOCKT)))
   PUSH_SUB(X(states_elec_blockt_mul))
-
-  symm_ = .false.
-  if(present(symm)) then
-    symm_ = symm
-  end if
 
   ! Calculate index sets of state block psi1 and psi2.
   if(present(xpsi1)) then
@@ -70,7 +64,6 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   end if
 
   if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
     ! Shortcuts.
     size = st%mpi_grp%size
     rank = st%mpi_grp%rank
@@ -104,9 +97,11 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     call X(states_elec_compactify)(st%d%dim, mesh, psi2_start, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
 
     ! Get neighbours.
+#if defined(HAVE_MPI)
     call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
     right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
     left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
+#endif
 
     do round = 0, size-1
       kk = mod(rank+round, size)   ! The column of the block currently being calculated.
@@ -114,7 +109,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       ! In all but the first rounds we have to wait for the data to arrive and
       ! then swap buffers.
       if(round > 0) then
+#if defined(HAVE_MPI)
         call MPI_Waitall(2, reqs, stats, mpi_err)
+#endif
         tmp_ptr => sendbuf
         sendbuf => recvbuf
         recvbuf => tmp_ptr
@@ -124,10 +121,12 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       ! accordingly received from the right neighbour.
       if(round < size-1) then
         recvcnt = xpsi2_count(ll)
+#if defined(HAVE_MPI)
         call MPI_Irecv(recvbuf(1, 1, 1), mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, &
           st%mpi_grp%comm, reqs(1), mpi_err)
         call MPI_Isend(sendbuf(1, 1, 1), mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  & 
           st%mpi_grp%comm, reqs(2), mpi_err)
+#endif
       end if
       ! Do the matrix multiplication.
       res_row_offset = sum(xpsi1_count(0:rank-1))
@@ -165,14 +164,15 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     res_tmp = res
 #endif
+#if defined(HAVE_MPI)
     call MPI_Allreduce(MPI_IN_PLACE_OR(res_tmp), res, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st_mpi_grp%comm, mpi_err)
+#endif
     call profiling_out(C_PROFILING_BLOCKT_AR)
     SAFE_DEALLOCATE_A(res_tmp)
     SAFE_DEALLOCATE_P(xpsi1_count)
     SAFE_DEALLOCATE_P(xpsi2_count)
     SAFE_DEALLOCATE_P(xpsi1_node)
     SAFE_DEALLOCATE_P(xpsi2_node)
-#endif
   else ! No states parallelization.
 
     if(present(xpsi1)) then
@@ -193,7 +193,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
     end if
 
-    call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
+    call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res)
     
     call psi1b%end()
     call psi2b%end()
@@ -226,12 +226,13 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
   integer              :: res_col, psi_col, matr_col
   integer, pointer     :: xpsi_(:), xres_(:)
   R_TYPE, allocatable  :: res_block(:, :, :), matr_block(:, :), psi_block(:, :, :)
-#if defined(HAVE_MPI)
   integer              :: rank, size, round, matr_row_offset, matr_col_offset, ii
-  integer              :: src, dst, left, right, kk, ll, idim, sendcnt, recvcnt, max_count
-  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  integer              :: kk, ll, idim, sendcnt, recvcnt, max_count
   integer, pointer     :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
+#if defined(HAVE_MPI)
+  integer              :: src, dst, left, right
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
 #endif
 
   call profiling_in(C_PROFILING_BLOCK_MATR, TOSTRING(X(BLOCK_MATR)))
@@ -255,7 +256,6 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
   ! but the code is easier to understand having it separated (instead a lot of
   ! conditionals and pointers).
   if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
     ! Shortcuts.
     size = st%mpi_grp%size
     rank = st%mpi_grp%rank
@@ -296,9 +296,11 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! Get neighbours.
+#if defined(HAVE_MPI)
     call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
     right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
     left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
+#endif
 
     ! Asynchronously left-rotate blocks of psi.
     do round = 0, size-1
@@ -308,7 +310,9 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       ! then swap buffers, i.e., what we received in the send buffer in the remainder
       ! of this loop, a bit confusing.
       if(round > 0) then
+#if defined(HAVE_MPI)
         call MPI_Waitall(2, reqs, stats, mpi_err)
+#endif
         tmp_ptr => sendbuf
         sendbuf => recvbuf
         recvbuf => tmp_ptr
@@ -318,8 +322,10 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       ! accordingly received from the right neighbour.
       if(round < size-1) then
         recvcnt = xpsi_count(ll)
+#if defined(HAVE_MPI)
         call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
         call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0, st%mpi_grp%comm, reqs(2), mpi_err)
+#endif
       end if
 
       ! Do the matrix multiplication.
@@ -351,7 +357,6 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     SAFE_DEALLOCATE_P(xres_count)
     SAFE_DEALLOCATE_P(xpsi_node)
     SAFE_DEALLOCATE_P(xres_node)
-#endif
   else ! No states parallelization.
     ! Compact everything to pass it to BLAS.
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:res_col))

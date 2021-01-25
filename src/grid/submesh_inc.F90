@@ -102,11 +102,11 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
 
   if(present(factor)) then
     !Loop unrolling inspired by BLAS axpy routine
-    m = mod(this%np,4)
+    m = mod(this%np, 4)
     do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
     end do
-    if( this%np.ge.4) then
+    if( this%np .ge. 4) then
       do ip = m+1, this%np, 4
         phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
         phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
@@ -115,11 +115,11 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
       end do
     end if
   else
-    m = mod(this%np,4)
+    m = mod(this%np, 4)
     do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
     end do
-    if( this%np.ge.4) then
+    if( this%np .ge. 4) then
       do ip = m+1, this%np, 4
         phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
         phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)

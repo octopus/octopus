@@ -38,13 +38,14 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
-  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e, lam, lam_conj
+  R_TYPE   :: gg, gg0, gg1, gamma, norma, dot
+  FLOAT    :: es(2), cg0, e0, res, alpha, beta, theta, old_res, old_energy, first_delta_e, lam, lam_conj, cg_phi
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
   integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
-  R_TYPE   :: sb(3)
+  R_TYPE   :: sb(2)
+  FLOAT    :: a0, b0, dsb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: add_xc_term
   type(states_elec_group_t) :: hpsi_j
@@ -153,8 +154,10 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
       do idim = 1, st%d%dim
-        h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
-                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, gr%mesh%np
+          h_psi(ip, idim) = psi2(ip, idim) - M_TWO*shift(ist,ik)*h_psi(ip, idim) + shift(ist,ik)**2*psi(ip, idim)
+        end do
       end do
     end if
 
@@ -176,6 +179,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.10
       do idim = 1, st%d%dim
+        !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end do
@@ -226,13 +230,16 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
+      !This needs to be done before the orthogonalization_single call, as psi is not guaranted 
+      !to be orthogonal to the other bands here
+      do idim = 1, st%d%dim
+        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
+      end do
+
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
           against_all=orthogonalize_to_all)
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
-      end do
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
@@ -282,6 +289,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
+          !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
             cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
           end do
@@ -301,7 +309,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! cg contains now the conjugate gradient
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, cg, h_cg, ist, ik)
-
+    
       if(fold_) then
         call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_cg, psi2, ist, ik)
         ! h_psi = (H-shift)^2 psi
@@ -312,33 +320,34 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       end if
 
       ! Line minimization (eq. 5.23 to 5.38)
-      a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
-      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
-      cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
+      a0 = M_TWO*R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)) !Eq. 5.26
+      b0  = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.))
+      cg0 = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.))
 
       if(gr%mesh%parallel_in_domains) then
-        sb(1) = a0
-        sb(2) = b0
-        sb(3) = cg0
-        call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
-        a0 = sb(1)
-        b0 = sb(2)
-        cg0 = sb(3)
+        dsb(1) = a0
+        dsb(2) = b0
+        dsb(3) = cg0
+        call comm_allreduce(gr%mesh%vp%comm, dsb, dim = 3)
+        a0 = dsb(1)
+        b0 = dsb(2)
+        cg0 = dsb(3)
       end if
       ! compute norm of cg here
       cg0 = sqrt(cg0)
 
       ! compare eq. 5.31
-      a0 = M_TWO * a0 / cg0
-      b0 = b0/cg0**2
+      a0 = a0 / cg0
+      b0 = b0 / cg0**2
       e0 = st%eigenval(ist, ik)
-      alpha = M_TWO * R_REAL(e0 - b0)
+      alpha = M_TWO * (e0 - b0)
 
       if (additional_terms) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
         tmp = M_TWO/cg0
         do idim = 1, st%d%dim
+          !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
           end do
@@ -359,7 +368,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
           (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
       end if
 
-      beta = R_REAL(a0) * M_TWO
+      beta = a0 * M_TWO
 
       ! For RDMFT, we get a different formula for the line minimization, which turns out to
       ! only change the beta of the original expression.
@@ -367,11 +376,12 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       if(hm%theory_level == RDMFT) then
         do jst = 1, st%nst
           call states_elec_get_state(st, gr%mesh, jst, ik, psi_j)
-          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
-          beta = beta - M_TWO * cg_phi / cg0 * lam_sym(jst)
+          cg_phi = M_TWO*R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
+          beta = beta - cg_phi / cg0 * lam_sym(jst)
         end do
       end if
 
+      !Eq. 5.37
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)
       ctheta = cos(theta)
@@ -381,7 +391,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       es(2) = alpha * (M_HALF - stheta2**2) + beta*M_TWO*stheta2*ctheta2
 
       ! Choose the minimum solutions.
-      if (R_REAL(es(2)) < R_REAL(es(1))) then
+      if (es(2) < es(1)) then
         theta = theta + M_PI*M_HALF
         a0 = ctheta2
         b0 = stheta2/cg0
@@ -392,6 +402,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
+        !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
           psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
           h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
@@ -449,7 +460,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
-      st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.)
+      st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.))
       res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
@@ -568,7 +579,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
       end if
 
       ! lambda = <psi|H|psi> = <psi|phi>
-      lambda = X(mf_dotp)(gr%mesh, dim, psi, phi)
+      lambda = R_REAL(X(mf_dotp)(gr%mesh, dim, psi, phi))
 
       ! Check convergence
       res = X(states_elec_residue)(gr%mesh, dim, phi, lambda, psi)

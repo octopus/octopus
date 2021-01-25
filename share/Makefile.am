@@ -18,14 +18,12 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = pseudopotentials recipes util opencl quadrature
+SUBDIRS = pseudopotentials recipes util opencl
 
 dta1dir = $(pkgdatadir)
 dist_dta1_DATA = logo                 \
 	filter_mask.data              \
 	gequad.data                   \
-	marching_cubes_edges.data     \
-	marching_cubes_triangles.data \
         gdlib.png
 
 dta2dir = $(pkgdatadir)

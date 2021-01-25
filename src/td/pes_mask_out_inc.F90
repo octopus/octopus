@@ -496,7 +496,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
   ! THE OUTPUT 
   if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
-    fn_unit = units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(-gr%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'pes_den'
@@ -510,7 +510,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
 
   if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
-    fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
+    fn_unit = sqrt(units_out%length**(-gr%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = st%d%kpt%start, st%d%kpt%end
@@ -2110,11 +2110,11 @@ end subroutine pes_mask_write_info
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
-  type(pes_mask_t),    intent(in)  :: mask
-  type(namespace_t),   intent(in)  :: namespace
-  type(restart_t),     intent(in)  :: restart
-  type(states_elec_t), intent(in)  :: st
-  integer,             intent(out) :: ierr
+  type(pes_mask_t), target, intent(in)  :: mask
+  type(namespace_t),        intent(in)  :: namespace
+  type(restart_t),          intent(in)  :: restart
+  type(states_elec_t),      intent(in)  :: st
+  integer,                  intent(out) :: ierr
 
   character(len=80) :: filename, path, lines(2)
   integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2

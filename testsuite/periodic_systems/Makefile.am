@@ -63,6 +63,7 @@ dist_share_DATA =                                \
 	11-silicon_force.test                    \
 	11-silicon_force.01-gs.inp               \
 	11-silicon_force.02-nlcc.inp             \
+        11-silicon_force.03-nosym.inp            \
 	12-boron_nitride.test                    \
 	12-boron_nitride.01-gs.inp               \
 	12-boron_nitride.02-gs_gamma.inp         \
@@ -103,6 +104,11 @@ dist_share_DATA =                                \
         20-masked_periodic_boundaries.test             \
 	21-magnon.01-gs.inp                      \
         21-magnon.02-td.inp                      \
-        21-magnon.test
+        21-magnon.test                           \
+        22-berry.01-cubic_Si_gs.inp              \
+        22-berry.02-cubic_Si.inp                 \
+        22-berry.test                            \
+        23-hybrids.01-ace.inp                    \
+        23-hybrids.test
 
 CLEANFILES = *~ *.bak

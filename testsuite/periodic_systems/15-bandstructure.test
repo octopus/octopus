@@ -40,6 +40,11 @@ match ; Angle alpha       ; GREPFIELD(out, 'alpha =', 3) ; 60
 match ; Angle beta        ; GREPFIELD(out, 'beta  =', 3) ; 60
 match ; Angle gamma       ; GREPFIELD(out, 'gamma =', 3) ; 60
 
+match ; PDOS energy 1 tot ; LINEFIELD(static/pdos-at001-Si3p.dat,2,2); 0.075093
+match ; PDOS energy 1 py  ; LINEFIELD(static/pdos-at001-Si3p.dat,2,3); 0.025031
+match ; PDOS energy 1 pz  ; LINEFIELD(static/pdos-at001-Si3p.dat,2,4); 0.025031
+match ; PDOS energy 1 px  ; LINEFIELD(static/pdos-at001-Si3p.dat,2,5); 0.025031
+
 Input      : 15-bandstructure.02-unocc.inp
 
 match ; Red. coord. k1 ; LINEFIELD(static/bandstructure, 2, 1) ;  0.00000000

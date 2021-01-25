@@ -1014,7 +1014,7 @@ contains
         orbitals(iw)%norbs = 1
         orbitals(iw)%ndim = 1
         orbitals(iw)%radius = -log(threshold)
-        orbitals(iw)%submeshforperiodic = .false.
+        orbitals(iw)%submesh = .false.
       
         ! cartesian coordinate of orbital center
         center(1:3) =  matmul(sb%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))

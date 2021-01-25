@@ -30,10 +30,14 @@ dist_share_DATA =                                                   \
         02-external-current.03-gaussian_current_pulse_with_mask.inp \
         03-linear-medium.test                                       \
 	03-linear-medium.01-cosinoidal_pulse_td.inp                 \
+	03-linear-medium.02-cosinoidal_pulse_td_pml.inp             \
+	03-linear-medium.03-cosinoidal_pulse_td_pml_unpacked.inp    \
         04-linear-medium-from-file.test                             \
 	04-linear-medium-from-file.01-cube_medium_from_file.inp     \
-	04-linear-medium-from-file.02-cube.off                      \
+	04-linear-medium-from-file.01-cube.off                      \
         05-plane_waves.test                                         \
-        05-plane_waves.01-pulse_pml.inp
+        05-plane_waves.01-pulse_pml.inp                             \
+        06-circular-polarization.test                               \
+        06-circular-polarization.01-1_puse_circ_pol.inp
 
 CLEANFILES = *~ *.bak

@@ -35,7 +35,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   logical              :: include_diag
 
-  FLOAT                :: xg(MAX_DIM)
+  FLOAT                :: xg(this%der%mesh%sb%dim)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
 
@@ -122,9 +122,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
     end do
 
-#ifdef HAVE_MPI
     call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
-#endif
 
     do ip = 1, this%der%mesh%np_global
       if (part_v(ip) == this%der%mesh%vp%partno) then

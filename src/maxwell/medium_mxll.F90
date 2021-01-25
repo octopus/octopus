@@ -25,10 +25,10 @@ module medium_mxll_oct_m
   use global_oct_m
   use iso_c_binding
   use messages_oct_m
-  use profiling_oct_m
   use comm_oct_m
   use grid_oct_m
   use mesh_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -39,8 +39,7 @@ module medium_mxll_oct_m
   public ::           &
     medium_box_t,     &
     medium_box_init,  &
-    medium_box_end,   &
-    generate_medium_boxes
+    medium_box_end
 
    type medium_box_t
      integer                         :: number   !< number of linear media boxes
@@ -57,11 +56,12 @@ module medium_mxll_oct_m
      FLOAT, allocatable              :: sigma_e(:,:) !< electric conductivy of (lossy) medium
      FLOAT, allocatable              :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
      integer, allocatable            :: points_number(:)
+     integer, allocatable            :: global_points_number(:)
      integer, allocatable            :: points_map(:,:)
      FLOAT, allocatable              :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
      FLOAT, allocatable              :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
      integer, allocatable            :: bdry_number(:)
-     FLOAT, allocatable              :: bdry_map(:,:)
+     integer, allocatable            :: bdry_map(:,:)
      character(len=256), allocatable :: filename(:)
      FLOAT                           :: width !< width of medium medium when used as boundary condition
    end type medium_box_t
@@ -80,6 +80,11 @@ module medium_mxll_oct_m
     type(block_t) :: blk
     type(medium_box_t), allocatable :: medium_box_aux
     logical :: checkmediumpoints
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_init)
+
+    call profiling_in(prof, 'MEDIUM_BOX_INIT')
 
     !%Variable LinearMediumBox
     !%Type block
@@ -236,8 +241,8 @@ module medium_mxll_oct_m
         call messages_info(1)
         call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
 
-        write(message(1),'(a, I8)')  'Number of points inside medium with the normal coordinates:', medium_box%points_number(1)
-        write(message(2),'(a, I8)')  'Number of points inside medium rescaling the coordinates:', medium_box_aux%points_number(1)
+        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', medium_box%global_points_number(1)
+        write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number(1)
         write(message(3), '(a)') ""
         call messages_info(3)
 
@@ -247,6 +252,10 @@ module medium_mxll_oct_m
 
       call messages_print_stress(stdout)
     end if
+
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_init)
 
   end subroutine medium_box_init
 
@@ -262,17 +271,21 @@ module medium_mxll_oct_m
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     logical :: inside
+    type(profile_t), save :: prof
 
     PUSH_SUB(generate_medium_boxes)
 
+    call profiling_in(prof, 'GENERATE_MEDIUM_BOXES')
+
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     SAFE_ALLOCATE(tmp_points_map(gr%mesh%np, nr_of_boxes))
     SAFE_ALLOCATE(tmp_bdry_map(gr%mesh%np, nr_of_boxes))
-    tmp_points_map = int(M_zero)
-    tmp_bdry_map = int(M_zero)
+    tmp_points_map = 0
+    tmp_bdry_map = 0
 
     SAFE_ALLOCATE(medium_box%points_number(nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%global_points_number(nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_number(nr_of_boxes))
     medium_box%number = nr_of_boxes
 
@@ -286,8 +299,8 @@ module medium_mxll_oct_m
        SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
        SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
 
-       medium_box%points_map = int(M_zero)
-       medium_box%bdry_map = int(M_zero)
+       medium_box%points_map = 0
+       medium_box%bdry_map = 0
 
        medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
 
@@ -321,8 +334,8 @@ module medium_mxll_oct_m
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
 
-    medium_box%points_map = int(M_zero)
-    medium_box%bdry_map = int(M_zero)
+    medium_box%points_map = 0
+    medium_box%bdry_map = 0
     medium_box%points_map = tmp_points_map(1:ip_in_max,1:nr_of_boxes)
     medium_box%bdry_map = tmp_bdry_map(1:ip_bd_max,1:nr_of_boxes)
 
@@ -413,6 +426,8 @@ module medium_mxll_oct_m
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
 
+    call profiling_out(prof)
+
     POP_SUB(generate_medium_boxes)
   contains
 
@@ -451,22 +466,6 @@ module medium_mxll_oct_m
 
     end function check_point_on_bounds
 
-    subroutine get_medium_io_function(medium_func, medium_box, mesh, il, io_func)
-      FLOAT,                    intent(in)    :: medium_func(:)
-      type(medium_box_t),       intent(in)    :: medium_box
-      type(mesh_t),             intent(in)    :: mesh
-      integer,                  intent(in)    :: il
-      FLOAT,                    intent(inout) :: io_func(:)
-
-      integer :: ip, ip_in
-
-      do ip_in = 1, medium_box%points_number(il)
-        ip = medium_box%points_map(ip_in, il)
-        io_func(ip) = medium_func(ip_in)
-      end do
-
-    end subroutine get_medium_io_function
-
   end subroutine generate_medium_boxes
 
   ! ----------------------------------------------------------
@@ -481,6 +480,11 @@ module medium_mxll_oct_m
     integer :: il, ip_in, ip
     FLOAT   :: xx(3)
     type(cgal_polyhedra_t), allocatable :: cgal_poly(:)
+    type(profile_t), save :: prof
+
+    PUSH_SUB(get_points_map_from_file)
+
+    call profiling_in(prof, 'GET_POINTS_MAP_FROM_FILE')
 
     SAFE_ALLOCATE(cgal_poly(1:medium_box%number))
 
@@ -502,9 +506,21 @@ module medium_mxll_oct_m
       if (ip_in > ip_in_max) ip_in_max = ip_in
       medium_box%points_number(il) = ip_in
       call cgal_polyhedron_end(cgal_poly(il))
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(ip_in, medium_box%global_points_number(il), 1, &
+          MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
+#else
+      medium_box%global_points_number(il) = medium_box%points_number(il)
+#endif
     end do
 
     SAFE_DEALLOCATE_A(cgal_poly)
+
+    call profiling_out(prof)
+
+    POP_SUB(get_points_map_from_file)
+
   end subroutine get_points_map_from_file
 
   ! ---------------------------------------------------------
@@ -512,7 +528,11 @@ module medium_mxll_oct_m
   subroutine medium_box_end(medium_box)
     type(medium_box_t),   intent(inout)    :: medium_box
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(medium_box_end)
+
+    call profiling_in(prof, 'MEDIUM_BOX_END')
 
     SAFE_DEALLOCATE_A(medium_box%center)
     SAFE_DEALLOCATE_A(medium_box%lsize)
@@ -532,6 +552,8 @@ module medium_mxll_oct_m
     SAFE_DEALLOCATE_A(medium_box%mu)
     SAFE_DEALLOCATE_A(medium_box%sigma_e)
     SAFE_DEALLOCATE_A(medium_box%sigma_m)
+
+    call profiling_out(prof)
 
     POP_SUB(medium_box_end)
 

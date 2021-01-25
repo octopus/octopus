@@ -56,13 +56,13 @@ module pes_spm_oct_m
   type pes_spm_t
     private
     integer                    :: nspoints                  !< how many points we store the wf
-    FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
-    FLOAT, pointer             :: rcoords_nrm(:,:)
-    CMPLX, pointer, public     :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
-    FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
-    FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
+    FLOAT, allocatable         :: rcoords(:,:)              !< coordinates of the sample points
+    FLOAT, allocatable         :: rcoords_nrm(:,:)
+    CMPLX, allocatable, public :: wf(:,:,:,:,:)             !< wavefunctions at sample points
+    FLOAT, allocatable         :: dq(:,:)                   !< part 1 of Volkov phase (recipe phase) 
+    FLOAT, allocatable         :: domega(:)                 !< part 2 of Volkov phase (recipe phase)
     integer                    :: recipe                    !< type of calculation (RAW/PHASE)
-    CMPLX, pointer             :: wfft(:,:,:,:,:) => NULL() !< Fourier transform of wavefunction
+    CMPLX, allocatable         :: wfft(:,:,:,:,:)           !< Fourier transform of wavefunction
     FLOAT                      :: omegamax                  !< maximum frequency of the spectrum
     FLOAT                      :: delomega                  !< frequency spacing of the spectrum
     integer                    :: nomega                    !< number of frequencies of the spectrum
@@ -335,14 +335,14 @@ contains
 
     PUSH_SUB(pes_spm_end)
 
-    SAFE_DEALLOCATE_P(this%wf)
-    SAFE_DEALLOCATE_P(this%rcoords)
-    SAFE_DEALLOCATE_P(this%rcoords_nrm)
+    SAFE_DEALLOCATE_A(this%wf)
+    SAFE_DEALLOCATE_A(this%rcoords)
+    SAFE_DEALLOCATE_A(this%rcoords_nrm)
 
-    SAFE_DEALLOCATE_P(this%wfft)
+    SAFE_DEALLOCATE_A(this%wfft)
 
-    SAFE_DEALLOCATE_P(this%dq)
-    SAFE_DEALLOCATE_P(this%domega)
+    SAFE_DEALLOCATE_A(this%dq)
+    SAFE_DEALLOCATE_A(this%domega)
 
     POP_SUB(pes_spm_end)
   end subroutine pes_spm_end
@@ -542,13 +542,11 @@ contains
       end do
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
         ! total spectrum = sum over all states
         call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
 
         ! orbital spectra
         call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
-#endif
       end if
 
       ! -----------------------------------------------------------------

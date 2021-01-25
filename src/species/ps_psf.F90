@@ -45,7 +45,7 @@ module ps_psf_oct_m
     type(ps_in_grid_t)           :: ps_grid
 
     type(valconf_t)              :: conf
-    FLOAT, pointer,      private :: eigen(:, :)
+    FLOAT, allocatable,  private :: eigen(:, :)
     integer,             private :: ispin
   end type ps_psf_t
 
@@ -63,8 +63,6 @@ contains
     logical :: found, ascii
 
     PUSH_SUB(ps_psf_init)
-
-    nullify(pstm%eigen)
 
     ! Sets the spin components
     pstm%ispin = ispin
@@ -110,7 +108,7 @@ contains
 
     PUSH_SUB(ps_psf_end)
 
-    SAFE_DEALLOCATE_P(ps_psf%eigen)
+    SAFE_DEALLOCATE_A(ps_psf%eigen)
     call ps_in_grid_end(ps_psf%ps_grid)
     call ps_psf_file_end(ps_psf%psf_file)
 

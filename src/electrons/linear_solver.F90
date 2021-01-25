@@ -22,7 +22,6 @@ module linear_solver_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -63,6 +62,7 @@ module linear_solver_oct_m
     integer,                public :: solver
     type(preconditioner_t), public :: pre
     integer                        :: max_iter
+    type(multigrid_t), allocatable :: mgrid
   end type linear_solver_t
 
   type(profile_t), save :: prof, prof_batch
@@ -85,17 +85,15 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, geo, mc, def_solver)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
-    type(geometry_t),       intent(in)    :: geo
     type(multicomm_t),      intent(in)    :: mc
-    integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
-    integer :: defsolver_ 
+    integer :: defsolver
 
     PUSH_SUB(linear_solver_init)
 
@@ -142,22 +140,18 @@ contains
     !% released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
     !%End
 
-    if(present(def_solver)) then
-      defsolver_ = def_solver
+    if(conf%devel_version) then
+      defsolver = OPTION__LINEARSOLVER__QMR_DOTP
     else
-      if(conf%devel_version) then
-        defsolver_ = OPTION__LINEARSOLVER__QMR_DOTP
+      if(states_are_real) then
+        defsolver = OPTION__LINEARSOLVER__QMR_SYMMETRIC
+        ! in this case, it is equivalent to LS_QMR_DOTP
       else
-        if(states_are_real) then
-          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIC
-          ! in this case, it is equivalent to LS_QMR_DOTP
-        else
-          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIZED
-        end if
+        defsolver = OPTION__LINEARSOLVER__QMR_SYMMETRIZED
       end if
     end if
 
-    call parse_variable(namespace, "LinearSolver", defsolver_, fsolver)
+    call parse_variable(namespace, "LinearSolver", defsolver, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
@@ -165,7 +159,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, namespace, gr, geo, mc)
+    call preconditioner_init(this%pre, namespace, gr, mc)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -217,10 +211,8 @@ contains
     if (this%solver == OPTION__LINEARSOLVER__MULTIGRID) then
       call messages_experimental("Multigrid linear solver")
 
-      if (.not. associated(gr%mgrid)) then
-        SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
-      end if
+      SAFE_ALLOCATE(this%mgrid)
+      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
     end if
 
     if (this%solver == OPTION__LINEARSOLVER__QMR_DOTP) then
@@ -237,6 +229,10 @@ contains
     this%solver = -1
 
     call preconditioner_end(this%pre)
+    if (allocated(this%mgrid)) then
+      call multigrid_end(this%mgrid)
+      SAFE_DEALLOCATE_A(this%mgrid)
+    end if
 
   end subroutine linear_solver_end
 

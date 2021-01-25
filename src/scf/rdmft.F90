@@ -107,12 +107,11 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
+  subroutine rdmft_init(rdm, namespace, gr, st, mc, fromScratch)
     type(rdm_t),         intent(out)   :: rdm
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(inout) :: gr  !< grid
     type(states_elec_t), intent(in)    :: st  !< States
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
     logical,             intent(in)    :: fromScratch
 
@@ -221,7 +220,7 @@ contains
       end do
     else
       ! initialize eigensolver. 
-      call eigensolver_init(rdm%eigens, namespace, gr, st, geo, mc)
+      call eigensolver_init(rdm%eigens, namespace, gr, st, mc)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -246,9 +245,8 @@ contains
 
   ! ----------------------------------------
 
-  subroutine rdmft_end(rdm, gr)
+  subroutine rdmft_end(rdm)
     type(rdm_t),  intent(inout) :: rdm
-    type(grid_t), intent(inout) :: gr
 
     PUSH_SUB(rdmft_end)
 
@@ -268,7 +266,7 @@ contains
       SAFE_DEALLOCATE_A(rdm%Coul)
       SAFE_DEALLOCATE_A(rdm%Exch)
     else
-      call eigensolver_end(rdm%eigens, gr)
+      call eigensolver_end(rdm%eigens)
     end if
 
     POP_SUB(rdmft_end)
@@ -488,7 +486,7 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
 
         call v_ks_write_info(ks, iunit, namespace)
         
@@ -624,7 +622,7 @@ contains
     PUSH_SUB(calc_photon_number)
 
     ! The photon dimension is always the last
-    dim_photon = gr%mesh%sb%dim
+    dim_photon = gr%sb%dim
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
     SAFE_ALLOCATE(psi_q2(1:gr%mesh%np))

@@ -50,6 +50,8 @@ module stress_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
+  use v_ks_oct_m
+  use xc_f03_lib_m
 
   implicit none
 
@@ -72,18 +74,18 @@ contains
 
   ! ---------------------------------------------------------
   !> This computes the total stress on the lattice
-  subroutine stress_calculate(namespace, gr, hm, st, geo)
+  subroutine stress_calculate(namespace, gr, hm, st, geo, ks)
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr !< grid
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(states_elec_t),      intent(inout) :: st
     type(geometry_t),         intent(inout) :: geo !< geometry
+    type(v_ks_t),             intent(in)    :: ks
 
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
     FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
     FLOAT :: stress_ps(3,3), stress_Ewald(3,3)
-
 
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(stress_calculate)
@@ -91,9 +93,17 @@ contains
     SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
-      write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
-      write(message(2), '(a)') "Stress might not be correct."
-      call messages_warning(2, namespace=namespace)
+      call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
+    end if
+
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
+      (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
+      write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
+      call messages_fatal(1, namespace=namespace)
+    end if
+    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+      write(message(1),'(a)') 'The stress tensor is currently not properly computed with vdW corrections'
+      call messages_fatal(1, namespace=namespace)
     end if
   
     stress(:,:) = M_ZERO
@@ -202,7 +212,7 @@ contains
          end if
       end if
       
-      ASSERT(associated(cube%fft))
+      ASSERT(allocated(cube%fft))
       ASSERT(cube%fft%library /= FFTLIB_NONE)
       
       SAFE_ALLOCATE(rho_total_fs(1:cube%rs_n_global(1),1:cube%rs_n_global(2),1:cube%rs_n_global(3)))
@@ -218,7 +228,7 @@ contains
          write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
          call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
-         if(associated(cube%Lrs))then
+         if (allocated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
          else

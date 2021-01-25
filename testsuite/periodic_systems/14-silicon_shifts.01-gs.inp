@@ -34,6 +34,12 @@ Spacing =a/14
 %SymmetryBreakDir
  1 | 0 | 0
 %
+%KPointsPath
+ 2 
+ 0.5 | 0.0 | 0.0 
+ 0.0 | 0.0 | 0.0 
+%
+
 
 KPointsUseSymmetries = yes
 

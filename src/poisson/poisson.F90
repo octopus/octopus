@@ -38,6 +38,7 @@ module poisson_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -125,7 +126,7 @@ module poisson_oct_m
     type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
-    logical, public :: is_dressed
+    logical, public :: is_dressed = .false.
     type(photon_mode_t), public :: photons
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
@@ -137,6 +138,7 @@ module poisson_oct_m
     type(PokeGrid)   :: poke_grid
     type(PokeSolver) :: poke_solver
 #endif
+    type(multigrid_t), allocatable, public  :: mgrid
   end type poisson_t
 
   integer, parameter ::             &
@@ -681,7 +683,6 @@ contains
 
     end select
     this%method = POISSON_NULL
-    this%is_dressed = .false.
 
     if (has_cube) then
       if (this%cube%parallel_in_domains) then
@@ -692,6 +693,12 @@ contains
 
     if (this%is_dressed) then
       call photon_mode_end(this%photons)
+    end if
+    this%is_dressed = .false.
+
+    if (allocated(this%mgrid)) then
+      call multigrid_end(this%mgrid)
+      SAFE_DEALLOCATE_A(this%mgrid)
     end if
 
     POP_SUB(poisson_end)
@@ -979,8 +986,6 @@ contains
     end if
 
     this%kernel = POISSON_FFT_KERNEL_NONE
-
-    nullify(sm%cube_map%map)
 
     select case(this%method)
     case(POISSON_DIRECT_SUM)

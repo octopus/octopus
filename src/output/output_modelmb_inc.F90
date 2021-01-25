@@ -75,7 +75,6 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
 
   SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
-  call modelmb_density_matrix_nullify(denmat)
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
     call modelmb_density_matrix_init(dirname, namespace, st, denmat)
   end if
@@ -106,7 +105,7 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
-      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-gr%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, &
         gr%mesh, wf, fn_unit, ierr, geo = geo)

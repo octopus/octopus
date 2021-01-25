@@ -1,4 +1,4 @@
-!! Copyright (C) 2014 M. Oliveira, J. Jornet-Somoza
+!! Copyright (C) 2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,137 +19,90 @@
 #include "global.h"
 
 module box_union_oct_m
+  use box_oct_m
+  use multibox_oct_m
   use global_oct_m
+  use linked_list_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use box_oct_m
 
   implicit none
 
   private
-  public ::                   &
-    box_union_t,              &
-    box_union_init,           &
-    box_union_end,            &
-    box_union_inside_vec,     &
-    box_union_inside,         &
-    box_union_get_nboxes,     &
-    box_union_get_center
+  public ::           &
+    box_union_t
 
-  type box_union_t
+  !> Class implementing a box that is an union other boxes.
+  type, extends(multibox_t) :: box_union_t
     private
-    
-    !> TODO: make this a linked list, so that boxes can be added and removed efficiently on-the-fly
-    integer              :: n_boxes
-    type(box_t), pointer :: boxes(:)
+  contains
+    procedure :: contains_points => box_union_contains_points
+    final     :: box_union_finalize
   end type box_union_t
+
+  interface box_union_t
+    procedure box_union_constructor
+  end interface box_union_t
 
 contains
 
   !--------------------------------------------------------------
-  subroutine box_union_init(union, n_boxes, boxes)
-    type(box_union_t), intent(out) :: union
-    integer,           intent(in)  :: n_boxes
-    type(box_t),       intent(in)  :: boxes(:)
+  function box_union_constructor(dim) result(box)
+    integer, intent(in) :: dim
+    class(box_union_t), pointer :: box
 
-    integer :: ibox
+    PUSH_SUB(box_union_constructor)
 
-    PUSH_SUB(box_union_init)
+    ! Allocate memory
+    SAFE_ALLOCATE(box)
 
-    union%n_boxes = n_boxes
-    SAFE_ALLOCATE(union%boxes(1:n_boxes))
+    ! Initialize box
+    box%dim = dim
 
-    do  ibox = 1,n_boxes
-      call box_copy(union%boxes(ibox), boxes(ibox))
-    end do
-    
-    POP_SUB(box_union_init)
-  end subroutine box_union_init
+    POP_SUB(box_union_constructor)
+  end function box_union_constructor
 
   !--------------------------------------------------------------
-  subroutine box_union_end(union)
-    type(box_union_t), intent(inout) :: union
+  subroutine box_union_finalize(this)
+    type(box_union_t), intent(inout) :: this
 
-    integer :: ibox
+    PUSH_SUB(box_union_finalize)
 
-    PUSH_SUB(box_union_end)
+    call multibox_end(this)
 
-    do ibox = 1, union%n_boxes
-      call box_end(union%boxes(ibox))
-    end do
-    SAFE_DEALLOCATE_P(union%boxes)
-
-    union%n_boxes = 0
-
-    POP_SUB(box_union_end)
-  end subroutine box_union_end
+    POP_SUB(box_union_finalize)
+  end subroutine box_union_finalize
 
   !--------------------------------------------------------------
-  !> Checks if a vector of points are inside the box.
-  subroutine box_union_inside_vec(union, npoints, points, inside)
-    type(box_union_t),  intent(in)  :: union
-    integer,            intent(in)  :: npoints
-    FLOAT,              intent(in)  :: points(:, :)
-    logical,            intent(out) :: inside(:)
+  recursive function box_union_contains_points(this, nn, xx) result(contained)
+    class(box_union_t), intent(in) :: this
+    integer,            intent(in) :: nn
+    FLOAT,              intent(in) :: xx(:,:)
+    logical :: contained(nn)
 
-    integer :: ibox
-    logical, allocatable :: inside2(:)
+    integer :: ip
+    FLOAT :: point(1:this%dim)
+    type(box_iterator_t) :: iter
+    class(box_t), pointer :: box
 
-    ! no push_sub because this function is called very frequently
-    SAFE_ALLOCATE(inside2(1:npoints))
+    ! A point must be inside at least one box to be considered inside an union of boxes
+    do ip = 1, nn
+      point(1:this%dim) = xx(ip, 1:this%dim)
+      contained(ip) = .false.
 
-    inside = .false.
-      do ibox = 1, union%n_boxes
-        call box_inside_vec(union%boxes(ibox), npoints, points, inside2)
-        inside = inside .or. inside2
+      call iter%start(this%list)
+      do while (iter%has_next())
+        box => iter%get_next()
+        contained(ip) = box%contains_point(point)
+        if (contained(ip)) exit
       end do
 
-    SAFE_DEALLOCATE_A(inside2)
-
-  end subroutine box_union_inside_vec
-  
-  !--------------------------------------------------------------
-  !> Checks if a point are inside the union box.
-  logical function box_union_inside(union, point) result(inside)
-    type(box_union_t),  intent(in)  :: union
-    FLOAT,              intent(in)  :: point(:)
-
-    integer :: ibox
-
-    ! no push_sub because this function is called very frequently
-
-    inside = .false.
-    do ibox = 1, union%n_boxes
-      if(box_inside(union%boxes(ibox), point)) inside = .true.
+      contained(ip) = contained(ip) .neqv. this%is_inside_out()
     end do
 
-  end function box_union_inside
+  end function box_union_contains_points
 
-  !--------------------------------------------------------------
-  !> Returns number of boxes inside domain
-  pure integer function box_union_get_nboxes(union) result(nbox)
-    type(box_union_t),  intent(in)  :: union
-    
-    ! no push_sub because this function is called very frequently
-    
-    nbox = union%n_boxes
-    
-  end function box_union_get_nboxes
-
-  !--------------------------------------------------------------
-  !> Returns number of boxes inside domain
-  pure function box_union_get_center(union, ibox) result(x)
-    type(box_union_t),  intent(in)  :: union
-    integer,            intent(in)  :: ibox
-    FLOAT, dimension(MAX_DIM)       :: x
-    
-    ! no push_sub because this function is called very frequently
-    
-    x = box_get_center(union%boxes(ibox))
-    
-  end function box_union_get_center
 end module box_union_oct_m
-
 
 !! Local Variables:
 !! mode: f90

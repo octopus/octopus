@@ -43,7 +43,7 @@
     integer :: istart, iend, energy_steps, out_file
     FLOAT, allocatable :: time(:), velocities(:, :)
     FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :)
-    FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
+    FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:)
     CMPLX, allocatable :: invdielectric(:, :)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
@@ -60,7 +60,7 @@
     integer :: skip
     logical :: from_forces
     character(len=120) :: header
-    FLOAT :: excess_charge, val_charge, qtot    
+    FLOAT :: excess_charge, qtot
 
     ! Initialize stuff
     call global_init(is_serial = .true.) 
@@ -115,8 +115,7 @@
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
-    call geometry_val_charge(geo, val_charge)
-    qtot = -(val_charge + excess_charge)
+    qtot = -(geometry_val_charge(geo) + excess_charge)
 
     if(from_forces) then
 
@@ -292,7 +291,7 @@
    
 
    SAFE_ALLOCATE(curr(ntime, 1:space%dim))
-   SAFE_ALLOCATE(heatcurr(ntime, 1:space%dim, 1:1))
+   SAFE_ALLOCATE(heatcurr(ntime, 1:space%dim))
    integral = M_ZERO
 
    if(from_forces) iunit = io_open('td.general/current_from_forces', global_namespace, action='write')
@@ -330,7 +329,7 @@
        
      else
        curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%rcell_volume
-       heatcurr(iter,1:space%dim, 1) = heat_current(1:space%dim, iter)/sb%rcell_volume
+       heatcurr(iter,1:space%dim) = heat_current(1:space%dim, iter)/sb%rcell_volume
      end if
         
      if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim)
@@ -413,14 +412,31 @@
     end do
 
     out_file = io_open('td.general/inverse_dielectric_function_from_current', global_namespace, action='write')
-    write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+    select case(space%dim)
+    case(1)
+      write(header, '(3a15)') '#        energy', 'Re x', 'Im x'
+    case(2)
+      write(header, '(5a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y'
+    case(3)
+      write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+    end select
     write(out_file,'(a)') trim(header)
     do ifreq = 1, energy_steps
-    ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
-    write(out_file, '(7e15.6)') ww,                                         &
-         TOFLOAT(invdielectric(1, ifreq)), aimag(invdielectric(1, ifreq)), &
-         TOFLOAT(invdielectric(2, ifreq)), aimag(invdielectric(2, ifreq)), &
-         TOFLOAT(invdielectric(3, ifreq)), aimag(invdielectric(3, ifreq))
+      ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+      select case(space%dim)
+      case(1)
+        write(out_file, '(3e15.6)') ww,                                        &
+           TOFLOAT(invdielectric(1, ifreq)), aimag(invdielectric(1, ifreq))
+      case(2)
+        write(out_file, '(5e15.6)') ww,                                        &
+           TOFLOAT(invdielectric(1, ifreq)), aimag(invdielectric(1, ifreq)), &
+           TOFLOAT(invdielectric(2, ifreq)), aimag(invdielectric(2, ifreq))
+      case(3)
+        write(out_file, '(7e15.6)') ww,                                        &
+           TOFLOAT(invdielectric(1, ifreq)), aimag(invdielectric(1, ifreq)), &
+           TOFLOAT(invdielectric(2, ifreq)), aimag(invdielectric(2, ifreq)), &
+           TOFLOAT(invdielectric(3, ifreq)), aimag(invdielectric(3, ifreq))
+      end select
     end do
     call io_close(out_file)
 
@@ -429,20 +445,20 @@
 
     
 !!!!!!!!!!!!!!!!!!!!!
-    SAFE_ALLOCATE(ftheatcurr(1:energy_steps, 1:3, 1:2))
+    SAFE_ALLOCATE(ftheatcurr(1:energy_steps, 1:space%dim, 1:2))
 
     ftheatcurr = M_ONE
 
-    call batch_init(heatcurrb, 3, 1, 1, heatcurr)
+    call batch_init(heatcurrb, 1, 1, space%dim, heatcurr)
     
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, M_ZERO, deltat, heatcurrb)
 
-    call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr)
+    call batch_init(ftheatcurrb, 1, 1, space%dim, ftheatcurr(:, :, 1))
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
     call ftheatcurrb%end()
 
-    call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr(:, :, 2:2))
+    call batch_init(ftheatcurrb, 1, 1, space%dim, ftheatcurr(:, :, 2))
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
     call ftheatcurrb%end()
@@ -468,7 +484,7 @@
     do ifreq = 1, energy_steps
       ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
-        transpose(ftheatcurr(ifreq, 1:3, 1:2)/v0)
+        transpose(ftheatcurr(ifreq, 1:space%dim, 1:2)/v0)
       !print *, ifreq, ftheatcurr(ifreq, 1:3, 1:2)
    end do
     
@@ -480,7 +496,6 @@
     
     call simul_box_end(sb)
     call geometry_end(geo)
-    call space_end(space)
 
     SAFE_DEALLOCATE_A(time)
 

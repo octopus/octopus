@@ -31,16 +31,15 @@ module permutations_oct_m
   public :: permutations_init, &
             permutations_write, &
             permutations_copy, &
-            permutations_nullify, &
             permutations_end, &
             permutations_t
 
   type permutations_t
    private
-   integer,          public :: npermutations
-   integer                  :: nn, npairs
-   integer, pointer, public :: allpermutations(:,:)
-   integer, pointer, public :: permsign(:)
+   integer,              public :: npermutations
+   integer                      :: nn, npairs
+   integer, allocatable, public :: allpermutations(:,:)
+   integer, allocatable, public :: permsign(:)
   end type permutations_t 
 
 contains
@@ -98,17 +97,6 @@ contains
     POP_SUB(permutations_write)
   end subroutine permutations_write
 
-  subroutine permutations_nullify (this)
-    type(permutations_t), intent(inout) :: this
-
-    PUSH_SUB(permutations_nullify)
-
-    nullify(this%allpermutations)
-    nullify(this%permsign)
-
-    POP_SUB(permutations_nullify)
-  end subroutine permutations_nullify
-
   subroutine permutations_copy (perm_in, perm_out)
     type(permutations_t), intent(inout) :: perm_in, perm_out
 
@@ -118,8 +106,8 @@ contains
     perm_out%npermutations = perm_in%npermutations
     perm_out%npairs = perm_in%npairs
 
-    SAFE_ALLOCATE_SOURCE_P(perm_out%allpermutations,perm_in%allpermutations)
-    SAFE_ALLOCATE_SOURCE_P(perm_out%permsign,perm_in%permsign)
+    SAFE_ALLOCATE_SOURCE_A(perm_out%allpermutations,perm_in%allpermutations)
+    SAFE_ALLOCATE_SOURCE_A(perm_out%permsign,perm_in%permsign)
 
     POP_SUB(permutations_copy)
   end subroutine permutations_copy
@@ -129,8 +117,8 @@ contains
 
     PUSH_SUB(permutations_end)
 
-    SAFE_DEALLOCATE_P (this%allpermutations)
-    SAFE_DEALLOCATE_P (this%permsign)
+    SAFE_DEALLOCATE_A(this%allpermutations)
+    SAFE_DEALLOCATE_A(this%permsign)
 
     POP_SUB(permutations_end)
   end subroutine permutations_end

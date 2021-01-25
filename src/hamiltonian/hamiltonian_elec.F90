@@ -49,6 +49,7 @@ module hamiltonian_elec_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
@@ -70,7 +71,7 @@ module hamiltonian_elec_oct_m
   use unit_system_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 
@@ -86,8 +87,7 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dmagnus,                         &
-    zmagnus,                         &
+    magnus,                               &
     dvmask,                          &
     zvmask,                          &
     hamiltonian_elec_inh_term,            &
@@ -174,7 +174,6 @@ module hamiltonian_elec_oct_m
     logical, public :: time_zero
 
     type(exchange_operator_t), public :: exxop
-    type(namespace_t), pointer :: namespace
 
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
@@ -207,7 +206,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
-    type(namespace_t),                  target, intent(in)    :: namespace
+    type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -231,8 +230,6 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
-
-    hm%namespace => namespace
 
     !%Variable ParticleMass
     !%Type float
@@ -307,6 +304,12 @@ contains
     SAFE_ALLOCATE(hm%psolver)
     call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
 
+    if(poisson_is_multigrid(hm%psolver)) then
+      SAFE_ALLOCATE(hm%psolver%mgrid)
+      call multigrid_init(hm%psolver%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    end if
+
+
     nullify(hm%psolver_fine)
     if (gr%have_fine_mesh) then
       SAFE_ALLOCATE(hm%psolver_fine)
@@ -316,7 +319,7 @@ contains
     end if
   
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family, mc)
+    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
@@ -361,7 +364,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, namespace, gr%mesh, gr%mesh%sb, hm%geo)
+    call bc_init(hm%bc, namespace, gr%mesh, gr%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -429,8 +432,7 @@ contains
  
 
     nullify(hm%hm_base%phase)
-    if (simul_box_is_periodic(gr%sb) .and. &
-      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
+    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
       call init_phase()
     end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
@@ -526,7 +528,7 @@ contains
         end if
       end if
 
-      if (.not. simul_box_is_periodic(gr%mesh%sb)) then
+      if (.not. simul_box_is_periodic(gr%sb)) then
         do il = 1, hm%ep%no_lasers
           if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
             if(accel_allow_CPU_only()) then
@@ -568,7 +570,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik, sp, ip_global, ip_inner
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:gr%sb%dim)
       
 
       PUSH_SUB(hamiltonian_elec_init.init_phase)
@@ -644,7 +646,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, gr%der%boundaries, namespace )
+        call lda_u_build_phase_correction(hm%lda_u, gr%sb, hm%d, gr%der%boundaries, namespace )
       end if
 
       POP_SUB(hamiltonian_elec_init.init_phase)
@@ -694,16 +696,19 @@ contains
             end if
             hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
 
-            if(.not.associated(hm%ep%v_static)) then
-              SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
-              hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+            !In the fully periodic case, we use Berry phases
+            if(gr%sb%periodic_dim < gr%sb%dim) then
+              if(.not.associated(hm%ep%v_static)) then
+                SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
+                hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+              end if
+              if(.not.allocated(hm%ep%v_ext)) then
+                SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
+                hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
+              end if     
+              call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
+              call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
             end if
-            if(.not.allocated(hm%ep%v_ext)) then
-              SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
-              hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
-            end if     
-            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
-            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
           end select
           call potential%deallocate_memory()
 
@@ -757,6 +762,7 @@ contains
         ! and we are not setting a gauge field
         if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
           SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+          hm%vberry = M_ZERO
         end if
       end if
 
@@ -838,8 +844,6 @@ contains
 
     SAFE_DEALLOCATE_P(hm%energy)
 
-    nullify(hm%namespace)
-     
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
     call iter%start(hm%external_potentials)
@@ -847,6 +851,7 @@ contains
       potential => iter%get_next()
       SAFE_DEALLOCATE_P(potential)
     end do
+    call hm%external_potentials%empty()
 
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end
@@ -1065,12 +1070,12 @@ contains
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_global, ip_inner, sp
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:mesh%sb%dim)
       integer :: iphase, nphase
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1646,7 +1651,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1805,6 +1810,79 @@ contains
 
     POP_SUB(zhamiltonian_elec_apply_all)
   end subroutine zhamiltonian_elec_apply_all
+
+
+  ! ---------------------------------------------------------
+
+  subroutine magnus(hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(namespace_t),        intent(in)    :: namespace
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(inout) :: psi(:,:)
+    CMPLX,                    intent(out)   :: hpsi(:,:)
+    integer,                  intent(in)    :: ik
+    FLOAT,                    intent(in)    :: vmagnus(:, :, :)
+    logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+    CMPLX, allocatable :: auxpsi(:, :), aux2psi(:, :)
+    integer :: idim, ispin
+
+    PUSH_SUB(magnus)
+
+    ! We will assume, for the moment, no spinors.
+    if(hm%d%dim /= 1) &
+      call messages_not_implemented("Magnus with spinors", namespace=namespace)
+
+    SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
+    SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
+
+    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+
+    ! Compute (T + Vnl)|psi> and store it
+    call zhamiltonian_elec_apply_single(hm, namespace, mesh, psi, auxpsi, 1, ik, &
+      terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+
+    ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
+    do idim = 1, hm%d%dim
+      call lalg_copy(mesh%np, auxpsi(:, idim), hpsi(:, idim))
+      hpsi(1:mesh%np, idim) = hpsi(1:mesh%np, idim) + hm%ep%Vpsl(1:mesh%np)*psi(1:mesh%np,idim)
+      call vborders(mesh, hm, psi(:, idim), hpsi(:, idim))
+    end do
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + vmagnus(1:mesh%np, ispin, 2)*psi(1:mesh%np, 1)
+
+    ! Add first term of the commutator:  - i Vmagnus(t1) (T + Vnl) |psi>
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) - M_zI*vmagnus(1:mesh%np, ispin, 1)*auxpsi(1:mesh%np, 1)
+
+    ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
+    auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
+    call zhamiltonian_elec_apply_single(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
+      terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
+
+    SAFE_DEALLOCATE_A(auxpsi)
+    SAFE_DEALLOCATE_A(aux2psi)
+    POP_SUB(magnus)
+  end subroutine magnus
+  
+  ! ---------------------------------------------------------
+  subroutine vborders (mesh, hm, psi, hpsi)
+    type(mesh_t),             intent(in)    :: mesh
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    CMPLX,                    intent(in)    :: psi(:)
+    CMPLX,                    intent(inout) :: hpsi(:)
+
+    integer :: ip
+
+    PUSH_SUB(vborders)
+
+    if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+      do ip = 1, mesh%np
+        hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
+      end do
+    end if
+
+    POP_SUB(vborders)
+  end subroutine vborders
 
 #include "undef.F90"
 #include "real.F90"

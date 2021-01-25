@@ -61,13 +61,11 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   end if
 
   if (in_line .and. mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
     if (i_am_root) then
       call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff, ff_global)
     else
       call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff)
     end if
-#endif
   end if
   
   if (i_am_root) then
@@ -89,10 +87,8 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   
   if (mesh%parallel_in_domains .and. in_line) then
 #ifdef HAVE_MPI
-    ! I have to broadcast the error code  end if
+    ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%vp%comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(mesh%vp%comm, mpi_err)
 #endif
   end if
     
@@ -103,11 +99,11 @@ end subroutine X(restart_write_mesh_function)
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
 subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
-  type(restart_t),  intent(in)    :: restart
-  character(len=*), intent(in)    :: filename
-  type(mesh_t),     intent(in)    :: mesh
-  R_TYPE, target,   intent(inout) :: ff(:)
-  integer,          intent(out)   :: ierr
+  type(restart_t),            intent(in)    :: restart
+  character(len=*),           intent(in)    :: filename
+  type(mesh_t),               intent(in)    :: mesh
+  R_TYPE, target, contiguous, intent(inout) :: ff(:)
+  integer,                    intent(out)   :: ierr
 
   integer :: ip, np, offset, file_size
   R_TYPE, pointer :: read_ff(:)

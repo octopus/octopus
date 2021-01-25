@@ -19,13 +19,13 @@
 
 module maxwell_boundary_op_oct_m
   use derivatives_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use io_oct_m
   use cube_function_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
   use maxwell_function_oct_m
   use medium_mxll_oct_m
   use mesh_function_oct_m
@@ -50,7 +50,6 @@ module maxwell_boundary_op_oct_m
     bc_mxll_init,              &
     bc_mxll_end,               &
     bc_mxll_t,                 &
-    bc_mxll_write_info,        &
     inner_and_outer_points_mapping,  &
     surface_grid_points_mapping
 
@@ -78,16 +77,15 @@ module maxwell_boundary_op_oct_m
   end type pml_t
 
   type plane_wave_t
-    integer                          :: points_number
-    integer,             allocatable :: points_map(:)
-    integer                          :: number
-    integer,             allocatable :: modus(:)
-    character(len=1024), allocatable :: e_field_string(:,:)
-    FLOAT,               allocatable :: k_vector(:,:)
-    FLOAT,               allocatable :: v_vector(:,:)
-    FLOAT,               allocatable :: e_field(:,:)
-    type(mxf_t),         allocatable :: mx_function(:)
-    type(mxf_t),         allocatable :: mx_phase(:)
+    integer                          :: points_number  !< number of points of plane wave boundary
+    integer,             allocatable :: points_map(:) !< points map for plane waves boundary
+    integer                          :: number !< number of plane waves given by user
+    integer,             allocatable :: modus(:) !< input file modus, either parser or Maxwell function
+    character(len=1024), allocatable :: e_field_string(:,:) !< string in case of parser
+    FLOAT,               allocatable :: k_vector(:,:) !< k vector for each plane wave
+    FLOAT,               allocatable :: v_vector(:,:) !< velocity vector for each plane wave
+    CMPLX,               allocatable :: e_field(:,:) !< field amplitude for each plane wave
+    type(mxf_t),         allocatable :: mx_function(:) !< Maxwell function for each plane wave
   end type plane_wave_t
 
   type bc_mxll_t
@@ -160,8 +158,11 @@ contains
     character(len=50)   :: str, ab_type_str
     logical             :: plane_waves_check = .false., ab_mask_check = .false., ab_pml_check = .false.
     logical             :: constant_check = .false., zero_check = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_init)
+
+    call profiling_in(prof, 'BC_MXLL_INIT')
 
     bc%ab_user_def = .false.
     bc%bc_ab_type(:) = MXLL_AB_NOT_ABSORBING ! default option
@@ -255,7 +256,7 @@ contains
 
       end select
 
-      select case (gr%mesh%sb%box_shape)
+      select case (gr%sb%box_shape)
       case(SPHERE)
         ab_shape_dim = 1
         if (sb%periodic_dim /= 0) then
@@ -308,7 +309,7 @@ contains
         bc%bc_bounds(:, idim) = bounds(:, idim)
       end select
 
-      if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+      if (gr%sb%box_shape == PARALLELEPIPED) then
 
         select case (bc%bc_ab_type(idim))
         case(MXLL_AB_CPML)
@@ -397,6 +398,8 @@ contains
       call messages_print_stress(stdout, namespace=namespace)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_init)
   end subroutine bc_mxll_init
 
@@ -468,7 +471,6 @@ contains
     SAFE_DEALLOCATE_A(plane_wave%v_vector)
     SAFE_DEALLOCATE_A(plane_wave%e_field)
     SAFE_DEALLOCATE_A(plane_wave%mx_function)
-    SAFE_DEALLOCATE_A(plane_wave%mx_phase)
 
     POP_SUB(plane_wave_end)
   end subroutine plane_wave_end
@@ -481,7 +483,11 @@ contains
     FLOAT,               intent(inout) :: bounds(:,:)
     integer,             intent(in)    :: idim
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(bc_mxll_medium_init)
+
+    call profiling_in(prof, 'BC_MXLL_MEDIUM_INIT')
 
     SAFE_ALLOCATE(medium%ep_factor(1))
     SAFE_ALLOCATE(medium%mu_factor(1))
@@ -535,6 +541,8 @@ contains
     !% Magnetic conductivity of the linear medium.
     !%End
     call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, medium%sigma_m_factor(1), unit_one)
+
+    call profiling_out(prof)
 
     POP_SUB(bc_mxll_medium_init)
   end subroutine bc_mxll_medium_init
@@ -619,8 +627,11 @@ contains
     FLOAT, allocatable :: tmp(:)
     logical :: mask_check, pml_check, medium_check
     character(1) :: dim_label(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_write_info)
+
+    call profiling_in(prof, 'BC_MXLL_WRITE_INFO')
 
     mask_check = .false.
     pml_check = .false.
@@ -704,6 +715,8 @@ contains
       SAFE_DEALLOCATE_A(tmp)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_write_info)
   contains
 
@@ -775,9 +788,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_mask_points_mapping)
 
+    call profiling_in(prof, 'MAXWELL_MASK_POINTS_MAPPING')
     ip_in_max = 1
     do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
@@ -810,6 +825,7 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
     POP_SUB(maxwell_mask_points_mapping)
   end subroutine maxwell_mask_points_mapping
 
@@ -821,8 +837,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_pml_points_mapping)
+
+    call profiling_in(prof, 'MAXWELL_PML_POINTS_MAPPING')
 
     ! allocate pml points map
     ip_in = 0
@@ -847,6 +866,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_pml_points_mapping)
   end subroutine maxwell_pml_points_mapping
 
@@ -858,8 +879,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_constant_points_mapping)
+
+    call profiling_in(prof, 'MAXWELL_CONSTANT_POINTS_MAP')
 
     ! allocate constant points map
     ip_in = 0
@@ -883,6 +907,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_constant_points_mapping)
   end subroutine maxwell_constant_points_mapping
 
@@ -894,8 +920,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_plane_waves_points_mapping)
+
+    call profiling_in(prof, 'MXLL_PLANE_WAVES_POINTS_MAP')
 
     ! allocate zero points map
     ip_in = 0
@@ -918,6 +947,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_plane_waves_points_mapping)
   end subroutine maxwell_plane_waves_points_mapping
 
@@ -929,8 +960,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_zero_points_mapping)
+
+    call profiling_in(prof, 'MXLL_ZERO_POINTS_MAPPING')
 
     ip_in_max = 0
     do idim = 1, 3
@@ -964,6 +998,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_zero_points_mapping)
   end subroutine maxwell_zero_points_mapping
 
@@ -976,8 +1012,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, ip_bd, ip_bd_max, point_info, boundary_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_medium_points_mapping)
+
+    call profiling_in(prof, 'MXLL_MEDIUM_POINTS_MAPPING')
 
     ip_in_max = 0
     ip_bd_max = 0
@@ -1024,6 +1063,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_medium_points_mapping)
   end subroutine maxwell_medium_points_mapping
 
@@ -1037,17 +1078,20 @@ contains
     integer :: ip, ip_in, idim
     FLOAT   :: width(3), ddv(3), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_pml)
 
-    SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
+    call profiling_in(prof, 'BC_MXLL_GENERATE_PML')
 
-    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp(gr%mesh%np_part))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%sb%dim))
+
+    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%sb%dim))
     SAFE_ALLOCATE(pml%c(1:pml%points_number, 1:3))
     SAFE_ALLOCATE(pml%mask(1:pml%points_number))
     SAFE_ALLOCATE(pml%conv_plus(1:pml%points_number, 1:3, 1:3))
@@ -1075,7 +1119,7 @@ contains
     do ip_in = 1, pml%points_number
       ip = pml%points_map(ip_in)
       ddv(1:3) = abs(gr%mesh%x(ip, 1:3)) - bounds(1, 1:3)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/pml%width)**pml%power
           hh     = (M_ONE-ddv(idim)/pml%width)**pml%power
@@ -1111,7 +1155,7 @@ contains
     end do
 
     ! PML auxiliary epsilon for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_ep
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1125,7 +1169,7 @@ contains
     end do
 
     ! PML auxiliary mu
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_mu
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1139,11 +1183,13 @@ contains
     end do
 
     ! PML auxiliary c for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       do ip_in = 1, pml%points_number
         pml%c(ip_in, idim) = P_c/pml%kappa(ip_in, idim)
       end do
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(bc_mxll_generate_pml)
   end subroutine bc_mxll_generate_pml
@@ -1157,8 +1203,11 @@ contains
     integer :: ip, ip_in, idim, ip_in_max
     FLOAT   :: ddv(3), tmp(3), width(3)
     FLOAT, allocatable :: mask(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_mask)
+
+    call profiling_in(prof, 'BC_MXLL_GENERATE_MASK')
 
     ip_in_max = maxval(bc%mask_points_number(:))
 
@@ -1194,6 +1243,8 @@ contains
 
     SAFE_DEALLOCATE_A(mask)
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_generate_mask)
   end subroutine bc_mxll_generate_mask
 
@@ -1207,20 +1258,23 @@ contains
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
     FLOAT   :: dd, dd_min, dd_max, xx(3), xxp(3)
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_medium)
 
+    call profiling_in(prof, 'BC_MXLL_GENERATE_MEDIUM')
+
     ip_in_max = maxval(bc%medium%points_number(:))
 
-    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%mesh%sb%dim, 3))
-    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%mesh%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%sb%dim, 3))
     SAFE_ALLOCATE(bc%medium%ep(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%mu(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_e(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_m(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%c(ip_in_max, 3))
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     bc%medium%aux_ep = M_ZERO
     bc%medium%aux_mu = M_ZERO
     bc%medium%c = P_c
@@ -1278,7 +1332,7 @@ contains
     do idim = 1, 3
       do ip_in = 1, bc%medium%points_number(idim)
         ip = bc%medium%points_map(ip_in,idim)
-        xx(:) = gr%mesh%x(ip,:)
+        xx(:) = gr%mesh%x(ip, :)
         dd_min = M_HUGE
         do ip_bd = 1, bc%medium%bdry_number(idim)
           ipp = bc%medium%bdry_map(ip_bd, idim)
@@ -1300,7 +1354,9 @@ contains
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
- 
+
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_generate_medium)
   end subroutine bc_mxll_generate_medium
 
@@ -1311,11 +1367,15 @@ contains
 
     type(block_t)        :: blk
     integer              :: il, nlines, ncols, ierr
-    FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
-    character(len=1024)  :: k_string(MAX_DIM)
+    FLOAT                :: k_vector(3), vv(3), xx(3), rr, dummy(3), test, test_limit!, angle, sigma
+    CMPLX                :: e_field(3)
+    character(len=1024)  :: k_string(3)
     character(len=1024)  :: mxf_expression
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
+
+    call profiling_in(prof, 'MXLL_PLANE_WAVES_BOUND_INI')
 
     test_limit = CNST(10.0e-9)
 
@@ -1354,12 +1414,11 @@ contains
 
       bc%plane_wave%number = nlines
       SAFE_ALLOCATE(bc%plane_wave%modus(nlines))
-      SAFE_ALLOCATE(bc%plane_wave%e_field_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%e_field(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%k_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%v_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field_string(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%k_vector(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%v_vector(3, nlines))
       SAFE_ALLOCATE(bc%plane_wave%mx_function(nlines))
-      SAFE_ALLOCATE(bc%plane_wave%mx_phase(nlines))
 
       ! read all lines
       do il = 1, nlines
@@ -1414,17 +1473,17 @@ contains
           bc%plane_wave%v_vector(:,il) = vv(:)
 
         else if (bc%plane_wave%modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-          call parse_block_float( blk, il - 1, 1, e_field(1))
-          call parse_block_float( blk, il - 1, 2, e_field(2))
-          call parse_block_float( blk, il - 1, 3, e_field(3))
+          call parse_block_cmplx( blk, il - 1, 1, e_field(1))
+          call parse_block_cmplx( blk, il - 1, 2, e_field(2))
+          call parse_block_cmplx( blk, il - 1, 3, e_field(3))
           call parse_block_string( blk, il - 1, 4, mxf_expression)
 
           write(message(1), '(a,i2) ') 'Substituting electromagnetic incident wave ', il
           write(message(3), '(a)'    ) 'with the expression: '
           call messages_info(2)
-          write(message(1), '(a,es9.2)')     '  E-field(x) amplitude       = ', e_field(1)
-          write(message(2), '(a,es9.2)')     '  E-field(y) amplitude       = ', e_field(2)
-          write(message(3), '(a,es9.2)')     '  E-field(z) amplitude       = ', e_field(3)
+          write(message(1), '(a,f9.4,sp,f9.4,"i")') '  E-field(x) complex amplitude  = ', real(e_field(1)), aimag(e_field(1))
+          write(message(2), '(a,f9.4,sp,f9.4,"i")') '  E-field(y) complex amplitude  = ', real(e_field(2)), aimag(e_field(2))
+          write(message(3), '(a,f9.4,sp,f9.4,"i")') '  E-field(z) complex amplitude  = ', real(e_field(3)), aimag(e_field(3))
           write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
           call messages_info(4)
           call mxf_read(bc%plane_wave%mx_function(il), namespace, trim(mxf_expression), ierr)
@@ -1434,9 +1493,9 @@ contains
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
-          k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
+          k_vector(1:3) = bc%plane_wave%mx_function(il)%k_vector(1:3)
 
-          test = ddot_product(k_vector(1:3), e_field(1:3))
+          test = TOFLOAT(dot_product(k_vector(1:3), e_field(1:3)))
           if (abs(test) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'
@@ -1460,6 +1519,8 @@ contains
 
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_plane_waves_boundaries_init)
   end subroutine maxwell_plane_waves_boundaries_init
 
@@ -1469,7 +1530,11 @@ contains
     type(states_mxll_t),      intent(inout) :: st
     FLOAT,                    intent(in)    :: bounds(:,:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_surfaces_init)
+
+    call profiling_in(prof, 'MAXWELL_SURFACES_INIT')
 
     ! y-z surface at -x boundary
     st%surface(1, 1)%spacing   = M_HALF*(mesh%spacing(2) + mesh%spacing(3))
@@ -1561,6 +1626,8 @@ contains
     st%surface(2, 3)%nv   = -int(bounds(1, 2)/mesh%spacing(2))
     st%surface(2, 3)%mv   =  int(bounds(1, 2)/mesh%spacing(2))
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_surfaces_init)
   end subroutine maxwell_surfaces_init
 
@@ -1573,7 +1640,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     integer,             intent(out)   :: point_info
 
-    FLOAT   :: rr, dd, xx(MAX_DIM), width(MAX_DIM)
+    FLOAT   :: rr, dd, xx(3), width(3)
 
     point_info = 0
 
@@ -1655,8 +1722,11 @@ contains
 
     integer :: ip, ip_in, ip_bd, point_info
     FLOAT   :: xx(mesh%sb%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(inner_and_outer_points_mapping)
+
+    call profiling_in(prof, 'INNER_AND_OUTER_POINTS_MAP')
 
     ! allocate inner and boundary points points map
     ip_in = 0
@@ -1680,8 +1750,12 @@ contains
     end do
     st%inner_points_number = ip_in
     SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
+    SAFE_ALLOCATE(st%inner_points_mask(1:mesh%np))
     st%boundary_points_number = ip_bd
     SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
+    SAFE_ALLOCATE(st%boundary_points_mask(1:mesh%np))
+    st%inner_points_mask = .false.
+    st%boundary_points_mask = .false.
 
     ! inner and boundary points mapping
     ip_in = 0
@@ -1700,11 +1774,15 @@ contains
       if (point_info == 0) then
         ip_in = ip_in + 1
         st%inner_points_map(ip_in) = ip
+        st%inner_points_mask(ip) = .true.
       else
         ip_bd = ip_bd + 1
         st%boundary_points_map(ip_bd) = ip
+        st%boundary_points_mask(ip) = .true.
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(inner_and_outer_points_mapping)
   end subroutine inner_and_outer_points_mapping
@@ -1718,8 +1796,11 @@ contains
     integer :: ix, ix_max, iix, iy, iy_max, iiy, iz, iz_max, iiz, idx1, idx2, ip_global, nn_max
     integer, allocatable :: nn(:,:,:,:)
     FLOAT   :: rr(3), delta(3), vec(2), min_1(3), max_1(3), min_2(3), max_2(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(surface_grid_points_mapping)
+
+    call profiling_in(prof, 'SURFACE_GRID_POINTS_MAPPING')
 
     st%surface_grid_rows_number(1) = 3
     ix_max  = st%surface_grid_rows_number(1)
@@ -1738,60 +1819,60 @@ contains
 
     SAFE_ALLOCATE(nn(1:2, 1:3, 1:3, 1:3))
 
-    st%surface_grid_center(1, 1, :, :) = -bounds(1,1)
+    st%surface_grid_center(1, 1, :, :) = -int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 2, iy, iz) = rr(2)
-        st%surface_grid_center(1, 3, iy, iz) = rr(3)
+        st%surface_grid_center(1, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(1, 3, iy, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 1, :, :) = bounds(1,1)
+    st%surface_grid_center(2, 1, :, :) = int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 2, iy, iz) = rr(2)
-        st%surface_grid_center(2, 3, iy, iz) = rr(3)
+        st%surface_grid_center(2, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(2, 3, iy, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 2, :, :) = -bounds(1,2)
+    st%surface_grid_center(1, 2, :, :) = -int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 1, ix, iz) = rr(1)
-        st%surface_grid_center(1, 3, ix, iz) = rr(3)
+        st%surface_grid_center(1, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(1, 3, ix, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 2, :, :) = bounds(1,2)
+    st%surface_grid_center(2, 2, :, :) = int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 1, ix, iz) = rr(1)
-        st%surface_grid_center(2, 3, ix, iz) = rr(3)
+        st%surface_grid_center(2, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(2, 3, ix, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 3, :, :) = -bounds(1,3)
+    st%surface_grid_center(1, 3, :, :) = -int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(1, 1, ix, iy) = rr(1)
-        st%surface_grid_center(1, 2, ix, iy) = rr(2)
+        st%surface_grid_center(1, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(1, 2, ix, iy) = int(rr(2))
       end do
     end do
-    st%surface_grid_center(2, 3, :, :) = bounds(1,3)
+    st%surface_grid_center(2, 3, :, :) = int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(2, 1, ix, iy) = rr(1)
-        st%surface_grid_center(2, 2, ix, iy) = rr(2)
+        st%surface_grid_center(2, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(2, 2, ix, iy) = int(rr(2))
       end do
     end do
 
@@ -1889,14 +1970,14 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(-bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 1, idx1, idx2, nn(1, 1, idx1, idx2)) = ip_global
           nn(2, 1, idx1, idx2) = nn(2, 1, idx1, idx2) + 1
           rr(1) = bounds(1,1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 1, idx1, idx2, nn(2, 1, idx1, idx2)) = ip_global
         end if
       end do
@@ -1921,14 +2002,14 @@ contains
           rr(2) = -bounds(1, 2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(-bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 2, idx1, idx2, nn(1, 2, idx1, idx2)) = ip_global
           nn(2, 2, idx1, idx2) = nn(2, 2, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = bounds(1,2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 2, idx1, idx2, nn(2, 2, idx1, idx2)) = ip_global
         end if
       end do
@@ -1953,20 +2034,22 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = -bounds(1,3)
           iiz = int(-bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 3, idx1, idx2, nn(1, 3, idx1, idx2)) = ip_global
           nn(2, 3, idx1, idx2) = nn(2, 3, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = bounds(1,3)
           iiz = int(bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 3, idx1, idx2, nn(2, 3, idx1, idx2)) = ip_global
         end if
       end do
     end do
 
     SAFE_DEALLOCATE_A(nn)
+
+    call profiling_out(prof)
 
     POP_SUB(surface_grid_points_mapping)
   contains

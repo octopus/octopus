@@ -26,9 +26,9 @@
     type(td_t),          intent(in)    :: td
     type(restart_t),     intent(inout) :: restart
 
-    integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair, iqn
+    integer             :: ip, ist, jst, cstr_dim(gr%sb%dim), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
-    FLOAT               :: psi_re, psi_im, xx(MAX_DIM), rr, fact, xend, xstart
+    FLOAT               :: psi_re, psi_im, xx(gr%sb%dim), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
     CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
     type(states_elec_t) :: tmp_st
@@ -229,7 +229,7 @@
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
       if (.not. associated(stin%current)) then
-        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
+        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%sb%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
       end if
     end select
@@ -260,14 +260,14 @@
       if(parse_block(namespace, 'OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
-        SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+        SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%sb%dim))
           
         no_constraint = parse_block_n(blk)
         tmp_box = M_ZERO
         cstr_dim = 0
         do ib = 1, no_constraint
           call parse_block_integer(blk, ib - 1, 0, idim)
-          if( idim  <=  0 .or. idim > gr%mesh%sb%dim) then
+          if( idim  <=  0 .or. idim > gr%sb%dim) then
             write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
             write(message(2), '(a)'   ) '"dimension" has to be positive'
             write(message(3), '(a)'   ) 'and must not exceed dimensions of the system.'
@@ -303,10 +303,10 @@
             
         end do
           
-        do idim = 1, gr%mesh%sb%dim
+        do idim = 1, gr%sb%dim
           if(cstr_dim(idim) == 0) tmp_box(:,idim) = M_ONE
         end do
-        tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim),2) 
+        tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%sb%dim),2) 
         SAFE_DEALLOCATE_A(xp)
         SAFE_DEALLOCATE_A(tmp_box)
                              
@@ -363,9 +363,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_density(gr, tg, psi) result(j1)
-    type(grid_t),        intent(in) :: gr
-    type(target_t),      intent(in) :: tg
-    type(states_elec_t), intent(in) :: psi
+    type(grid_t),        intent(in)    :: gr
+    type(target_t),      intent(in)    :: tg
+    type(states_elec_t), intent(inout) :: psi
 
     integer :: ip, maxiter
     FLOAT :: currfunc_tmp
@@ -413,7 +413,7 @@
   subroutine target_chi_density(tg, gr, psi_in, chi_out)
     type(target_t),      intent(in)    :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: psi_in
     type(states_elec_t), intent(inout) :: chi_out
 
     integer :: no_electrons, ip, ist, ib, ik
@@ -491,7 +491,7 @@
   subroutine target_tdcalc_density(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi
+    type(states_elec_t), intent(inout) :: psi
     integer,             intent(in)    :: time
 
     PUSH_SUB(target_tdcalc_density)
@@ -510,9 +510,9 @@
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
   FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t),      intent(in) :: tg
-    type(grid_t),        intent(in) :: gr
-    type(states_elec_t), intent(in) :: psi
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(inout) :: psi
 
     integer :: ip
     FLOAT, allocatable :: semilocal_function(:)
@@ -573,7 +573,7 @@
     type(target_t),       intent(in)    :: tg
     type(grid_t),         intent(in)    :: gr
     FLOAT,                intent(in)    :: factor
-    type(states_elec_t),  intent(in)    :: psi_in
+    type(states_elec_t),  intent(inout) :: psi_in
     type(states_elec_t),  intent(inout) :: chi
 
     CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)
@@ -607,7 +607,7 @@
       SAFE_ALLOCATE(zpsi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
       SAFE_ALLOCATE(zchi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
       
-      call dderivatives_div(gr%der, psi_in%current(1:gr%der%mesh%np_part, 1:gr%mesh%sb%dim, 1), &
+      call dderivatives_div(gr%der, psi_in%current(1:gr%der%mesh%np_part, 1:gr%sb%dim, 1), &
                                     div_curr_psi_in(1:gr%der%mesh%np_part,1)) 
       
       ! the boundary condition  

@@ -56,9 +56,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_star_get_lapl(this, dim, order)
-    type(stencil_t), intent(out) :: this
-    integer,         intent(in)  :: dim
-    integer,         intent(in)  :: order
+    type(stencil_t), intent(inout) :: this
+    integer,         intent(in)    :: dim
+    integer,         intent(in)    :: order
 
     integer :: ii, jj, nn
     logical :: got_center
@@ -169,9 +169,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_star_get_grad(this, dir, order)
-    type(stencil_t), intent(out) :: this
-    integer, intent(in)  :: dir
-    integer, intent(in)  :: order
+    type(stencil_t), intent(inout) :: this
+    integer,         intent(in)  :: dir
+    integer,         intent(in)  :: order
 
     integer :: i, n
 

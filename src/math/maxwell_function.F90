@@ -80,13 +80,11 @@ module maxwell_function_oct_m
 
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
-    FLOAT, pointer :: val(:)    => NULL()
-    FLOAT, pointer :: valww(:)  => NULL()
     type(fft_t) :: fft_handler
   end type mxf_t
 
   interface mxf
-    module procedure mxft
+    module procedure mxf_eval
   end interface mxf
 
 contains
@@ -281,8 +279,6 @@ contains
     f%mode = MXF_EMPTY
     f%niter = 0
     f%dx = M_ZERO
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init)
   end subroutine mxf_init
@@ -312,8 +308,6 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_const_wave)
   end subroutine mxf_init_const_wave
@@ -331,8 +325,6 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_const_phase)
   end subroutine mxf_init_const_phase
@@ -351,8 +343,6 @@ contains
     f%k_vector = k_vector
     f%r0 = r0
     f%width = width
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_gaussian_wave)
   end subroutine mxf_init_gaussian_wave
@@ -371,8 +361,6 @@ contains
     f%k_vector = k_vector
     f%r0 = r0
     f%width = width
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_cosinoidal_wave)
   end subroutine mxf_init_cosinoidal_wave
@@ -393,9 +381,6 @@ contains
     f%growth = growth
     f%width = width
 
-    nullify(f%val)
-    nullify(f%valww)
-
     POP_SUB(mxf_init_logistic_wave)
   end subroutine
   !------------------------------------------------------------
@@ -415,9 +400,6 @@ contains
     f%growth = growth
     f%width = width
 
-    nullify(f%val)
-    nullify(f%valww)
-
     POP_SUB(mxf_init_trapezoidal_wave)
   end subroutine
   !------------------------------------------------------------
@@ -432,8 +414,6 @@ contains
 
     f%mode       = MXF_FROM_EXPR
     f%expression = trim(expression)
-    nullify(f%val)
-    nullify(f%valww)
     
     POP_SUB(mxf_init_fromexpr)
   end subroutine mxf_init_fromexpr
@@ -441,11 +421,12 @@ contains
 
 
   !------------------------------------------------------------
-  FLOAT function mxft(f, x) result(y)
+  CMPLX function mxf_eval(f, x) result(y)
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
-    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4
+    FLOAT :: xx, limit_1, limit_2, limit_3, limit_4
+    CMPLX :: r
     integer :: xdim
 
     ! no push_sub because it is called too frequently
@@ -455,7 +436,7 @@ contains
     select case(f%mode)
     case (MXF_CONST_WAVE)
 
-      y = f%a0 * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_CONST_PHASE)
 
@@ -465,7 +446,7 @@ contains
 
        r = exp( - ( ( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
             / sqrt(sum(f%k_vector(1:xdim)**2)) )**2 / (M_TWO*f%width**2) ) )
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_COSINOIDAL_WAVE)
 
@@ -473,7 +454,7 @@ contains
       if(abs( sum( f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))/sqrt(sum(f%k_vector(1:xdim)**2)) ) ) <= f%width) then
          r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
               / sqrt(sum(f%k_vector(1:xdim)**2)) - M_TWO*f%width) / f%width))
-        r = r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+        r = r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
       end if
       y = f%a0 * r
 
@@ -483,7 +464,7 @@ contains
             / sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO))) &
             + M_ONE/(M_ONE + exp(-f%growth*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
             / sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO))) - M_ONE
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_TRAPEZOIDAL_WAVE)
 
@@ -501,7 +482,7 @@ contains
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case default
 
@@ -509,7 +490,7 @@ contains
 
     end select
 
-  end function mxft
+  end function mxf_eval
   !------------------------------------------------------------
 
 

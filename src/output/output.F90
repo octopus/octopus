@@ -33,6 +33,7 @@ module output_oct_m
   use etsf_io_tools
 #endif
   use exchange_operator_oct_m
+  use external_densities_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
@@ -87,7 +88,7 @@ module output_oct_m
   use young_oct_m
   use xc_oct_m
   use xc_oep_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 
@@ -96,7 +97,6 @@ module output_oct_m
     output_t,            &
     output_bgw_t,        &
     output_init,         &
-    output_end,          &
     output_states,       &
     doutput_modelmb,     &
     zoutput_modelmb,     &
@@ -641,17 +641,6 @@ contains
   end subroutine output_init
 
   ! ---------------------------------------------------------
-
-  subroutine output_end(outp)
-    type(output_t), intent(inout) :: outp
-
-    PUSH_SUB(output_end)
-    
-    POP_SUB(output_end)
-
-  end subroutine output_end
-
-  ! ---------------------------------------------------------
   subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
@@ -676,7 +665,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
           units_out%length, ierr, geo = geo)
@@ -721,7 +710,7 @@ contains
       call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
     end if
     
-    call output_energy_density(outp, namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
@@ -784,7 +773,7 @@ contains
 
     ! First the ELF in real space
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-      ASSERT(gr%mesh%sb%dim /= 1)
+      ASSERT(gr%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
@@ -923,17 +912,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, der, geo, gr, grp)
+  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
     type(output_t),            intent(in) :: outp
     type(namespace_t),         intent(in) :: namespace
     character(len=*),          intent(in) :: dir
     type(hamiltonian_elec_t),  intent(in) :: hm
     type(v_ks_t),           intent(inout) :: ks
     type(states_elec_t),       intent(in) :: st
-    type(derivatives_t),       intent(in) :: der
     type(geometry_t),          intent(in) :: geo
     type(grid_t),              intent(in) :: gr
-    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
@@ -945,7 +932,7 @@ contains
     PUSH_SUB(output_energy_density)
    
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%energy*units_out%length**(-gr%sb%dim)
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
@@ -1220,7 +1207,7 @@ contains
     type(namespace_t),        intent(in)    :: namespace
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
+    type(grid_t), target,     intent(in)    :: gr
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
@@ -1239,7 +1226,7 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
-    if(gr%mesh%sb%dim /= 3) then
+    if(gr%sb%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1, namespace=namespace)
     end if
@@ -1256,7 +1243,7 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
 
-    if(geo%nlcc) &
+    if(hm%ep%nlcc) &
       call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
@@ -1475,7 +1462,12 @@ contains
       character(len=3), intent(inout) :: sheader
       integer,          intent(in)    :: iunit
       
+      FLOAT, pointer :: weight(:), red_point(:,:)
+
       PUSH_SUB(output_berkeleygw.bgw_write_header)
+
+      weight => gr%sb%kpoints%reduced%weight
+      red_point => gr%sb%kpoints%reduced%red_point
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
         symmetries_number(gr%sb%symm), 0, geo%natoms, &
@@ -1483,7 +1475,7 @@ contains
         ecutwfc * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%full%shifts, &
         gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
         M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
-        apos, ngk, gr%sb%kpoints%reduced%weight, gr%sb%kpoints%reduced%red_point, &
+        apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 
       call write_binary_gvectors(iunit, shell_density%ngvectors, shell_density%ngvectors, shell_density%red_gvec)
@@ -1529,8 +1521,7 @@ contains
 
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
-    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+    if(this%basis%submesh) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1557,7 +1548,7 @@ contains
               end if
             end if
             if(has_phase) then
-              if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+              if(.not. this%basis%submesh) then
                call zio_function_output(outp%how, dir, fname, namespace, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
@@ -1566,7 +1557,7 @@ contains
                call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
-              if(this%basisfromstates) then
+              if(.not.this%basis%submesh) then
                 if (states_are_real(st)) then
                   call dio_function_output(outp%how, dir, fname, namespace, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
@@ -1591,11 +1582,8 @@ contains
       end do
     end do
 
-    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
-      SAFE_DEALLOCATE_A(tmp)
-      SAFE_DEALLOCATE_A(dtmp)
-    end if
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(dtmp)
 
     POP_SUB(output_dftu_orbitals)
   end subroutine output_dftu_orbitals

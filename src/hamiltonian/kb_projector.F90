@@ -36,7 +36,6 @@ module kb_projector_oct_m
   private
   public :: &
        kb_projector_t,             &
-       kb_projector_null,          &
        kb_projector_init,          &
        dkb_project, zkb_project,   &
        dkb_project_bra,            &
@@ -49,25 +48,14 @@ module kb_projector_oct_m
 
   type kb_projector_t
     private
-    integer                  :: n_s       !< number of points inside the sphere
-    integer,          public :: n_c       !< number of components per projector
-    FLOAT,   pointer, public :: p(:,:)    !< projectors
-    FLOAT,            public :: e(2)      !< KB energies
+    integer                    :: n_s       !< number of points inside the sphere
+    integer,            public :: n_c       !< number of components per projector
+    FLOAT, allocatable, public :: p(:,:)    !< projectors
+    FLOAT,              public :: e(2)      !< KB energies
   end type kb_projector_t
 
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine kb_projector_null(kb_p)
-    type(kb_projector_t), intent(out) :: kb_p
-
-    PUSH_SUB(kb_projector_null)
-
-    nullify(kb_p%p)
-
-    POP_SUB(kb_projector_null)
-  end subroutine kb_projector_null
 
   ! ---------------------------------------------------------
   subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
@@ -120,7 +108,7 @@ contains
 
     PUSH_SUB(kb_projector_end)
 
-    SAFE_DEALLOCATE_P(kb_p%p)
+    SAFE_DEALLOCATE_A(kb_p%p)
 
     POP_SUB(kb_projector_end)
   end subroutine kb_projector_end

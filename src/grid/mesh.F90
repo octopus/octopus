@@ -228,7 +228,7 @@ contains
     FLOAT,        intent(in),  optional :: origin(:) !< origin(sb%dim)
     FLOAT,        intent(out), optional :: coords(:) !< coords(sb%dim)
    
-    FLOAT :: xx(MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
 
     ! no push_sub because it is called too frequently
     
@@ -237,7 +237,6 @@ contains
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
     
     if(present(coords)) then
-      coords(1:MAX_DIM) = M_ZERO
       coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
 
@@ -266,7 +265,7 @@ contains
     FLOAT,            intent(out) :: dist   
     
     integer :: iatom, jatom, idir
-    FLOAT   :: xx(MAX_DIM), rr, dd, radius
+    FLOAT   :: xx(mesh%sb%dim), rr, dd, radius
     
     ! no PUSH SUB, called too often
 
@@ -275,7 +274,7 @@ contains
 
     select case(mesh%sb%box_shape)
     case(SPHERE)
-      call mesh_r(mesh, ip, rr, coords=xx)
+      call mesh_r(mesh, ip, rr)
       dd = rr - (mesh%sb%rsize - width)
       if(dd > M_ZERO) then
         is_on_border = .true.
@@ -300,7 +299,7 @@ contains
     case(MINIMUM)
       radius = mesh%sb%rsize
       do iatom = 1, geo%natoms
-        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x, coords=xx)
+        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x)
         if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%species)
         dd = rr - (radius - width)
 	! check if the point is on the spherical shell of atom # iatom
@@ -402,7 +401,7 @@ contains
     integer,      intent(out)   :: imin_local
     integer,      intent(out)   :: imin_global
 
-    integer              :: ip, ip_global, idim, ipart
+    integer              :: ip, ip_global, idim, ipart, idx(1:MAX_DIM)
     FLOAT                :: dd, xx(3)
 
     dmin_global = M_HUGE
@@ -410,8 +409,9 @@ contains
       do ipart=1, mesh%vp%npart
         do ip = 1, mesh%vp%np_local_vec(ipart)
           ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
+          call index_to_coords(mesh%idx, ip_global, idx)
           do idim = 1, mesh%sb%dim
-            xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
+            xx(idim) = idx(idim) * mesh%spacing(idim)
           end do
           dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
           if (dd < dmin_global) then
@@ -424,8 +424,9 @@ contains
       end do
     else
       do ip = 1, mesh%np
+        call index_to_coords(mesh%idx, ip, idx)
         do idim = 1, mesh%sb%dim
-          xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
+          xx(idim) = idx(idim) * mesh%spacing(idim)
         end do
         dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
         if (dd < dmin_global) then
@@ -668,7 +669,7 @@ contains
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
-    integer, pointer,     intent(out) :: map(:)
+    integer, allocatable, intent(out) :: map(:)
     integer,              intent(out) :: ierr
 
     integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
@@ -678,7 +679,6 @@ contains
 
     ierr = 0
 
-    nullify(map)
     grid_changed = .false.
     grid_reordered = .false.
 
@@ -723,7 +723,7 @@ contains
               map(ip) = 0
               grid_reordered = .false.
             else
-              map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+              map(ip) = index_from_coords(mesh%idx, [xx(1), xx(2), xx(3)])
               if(map(ip) > mesh%np_global) map(ip) = 0
             end if
           end do
@@ -754,14 +754,14 @@ contains
     SAFE_DEALLOCATE_A(this%vol_pp)
 
     if(this%parallel_in_domains) then
-#if defined(HAVE_MPI)
       call vec_end(this%vp)
       ! this is true if MeshUseTopology = false
+#if defined(HAVE_MPI)
       if(this%mpi_grp%comm /= this%vp%comm) &
         call MPI_Comm_free(this%vp%comm, mpi_err)
+#endif
       call partition_end(this%inner_partition)
       call partition_end(this%bndry_partition)
-#endif
     end if
     
     POP_SUB(mesh_end)
@@ -792,7 +792,7 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
+    ipp = index_from_coords(mesh%idx, [ix(1), ix(2), ix(3)])
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip_local, rr, coords = xx)
@@ -837,7 +837,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
     logical, optional,  intent(in) :: force
-    FLOAT                          :: xx(1:MAX_DIM)
+    FLOAT                          :: xx(1:mesh%sb%dim)
 
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
@@ -854,9 +854,8 @@ contains
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-      xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
-      xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
+      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     end if
 
   end function mesh_x_global

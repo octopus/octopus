@@ -22,8 +22,8 @@ module multigrid_oct_m
   use boundaries_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
@@ -67,13 +67,13 @@ module multigrid_oct_m
 
   type multigrid_t
     private
-    integer                                  :: n_levels
-    type(multigrid_level_t), pointer, public :: level(:)
+    integer                                      :: n_levels
+    type(multigrid_level_t), allocatable, public :: level(:)
 
-    integer          :: tp
-    integer, pointer :: sp(:)
-    integer, pointer :: ep(:)
-    integer, pointer :: ep_part(:)
+    integer              :: tp
+    integer, allocatable :: sp(:)
+    integer, allocatable :: ep(:)
+    integer, allocatable :: ep_part(:)
   end type multigrid_t
 
   type(profile_t), save :: interp_prof, injection_prof, restrict_prof
@@ -90,10 +90,9 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, namespace, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
+  subroutine multigrid_init(mgrid, namespace, cv, mesh, der, stencil, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
     type(namespace_t),             intent(in)    :: namespace
-    type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
@@ -172,7 +171,7 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
+      call multigrid_mesh_half(cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
       call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
@@ -213,10 +212,8 @@ contains
     type(mesh_t),           intent(in)    :: fine, coarse
 
     integer :: i, i1, i2, i4, i8, pt, ig
-#ifdef HAVE_MPI
     integer :: ii, jj
-#endif
-    integer :: x(MAX_DIM), mod2(MAX_DIM)
+    integer :: x(MAX_DIM), mod2(MAX_DIM), idx(MAX_DIM)
 
     PUSH_SUB(multigrid_get_transfer_tables)
 
@@ -226,16 +223,13 @@ contains
     ! GENERATE THE TABLE TO MAP FROM THE FINE TO THE COARSE GRID
     do i = 1, tt%n_coarse
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index of the coarse grid
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
-#endif
       ! locate the equivalent global fine grid point
-      ig = fine%idx%lxyz_inv(2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3))
-#ifdef HAVE_MPI
+      call index_to_coords(coarse%idx, ig, idx)
+      ig = index_from_coords(fine%idx, 2*idx)
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
-#endif
       tt%to_coarse(i) = ig
     end do
 
@@ -249,11 +243,10 @@ contains
     tt%n_fine8 = 0
     do i = 1, tt%n_fine
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-#endif
-      mod2 = mod(fine%idx%lxyz(ig, :), 2)
+      call index_to_coords(fine%idx, ig, idx)
+      mod2 = mod(idx, 2)
       
       pt = sum(abs(mod2(1:3)))
       
@@ -284,42 +277,41 @@ contains
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
     do i = 1, fine%np
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-#endif
-      x(1:3)    = fine%idx%lxyz(ig, 1:3)/2
-      mod2(1:3) = mod(fine%idx%lxyz(ig, 1:3), 2)
+      call index_to_coords(fine%idx, ig, idx)
+      x(1:3)    = idx(1:3)/2
+      mod2(1:3) = mod(idx(1:3), 2)
 
       pt = sum(abs(mod2(1:3)))
 
       select case(pt)
       case(0)
         i1 = i1 + 1
-        tt%to_fine1(1, i1) = coarse%idx%lxyz_inv(x(1), x(2), x(3))
+        tt%to_fine1(1, i1) = index_from_coords(coarse%idx, [x(1), x(2), x(3)])
         
       case(1)
         i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine2(2, i2) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine2(1, i2) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine2(2, i2) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(2)
         i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine4(2, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine4(3, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine4(4, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine4(1, i4) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine4(2, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine4(3, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine4(4, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(3)
         i8 = i8 + 1
-        tt%to_fine8(1, i8) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine8(2, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3)          )
-        tt%to_fine8(3, i8) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3)          )
-        tt%to_fine8(4, i8) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3) + mod2(3))
-        tt%to_fine8(5, i8) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine8(6, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine8(7, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine8(8, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine8(1, i8) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine8(2, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3)          ])
+        tt%to_fine8(3, i8) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(4, i8) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(5, i8) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine8(6, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(7, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(8, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       end select
       
@@ -328,7 +320,6 @@ contains
     ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
 
     ! translate to local points.
-#ifdef HAVE_MPI
     if (coarse%parallel_in_domains) then
 
       do ii = 1, tt%n_fine1
@@ -354,7 +345,6 @@ contains
       end do
 
     end if
-#endif
 
     POP_SUB(multigrid_get_transfer_tables)
   end subroutine multigrid_get_transfer_tables
@@ -363,13 +353,11 @@ contains
   !> Creates a mesh that has twice the spacing betwen the points than the in mesh.
   !! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil, namespace)
-    type(geometry_t),           intent(in)    :: geo
+  subroutine multigrid_mesh_half(cv, mesh_in, mesh_out, stencil)
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
     type(stencil_t),            intent(in)    :: stencil
-    type(namespace_t),          intent(in)    :: namespace
 
     PUSH_SUB(multigrid_mesh_half)
 
@@ -385,19 +373,17 @@ contains
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil, namespace)
-    type(geometry_t),           intent(in)    :: geo
+  subroutine multigrid_mesh_double(cv, mesh_in, mesh_out, stencil)
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
     type(stencil_t),            intent(in)    :: stencil
-    type(namespace_t),          intent(in)    :: namespace
 
     PUSH_SUB(multigrid_mesh_double)
 
@@ -413,7 +399,7 @@ contains
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_double)
   end subroutine multigrid_mesh_double
@@ -427,11 +413,11 @@ contains
 
     PUSH_SUB(multigrid_end)
 
-    SAFE_DEALLOCATE_P(mgrid%sp)
-    SAFE_DEALLOCATE_P(mgrid%ep)
-    SAFE_DEALLOCATE_P(mgrid%ep_part)
+    SAFE_DEALLOCATE_A(mgrid%sp)
+    SAFE_DEALLOCATE_A(mgrid%ep)
+    SAFE_DEALLOCATE_A(mgrid%ep_part)
 
-    SAFE_DEALLOCATE_P(mgrid%level(0)%tt%fine_i)
+    SAFE_DEALLOCATE_A(mgrid%level(0)%tt%fine_i)
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
@@ -441,15 +427,15 @@ contains
       SAFE_DEALLOCATE_P(level%mesh)
       SAFE_DEALLOCATE_P(level%der)
 
-      SAFE_DEALLOCATE_P(level%tt%to_coarse)
-      SAFE_DEALLOCATE_P(level%tt%to_fine1)
-      SAFE_DEALLOCATE_P(level%tt%to_fine2)
-      SAFE_DEALLOCATE_P(level%tt%to_fine4)
-      SAFE_DEALLOCATE_P(level%tt%to_fine8)
-      SAFE_DEALLOCATE_P(level%tt%fine_i)
+      SAFE_DEALLOCATE_A(level%tt%to_coarse)
+      SAFE_DEALLOCATE_A(level%tt%to_fine1)
+      SAFE_DEALLOCATE_A(level%tt%to_fine2)
+      SAFE_DEALLOCATE_A(level%tt%to_fine4)
+      SAFE_DEALLOCATE_A(level%tt%to_fine8)
+      SAFE_DEALLOCATE_A(level%tt%fine_i)
     end do
 
-    SAFE_DEALLOCATE_P(mgrid%level)
+    SAFE_DEALLOCATE_A(mgrid%level)
 
     POP_SUB(multigrid_end)
   end subroutine multigrid_end

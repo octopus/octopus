@@ -26,7 +26,6 @@ module eigensolver_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use exponential_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -77,9 +76,9 @@ module eigensolver_oct_m
     FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer,   public :: diff(:, :)
-    integer,          public :: matvec
-    integer, pointer, public :: converged(:)
+    FLOAT, allocatable,   public :: diff(:, :)
+    integer,              public :: matvec
+    integer, allocatable, public :: converged(:)
 
     !> Stores information about the preconditioning.
     type(preconditioner_t), public :: pre
@@ -90,7 +89,6 @@ module eigensolver_oct_m
 
     logical :: skip_finite_weight_kpoints
     logical, public :: folded_spectrum
-    FLOAT, pointer   :: spectrum_shift(:,:)
 
     ! cg options
     logical, public :: orthogonalize_to_all
@@ -109,19 +107,16 @@ module eigensolver_oct_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12,         &
-       RS_FEAST   = 13,         &
        RS_PSD     = 14
   
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, namespace, gr, st, geo, mc)
+  subroutine eigensolver_init(eigens, namespace, gr, st, mc)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
 
     integer :: default_iter, default_es
@@ -329,8 +324,7 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-7,
-    !% except for the ARPACK solver for which it is 0.
+    !% This is the tolerance for the eigenvectors. The default is 1e-7.
     !%End
     call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
 
@@ -360,12 +354,11 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
-      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
+      call preconditioner_init(eigens%pre, namespace, gr, mc)
     else
       call preconditioner_null(eigens%pre)
     end if
 
-    nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
     eigens%diff(1:st%nst, 1:st%d%nik) = 0
 
@@ -373,9 +366,6 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec = 0
 
-    ! FEAST: subspace diagonalization or not?  I guess not.
-    ! But perhaps something could be gained by changing this.
-    !
     ! In case of the evolution eigensolver, this makes no sense to use subspace diagonalization
     ! as orthogonalization is done internally at each time-step
     if(eigens%es_type == RS_EVO) then
@@ -421,21 +411,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_end(eigens, gr)
+  subroutine eigensolver_end(eigens)
     type(eigensolver_t), intent(inout) :: eigens
-    type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
-    case(RS_EVO)
-      call exponential_end(eigens%exponential_operator)
     end select
 
-    SAFE_DEALLOCATE_P(eigens%converged)
-    SAFE_DEALLOCATE_P(eigens%diff)
+    SAFE_DEALLOCATE_A(eigens%converged)
+    SAFE_DEALLOCATE_A(eigens%diff)
 
     POP_SUB(eigensolver_end)
   end subroutine eigensolver_end

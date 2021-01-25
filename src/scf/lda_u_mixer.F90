@@ -93,7 +93,6 @@ contains
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
      mixer%mixU = .true.
    else
-     call mixfield_nullify(mixer%mixfield_U)
      mixer%mixU = .false.
    end if
 
@@ -162,7 +161,7 @@ contains
    SAFE_DEALLOCATE_P(mixer%tmpU)
 
    call mixfield_end(smix,mixer%mixfield_occ)
-   call mixfield_end(smix, mixer%mixfield_U)
+   if (mixer%mixU) call mixfield_end(smix, mixer%mixfield_U)
 
    POP_SUB(lda_u_mixer_end)
  end subroutine lda_u_mixer_end
@@ -218,7 +217,7 @@ contains
  ! ---------------------------------------------------------
  subroutine lda_u_mixer_get_vnew(this, mixer, st)
    type(lda_u_t),       intent(inout) :: this
-   type(lda_u_mixer_t), intent(in)    :: mixer
+   type(lda_u_mixer_t), intent(inout) :: mixer
    type(states_elec_t), intent(in)    :: st
 
    if(.not. mixer%apply) return

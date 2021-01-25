@@ -16,8 +16,8 @@ match ; Geometry         ; LINEFIELD(static/geometry.xyz, 3, 3) ; 0.000000
 # DX output
 match ; DX Origin        ; LINEFIELD(static/density.dx, 2, 2) ; -2.645886
 match ; DX Delta         ; LINEFIELD(static/density.dx, 3, 2) ; 0.264589
-Precision : 0.000000001
 
+Precision : 2e-9
 match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166986832631
 match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133466426887
 
@@ -116,5 +116,4 @@ Program : oct-convert
 Input : 05-output.03-convert-op.inp
 Precision: 3e-09
 match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244202526628
-Precision: 2e-09
-match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.281647378e-06
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.279592822e-06

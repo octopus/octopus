@@ -52,6 +52,30 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
   ASSERT(associated(this%mesh))
 
+  ! If the quantity to be symmetrized is uniformly zero, we don`t symmetrize
+  if(present(field)) then
+    maxabs = maxval(abs(field(1:np)))
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    end if
+    if(maxabs < M_EPSILON) then
+      symmfield(1:np) = field(1:np)
+      POP_SUB(X(symmetrizer_apply))
+      return
+    end if
+  end if
+  if(present(field_vector)) then
+    maxabs = maxval(abs(field_vector(1:np, 1:3)))
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    end if
+    if(maxabs < M_EPSILON) then
+      symmfield_vector(1:np, 1:3) = field_vector(1:np, 1:3)
+      POP_SUB(X(symmetrizer_apply))
+      return
+    end if
+  end if
+
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
   ! need almost all points anyway.
@@ -61,9 +85,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   if(present(field)) then
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-#ifdef HAVE_MPI
       call vec_allgather(this%mesh%vp, field_global, field)
-#endif
     else
       field_global => field
     end if
@@ -74,9 +96,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
-#ifdef HAVE_MPI
         call vec_allgather(this%mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
-#endif
       end do
     else
       field_global_vector => field_vector
@@ -114,7 +134,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
   if(.not. optional_default(suppress_warning, .false.)) then
     if(present(field)) then
-      maxabs = maxval(abs(field(1:np)))
       maxabsdiff = maxval(abs(field(1:np) - symmfield(1:np)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
@@ -123,7 +142,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     end if
     
     if(present(field_vector)) then
-      maxabs = maxval(abs(field_vector(1:np, 1:3)))
       maxabsdiff = maxval(abs(field_vector(1:np, 1:3) - symmfield_vector(1:np, 1:3)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
@@ -173,9 +191,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
 
   if(this%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-#ifdef HAVE_MPI
     call vec_allgather(this%mesh%vp, field_global, field)
-#endif
   else
     field_global => field
   end if
@@ -239,7 +255,7 @@ subroutine X(symmetrize_magneto_optics_cart)(symm, tensor)
   
   integer :: iop, nops
   R_TYPE  :: tensor_symm(3, 3, 3)
-  FLOAT   :: rot(3, 3)
+  integer :: rot(3, 3)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   

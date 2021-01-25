@@ -46,10 +46,10 @@ module mesh_cube_parallel_map_oct_m
     type(partition_transfer_t) :: m2c
     integer :: m2c_nsend !< How many points will this process send to the cube partition
     integer :: m2c_nrec  !< How many points will this process receive from the mesh partition
-    integer, pointer :: m2c_mf_order(:)   !< How the points of the mesh function should be ordered to execute 
+    integer, allocatable :: m2c_mf_order(:)   !< How the points of the mesh function should be ordered to execute 
                                           !! the transfer from the mesh partition to the cube partition. 
                                           !! These are *local* indices.
-    integer, pointer :: m2c_cf_order(:,:) !< How the points of the mesh function are ordered after executing 
+    integer, allocatable :: m2c_cf_order(:,:) !< How the points of the mesh function are ordered after executing 
                                           !! the transfer from the mesh partition to the cube partition with 
                                           !! respect to the *local* cube indices.
 
@@ -57,10 +57,10 @@ module mesh_cube_parallel_map_oct_m
     type(partition_transfer_t) :: c2m
     integer :: c2m_nsend !< How many points will this process send to the mesh partition
     integer :: c2m_nrec  !< How many points will this process receive from the cube partition
-    integer, pointer :: c2m_cf_order(:,:) !< How the points of the mesh function should be ordered to execute
+    integer, allocatable :: c2m_cf_order(:,:) !< How the points of the mesh function should be ordered to execute
                                           !! the transfer from the cube partition to the mesh partition with 
                                           !! respect to the *local* cube indices.
-    integer, pointer :: c2m_mf_order(:)   !< How the points of the mesh function are ordered after executing 
+    integer, allocatable :: c2m_mf_order(:)   !< How the points of the mesh function are ordered after executing 
                                           !! the transfer from the cube partition to the mesh partition. 
                                           !! These are *local* indices.
   end type mesh_cube_parallel_map_t
@@ -136,9 +136,7 @@ contains
         
     if (mesh%parallel_in_domains) then
       do ip = 1, this%m2c_nsend
-#ifdef HAVE_MPI
         this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-#endif
         if (this%m2c_mf_order(ip) == 0) then
           write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
                mf_order(ip), " is not stored in partition ", mesh%vp%partno
@@ -214,10 +212,7 @@ contains
     end do
     if (mesh%parallel_in_domains) then
       do ip = 1, this%c2m_nrec
-#ifdef HAVE_MPI
         this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-      
-#endif
         if (this%c2m_mf_order(ip) == 0) then
           write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
                mf_order(ip), " is not stored in partition ", mesh%vp%partno
@@ -244,10 +239,10 @@ contains
 
     PUSH_SUB(mesh_cube_parallel_map_end)
 
-    SAFE_DEALLOCATE_P(this%m2c_mf_order)
-    SAFE_DEALLOCATE_P(this%m2c_cf_order)
-    SAFE_DEALLOCATE_P(this%c2m_mf_order)
-    SAFE_DEALLOCATE_P(this%c2m_cf_order)
+    SAFE_DEALLOCATE_A(this%m2c_mf_order)
+    SAFE_DEALLOCATE_A(this%m2c_cf_order)
+    SAFE_DEALLOCATE_A(this%c2m_mf_order)
+    SAFE_DEALLOCATE_A(this%c2m_cf_order)
     call partition_transfer_end(this%m2c)
     call partition_transfer_end(this%c2m)
 

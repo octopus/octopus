@@ -22,7 +22,10 @@ AC_PREREQ(2.59)
 AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
+# enable silent rules by default (use --disable-silent-rules for disabling)
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -36,7 +39,6 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
@@ -326,7 +328,6 @@ ACX_FUTILE
 ACX_PSOLVER
 
 dnl check for CGAL library.
-dnl ACX_CGAL
 AX_LIB_CGAL_CORE
 
 dnl If PSolver was not found, we check for older versions of the library (1.7.x),
@@ -353,10 +354,14 @@ AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
 
+ACX_DFTBPLUS
+
 AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
 FDEP_F90_GNU_MAKE_DEPS
+
+LT_INIT([disable-shared])
 
 ACX_OCTOPUS_COMPILATION_INFO
 
@@ -414,7 +419,6 @@ AC_CONFIG_FILES([Makefile
   share/recipes/eu/Makefile
   share/util/Makefile
   share/opencl/Makefile
-  share/quadrature/Makefile
   build/Makefile
   build/octopus.spec
   testsuite/Makefile

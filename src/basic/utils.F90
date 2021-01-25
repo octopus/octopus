@@ -280,9 +280,6 @@ contains
 #ifdef HAVE_BLUE_GENE_Q
     get_config_opts = trim(get_config_opts)//' bluegene/q'
 #endif
-#ifdef HAVE_LIBXC4
-    get_config_opts = trim(get_config_opts)//' libxc4'
-#endif
 #ifdef HAVE_LIBXC5
     get_config_opts = trim(get_config_opts)//' libxc5'
 #endif
@@ -293,9 +290,6 @@ contains
 
     ! keep in alphabetical order, for ease in seeing if something is listed
     get_optional_libraries = ''
-#ifdef HAVE_ARPACK
-    get_optional_libraries = trim(get_optional_libraries)//' arpack'
-#endif
 #ifdef HAVE_BERKELEYGW
     get_optional_libraries = trim(get_optional_libraries)//' berkeleygw'
 #endif
@@ -308,11 +302,17 @@ contains
 #ifdef HAVE_CLBLAS
     get_optional_libraries = trim(get_optional_libraries)//' clblas'
 #endif
+#ifdef HAVE_DFTBPLUS
+    get_optional_libraries = trim(get_optional_libraries)//' DFTBPlus'
+#endif
+#ifdef HAVE_DFTBPLUS_DEVEL
+    get_optional_libraries = trim(get_optional_libraries)//' DFTBPlus_devel'
+#endif
+#ifdef HAVE_ELPA
+    get_optional_libraries = trim(get_optional_libraries)//' ELPA'
+#endif
 #ifdef HAVE_ETSF_IO
     get_optional_libraries = trim(get_optional_libraries)//' etsf_io'
-#endif
-#ifdef HAVE_FEAST
-    get_optional_libraries = trim(get_optional_libraries)//' feast'
 #endif
 #ifdef HAVE_GDLIB
     get_optional_libraries = trim(get_optional_libraries)//' gdlib'
@@ -340,9 +340,6 @@ contains
 #endif
 #ifdef HAVE_PARMETIS
     get_optional_libraries = trim(get_optional_libraries)//' parmetis'
-#endif
-#ifdef HAVE_PARPACK
-    get_optional_libraries = trim(get_optional_libraries)//' parpack'
 #endif
 #ifdef HAVE_PFFT
     get_optional_libraries = trim(get_optional_libraries)//' pfft'

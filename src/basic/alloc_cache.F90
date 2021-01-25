@@ -134,11 +134,11 @@ contains
         
         type(alloc_cache_t),   intent(inout) :: alloc_cache
         integer(8),            intent(in)    :: size
-        integer,               intent(in)    :: found
+        integer,               intent(out)   :: found
 #ifdef HAVE_OPENCL
-        type(cl_mem),          intent(in)    :: loc
+        type(cl_mem),          intent(out)   :: loc
 #else
-        type(c_ptr),           intent(in)    :: loc
+        type(c_ptr),           intent(out)   :: loc
 #endif
       end subroutine alloc_cache_get_low
     end interface

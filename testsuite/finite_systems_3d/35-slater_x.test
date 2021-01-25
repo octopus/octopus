@@ -18,23 +18,34 @@ match ; Eigenvalue   [4 dn] ; GREPFIELD(static/info, '4   dn', 3) ; -0.614222
 Input: 35-slater_x.02-gs_spinors.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 6.0e-4
-match ;  Total energy      ; GREPFIELD(static/info, 'Total       =', 3) ; -14.59397097
-Precision: 6.0e-4
-match ;  Exchange energy   ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.1204761000000003
-Precision: 0.00011
-match ; Eigenvalue   [1] ; GREPFIELD(static/info, '1   --', 3) ; -1.063289
-match ; Sx           [1] ; GREPFIELD(static/info, '1   --', 5) ;  0.0002
-match ; Sy           [1] ; GREPFIELD(static/info, '1   --', 6) ;  0.0000
-match ; Sz           [1] ; GREPFIELD(static/info, '1   --', 7) ;  0.5000
 
-match ; Eigenvalue   [4] ; GREPFIELD(static/info, '4   --', 3) ; -0.614217
-match ; Sx           [4] ; GREPFIELD(static/info, '4   --', 5) ;  0.0002
-match ; Sy           [4] ; GREPFIELD(static/info, '4   --', 6) ;  0.0000
-match ; Sz           [4] ; GREPFIELD(static/info, '4   --', 7) ;  0.5000
-
-match ; Eigenvalue   [6] ; GREPFIELD(static/info, '6   --', 3) ; -0.458229
-match ; Sx           [6] ; GREPFIELD(static/info, '6   --', 5) ; -0.0002
-match ; Sy           [6] ; GREPFIELD(static/info, '6   --', 6) ;  0.0000
-match ; Sz           [6] ; GREPFIELD(static/info, '6   --', 7) ; -0.5000
-
+Precision: 1.00e-15
+match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+Precision: 2.89e-04
+match ;  Total energy      ; GREPFIELD(static/info, 'Total       =', 3) ; -14.593689205
+Precision: 2.80e-04
+match ;  Exchange energy   ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.120188625
+Precision: 1.65e-06
+match ;  Eigenvalue   [1]  ; GREPFIELD(static/info, '1   --', 3) ; -1.0633405
+Precision: 2.20e-04
+match ;  Sx           [1]  ; GREPFIELD(static/info, '1   --', 5) ; 0.0
+Precision: 1.00e-15
+match ;  Sy           [1]  ; GREPFIELD(static/info, '1   --', 6) ; 0.0
+Precision: 5.00e-16
+match ;  Sz           [1]  ; GREPFIELD(static/info, '1   --', 7) ; 0.5
+Precision: 1.10e-06
+match ;  Eigenvalue   [4]  ; GREPFIELD(static/info, '4   --', 3) ; -0.614177
+Precision: 2.20e-04
+match ;  Sx           [4]  ; GREPFIELD(static/info, '4   --', 5) ; 0.0
+Precision: 1.00e-15
+match ;  Sy           [4]  ; GREPFIELD(static/info, '4   --', 6) ; 0.0
+Precision: 5.00e-16
+match ;  Sz           [4]  ; GREPFIELD(static/info, '4   --', 7) ; 0.5
+Precision: 2.20e-06
+match ;  Eigenvalue   [6]  ; GREPFIELD(static/info, '6   --', 3) ; -0.458185
+Precision: 2.20e-04
+match ;  Sx           [6]  ; GREPFIELD(static/info, '6   --', 5) ; 0.0
+Precision: 1.00e-15
+match ;  Sy           [6]  ; GREPFIELD(static/info, '6   --', 6) ; 0.0
+Precision: 5.00e-16
+match ;  Sz           [6]  ; GREPFIELD(static/info, '6   --', 7) ; -0.5

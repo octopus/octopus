@@ -59,7 +59,6 @@ module pes_flux_oct_m
     pes_flux_t,                &
     pes_flux_init,             &
     pes_flux_end,              &
-    pes_flux_nullify,          &
     pes_flux_calc,             &
     pes_flux_output,           &
     pes_flux_load,             &
@@ -76,50 +75,50 @@ module pes_flux_oct_m
     !< the momentum of photoelectrons. This has to be distinguished from the electrons crystal momentum 
     !< in periodic systems and its discretized values (AKA kpoints). 
     
-    integer          :: nkpnts                         !< total number of k-points
-    integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
-    integer          :: nk
-    integer          :: nk_start, nk_end
+    integer            :: nkpnts                         !< total number of k-points
+    integer            :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
+    integer            :: nk
+    integer            :: nk_start, nk_end
 
     ! spherical momentum grid
-    integer          :: nstepsthetak, nstepsphik       !< parameters for k-mesh
-    FLOAT            :: thetak_rng(1:2)                !< the range of thetak in [0,pi]
-    FLOAT            :: phik_rng(1:2)                  !< the range of phik in [0,2pi]
-    integer          :: nstepsomegak
-    integer          :: nstepsomegak_start, nstepsomegak_end
-    FLOAT            :: ktransf(1:3,1:3)               !< transformation matrix for k-mesh 
+    integer            :: nstepsthetak, nstepsphik       !< parameters for k-mesh
+    FLOAT              :: thetak_rng(1:2)                !< the range of thetak in [0,pi]
+    FLOAT              :: phik_rng(1:2)                  !< the range of phik in [0,2pi]
+    integer            :: nstepsomegak
+    integer            :: nstepsomegak_start, nstepsomegak_end
+    FLOAT              :: ktransf(1:3,1:3)               !< transformation matrix for k-mesh 
 
-    FLOAT, pointer   :: klinear(:,:)                   !< A set of liner grids to help define the k-mesh
+    FLOAT, allocatable :: klinear(:,:)                   !< A set of liner grids to help define the k-mesh
                                                        !< polar:     klinear(nk,1)    defines the radial part of the k-mesh
                                                        !< cartesian: klinear(nk,1:3)  defines the the k-mesh along each axes
 
-    FLOAT            :: dk                             !< parameters for k-mesh
-    FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
-    FLOAT, pointer   :: kcoords_sph(:,:,:)
-    integer          :: kgrid                          !< how is the grid in k: polar/cartesian
+    FLOAT              :: dk                             !< parameters for k-mesh
+    FLOAT, allocatable :: kcoords_cub(:,:,:)             !< coordinates of k-points
+    FLOAT, allocatable :: kcoords_sph(:,:,:)
+    integer            :: kgrid                          !< how is the grid in k: polar/cartesian
 
     ! Surface relates quantities
-    integer, public  :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
-    integer          :: nsrfcpnts                      !< total number of surface points
-    integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
-    FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
-    FLOAT, pointer   :: rcoords(:,:)                   !< coordinates of the surface points
-    integer, pointer :: srfcpnt(:)                     !< for cubic surface: returns local index of the surface points
-    integer, pointer :: rankmin(:)                     !< for cubic surface: returns node which has the surface point
-    integer          :: lmax                           !< for spherical surface
-    CMPLX, pointer   :: ylm_r(:,:,:)                   !< for spherical surface
-    CMPLX, pointer   :: ylm_k(:,:,:)                   !< for spherical surface
-    FLOAT, pointer   :: j_l(:,:)                       !< for spherical surface
-    FLOAT            :: radius
-    integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
+    integer, public    :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
+    integer            :: nsrfcpnts                      !< total number of surface points
+    integer            :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
+    FLOAT, allocatable :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
+    FLOAT, allocatable :: rcoords(:,:)                   !< coordinates of the surface points
+    integer, allocatable :: srfcpnt(:)                     !< for cubic surface: returns local index of the surface points
+    integer, allocatable :: rankmin(:)                     !< for cubic surface: returns node which has the surface point
+    integer            :: lmax                           !< for spherical surface
+    CMPLX, allocatable :: ylm_r(:,:,:)                   !< for spherical surface
+    CMPLX, allocatable :: ylm_k(:,:,:)                   !< for spherical surface
+    FLOAT, allocatable :: j_l(:,:)                       !< for spherical surface
+    FLOAT              :: radius
+    integer, allocatable :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
     
-    CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface: Born-von Karman phase
-    CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
-    CMPLX, pointer   :: expkr_perp(:,:)                !< for cubic surface: Exponential tabulated on the direction perpendicular to the face
-    FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
-    integer, pointer :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
-    integer, pointer :: Lkpuvz_inv(:,:,:)              !< map a point on the momentum mesh into its components u,v,z (u,v parametric on face
+    CMPLX,   allocatable :: bvk_phase(:,:)                 !< for cubic surface: Born-von Karman phase
+    CMPLX,   allocatable :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
+    CMPLX,   allocatable :: expkr_perp(:,:)                !< for cubic surface: Exponential tabulated on the direction perpendicular to the face
+    FLOAT,   allocatable :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
+    integer, allocatable :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
+    integer, allocatable :: Lkpuvz_inv(:,:,:)              !< map a point on the momentum mesh into its components u,v,z (u,v parametric on face
                                                        !< and z perpendicular)
 
     ! Surface and time integration 
@@ -129,12 +128,12 @@ module pes_flux_oct_m
     integer          :: save_iter                      !< sys%outp%restart_write_interval
     integer          :: itstep                         !< 1 <= itstep <= tdsteps
 
-    CMPLX, pointer   :: wf(:,:,:,:,:)                  !< wavefunction
-    CMPLX, pointer   :: gwf(:,:,:,:,:,:)               !< gradient of wavefunction
-    FLOAT, pointer   :: veca(:,:)                      !< vector potential
-    CMPLX, pointer   :: conjgphase_prev(:,:)           !< Volkov phase for all k-points from previous time step
-    CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
-    CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
+    CMPLX, allocatable :: wf(:,:,:,:,:)                  !< wavefunction
+    CMPLX, allocatable :: gwf(:,:,:,:,:,:)               !< gradient of wavefunction
+    FLOAT, allocatable :: veca(:,:)                      !< vector potential
+    CMPLX, allocatable :: conjgphase_prev(:,:)           !< Volkov phase for all k-points from previous time step
+    CMPLX, allocatable :: spctramp_cub(:,:,:,:)          !< spectral amplitude
+    CMPLX, allocatable :: spctramp_sph(:,:,:,:,:)
 
     integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
                                                        !< mesh. Used when working with semi-periodic systems 
@@ -647,43 +646,6 @@ contains
     POP_SUB(pes_flux_init)
   end subroutine pes_flux_init
 
-
-  ! ---------------------------------------------------------
-  subroutine pes_flux_nullify(this)
-    type(pes_flux_t), intent(inout) :: this
-    PUSH_SUB(pes_flux_nullify)
-
-    nullify(this%kcoords_sph)
-    nullify(this%ylm_k)
-    nullify(this%j_l)
-    nullify(this%ylm_r)
-    nullify(this%conjgphase_prev)
-    nullify(this%spctramp_sph)
-    nullify(this%klinear)
-    nullify(this%kcoords_cub)
-    nullify(this%conjgphase_prev)
-    nullify(this%spctramp_cub)    
-    nullify(this%srfcpnt)
-    nullify(this%rankmin)
-    nullify(this%face_idx_range)
-    nullify(this%LLr)
-    nullify(this%NN)      
-    nullify(this%expkr)
-    nullify(this%expkr_perp)
-    nullify(this%bvk_phase)      
-    nullify(this%Lkpuvz_inv)      
-    
-
-    nullify(this%srfcnrml)
-    nullify(this%rcoords)
-    nullify(this%wf)
-    nullify(this%gwf)
-    nullify(this%veca)
-
-
-    POP_SUB(pes_flux_nullify)
-  end subroutine pes_flux_nullify
-
   ! ---------------------------------------------------------
   subroutine pes_flux_end(this)
     type(pes_flux_t), intent(inout) :: this
@@ -691,42 +653,42 @@ contains
     PUSH_SUB(pes_flux_end)
 
     if(this%surf_shape == PES_SPHERICAL) then
-      SAFE_DEALLOCATE_P(this%kcoords_sph)
-      SAFE_DEALLOCATE_P(this%ylm_k)
-      SAFE_DEALLOCATE_P(this%j_l)
-      SAFE_DEALLOCATE_P(this%ylm_r)
-      SAFE_DEALLOCATE_P(this%conjgphase_prev)
-      SAFE_DEALLOCATE_P(this%spctramp_sph)
+      SAFE_DEALLOCATE_A(this%kcoords_sph)
+      SAFE_DEALLOCATE_A(this%ylm_k)
+      SAFE_DEALLOCATE_A(this%j_l)
+      SAFE_DEALLOCATE_A(this%ylm_r)
+      SAFE_DEALLOCATE_A(this%conjgphase_prev)
+      SAFE_DEALLOCATE_A(this%spctramp_sph)
     else
-      SAFE_DEALLOCATE_P(this%kcoords_cub)
-      SAFE_DEALLOCATE_P(this%conjgphase_prev)
-      SAFE_DEALLOCATE_P(this%spctramp_cub)
+      SAFE_DEALLOCATE_A(this%kcoords_cub)
+      SAFE_DEALLOCATE_A(this%conjgphase_prev)
+      SAFE_DEALLOCATE_A(this%spctramp_cub)
       
       if(.not. this%surf_interp) then
-        SAFE_DEALLOCATE_P(this%srfcpnt)
+        SAFE_DEALLOCATE_A(this%srfcpnt)
       end if
-      SAFE_DEALLOCATE_P(this%rankmin)
+      SAFE_DEALLOCATE_A(this%rankmin)
       
-      SAFE_DEALLOCATE_P(this%face_idx_range)
-      SAFE_DEALLOCATE_P(this%LLr)
-      SAFE_DEALLOCATE_P(this%NN)      
+      SAFE_DEALLOCATE_A(this%face_idx_range)
+      SAFE_DEALLOCATE_A(this%LLr)
+      SAFE_DEALLOCATE_A(this%NN)      
       
-      SAFE_DEALLOCATE_P(this%expkr)
-      SAFE_DEALLOCATE_P(this%expkr_perp)
-      SAFE_DEALLOCATE_P(this%bvk_phase)      
+      SAFE_DEALLOCATE_A(this%expkr)
+      SAFE_DEALLOCATE_A(this%expkr_perp)
+      SAFE_DEALLOCATE_A(this%bvk_phase)      
 
-      SAFE_DEALLOCATE_P(this%Lkpuvz_inv)      
+      SAFE_DEALLOCATE_A(this%Lkpuvz_inv)      
       
     end if
 
-    SAFE_DEALLOCATE_P(this%klinear)
+    SAFE_DEALLOCATE_A(this%klinear)
 
-    SAFE_DEALLOCATE_P(this%srfcnrml)
-    SAFE_DEALLOCATE_P(this%rcoords)
+    SAFE_DEALLOCATE_A(this%srfcnrml)
+    SAFE_DEALLOCATE_A(this%rcoords)
 
-    SAFE_DEALLOCATE_P(this%wf)
-    SAFE_DEALLOCATE_P(this%gwf)
-    SAFE_DEALLOCATE_P(this%veca)
+    SAFE_DEALLOCATE_A(this%wf)
+    SAFE_DEALLOCATE_A(this%gwf)
+    SAFE_DEALLOCATE_A(this%veca)
 
     POP_SUB(pes_flux_end)
   end subroutine pes_flux_end
@@ -2339,7 +2301,6 @@ contains
             if(mesh%parallel_in_domains) then
               call MPI_Bcast(s1_act, (lmax + 1) * (2 * lmax + 1) * 3, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
               call MPI_Bcast(s2_act, (lmax + 1) * (2 * lmax + 1), MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-              call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
             end if
 #endif
 
@@ -2429,7 +2390,7 @@ contains
     FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(1:MAX_DIM), dd, area, dS(1:MAX_DIM, 1:2), factor
+    FLOAT                 :: xx(1:mesh%sb%dim), dd, area, dS(1:MAX_DIM, 1:2), factor
     integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
     integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
@@ -2573,7 +2534,7 @@ contains
       
         nsurfaces = 0
 
-        xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
+        xx(1:mdim) = mesh%x(ip_local, 1:mdim) - offset(1:mdim)
 
         ! eventually check whether we are in absorbing zone
         select case(hm%bc%abtype)
@@ -2636,7 +2597,7 @@ contains
             if(abs(which_surface(ip_global)) == idir .and. sign(1, which_surface(ip_global)) == pm) then
               isp = isp + 1
               ! coordinate of surface point
-              xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global)
+              xx(1:mdim) = mesh_x_global(mesh, ip_global)
               this%rcoords(1:mdim, isp) = xx(1:mdim)
               ! local ip & node which has the surface point
               this%srfcpnt(isp) = mesh_nearest_point(mesh, this%rcoords(1:mdim, isp), dd, rankmin)

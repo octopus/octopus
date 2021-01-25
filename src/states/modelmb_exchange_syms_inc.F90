@@ -53,8 +53,6 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
 
   symmetries_satisfied = .false.
 
-  call young_nullify (young)
-
   SAFE_ALLOCATE(sym_ok_alltypes(1:modelmbparticles%ntype_of_particle))
 
   !set up combinations of young diagrams (1 for each type)
@@ -128,7 +126,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     call wfbatch%end()
   else
     norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
-    norm = norm * product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
+    norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
   end if
 
   wf(:) = fermicompwf(:,1,1) / sqrt(norm)
@@ -178,15 +176,11 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
 
   PUSH_SUB(X(modelmb_sym_state_1diag))
 
-  call permutations_nullify(perms_up)
-  call permutations_nullify(perms_down)
-  call young_nullify (young)
-
   sym_ok_alltypes = 0
 
   ndimmb=modelmbparticles%ndim
 
-  normalizer = product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
+  normalizer = product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
 
   ! this is in case _none_ of the particles is symmetrized,
   !   then the whole itype loop is skipped

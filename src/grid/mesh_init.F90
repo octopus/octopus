@@ -21,7 +21,6 @@
 module mesh_init_oct_m
   use checksum_interface_oct_m
   use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
@@ -100,7 +99,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
         out = x(idir) > sb%lsize(idir) + DELTA_
       else
-        ! do the same comparison here as in simul_box_in_box_vec
+        ! do the same comparison here as in simul_box_contains_points
         out = chi(idir) > sb%lsize(idir) + DELTA_
       end if
     end do
@@ -166,13 +165,11 @@ end subroutine mesh_init_stage_1
 !> This subroutine checks if every grid point belongs to the internal
 !! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
 !! how many points has the mesh and the enlargement.
-subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
+subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
-  type(geometry_t),    intent(in)    :: geo
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
-  type(namespace_t),   intent(in)    :: namespace
 
   integer :: il, ik, ix, iy, iz, is
   integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
@@ -218,7 +215,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
 
   mesh%idx%lxyz_inv(:,:,:) = 0
   res = 1
-  SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
+  SAFE_ALLOCATE(xx(mesh%idx%nr(1,1):mesh%idx%nr(2,1), 1:MAX_DIM))
   SAFE_ALLOCATE(in_box(mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
   chi = M_ZERO
 
@@ -247,48 +244,29 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
       chi(2) = TOFLOAT(iy) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = TOFLOAT(ix) * mesh%spacing(1)
-        call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
+        call curvilinear_chi2x(sb, cv, chi(:), xx(ix, :))
       end do
 
-      call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
+      in_box = sb%contains_points(mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+        if (.not.in_box(ix)) cycle
         ! With multiresolution, only inner (not enlargement) points are marked now
         if(sb%mr_flag) then
-          if (in_box(ix) ) then
-            ! First check: is the point beyond the multiresolution areas
-            n_mod = 2**sb%hr_area%num_radii
-            if (sum((xx(:,ix)-sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
-                 mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
-              mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
-            end if
-            ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
-            if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
-              do i_lev = 1,sb%hr_area%num_radii
-                n_mod = 2**(i_lev-1)
-                if( sum((xx(:,ix)-sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
-                    mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
-                  mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
-                end if
-              end do
-            end if
-          end if
+          call multiresolution_mark_inner_point(ix, iy, iz)
         else ! the usual way: mark both inner and enlargement points
-          if (in_box(ix)) then
+          ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
+          ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
 
-            ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
-            ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
-            
-            mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
-            do is = 1, stencil%size
-              if(stencil%center == is) cycle
-              ii = ix + stencil%points(1, is)
-              jj = iy + stencil%points(2, is)
-              kk = iz + stencil%points(3, is)
-              if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
-              mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
-            end do
-          end if
+          mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
+          do is = 1, stencil%size
+            if(stencil%center == is) cycle
+            ii = ix + stencil%points(1, is)
+            jj = iy + stencil%points(2, is)
+            kk = iz + stencil%points(3, is)
+            if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
+            mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
+          end do
         end if
       end do
     end do
@@ -315,6 +293,62 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
   SAFE_DEALLOCATE_A(in_box)
 
   if(sb%mr_flag) then
+    call multiresolution_mark_enlargement_points()
+  end if
+
+  ! count the points
+  il = 0
+  ik = 0
+  do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+      do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+        if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) ik = ik + 1
+        if(mesh%idx%lxyz_inv(ix, iy, iz) /= 0) il = il + 1
+      end do
+    end do
+  end do
+  mesh%np_part_global = il
+  mesh%np_global      = ik
+
+  ASSERT(mesh%np_global > 0)
+  ASSERT(mesh%np_part_global > 0)
+
+  ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
+  ! following routine checks that everything will be ok.
+  if(sb%mr_flag) then
+    call multiresolution_check_points()
+  end if
+
+  call profiling_out(mesh_init_prof)
+  POP_SUB(mesh_init_stage_2)
+
+contains
+
+  subroutine multiresolution_mark_inner_point(ix, iy, iz)
+    integer, intent(in) :: ix, iy, iz
+
+    PUSH_SUB(mesh_init_stage_2.multiresolution_mark_inner_point)
+    ! First check: is the point beyond the multiresolution areas
+    n_mod = 2**sb%hr_area%num_radii
+    if (sum((xx(ix, :) - sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+         mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz, n_mod) == 0) then
+      mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
+    end if
+    ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
+    if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
+      do i_lev = 1,sb%hr_area%num_radii
+        n_mod = 2**(i_lev-1)
+        if( sum((xx(ix, :) - sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+            mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
+          mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
+        end if
+      end do
+    end if
+    POP_SUB(mesh_init_stage_2.multiresolution_mark_inner_point)
+  end subroutine multiresolution_mark_inner_point
+
+  subroutine multiresolution_mark_enlargement_points()
+    PUSH_SUB(mesh_init_stage_2.multiresolution_mark_enlargement_points)
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
       chi(3) = TOFLOAT(iz) * mesh%spacing(3)
@@ -372,28 +406,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
         end do
       end do
     end do
-  end if
+    POP_SUB(mesh_init_stage_2.multiresolution_mark_enlargement_points)
+  end subroutine multiresolution_mark_enlargement_points
 
-  ! count the points
-  il = 0
-  ik = 0
-  do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-    do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) ik = ik + 1
-        if(mesh%idx%lxyz_inv(ix, iy, iz) /= 0) il = il + 1
-      end do
-    end do
-  end do
-  mesh%np_part_global = il
-  mesh%np_global      = ik
-
-  ASSERT(mesh%np_global > 0)
-  ASSERT(mesh%np_part_global > 0)
-
-  ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
-  ! following routine checks that everything will be ok.
-  if(sb%mr_flag) then
+  subroutine multiresolution_check_points()
+    PUSH_SUB(mesh_init_stage_2.multiresolution_check_points)
     ! loop through all interpolation points and check that all points used for interpolation exist
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
@@ -432,10 +449,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
       end do
     end do
 
-  end if
-
-  call profiling_out(mesh_init_prof)
-  POP_SUB(mesh_init_stage_2)
+    POP_SUB(mesh_init_stage_2.multiresolution_check_points)
+  end subroutine multiresolution_check_points
 end subroutine mesh_init_stage_2
 
 ! ---------------------------------------------------------
@@ -464,14 +479,14 @@ subroutine mesh_init_stage_3(mesh, namespace, stencil, mc, parent)
 
   if(.not. mesh%parallel_in_domains) then
     ! When running parallel, x is computed later.
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:MAX_DIM))
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:mesh%sb%dim))
   end if
   
   if(.not. mesh%idx%is_hypercube) then
     call create_x_lxyz()
   else if(.not. mesh%parallel_in_domains) then
     do ip = 1, mesh%np_part_global
-      mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
+      mesh%x(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip, force=.true.)
     end do
   end if
 
@@ -633,7 +648,7 @@ contains
                   if(.not. mesh%parallel_in_domains) then
 #endif
                     call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-                    mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+                    mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
                   end if
 #endif                                   
@@ -697,7 +712,7 @@ contains
           chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
           call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-          mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+          mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
         end if
 #endif                 
@@ -762,7 +777,7 @@ contains
               chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
               call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-              mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+              mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
             end if
 #endif          
@@ -946,22 +961,22 @@ contains
     ! x consists of three parts: the local points, the
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:MAX_DIM))
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:mesh%sb%dim))
     mesh%x(:, :) = M_ZERO
     ! Do the inner points
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
-      mesh%x(ii, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
     ! Do the ghost points
     do ii = 1, mesh%vp%np_ghost
       jj = mesh%vp%ghost(mesh%vp%xghost + ii - 1) 
-      mesh%x(ii+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii+mesh%np, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
     ! Do the boundary points
     do ii = 1, mesh%vp%np_bndry
       jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
-      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
 
     !%Variable PartitionPrint
@@ -993,12 +1008,6 @@ contains
     integer :: jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn
-    FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
-    integer, allocatable :: posi(:)
-    integer :: n_mod, i_lev, nr(1:2, 1:MAX_DIM)
-    FLOAT, parameter :: DELTA = CNST(1e-12)
- 
 #if defined(HAVE_MPI)
     integer :: kk
 #endif
@@ -1049,117 +1058,13 @@ contains
     else ! serial mode
 
       if(mesh%sb%mr_flag) then
-
-        message(1) = 'Info: Point volumes are calculated by solving interpolation coefficients for the intermediate points.'
-        call messages_info(1)
-
-        ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
-
-        nn = 2*mesh%sb%hr_area%interp%order
-
-        SAFE_ALLOCATE(ww(1:nn))
-        SAFE_ALLOCATE(pos(1:nn))
-        SAFE_ALLOCATE(posi(1:nn))
-
-        do ii = 1, mesh%sb%hr_area%interp%order
-          posi(ii) = 1 + 2*(ii - 1)
-          posi(mesh%sb%hr_area%interp%order + ii) = -posi(ii)
-          pos(ii) =  posi(ii)
-          pos(mesh%sb%hr_area%interp%order + ii) = -pos(ii)
-        end do
-
-        call interpolation_coefficients(nn, pos, M_ZERO, ww)
-
-        ! volumes are initialized even for the intermediate points
-        nr(:,:) = mesh%idx%nr(:,:)
-        SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
-        vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
-
-        ! The idea is that in the first i_lev loop we find intermediate
-        ! points that are odd, i.e. at least one of their indices cannot
-        ! be divided by 2 (note that then n_mod=2**1=1).
-        !
-        ! In the second loop we accept only those intermediate points that
-        ! have at least one index that cannot be divided by 4. This
-        ! rules out some even points that were included in the first loop.
-        !
-        ! This continues until the last resolution level. In each step
-        ! the point volumes of the neighboring points area modified.
-
-        do i_lev = 1, sb%hr_area%num_radii
-
-          write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
-          call messages_info(1)
-
-          ! loop through _all_ the points
-          do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-            do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-              do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
- 
-                ! Skip ordinary points
-                if(mesh%idx%lxyz_inv(ix,iy,iz) > 0 .and. &
-                     mesh%idx%lxyz_inv(ix,iy,iz) <= mesh%np) cycle
-
-                ! Is it the kind of intermediate point we are looking for?
-                n_mod = 2**i_lev
-                dx = abs(mod(ix, n_mod))
-                dy = abs(mod(iy, n_mod))
-                dz = abs(mod(iz, n_mod))
-                if(dx+dy+dz == 0) cycle
-
-                if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
-
-                ! The present point (ix,iy,iz) is an intermediate one. When
-                ! calculating integrals, the value of the integrand is
-                ! interpolated from the neighboring ones, i.e. the values of
-                ! the neighboring points are added up with different weights.
-                ! The following loop goes through the neighboring points and
-                ! modifies their weights, i.e. their volumes.
-
-                do lii = 1, nn
-                  do ljj = 1, nn
-                    do lkk = 1, nn
-                      newi = ix + posi(lii)*dx
-                      newj = iy + posi(ljj)*dy
-                      newk = iz + posi(lkk)*dz
-                      if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
-                         any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
-                      vol_tmp(newi, newj, newk) = vol_tmp(newi, newj, newk) + &
-                         vol_tmp(ix, iy, iz) * ww(lii)*ww(ljj)*ww(lkk)
-                    end do
-                  end do
-                end do
-                vol_tmp(ix, iy, iz) = M_ZERO
-              end do
-            end do
-          end do
-
-        end do
-
-        ! the volumes are now in vol_tmp table. Move them to vol_pp
-        do ip = 1, mesh%np
-          ix = mesh%idx%lxyz(ip, 1)
-          iy = mesh%idx%lxyz(ip, 2)
-          iz = mesh%idx%lxyz(ip, 3)
-          mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
-        end do
-       
-        write (message(1),'(a,F26.12)') 'Info: Point volume calculation finished. Total volume :',sum(mesh%vol_pp(1:mesh%np))
-        call messages_info(1)
-
-        SAFE_DEALLOCATE_A(ww)
-        SAFE_DEALLOCATE_A(pos)
-        SAFE_DEALLOCATE_A(posi)
-        SAFE_DEALLOCATE_A(vol_tmp)
-
-      else ! no multiresolution
-
+        call multiresolution_vol_pp(sb)
+      else
         do ip = 1, np
           call index_to_coords(mesh%idx, ip, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
         end do
-
       end if
     end if
 
@@ -1172,9 +1077,123 @@ contains
     mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
-
   end subroutine mesh_get_vol_pp
 
+  subroutine multiresolution_vol_pp(sb)
+    type(simul_box_t), intent(in) :: sb
+
+    integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn
+    FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
+    integer, allocatable :: posi(:)
+    integer :: n_mod, i_lev, nr(1:2, 1:MAX_DIM)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
+
+    PUSH_SUB(mesh_init_stage_3.multiresolution_vol_pp)
+
+    message(1) = 'Info: Point volumes are calculated by solving interpolation coefficients for the intermediate points.'
+    call messages_info(1)
+
+    ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
+
+    nn = 2*mesh%sb%hr_area%interp%order
+
+    SAFE_ALLOCATE(ww(1:nn))
+    SAFE_ALLOCATE(pos(1:nn))
+    SAFE_ALLOCATE(posi(1:nn))
+
+    do ii = 1, mesh%sb%hr_area%interp%order
+      posi(ii) = 1 + 2*(ii - 1)
+      posi(mesh%sb%hr_area%interp%order + ii) = -posi(ii)
+      pos(ii) =  posi(ii)
+      pos(mesh%sb%hr_area%interp%order + ii) = -pos(ii)
+    end do
+
+    call interpolation_coefficients(nn, pos, M_ZERO, ww)
+
+    ! volumes are initialized even for the intermediate points
+    nr(:,:) = mesh%idx%nr(:,:)
+    SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
+    vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
+
+    ! The idea is that in the first i_lev loop we find intermediate
+    ! points that are odd, i.e. at least one of their indices cannot
+    ! be divided by 2 (note that then n_mod=2**1=1).
+    !
+    ! In the second loop we accept only those intermediate points that
+    ! have at least one index that cannot be divided by 4. This
+    ! rules out some even points that were included in the first loop.
+    !
+    ! This continues until the last resolution level. In each step
+    ! the point volumes of the neighboring points area modified.
+
+    do i_lev = 1, sb%hr_area%num_radii
+
+      write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
+      call messages_info(1)
+
+      ! loop through _all_ the points
+      do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+        do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+          do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
+
+            ! Skip ordinary points
+            if(mesh%idx%lxyz_inv(ix,iy,iz) > 0 .and. &
+                 mesh%idx%lxyz_inv(ix,iy,iz) <= mesh%np) cycle
+
+            ! Is it the kind of intermediate point we are looking for?
+            n_mod = 2**i_lev
+            dx = abs(mod(ix, n_mod))
+            dy = abs(mod(iy, n_mod))
+            dz = abs(mod(iz, n_mod))
+            if(dx+dy+dz == 0) cycle
+
+            if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
+
+            ! The present point (ix,iy,iz) is an intermediate one. When
+            ! calculating integrals, the value of the integrand is
+            ! interpolated from the neighboring ones, i.e. the values of
+            ! the neighboring points are added up with different weights.
+            ! The following loop goes through the neighboring points and
+            ! modifies their weights, i.e. their volumes.
+
+            do lii = 1, nn
+              do ljj = 1, nn
+                do lkk = 1, nn
+                  newi = ix + posi(lii)*dx
+                  newj = iy + posi(ljj)*dy
+                  newk = iz + posi(lkk)*dz
+                  if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
+                     any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
+                  vol_tmp(newi, newj, newk) = vol_tmp(newi, newj, newk) + &
+                     vol_tmp(ix, iy, iz) * ww(lii)*ww(ljj)*ww(lkk)
+                end do
+              end do
+            end do
+            vol_tmp(ix, iy, iz) = M_ZERO
+          end do
+        end do
+      end do
+
+    end do
+
+    ! the volumes are now in vol_tmp table. Move them to vol_pp
+    do ip = 1, mesh%np
+      ix = mesh%idx%lxyz(ip, 1)
+      iy = mesh%idx%lxyz(ip, 2)
+      iz = mesh%idx%lxyz(ip, 3)
+      mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
+    end do
+
+    write (message(1),'(a,F26.12)') 'Info: Point volume calculation finished. Total volume :',sum(mesh%vol_pp(1:mesh%np))
+    call messages_info(1)
+
+    SAFE_DEALLOCATE_A(ww)
+    SAFE_DEALLOCATE_A(pos)
+    SAFE_DEALLOCATE_A(posi)
+    SAFE_DEALLOCATE_A(vol_tmp)
+
+    POP_SUB(mesh_init_stage_3.multiresolution_vol_pp)
+  end subroutine multiresolution_vol_pp
 end subroutine mesh_init_stage_3
 
 end module mesh_init_oct_m

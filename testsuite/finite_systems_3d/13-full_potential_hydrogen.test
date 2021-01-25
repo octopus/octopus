@@ -49,8 +49,14 @@ match ; Tot <Lz>                      ; GREPFIELD(static/ks_me_angular_momentum,
 match ; Tot <L2>                      ; GREPFIELD(static/ks_me_angular_momentum, 'Total', 4, 1) ; 2.010470
 
 Input: 13-full_potential_hydrogen.02-gs-cg.inp
-match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy                  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50144038
-match ; Species displacement          ; GREPFIELD(out, 'H_f atom displaced', 7)    ;  0.0
-match ; Eigenvalue                    ; GREPFIELD(static/info, ' 1   -- ', 3)      ; -0.501440
-match ; Occupation                    ; GREPFIELD(static/info, ' 1   -- ', 4)      ;  1.0
+
+Precision: 1.00e-15
+match ;  SCF convergence                ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+Precision: 4.98e-16
+match ;  Total energy                   ; GREPFIELD(static/info, 'Total       =', 3) ; -0.49810846
+Precision: 1.00e-15
+match ;  Species displacement           ; GREPFIELD(out, 'H_f atom displaced', 7) ; 0.0
+Precision: 4.98e-16
+match ;  Eigenvalue                     ; GREPFIELD(static/info, ' 1   -- ', 3) ; -0.498108
+Precision: 1.00e-15
+match ;  Occupation                     ; GREPFIELD(static/info, ' 1   -- ', 4) ; 1.0

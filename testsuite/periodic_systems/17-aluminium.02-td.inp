@@ -32,19 +32,12 @@ ExperimentalFeatures = yes
 
 FromScratch = yes
 
-%Velocities
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-%
-
 %GaugeVectorField
  c | 0.0 | 0.0
 %
 
 TDMaxSteps = 150
-
+TDEnergyUpdateIter = 5
 TDOutput = energy + geometry + total_current + gauge_field
 
 # test code path without CUDA-aware MPI for this test

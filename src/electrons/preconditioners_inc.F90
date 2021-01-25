@@ -22,8 +22,8 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  R_TYPE,                   intent(inout) :: a(:,:)
-  R_TYPE,                   intent(inout) :: b(:,:)
+  R_TYPE, contiguous,       intent(inout) :: a(:,:)
+  R_TYPE, contiguous,       intent(inout) :: b(:,:)
   integer,                  intent(in)    :: ik
   R_TYPE,         optional, intent(in)    :: omega
 
@@ -54,7 +54,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
     if(associated(hm%hm_base%phase)) then
       SAFE_ALLOCATE(batch_ea)
       call batch_a%copy_to(batch_ea)
-      call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., batch_ea, src = batch_a)
+      call hamiltonian_elec_base_phase(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., batch_ea, src = batch_a)
       batch_b%has_phase = .true.
     else
       batch_ea => batch_a
@@ -63,7 +63,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
      call X(derivatives_batch_perform)(pre%op, gr%der, batch_ea, batch_b, set_bc = .false.)
 
     if(associated(hm%hm_base%phase)) then
-      call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np, .true., batch_b)
+      call hamiltonian_elec_base_phase(hm%hm_base, gr%mesh, gr%mesh%np, .true., batch_b)
       call batch_ea%end(copy = .false.)
       SAFE_DEALLOCATE_P(batch_ea)
     end if
@@ -279,11 +279,15 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
     call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
-    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      if(present(omega)) then
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      else
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik)
+      end if
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)

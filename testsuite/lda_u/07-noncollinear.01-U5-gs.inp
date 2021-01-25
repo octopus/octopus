@@ -6,10 +6,10 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-EigenSolver = cg
-ConvRelDens = 5e-5
-EigensolverTolerance = 1e-8
-CGOrthogonalizeAll = yes
+ConvEigenError = yes
+ExtraStates = 4
+MixingRestart = 0
+MixNumberSteps = 3
 
 a = 7.8809
 
@@ -18,7 +18,7 @@ a = 7.8809
 %
 DFTULevel = dft_u_empirical
 
-PseudopotentialSet=hscv_lda
+PseudopotentialSet = hgh_lda
 
 %LatticeParameters
   a | a | a

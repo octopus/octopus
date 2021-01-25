@@ -113,9 +113,8 @@ contains
   end subroutine gravity_init
 
   ! ---------------------------------------------------------
-  subroutine gravity_calculate(this, namespace)
+  subroutine gravity_calculate(this)
     class(gravity_t),             intent(inout) :: this
-    type(namespace_t),            intent(in)    :: namespace
 
     FLOAT, parameter :: GG = CNST(6.67430e-11) ! In S.I. units!
     FLOAT :: dist3
@@ -125,7 +124,7 @@ contains
     dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
     this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-      / dist3 * (GG * this%system_mass * this%partner_mass)
+      / (dist3 + M_EPSILON) * (GG * this%system_mass * this%partner_mass)
 
     POP_SUB(gravity_calculate)
   end subroutine gravity_calculate

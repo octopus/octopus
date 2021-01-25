@@ -47,7 +47,7 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
     if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
-      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-gr%sb%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
           write(fname, '(2a)') 'lr_density-', index2axis(idir)
@@ -60,10 +60,10 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-      fn_unit = units_out%length**(1 - gr%mesh%sb%dim)
+      fn_unit = units_out%length**(1 - gr%sb%dim)
       SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
-        do idir2 = 1, gr%mesh%sb%dim
+        do idir2 = 1, gr%sb%dim
           tmp(1:gr%mesh%np) = -gr%mesh%x(1:gr%mesh%np, idir2) * lr%X(dl_rho)(:, is)
           if(st%d%nspin == 1) then
             write(fname, '(4a)') 'alpha_density-', index2axis(idir2), '-', index2axis(idir)
@@ -79,9 +79,9 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
-        fn_unit = units_out%time**(-1) * units_out%length**(-gr%mesh%sb%dim)
+        fn_unit = units_out%time**(-1) * units_out%length**(-gr%sb%dim)
         do is = 1, st%d%nspin
-          do idir2 = 1, gr%mesh%sb%dim
+          do idir2 = 1, gr%sb%dim
             if(st%d%nspin == 1) then
               write(fname, '(4a)') 'lr_current-', index2axis(idir2), '-',  index2axis(idir)
             else
@@ -98,7 +98,7 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
       end if
     end if
 
-    if(gr%mesh%sb%dim==3) then
+    if(gr%sb%dim==3) then
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) call lr_elf('lr_elf_D','lr_elf')
     end if
 
@@ -106,7 +106,7 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
 
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
-    fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
+    fn_unit = sqrt(units_out%length**(-gr%sb%dim))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = st%d%kpt%start, st%d%kpt%end
@@ -137,7 +137,7 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
-    fn_unit = units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(-gr%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then

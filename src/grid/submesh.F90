@@ -24,6 +24,7 @@ module submesh_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use global_oct_m
+  use index_oct_m
   use lalg_basic_oct_m
   use messages_oct_m
   use sort_oct_m
@@ -82,8 +83,8 @@ module submesh_oct_m
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
-    integer,      pointer :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
-    FLOAT,        pointer :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
+    integer,  allocatable :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
+    FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
     type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
                                             !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
@@ -112,8 +113,6 @@ contains
 
     sm%np = -1
     sm%radius = M_ZERO
-    nullify(sm%map)
-    nullify(sm%x)
     nullify(sm%mesh)
 
     sm%np_global = -1
@@ -196,11 +195,9 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc2) then
@@ -226,11 +223,9 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
@@ -464,7 +459,6 @@ contains
 
 #ifdef HAVE_MPI
       call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-      call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
@@ -478,9 +472,7 @@ contains
 #ifdef HAVE_MPI
       if(this%np_part > 0) then
         call MPI_Bcast(this%map(1), this%np_part, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mpi_grp%comm, mpi_err)
         call MPI_Bcast(this%x(1, 0), this%np_part*(mesh%sb%dim + 1), MPI_FLOAT, root, mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mpi_grp%comm, mpi_err)
       end if
 #endif
 
@@ -500,8 +492,8 @@ contains
     if( this%np /= -1 ) then
       nullify(this%mesh)
       this%np = -1
-      SAFE_DEALLOCATE_P(this%map)
-      SAFE_DEALLOCATE_P(this%x)
+      SAFE_DEALLOCATE_A(this%map)
+      SAFE_DEALLOCATE_A(this%x)
     end if
 
     POP_SUB(submesh_end)
@@ -618,9 +610,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-  #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
-  #endif 
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -642,11 +632,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-   #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
-   #endif 
 
     SAFE_DEALLOCATE_A(part_np)
 
@@ -726,7 +714,7 @@ contains
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
-    dotp = cmplx(M_ZERO, M_ZERO)
+    dotp = M_z0
   
     if(this%mesh%use_curvilinear) then
       do is = 1, this%np

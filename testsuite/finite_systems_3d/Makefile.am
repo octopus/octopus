@@ -61,7 +61,6 @@ dist_share_DATA = \
 	08-spin_orbit_coupling_full.test               \
 	09-spinors.01-ground_state.inp                 \
 	09-spinors.02-rmmdiis.inp                      \
-	09-spinors.03-rmmdiis_extra_states.inp         \
 	09-spinors.test                                \
 	10-fullerene.test                              \
 	10-fullerene.01-gs.inp                         \
@@ -123,6 +122,7 @@ dist_share_DATA = \
         29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.02-multipoles.inp \
+        30-local_multipoles.03-multipoles_restart.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \
 	31-acetylene_b3lyp.01-gs.inp \

@@ -174,7 +174,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, namespace, gr, geo, st, mc, hm)
+    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO
@@ -222,7 +222,7 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         do jatom = 1, geo%natoms
-          do beta = 1, gr%mesh%sb%dim
+          do beta = 1, gr%sb%dim
             jmat = vibrations_get_index(vib, jatom, beta)
             vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &

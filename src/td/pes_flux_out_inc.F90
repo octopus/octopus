@@ -37,13 +37,13 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krn
   select case (this%kgrid)
   
   case (PES_POLAR)
-    call pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
+    call pes_flux_pmesh_sph(this, dim, pmesh, idxZero, krng, Lp)
   
   case (PES_CARTESIAN)
     if (kpoints_have_zero_weight_path(kpoints)) then
       call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     else
-      call pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
+      call pes_flux_pmesh_cub(this, dim, pmesh, idxZero, krng, Lp, Ekin)
     end if
   
   case default
@@ -73,7 +73,7 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
   select case (this%kgrid)
   
   case (PES_POLAR)
-    call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
+    call pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, istin)
   
   case (PES_CARTESIAN)
     call pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
@@ -441,12 +441,9 @@ end subroutine pes_flux_map_from_state_1
 ! CUBE (parallelepiped in spirit)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh_cub(this, dim, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
-  type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
   integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
@@ -504,11 +501,9 @@ end subroutine pes_flux_pmesh_cub
 
 
 
-subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
+subroutine pes_flux_pmesh_sph(this, dim, pmesh, idxZero, krng, Lp)
   type(pes_flux_t),  intent(in)    :: this
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)             
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
   integer,           intent(out)   :: idxZero(:)             
   integer,           intent(in)    :: krng(:)                                                                     
@@ -582,11 +577,10 @@ end subroutine pes_flux_pmesh_sph
 
 
 
-subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
+subroutine pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, istin)
   type(pes_flux_t),   intent(in) :: this
   type(restart_t),    intent(in) :: restart
   type(states_elec_t),intent(in) :: st
-  integer,            intent(in) :: ll(:)
   FLOAT, target,       intent(out) :: pesP(:,:,:,:)
   integer,             intent(in)  :: krng(:) 
   integer,             intent(in)  :: Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3)
@@ -719,13 +713,12 @@ end subroutine pes_flux_map_from_state_2
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim)
+subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, Ekin, dim)
   type(pes_flux_t),  intent(in) :: this
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
   integer,           intent(in) :: dim
 
@@ -741,7 +734,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim
   
   case (PES_CARTESIAN)
     if (this%surf_shape == PES_CUBIC) then
-      call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin, dim)
+      call pes_flux_out_energy_pln(pesK, file, namespace, ll, Ekin, dim)
     else 
       call messages_not_implemented("Energy-resolved PES for the flux method with cartesian momentum grids", namespace=namespace)
     end if
@@ -757,12 +750,11 @@ end subroutine pes_flux_out_energy
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin, dim)
+subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, Ekin, dim)
   FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
   integer,           intent(in) :: dim
   
@@ -926,9 +918,8 @@ end subroutine pes_flux_out_vmap_cub
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! OUTPUT ON THE RUN
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine pes_flux_output(this, mesh, sb, st, namespace)
+subroutine pes_flux_output(this, sb, st, namespace)
   type(pes_flux_t), intent(inout)    :: this
-  type(mesh_t),        intent(in)    :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
@@ -948,7 +939,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace)
                                   efile = io_workpath("td.general/PES_flux.power.sum", namespace))
   
   case (PES_CARTESIAN)
-    call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim, io_workpath("td.general/", namespace))
+    call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim)
     
   
   case default
@@ -961,12 +952,11 @@ end subroutine pes_flux_output
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
+subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
   type(pes_flux_t), intent(inout)    :: this
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: dim
-  character(len=*),    intent(in)    :: path 
   
   integer            :: stst, stend, kptst, kptend, sdim, mdim
   integer            :: ik, ist, isdim, ikp, ik1, ik2, ik3
@@ -1011,9 +1001,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   end do
   
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
-#endif
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
   end if
   
   
@@ -1185,7 +1173,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   end do
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
     ! total spectrum = sum over all states
     if(this%surf_shape == PES_SPHERICAL) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
@@ -1195,7 +1182,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
 
     ! orbital spectra
     call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
-#endif
   end if
 
 

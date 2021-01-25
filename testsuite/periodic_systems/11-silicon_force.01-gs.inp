@@ -4,15 +4,17 @@ CalculationMode = gs
 
 PeriodicDimensions = 3
 
-a = 10.2
+# Use a lattice parameter that is a bit smaller than the equilibrium one
+a = 9.2
 
 Spacing = a/14
 
 BoxShape = parallelepiped
 Lsize = a/2
 
+# We move the first Si atom slighly out of position to get non-zero forces
 %ReducedCoordinates
-  "Si" |   0.1       | -0.02     | 0.03
+  "Si" |   0.1       | -0.05     | 0.075
   "Si" |   1/2       | 1/2       | 0.0
   "Si" |   1/2       | 0.0       | 1/2
   "Si" |   0.0       | 1/2       | 1/2 
@@ -32,9 +34,6 @@ ExperimentalFeatures = yes
 SymmetrizeDensity = yes
 
 ExtraStates = 1
-ConvRelDens = 1e-7
-MaximumIter = 1
 
-SCFCalculateStress = yes
+SCFCalculateStress = no
 StatesPack = yes
-LCAOStart = lcao_full

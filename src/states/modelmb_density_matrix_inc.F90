@@ -177,7 +177,6 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
 
   ndim1part=st%modelmbparticles%ndim
 
-  call modelmb_1part_nullify(mb_1part)
   SAFE_ALLOCATE(  ix_1part(1:ndim1part))
   SAFE_ALLOCATE(ix_1part_p(1:ndim1part))
   SAFE_ALLOCATE(dipole_moment(1:ndim1part))

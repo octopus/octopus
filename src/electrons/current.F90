@@ -25,6 +25,7 @@ module current_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use exchange_operator_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_base_oct_m
@@ -44,10 +45,8 @@ module current_oct_m
   use simul_box_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
-  use states_mxll_oct_m
   use string_oct_m
   use symmetrizer_oct_m
-  use tdfunction_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m  
@@ -68,22 +67,14 @@ module current_oct_m
   public ::                               &
     current_t,                            &
     current_init,                         &
-    current_end,                          &
     current_calculate,                    &
     current_heat_calculate,               &
-    current_calculate_mel,                &
-    get_rs_density_ext,                   &
-    external_current_init,                &
-    external_current_calculation
+    current_calculate_mel
 
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
     CURRENT_GRADIENT_CORR      = 2,       &
     CURRENT_HAMILTONIAN        = 3
-
-  integer, parameter, public ::           &
-    EXTERNAL_CURRENT_PARSER      = 0,     &
-    EXTERNAL_CURRENT_TD_FUNCTION = 1
 
 contains
 
@@ -123,26 +114,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine current_end(this)
-    type(current_t), intent(inout) :: this
-
-    PUSH_SUB(current_end)
-
-
-    POP_SUB(current_end)
-  end subroutine current_end
-
-  ! ---------------------------------------------------------
-
-  subroutine current_batch_accumulate(st, der, ik, ib, psib, gpsib, current, current_kpt)
-    type(states_elec_t), intent(in)    :: st
+  subroutine current_batch_accumulate(st, der, ik, ib, psib, gpsib)
+    type(states_elec_t), intent(inout) :: st
     type(derivatives_t), intent(inout) :: der
     integer,             intent(in)    :: ik
     integer,             intent(in)    :: ib
     type(wfs_elec_t),    intent(in)    :: psib
     type(wfs_elec_t),    intent(in)    :: gpsib(:)
-    FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ist, idir, ii, ip, idim, wgsize
     CMPLX, allocatable :: psi(:, :), gpsi(:, :)
@@ -173,17 +151,17 @@ contains
           if(st%d%ispin /= SPINORS) then
             !$omp parallel do
             do ip = 1, der%mesh%np
-              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+              st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
             end do
             !$omp end parallel do
           else
             !$omp parallel do private(c_tmp)
             do ip = 1, der%mesh%np
-              current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
-              current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
+              st%current(ip, idir, 1) = st%current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+              st%current(ip, idir, 2) = st%current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
               c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
-              current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
-              current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+              st%current(ip, idir, 3) = st%current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
+              st%current(ip, idir, 4) = st%current(ip, idir, 4) + ww*aimag(c_tmp)
             end do
             !$omp end parallel do
           end if
@@ -231,7 +209,7 @@ contains
 
       do ip = 1, der%mesh%np
         do idir = 1, der%mesh%sb%dim
-          current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + current_tmp(idir, ip)
+          st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) + current_tmp(idir, ip)
         end do
       end do
       
@@ -255,7 +233,7 @@ contains
           do idir = 1, der%mesh%sb%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
-              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+              st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) &
                 + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
@@ -264,7 +242,7 @@ contains
           do idir = 1, der%mesh%sb%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
-              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+              st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) &
                 + ww*aimag(conjg(psib%zff(ip, 1, ii))*gpsib(idir)%zff(ip, 1, ii))
             end do
             !$omp end parallel do
@@ -281,15 +259,13 @@ contains
   end subroutine current_batch_accumulate
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, namespace, der, hm, geo, st, current, current_kpt)
+  subroutine current_calculate(this, namespace, der, hm, geo, st)
     type(current_t),          intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(inout) :: der
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
-    FLOAT,                    intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,           intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
@@ -305,9 +281,9 @@ contains
     PUSH_SUB(current_calculate)
 
     ! spin not implemented or tested
-    ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
-    ASSERT(all(ubound(current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
-    ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
+    ASSERT(all(ubound(st%current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
+    ASSERT(all(ubound(st%current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(lbound(st%current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
@@ -317,8 +293,8 @@ contains
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%mesh%sb%dim))
 
-    current = M_ZERO
-    current_kpt = M_ZERO
+    st%current = M_ZERO
+    st%current_kpt = M_ZERO
 
     select case(this%method)
 
@@ -359,21 +335,21 @@ contains
               if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+                  st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) &
                     - ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
                 end do
                 !$omp end parallel do
               else
                 !$omp parallel do  private(c_tmp)
                 do ip = 1, der%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) + &
+                  st%current(ip, idir, 1) = st%current(ip, idir, 1) + &
                     ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
-                  current(ip, idir, 2) = current(ip, idir, 2) + &
+                  st%current(ip, idir, 2) = st%current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
                   c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
                     -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
-                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                  st%current(ip, idir, 3) = st%current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
+                  st%current(ip, idir, 4) = st%current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
               end if
@@ -395,7 +371,8 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE) then
+        .and. hm%lda_u_level == DFT_U_NONE .and. hm%theory_level /= HARTREE_FOCK &
+        .and. hm%theory_level /= RDMFT) then
 
         ! we can use the packed version
         
@@ -408,7 +385,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
+              call hamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
@@ -424,7 +401,7 @@ contains
                     der%boundaries, epsib, commpsib)
 
 
-            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib)
 
             do idir = 1, der%mesh%sb%dim
               call commpsib(idir)%end()
@@ -489,13 +466,15 @@ contains
                   associated(hm%hm_base%phase))
               end if
 
+              call zexchange_operator_commute_r(hm%exxop, der%mesh, st%d, ik, psi, gpsi)
+
             end if
 
             if(st%d%ispin /= SPINORS) then
               do idir = 1, der%mesh%sb%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + &
+                  st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) + &
                     ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
                 end do
                 !$omp end parallel do
@@ -504,13 +483,13 @@ contains
               do idir = 1, der%mesh%sb%dim
                 !$omp parallel do  private(c_tmp)
                 do ip = 1, der%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) + &
+                  st%current(ip, idir, 1) = st%current(ip, idir, 1) + &
                     ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
-                  current(ip, idir, 2) = current(ip, idir, 2) + &
+                  st%current(ip, idir, 2) = st%current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
                   c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
-                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                  st%current(ip, idir, 3) = st%current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
+                  st%current(ip, idir, 4) = st%current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
               end do
@@ -532,22 +511,22 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_elec_dim_get_spin_index(st%d, ik)
         do idir = 1, der%mesh%sb%dim
-          call lalg_axpy(der%mesh%np, M_ONE, current_kpt(:, idir, ik), current(1:der%mesh%np, idir, ispin))
+          call lalg_axpy(der%mesh%np, M_ONE, st%current_kpt(:, idir, ik), st%current(1:der%mesh%np, idir, ispin))
         end do
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = current(:, :, ispin), &
+        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = st%current(:, :, ispin), &
           symmfield_vector = symmcurrent, suppress_warning = .true.)
-        current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
+        st%current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmcurrent)
@@ -761,174 +740,6 @@ contains
       
   end subroutine current_heat_calculate
 
-  
-  !! Maxwell-related subroutines
-  
-  !----------------------------------------------------------
-  subroutine get_rs_density_ext(st, mesh, time, rs_current_density_ext)
-    type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),        intent(in)    :: mesh
-    FLOAT,               intent(in)    :: time
-    CMPLX,     optional, intent(inout) :: rs_current_density_ext(:,:)
-
-    FLOAT, allocatable :: current(:,:,:)
-
-    PUSH_SUB(get_rs_density_ext)
-
-    SAFE_ALLOCATE(current(1:mesh%np, 1:mesh%sb%dim, 1))  !< The 1 in the last column is a dummy to use batch routines
-
-    call external_current_calculation(st, mesh, time, current(:, :, 1))
-    call build_rs_current_state(current(:, :, 1), mesh, rs_current_density_ext(:, :), st%ep(:), mesh%np)
-    rs_current_density_ext = - rs_current_density_ext
-
-    SAFE_DEALLOCATE_A(current)
-
-    POP_SUB(get_rs_density_ext)
-  end subroutine get_rs_density_ext
-
-
-  !----------------------------------------------------------
-  subroutine external_current_init(st, namespace, mesh)
-    type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),        intent(in)    :: mesh
-    type(namespace_t),   intent(in)    :: namespace
-
-    type(block_t)        :: blk
-    integer              :: ip, il, nlines, ncols, idir, ierr
-    FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(MAX_DIM), rr, omega
-    character(len=1024)  :: tdf_expression, phase_expression
-
-    PUSH_SUB(external_current_init)
-
-    !%Variable UserDefinedMaxwellExternalCurrent
-    !%Type block
-    !%Section MaxwellStates
-    !%Description
-    !%
-    !% Example:
-    !%
-    !% <tt>%UserDefinedMaxwellExternalCurrent
-    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1"
-    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2"
-    !% <br>&nbsp;&nbsp; current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
-    !% <br>%</tt>
-    !%
-    !% Description about UserDefinedMaxwellExternalCurrent follows
-    !%
-    !%Option current_parser 0
-    !% description follows
-    !%Option current_td_function 1
-    !% description follows
-    !%End
-
-    if(parse_block(namespace, 'UserDefinedMaxwellExternalCurrent', blk) == 0) then
-
-      ! find out how many lines (i.e. states) the block has
-      nlines = parse_block_n(blk)
-
-      st%external_current_number = nlines
-      SAFE_ALLOCATE(st%external_current_modus(nlines))
-      SAFE_ALLOCATE(st%external_current_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(st%external_current_amplitude(1:mesh%np, MAX_DIM, nlines))
-      SAFE_ALLOCATE(st%external_current_td_function(nlines))
-      SAFE_ALLOCATE(st%external_current_omega(nlines))
-      SAFE_ALLOCATE(st%external_current_td_phase(nlines))
-
-      ! read all lines
-      do il = 1, nlines
-        ! Check that number of columns is four, five, six or seven.
-        ncols = parse_block_cols(blk, il - 1)
-        if((ncols  /=  4) .and. (ncols /= 5) .and. (ncols /= 6) .and. (ncols /= 7)) then
-          message(1) = 'Each line in the MaxwellExternalCurrent block must have'
-          message(2) = 'four, five, six or or seven columns.'
-          call messages_fatal(2, namespace=namespace)
-        end if
-
-        call parse_block_integer(blk, il - 1, 0, st%external_current_modus(il))
-
-        if (st%external_current_modus(il) == EXTERNAL_CURRENT_PARSER) then
-          ! parse formula string
-          do idir = 1, st%dim
-            call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
-            call conv_to_C_string(st%external_current_string(idir, il))
-          end do
-        else if (st%external_current_modus(il) == EXTERNAL_CURRENT_TD_FUNCTION) then
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, coords = xx)
-            do idir = 1, st%dim
-              call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
-              call conv_to_C_string(st%external_current_string(idir, il))
-              call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, M_ZERO, &
-                st%external_current_string(idir, il))
-              j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
-            end do
-            st%external_current_amplitude(ip, 1:st%dim, il) = j_vector(1:st%dim)
-          end do
-          call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
-          st%external_current_omega(il) = omega
-          call parse_block_string(blk, il-1, 5, tdf_expression)
-          call tdf_read(st%external_current_td_function(il), namespace, trim(tdf_expression), ierr)
-          if(parse_block_cols(blk, il-1) > 6) then
-            call parse_block_string(blk, il-1, 6, phase_expression)
-            call tdf_read(st%external_current_td_phase(il), namespace, trim(phase_expression), ierr)
-            if (ierr /= 0) then
-              write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
-              write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
-              call messages_warning(2, namespace=namespace)
-            end if
-          else
-            call tdf_init(st%external_current_td_phase(il))
-          end if
-        end if
-      end do
-      call parse_block_end(blk)
-    end if
-
-
-    POP_SUB(external_current_init)
-  end subroutine external_current_init
-
-
-  !----------------------------------------------------------
-  subroutine external_current_calculation(st, mesh, time, current)
-    type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
-    FLOAT,          intent(in)    :: time
-    FLOAT,          intent(inout) :: current(:,:)
-
-    integer :: ip, jn, idir
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
-    CMPLX   :: exp_arg
-
-    PUSH_SUB(external_current_calculation)
-
-    current(:,:) = M_ZERO
-    do jn = 1, st%external_current_number
-      if (st%external_current_modus(jn) == EXTERNAL_CURRENT_PARSER) then
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, coords = xx)
-          do idir = 1, st%dim
-            tt = time
-            call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, tt, &
-              & trim(st%external_current_string(idir,jn)))
-            j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
-          end do
-          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
-        end do
-
-      else if(st%external_current_modus(jn) == EXTERNAL_CURRENT_TD_FUNCTION) then
-        do ip = 1, mesh%np
-          exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
-          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%dim) = TOFLOAT(amp(1:st%dim) * exp(-M_zI*exp_arg))
-          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
-        end do
-      end if
-    end do
-
-    POP_SUB(external_current_calculation)
-  end subroutine external_current_calculation
-  
 end module current_oct_m
 
 !! Local Variables:

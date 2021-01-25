@@ -66,17 +66,21 @@ contains
 
     type(block_t)      :: blk
     integer            :: il, nlines, idim, ncols, ip, state_from, ierr, maxwell_field
-    FLOAT              :: xx(MAX_DIM), rr, e_value, dummy, b_value
+    FLOAT              :: xx(1:mesh%sb%dim), rr, e_value, dummy, b_value
     FLOAT, allocatable :: e_field(:), b_field(:)
-    CMPLX, allocatable :: rs_state_add(:)
+    FLOAT, allocatable :: total_efield(:,:), total_bfield(:,:)
+    CMPLX, allocatable :: rs_state_add(:), rs_state(:,:)
     character(len=150), pointer :: filename_e_field, filename_b_field
     character(1) :: cdim
+    type(profile_t), save :: prof
     
     integer, parameter ::           &
       STATE_FROM_FORMULA  = 1,      &
       STATE_FROM_FILE     = -10010
 
     PUSH_SUB(states_mxll_read_user_def)
+
+    call profiling_in(prof, 'STATES_MXLL_READ_USER_DEF')
 
     !%Variable UserDefinedInitialMaxwellStates
     !%Type block
@@ -123,6 +127,7 @@ contains
     if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
       SAFE_ALLOCATE(rs_state_add(1:mesh%np_part))
+      SAFE_ALLOCATE(rs_state(1:mesh%np, 1:3))
 
       ! Set electromagnetic field equal to zero in the whole simulation box.
       user_def_rs_state(:,:) = M_ZERO
@@ -133,6 +138,12 @@ contains
       write(message(1), '(a,i5)') 'Maxwell electromagnetic fields are added.'
       write(message(2), '(a,i5)') ''
       call messages_info(2)
+
+    
+      SAFE_ALLOCATE(total_efield(1:mesh%np, 1:3))
+      SAFE_ALLOCATE(total_bfield(1:mesh%np, 1:3))
+      total_efield = M_ZERO
+      total_bfield = M_ZERO
 
       ! read all lines
       do il = 1, nlines
@@ -155,6 +166,7 @@ contains
         select case(state_from)
 
         case(STATE_FROM_FORMULA)
+
           ! parse formula string
           call parse_block_integer(blk, il - 1, 2, maxwell_field )
           if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
@@ -167,26 +179,30 @@ contains
             call conv_to_C_string(st%user_def_b_field(idim))
           end if
 
-          ! fill Maxwell states with user-defined formulas
-          do ip = 1, mesh%np
-            xx = mesh%x(ip, :)
-            rr = sqrt(sum(xx(:)**2))
-            ! parse user-defined expressions
-            if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
+          if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
+
+            ! fill Maxwell states with user-defined formulas
+            do ip = 1, mesh%np
+              xx = mesh%x(ip, :)
+              rr = sqrt(sum(xx**2))
+              ! parse user-defined expressions
               call parse_expression(e_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_e_field(idim))
-              b_value = M_ZERO
-            else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
+              total_efield(ip, idim) = total_efield(ip, idim) + e_value
+            end do
+
+          else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
+            ! fill Maxwell states with user-defined formulas
+            do ip = 1, mesh%np
+              xx = mesh%x(ip, :)
+              rr = sqrt(sum(xx**2))
+
               call parse_expression(b_value, dummy, st%dim, xx, rr, M_ZERO, &
-                                    st%user_def_b_field(idim))
-              e_value = M_ZERO
-            end if
-            e_value = units_to_atomic(units_inp%energy/units_inp%length, e_value)
-            b_value = units_to_atomic(unit_one/(units_inp%length**2), b_value)
-            ! fill state
-            call build_rs_element(e_value, b_value, st%rs_sign, rs_state_add(ip), &
-                                          st%ep(ip), st%mu(ip))
-          end do
+                                      st%user_def_b_field(idim))
+              total_bfield(ip, idim) = total_bfield(ip, idim) + b_value
+            end do
+
+          end if
 
         case(STATE_FROM_FILE)
           ! The input format can be coded in column four now. As it is
@@ -224,6 +240,8 @@ contains
 
           SAFE_DEALLOCATE_A(e_field)
           SAFE_DEALLOCATE_A(b_field)
+        
+          call lalg_axpy(mesh%np, M_ONE, rs_state_add, user_def_rs_state(:,idim))
 
         case default
           message(1) = 'Wrong entry in UserDefinedMaxwellStates, column 2.'
@@ -231,10 +249,26 @@ contains
           call messages_fatal(2, namespace=namespace)
         end select
 
-        call lalg_axpy(mesh%np, M_ONE, rs_state_add, user_def_rs_state(:,idim))
-
       end do
 
+      if(state_from == STATE_FROM_FORMULA) then
+        do idim = 1, 3
+          total_efield(:, idim) = units_to_atomic(units_inp%energy/units_inp%length, total_efield(:, idim))
+          total_bfield(:, idim) = units_to_atomic(unit_one/(units_inp%length**2), total_bfield(:, idim)) 
+        end do
+
+       ! fill state
+       call build_rs_state(total_efield, total_bfield, st%rs_sign, rs_state, mesh, st%ep, st%mu)
+       do idim = 1, 3
+          call lalg_axpy(mesh%np, M_ONE, rs_state(:, idim), user_def_rs_state(:,idim))
+        end do
+      end if
+
+      
+      SAFE_DEALLOCATE_A(total_efield)
+      SAFE_DEALLOCATE_A(total_bfield)
+
+      SAFE_DEALLOCATE_A(rs_state)
       SAFE_DEALLOCATE_A(rs_state_add)
       call parse_block_end(blk)
       !call messages_print_stress(stdout, namespace=namespace)
@@ -243,6 +277,8 @@ contains
       message(1) = "'UserDefineInitialdStates' has to be specified as block."
       call messages_fatal(1, namespace=namespace)
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_read_user_def)
   end subroutine states_mxll_read_user_def

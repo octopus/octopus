@@ -21,7 +21,8 @@
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim)
+subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim, &
+                                    use_mesh, normalize)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   type(submesh_t),          intent(inout) :: sm
@@ -31,13 +32,14 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   integer,                  intent(in)    :: orbind
   FLOAT,                    intent(in)    :: radius
   integer,                  intent(in)    :: d_dim
+  logical,                  intent(in)    :: use_mesh
+  logical,                  intent(in)    :: normalize
 
   type(species_t), pointer :: spec
-  #ifdef R_TCOMPLEX
   FLOAT, allocatable :: tmp(:)
-  #endif
-  integer :: is, mm
-  FLOAT :: coeff
+  R_TYPE, allocatable :: ztmp(:,:)
+  integer :: mm
+  FLOAT :: coeff, norm
 
   PUSH_SUB(X(get_atomic_orbital))
 
@@ -97,8 +99,12 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
   end if
 
-  if(.not.associated(os%X(orb))) then
-    SAFE_ALLOCATE(os%X(orb)(1:sm%np,1:os%ndim,1:os%norbs))
+  if(.not. allocated(os%X(orb))) then
+    if(use_mesh) then
+      SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+    else
+      SAFE_ALLOCATE(os%X(orb)(1:sm%np,1:os%ndim,1:os%norbs))
+    end if
     os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
   end if
 
@@ -107,58 +113,71 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     mm = orbind-1-ll
 
     !We get the orbital from the pseudopotential
-  #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
     call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, tmp)
-    os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
+    if(normalize) then
+      norm = dsm_nrm2(os%sphere, tmp)
+      call lalg_scal(os%sphere%np, M_ONE/norm, tmp)
+    end if
+
+    if(use_mesh) then
+      call submesh_add_to_mesh(sm, tmp, os%X(orb)(1:mesh%np, 1, orbind))
+    else
+      os%X(orb)(1:sm%np, 1, orbind) = tmp(1:sm%np)
+    end if
     SAFE_DEALLOCATE_A(tmp)
-  #else
-    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
-                                         os%X(orb)(1:sm%np,1,orbind))
-  #endif
+
   else
+    SAFE_ALLOCATE(ztmp(1:sm%np, 1:2))  
+
     if(jj == ll+M_HALF) then
       mm = orbind - 2 - ll
       if(mm >= -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
-                                         os%X(orb)(1:sm%np,1,orbind))
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, ztmp(:, 1))
         coeff = sqrt((ll+mm+M_ONE)/(M_TWO*ll+M_ONE)) 
-        do is = 1,sm%np
-          os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
-        end do
+        call lalg_scal(sm%np, coeff, ztmp(:, 1))
       else
-        os%X(orb)(1:sm%np,1,orbind) = M_ZERO
+        ztmp(1:sm%np, 1) = M_ZERO
       end if
       if(mm < ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, &
-                                         os%X(orb)(1:sm%np,2,orbind))
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, ztmp(:,2))
         coeff = sqrt((ll-mm)/(M_TWO*ll+M_ONE))                           
-        do is = 1,sm%np
-          os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
-        end do
+        call lalg_scal(sm%np, coeff, ztmp(:, 2))
       else
-       os%X(orb)(1:sm%np,2,orbind) = M_ZERO
+       ztmp(1:sm%np, 2) = M_ZERO
       end if
     else
       mm = orbind - ll
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
-                                        os%X(orb)(1:sm%np,2,orbind))
-      coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))                           
-      do is = 1,sm%np
-        os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
-      end do
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, ztmp(:,2))
+      coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))  
+      call lalg_scal(sm%np, coeff, ztmp(:, 2)) 
       if(mm > -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, &
-                                         os%X(orb)(1:sm%np,1,orbind))
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, ztmp(:,1))
         coeff = sqrt((ll-mm+M_ONE)/(M_TWO*ll+M_ONE))      
-        do is = 1,sm%np
-          os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
-        end do
+        call lalg_scal(sm%np, coeff, ztmp(:, 1))
       else
-       os%X(orb)(1:sm%np,1,orbind) = M_ZERO
+       ztmp(1:sm%np, 1) = M_ZERO
       end if
     end if
+
+    if(normalize) then  
+      norm = X(sm_nrm2)(os%sphere, ztmp(:,1))**2 
+      norm = norm + X(sm_nrm2)(os%sphere, ztmp(:,2))**2
+      norm = sqrt(norm)
+      call lalg_scal(os%sphere%np, M_ONE/norm, ztmp(:,1))
+      call lalg_scal(os%sphere%np, M_ONE/norm, ztmp(:,2))
+    end if
+
+
+    if(use_mesh) then
+      call submesh_add_to_mesh(sm, ztmp(:, 1), os%X(orb)(1:mesh%np, 1, orbind))
+      call submesh_add_to_mesh(sm, ztmp(:, 2), os%X(orb)(1:mesh%np, 2, orbind))
+    else
+      os%X(orb)(1:sm%np, 1, orbind) = ztmp(1:sm%np, 1)
+      os%X(orb)(1:sm%np, 2, orbind) = ztmp(1:sm%np, 2)
+    end if
+    SAFE_DEALLOCATE_A(tmp)
 
   end if
 

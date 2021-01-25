@@ -29,8 +29,9 @@ Smearing = 0.1*eV
 
 ExtraStates = 2
 
+ConvEigenError = yes
+
 ExperimentalFeatures = yes
 
 FromScratch = yes
 StatesPack = yes
-LCAOStart = lcao_full

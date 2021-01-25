@@ -47,7 +47,7 @@ module poisson_psolver_oct_m
   use poisson_solver
   use dictionaries, dict_set => set
   use yaml_output, only: yaml_map
-  use wrapper_MPI
+  use wrapper_MPI, only: mpi_environment, mpi_environment_set
 #endif
 
 

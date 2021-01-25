@@ -20,6 +20,7 @@
 AC_DEFUN([ACX_ELPA],
 [
   
+if test x"$acx_scalapack_ok" = xyes; then
   acx_elpa_ok=no
   acx_elpa_old_ok=no
 
@@ -33,7 +34,7 @@ AC_DEFUN([ACX_ELPA],
   # Set FCFLAGS_ELPA only if not set from environment
   if test x"$FCFLAGS_ELPA" = x; then
     case $with_elpa_prefix in
-      "") FCFLAGS_ELPA="-I/usr/include" ;;
+      "") FCFLAGS_ELPA="-I/usr/include -I/usr/include/elpa/modules" ;;
       *)  FCFLAGS_ELPA="-I$with_elpa_prefix/include" ;;
     esac
   fi
@@ -98,5 +99,9 @@ AC_DEFUN([ACX_ELPA],
 
   FCFLAGS="$acx_elpa_save_FCFLAGS"
   LIBS="$acx_elpa_save_LIBS"
+else
+  dnl Scalapack is needed to use elpa
+  AC_MSG_WARN([elpa library is not used because scalapack is not found which is a prerequisite for elpa])
+fi
 
 ])

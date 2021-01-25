@@ -248,18 +248,18 @@ contains
         call comm_allreduce(mpi_world%comm, psi)
         call comm_allreduce(mpi_world%comm, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
-        call zgemm( 'n',                               &
-                    'c',                               &
-                    nst,                               &
-                    nst,                               &
-                    mesh%np_global*st%d%dim,           &
-                    cmplx(mesh%volume_element,kind=8), &
-                    hpsi(1, 1, 1),                     &
-                    ubound(hpsi, dim = 1),             &
-                    psi(1, 1, 1),                      &
-                    ubound(psi, dim = 1),              &
-                    cmplx(0.,kind=8),                  &
-                    hmss(1, 1),                        &
+        call zgemm( 'n',                                  &
+                    'c',                                  &
+                    nst,                                  &
+                    nst,                                  &
+                    mesh%np_global*st%d%dim,              &
+                    TOCMPLX(mesh%volume_element, M_ZERO), &
+                    hpsi(1, 1, 1),                        &
+                    ubound(hpsi, dim = 1),                &
+                    psi(1, 1, 1),                         &
+                    ubound(psi, dim = 1),                 &
+                    M_z0,                                 &
+                    hmss(1, 1),                           &
                     ubound(hmss, dim = 1))
 
         hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))

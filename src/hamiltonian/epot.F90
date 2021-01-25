@@ -30,6 +30,7 @@ module epot_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
   use lasers_oct_m
+  use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -117,8 +118,8 @@ module epot_oct_m
     FLOAT, pointer :: fii(:, :)
     FLOAT, allocatable :: vdw_forces(:, :)
     
-    real(4), pointer, private :: local_potential(:,:)
-    logical,          private :: local_potential_precalculated
+    FLOAT, pointer, private :: local_potential(:,:)
+    logical,        private :: local_potential_precalculated
 
     logical          :: ignore_external_ions
     logical,                  private :: have_density
@@ -131,19 +132,21 @@ module epot_oct_m
     !> variables for external forces over the ions
     logical,     private :: global_force
     type(tdf_t), private :: global_force_function
+
+    logical              :: nlcc = .false.   !< does any species have non-local core corrections?
   end type epot_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family, mc)
+  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, xc_family, mc)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
+    type(states_elec_t),                intent(inout) :: st
     type(geometry_t),                   intent(inout) :: geo
     type(poisson_t),  target,           intent(in)    :: psolver
     integer,                            intent(in)    :: ispin
-    integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
     type(multicomm_t),                  intent(in)    :: mc
 
@@ -191,7 +194,7 @@ contains
     nullify(ep%Vclassical)
     if(geo%ncatoms > 0) then
 
-      if(simul_box_is_periodic(gr%mesh%sb)) &
+      if(simul_box_is_periodic(gr%sb)) &
         call messages_not_implemented("classical atoms in periodic systems", namespace=namespace)
       
       !%Variable ClassicalPotential
@@ -229,7 +232,7 @@ contains
     ! lasers
     call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, namespace, gr%mesh%sb, ispin)
+    call kick_init(ep%kick, namespace, gr%sb, ispin)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
@@ -342,7 +345,7 @@ contains
 
     ep%have_density = .false.
     do ia = 1, geo%natoms
-      if(local_potential_has_density(gr%mesh%sb, geo%atom(ia))) then
+      if(local_potential_has_density(gr%sb, geo%atom(ia))) then
         ep%have_density = .true.
         exit
       end if
@@ -386,6 +389,16 @@ contains
 
     end if
     
+    ! find out if we need non-local core corrections
+    ep%nlcc = .false.
+    do ia = 1, geo%nspecies
+      ep%nlcc = (ep%nlcc.or.species_has_nlcc(geo%species(ia)))
+    end do
+    if(ep%nlcc) then
+      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
+      st%rho_core(:) = M_ZERO
+    end if
+
 
     POP_SUB(epot_init)
   end subroutine epot_init
@@ -449,8 +462,7 @@ contains
     type(geometry_t), target, intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
 
-    integer :: ia, ip
-    type(atom_t),      pointer :: atm
+    integer :: ia
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
@@ -470,16 +482,16 @@ contains
 
     ! Local part
     ep%vpsl = M_ZERO
-    if(geo%nlcc) st%rho_core = M_ZERO
+    if(ep%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
-      if(geo%nlcc) then
-        call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
-          rho_core = st%rho_core, density = density)
-      else
-        call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
-      end if
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
+
+      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
+
+      if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
+        call species_get_nlcc(geo%atom(ia)%species, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
+      endif
     end do
 
     ! reduce over atoms if required
@@ -500,24 +512,21 @@ contains
       SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
       if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
       call dpoisson_solve(ep%poisson_solver, tmp, density)
-      do ip = 1, mesh%np
-        ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
-      end do
+      call lalg_axpy(mesh%np, M_ONE, tmp, ep%vpsl)
       SAFE_DEALLOCATE_A(tmp)
 
     end if
     SAFE_DEALLOCATE_A(density)
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ep%ion_interaction, geo, sb, namespace, ep%ignore_external_ions, ep%eii, ep%fii)
+    call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
-      atm => geo%atom(ia)
-      if(.not. species_is_ps(atm%species)) cycle
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
+      if (.not. species_is_ps(geo%atom(ia)%species)) cycle
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), atm, namespace, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), geo%atom(ia), namespace, st%d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
@@ -536,14 +545,18 @@ contains
     end if
     
     do ia = 1, geo%natoms
-      atm => geo%atom(ia)
-      call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
+      call projector_build(ep%proj(ia), gr, geo%atom(ia), ep%so_strength)
       if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
 
     ! add static electric fields
-    if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
-    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
+    if (ep%classical_pot > 0) then
+      call lalg_axpy(mesh%np, M_ONE, ep%Vclassical, ep%vpsl) 
+    end if
+
+    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) then
+      call lalg_axpy(mesh%np, M_ONE, ep%v_static, ep%vpsl)
+    end if
 
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
@@ -561,7 +574,7 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, rho_core, density)
+  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, density)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(in)    :: der
@@ -569,7 +582,6 @@ contains
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
-    FLOAT,          optional, pointer       :: rho_core(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
     integer :: ip
@@ -595,12 +607,12 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
+        call species_get_long_range_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
 
+        !In this case, we want to treat this outside of this routine to 
+        !avoid multiple calls to poisson_solve
         if(present(density)) then
-          do ip = 1, der%mesh%np
-            density(ip) = density(ip) + rho(ip)
-          end do
+          call lalg_axpy(der%mesh%np, M_ONE, rho, density)
         else
 
           SAFE_ALLOCATE(vl(1:der%mesh%np))
@@ -621,12 +633,11 @@ contains
         SAFE_ALLOCATE(vl(1:der%mesh%np))
         call species_get_local(geo%atom(iatom)%species, der%mesh, namespace, &
           geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
+
       end if
 
       if(allocated(vl)) then
-        do ip = 1, der%mesh%np
-          vpsl(ip) = vpsl(ip) + vl(ip)
-        end do
+        call lalg_axpy(der%mesh%np, M_ONE, vl, vpsl)
         SAFE_DEALLOCATE_A(vl)
       end if
 
@@ -639,30 +650,13 @@ contains
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
-
-        ! Cannot be written (correctly) as a vector expression since for periodic systems,
-        ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
-        do ip = 1, sphere%np
-          vpsl(sphere%map(ip)) = vpsl(sphere%map(ip)) + vl(ip)
-        end do
+        call submesh_add_to_mesh(sphere, vl, vpsl)
 
         SAFE_DEALLOCATE_A(vl)
         call submesh_end(sphere)
 
       end if
 
-    end if
-
-    !Non-local core corrections
-    if(present(rho_core) .and. &
-      species_has_nlcc(geo%atom(iatom)%species) .and. &
-      species_is_ps(geo%atom(iatom)%species)) then
-      SAFE_ALLOCATE(rho(1:der%mesh%np))
-      call species_get_nlcc(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
-      do ip = 1, der%mesh%np
-        rho_core(ip) = rho_core(ip) + rho(ip)
-      end do
-      SAFE_DEALLOCATE_A(rho)
     end if
 
     call profiling_out(prof)
@@ -718,7 +712,6 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     integer :: iatom
-    FLOAT, allocatable :: tmp(:)
     
     PUSH_SUB(epot_precalc_local_potential)
     
@@ -726,19 +719,14 @@ contains
       SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
     end if
 
-
     ep%local_potential_precalculated = .false.
 
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%np) = M_ZERO
-      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
-      ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
+      ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
+      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 
-    SAFE_DEALLOCATE_A(tmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 

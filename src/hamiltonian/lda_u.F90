@@ -103,8 +103,7 @@ module lda_u_oct_m
     FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
 
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
+    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
 
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional)
@@ -137,8 +136,8 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
 
     integer, public     :: maxneighbors
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:)
+    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
+    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -185,13 +184,14 @@ contains
     nullify(this%zV)
     nullify(this%coulomb)
     nullify(this%zcoulomb)
-    nullify(this%drenorm_occ)
-    nullify(this%zrenorm_occ)
+    nullify(this%renorm_occ)
     nullify(this%orbsets)
     nullify(this%dn_ij)
     nullify(this%zn_ij)
     nullify(this%dn_alt_ij)
     nullify(this%zn_alt_ij)
+    nullify(this%dn_alt_ii)
+    nullify(this%zn_alt_ii)
 
     call distributed_nullify(this%orbs_dist, 0)
 
@@ -203,11 +203,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
-    type(lda_u_t),             intent(inout) :: this
+    type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: level
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t), target,  intent(in)    :: geo
+    type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
 
@@ -288,7 +288,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%sb%nonorthogonal) then
+      if(gr%sb%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -300,7 +300,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%sb%nonorthogonal) then
+      if(gr%sb%nonorthogonal) then
         call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -400,7 +400,7 @@ contains
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace)
+      call orbitalbasis_init(this%basis, namespace, gr%sb)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -528,12 +528,13 @@ contains
     SAFE_DEALLOCATE_P(this%zV)
     SAFE_DEALLOCATE_P(this%coulomb)
     SAFE_DEALLOCATE_P(this%zcoulomb)
-    SAFE_DEALLOCATE_P(this%drenorm_occ)
-    SAFE_DEALLOCATE_P(this%zrenorm_occ)
+    SAFE_DEALLOCATE_P(this%renorm_occ)
     SAFE_DEALLOCATE_P(this%dn_ij)
     SAFE_DEALLOCATE_P(this%zn_ij)
     SAFE_DEALLOCATE_P(this%dn_alt_ij)
     SAFE_DEALLOCATE_P(this%zn_alt_ij)
+    SAFE_DEALLOCATE_P(this%dn_alt_ii)
+    SAFE_DEALLOCATE_P(this%zn_alt_ii)
     SAFE_DEALLOCATE_A(this%basisstates)
 
     nullify(this%orbsets)
@@ -552,9 +553,9 @@ contains
 
   ! When moving the ions, the basis must be reconstructed
   subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, has_phase)
-    type(lda_u_t),             intent(inout) :: this
+    type(lda_u_t),     target, intent(inout) :: this
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t), target,  intent(in)    :: geo
+    type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(namespace_t),         intent(in)    :: namespace
@@ -601,6 +602,9 @@ contains
         SAFE_DEALLOCATE_P(this%dn_alt_ij)
         SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+        SAFE_DEALLOCATE_P(this%dn_alt_ii)
+        SAFE_ALLOCATE(this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+        this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
       else
         SAFE_DEALLOCATE_P(this%zn_ij)
         SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
@@ -608,13 +612,16 @@ contains
         SAFE_DEALLOCATE_P(this%zn_alt_ij)
         SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+        SAFE_DEALLOCATE_P(this%zn_alt_ii)
+        SAFE_ALLOCATE(this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+        this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
       end if
     end if
 
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries, namespace)
+      call lda_u_build_phase_correction(this, gr%sb, st%d, gr%der%boundaries, namespace)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then

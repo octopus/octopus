@@ -42,14 +42,15 @@ match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -19.96949
 match ; HOMO-1         ; GREPFIELD(static/info, '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 
-Input: 01-casida.012-vib_modes.inp
-match ; Bond stretch   ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 2254.18075863
-Precision : 0.025
-match ; Libration 1    ; LINEFIELD(vib_modes/normal_frequencies_lr, 2, 2) ; 324.14
+Input: 01-casida.02-vib_modes.inp
+Precision: 0.05
+match ;  Bond stretch    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 2254.18105202
+Precision: 2.4e-02
+match ;  Libration 1     ; LINEFIELD(vib_modes/normal_frequencies_lr, 2, 2) ; 324.127205145
 
 Precision : 0.0001
 
-Input: 01-casida.02-unocc.inp
+Input: 01-casida.03-unocc.inp
 match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
 match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
@@ -59,7 +60,7 @@ match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
 match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 
-Input: 01-casida.022-unocc_restart.inp
+Input: 01-casida.04-unocc_restart.inp
 match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
 match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
@@ -69,7 +70,7 @@ match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
 match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 
-Input: 01-casida.03-casida.inp
+Input: 01-casida.05-casida.inp
 match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
 match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
 
@@ -116,8 +117,84 @@ match ; 1st TDA force 1 1 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_000
 match ; 1st TDA force 1 2 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_00001.xsf, 2, 6) ; 0.0
 match ; 9th TDA force 1 1 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_00009.xsf, 2, 5) ; -0.166306
 
+# check parallel solver
+Input: 01-casida.06-casida_scalapack.inp
+if(available scalapack); then
+  match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
+  match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
 
-Input: 01-casida.032-casida_restart.inp
+  # test only non-degenerate transitions as intensities are not well-defined otherwise
+  match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 7) ; 0.0
+  match ;  7th eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 7) ; 0.0
+
+  match ; 1st Petersilka E ; LINEFIELD(casida/petersilka, 2, 2) ; 3.44931259E-01
+  match ; 2nd Petersilka E ; LINEFIELD(casida/petersilka, 3, 2) ; 3.44931259E-01
+  match ; 3rd Petersilka E ; LINEFIELD(casida/petersilka, 4, 2) ; 3.53561930E-01
+  match ; 9th Petersilka E ; LINEFIELD(casida/petersilka, 10, 2) ; 4.54207048E-01
+
+  match ; 1st Petersilka f ; LINEFIELD(casida/petersilka, 2, 6) ; 0.0
+  match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka, 3, 6) ; 0.0
+  match ; 7th Petersilka f ; LINEFIELD(casida/petersilka, 8, 6) ; 4.96390161E-02
+  match ; 9th Petersilka f ; LINEFIELD(casida/petersilka, 10, 6) ; 4.97637323E-02
+
+  match ; 1st Casida E ; LINEFIELD(casida/casida, 2, 2) ; 3.42081546E-01
+  match ; 2nd Casida E ; LINEFIELD(casida/casida, 4, 2) ; 3.53561930E-01
+  match ; 3rd Casida E ; LINEFIELD(casida/casida, 5, 2) ; 3.73691875E-01
+
+  match ; 1st Casida f ; LINEFIELD(casida/casida, 2, 6) ; 0.0
+  match ; 3rd Casida f ; LINEFIELD(casida/casida, 5, 6) ; 0.0
+  match ; 9th Casida f ; LINEFIELD(casida/casida, 10, 6) ; 4.59733350E-02
+
+  match ; 1st TDA E ; LINEFIELD(casida/tamm_dancoff, 2, 2) ; 3.44931274E-01
+  match ; 2nd TDA E ; LINEFIELD(casida/tamm_dancoff, 4, 2) ; 3.53561930E-01
+  match ; 3rd TDA E ; LINEFIELD(casida/tamm_dancoff, 5, 2) ; 3.74266381E-01
+
+  match ; 1st TDA f ; LINEFIELD(casida/tamm_dancoff, 2, 6) ; 0.0
+  match ; 3rd TDA f ; LINEFIELD(casida/tamm_dancoff, 5, 6) ; 0.0
+  match ; 9th TDA f ; LINEFIELD(casida/tamm_dancoff, 10, 6) ; 4.58820724E-02
+else
+  match ; Error match ; GREPCOUNT(err, 'code not compiled with ScaLAPACK') ; 1
+endif
+
+Input: 01-casida.07-casida_elpa.inp
+if(available ELPA); then
+  match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
+  match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
+
+  # test only non-degenerate transitions as intensities are not well-defined otherwise
+  match ;  1st eps-diff f ; GREPFIELD(casida/eps_diff, '  5   6', 7) ; 0.0
+  match ;  7th eps-diff f ; GREPFIELD(casida/eps_diff, '  5   8', 7) ; 0.0
+
+  match ; 1st Petersilka E ; LINEFIELD(casida/petersilka, 2, 2) ; 3.44931259E-01
+  match ; 2nd Petersilka E ; LINEFIELD(casida/petersilka, 3, 2) ; 3.44931259E-01
+  match ; 3rd Petersilka E ; LINEFIELD(casida/petersilka, 4, 2) ; 3.53561930E-01
+  match ; 9th Petersilka E ; LINEFIELD(casida/petersilka, 10, 2) ; 4.54207048E-01
+
+  match ; 1st Petersilka f ; LINEFIELD(casida/petersilka, 2, 6) ; 0.0
+  match ; 2nd Petersilka f ; LINEFIELD(casida/petersilka, 3, 6) ; 0.0
+  match ; 7th Petersilka f ; LINEFIELD(casida/petersilka, 8, 6) ; 4.96390161E-02
+  match ; 9th Petersilka f ; LINEFIELD(casida/petersilka, 10, 6) ; 4.97637323E-02
+
+  match ; 1st Casida E ; LINEFIELD(casida/casida, 2, 2) ; 3.42081546E-01
+  match ; 2nd Casida E ; LINEFIELD(casida/casida, 4, 2) ; 3.53561930E-01
+  match ; 3rd Casida E ; LINEFIELD(casida/casida, 5, 2) ; 3.73691875E-01
+
+  match ; 1st Casida f ; LINEFIELD(casida/casida, 2, 6) ; 0.0
+  match ; 3rd Casida f ; LINEFIELD(casida/casida, 5, 6) ; 0.0
+  match ; 9th Casida f ; LINEFIELD(casida/casida, 10, 6) ; 4.59733350E-02
+
+  match ; 1st TDA E ; LINEFIELD(casida/tamm_dancoff, 2, 2) ; 3.44931274E-01
+  match ; 2nd TDA E ; LINEFIELD(casida/tamm_dancoff, 4, 2) ; 3.53561930E-01
+  match ; 3rd TDA E ; LINEFIELD(casida/tamm_dancoff, 5, 2) ; 3.74266381E-01
+
+  match ; 1st TDA f ; LINEFIELD(casida/tamm_dancoff, 2, 6) ; 0.0
+  match ; 3rd TDA f ; LINEFIELD(casida/tamm_dancoff, 5, 6) ; 0.0
+  match ; 9th TDA f ; LINEFIELD(casida/tamm_dancoff, 10, 6) ; 4.58820724E-02
+else
+  match ; Error match ; GREPCOUNT(err, 'code not compiled with') ; 1
+endif
+
+Input: 01-casida.08-casida_restart.inp
 match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
 match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
 match ; 12th eps-diff E ; GREPFIELD(casida/eps_diff, '  5  11', 3) ; 4.33579704E-01
@@ -168,32 +245,36 @@ match ; 9th TDA force 1 1 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_000
 
 
 Util : oct-casida_spectrum
-Input: 01-casida.04-spectrum.inp
+Input: 01-casida.09-spectrum.inp
 
 # all theory levels have appreciable amplitude at E = 0.53 Ha
 # due to symmetry, the values in y and z must be equal
+Precision: 4e-5
+match ;   eps_diff spectrum x      ; LINEFIELD(casida/spectrum.eps_diff, 532, 2) ; 0.2112184
+match ;   eps_diff spectrum y      ; LINEFIELD(casida/spectrum.eps_diff, 532, 3) ; 5.882595
+match ;   eps_diff spectrum z      ; LINEFIELD(casida/spectrum.eps_diff, 532, 4) ; 5.882595
+match ;   eps_diff spectrum tot    ; LINEFIELD(casida/spectrum.eps_diff, 532, 5) ; 3.992136
 
-match ; eps_diff spectrum x    ; LINEFIELD(casida/spectrum.eps_diff, 532, 2) ; 2.112186E-01
-match ; eps_diff spectrum y    ; LINEFIELD(casida/spectrum.eps_diff, 532, 3) ; 5.882758E+00
-match ; eps_diff spectrum z    ; LINEFIELD(casida/spectrum.eps_diff, 532, 4) ; 5.882758E+00
-match ; eps_diff spectrum tot  ; LINEFIELD(casida/spectrum.eps_diff, 532, 5) ; 3.992244E+00
+Precision: 2e-5
+match ;   Petersilka spectrum x     ; LINEFIELD(casida/spectrum.petersilka, 532, 2) ; 0.1787432
+match ;   Petersilka spectrum y     ; LINEFIELD(casida/spectrum.petersilka, 532, 3) ; 13.76347
+match ;   Petersilka spectrum z     ; LINEFIELD(casida/spectrum.petersilka, 532, 4) ; 13.76347
+match ;   Petersilka spectrum tot   ; LINEFIELD(casida/spectrum.petersilka, 532, 5) ; 9.235227
 
-match ; Petersilka spectrum x   ; LINEFIELD(casida/spectrum.petersilka, 532, 2) ; 1.787434E-01
-match ; Petersilka spectrum y   ; LINEFIELD(casida/spectrum.petersilka, 532, 3) ; 1.376358E+01
-match ; Petersilka spectrum z   ; LINEFIELD(casida/spectrum.petersilka, 532, 4) ; 1.376358E+01
-match ; Petersilka spectrum tot ; LINEFIELD(casida/spectrum.petersilka, 532, 5) ; 9.235299E+00
+Precision: 2e-4
+match ;   Casida spectrum x      ; LINEFIELD(casida/spectrum.casida, 532, 2) ; 0.6114891
+match ;   Casida spectrum y      ; LINEFIELD(casida/spectrum.casida, 532, 3) ; 14.310025
+match ;   Casida spectrum z      ; LINEFIELD(casida/spectrum.casida, 532, 4) ; 14.31003
+match ;   Casida spectrum tot    ; LINEFIELD(casida/spectrum.casida, 532, 5) ; 9.743847500000001
 
-match ; Casida spectrum x    ; LINEFIELD(casida/spectrum.casida, 532, 2) ; 6.114840E-01
-match ; Casida spectrum y    ; LINEFIELD(casida/spectrum.casida, 532, 3) ; 1.431070E+01
-match ; Casida spectrum z    ; LINEFIELD(casida/spectrum.casida, 532, 4) ; 1.431069E+01
-match ; Casida spectrum tot  ; LINEFIELD(casida/spectrum.casida, 532, 5) ; 9.744292E+00
+Precision: 2e-5
+match ;   CV(2) spectrum x     ; LINEFIELD(casida/spectrum.variational, 532, 2) ; 0.409128
+match ;   CV(2) spectrum y     ; LINEFIELD(casida/spectrum.variational, 532, 3) ; 0.7731494
+match ;   CV(2) spectrum z     ; LINEFIELD(casida/spectrum.variational, 532, 4) ; 0.7731495
+match ;   CV(2) spectrum tot   ; LINEFIELD(casida/spectrum.variational, 532, 5) ; 0.6518089499999999
 
-match ; CV(2) spectrum x   ; LINEFIELD(casida/spectrum.variational, 532, 2) ; 4.091227E-01
-match ; CV(2) spectrum y   ; LINEFIELD(casida/spectrum.variational, 532, 3) ; 7.731327E-01
-match ; CV(2) spectrum z   ; LINEFIELD(casida/spectrum.variational, 532, 4) ; 7.731329E-01
-match ; CV(2) spectrum tot ; LINEFIELD(casida/spectrum.variational, 532, 5) ; 6.517961E-01
-
-match ; Tamm-Dancoff spectrum x   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 2) ; 5.393814E-01
-match ; Tamm-Dancoff spectrum y   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 3) ; 1.837430E+01
-match ; Tamm-Dancoff spectrum z   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 4) ; 1.837429E+01
-match ; Tamm-Dancoff spectrum tot ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 5) ; 1.242932E+01
+Precision: 4e-4
+match ;   Tamm-Dancoff spectrum x     ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 2) ; 0.5393867
+match ;   Tamm-Dancoff spectrum y     ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 3) ; 18.37349
+match ;   Tamm-Dancoff spectrum z     ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 4) ; 18.37348
+match ;   Tamm-Dancoff spectrum tot   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 5) ; 12.428785

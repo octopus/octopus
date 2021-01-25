@@ -7,9 +7,12 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = cg
-ConvRelDens = 5e-6
 EigensolverTolerance = 1e-8
-CGOrthogonalizeAll = yes
+ExtraStates = 4
+
+MixingPreconditioner = yes
+
+MaximumIter = 300
 
 a = 7.8809
 
@@ -18,7 +21,7 @@ a = 7.8809
 %
 DFTULevel = dft_u_acbn0
 
-PseudopotentialSet=hscv_lda
+PseudopotentialSet=hgh_lda
 
 %LatticeParameters
   a | a | a

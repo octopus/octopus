@@ -1280,6 +1280,245 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx, preserve_mat)
 
 end subroutine X(least_squares_vec)
 
+! ---------------------------------------------------------
+!> Computes all the eigenvalues and the eigenvectors of a real symmetric or
+!! complex Hermitian eigenproblem in parallel using ScaLAPACK or ELPA on all
+!! processors
+!! n: dimension of matrix
+!! a: input matrix, on exit: contains eigenvectors
+!! e: eigenvalues
+subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
+  implicit none
+  integer,           intent(in)    :: n
+  R_TYPE,            intent(inout) :: a(:,:)   !< (n,n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
+  integer, optional, intent(out)   :: err_code
+
+#ifdef HAVE_SCALAPACK
+  integer :: info, ii
+  integer :: np, np_rows, np_cols, block_size
+  type(blacs_proc_grid_t) :: proc_grid
+  integer :: desc(BLACS_DLEN)
+  integer :: nb_rows, nb_cols
+  R_TYPE, allocatable :: b(:,:), eigenvectors(:,:)
+#ifdef HAVE_ELPA
+  class(elpa_t), pointer :: elpa
+#else
+  R_TYPE, allocatable :: work(:)
+  R_TYPE :: worksize
+#ifdef R_TCOMPLEX
+  R_TYPE, allocatable :: rwork(:)
+  R_TYPE :: rworksize
+#endif
+#endif
+#endif
+
+
+#ifndef HAVE_SCALAPACK
+  write(message(1), '(a)') 'Called eigensolve_parallel but compiled without ScaLAPACK support.'
+  write(message(2), '(a)') 'Using non-parallel solver as fallback.'
+  call messages_info(2)
+  call X(eigensolve)(n, a, e, bof, err_code)
+#else
+
+  PUSH_SUB(X(eigensolve_parallel))
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER_PARALLEL")
+
+  ASSERT(n > 0)
+
+  ! structure of function:
+  ! 1. choose processor distribution, BLACS grid layout
+  ! 2. initialize and allocate distributed matrices, compute scalapack descriptors
+  ! 3. copy entries to distributed matrix
+  ! 4. eigensolver settings (allocate workspace)
+  ! 5. call eigensolver
+  ! 6. copy eigenvector entries back from distributed matrix
+  ! 7. deallocate and finalize unused matrices/structures
+
+
+  ! 1. choose processor distribution, BLACS grid layout
+  ! processor layout follows recommendations in the ScaLAPACK user guide,
+  ! Section 5.3.1: linear for sizes <9; otherwise as square as possible
+  np = mpi_world%size
+  if(np < 9) then
+    np_rows = 1
+    np_cols = np
+  else
+    do ii = floor(sqrt(real(np))), 2, -1
+      if(mod(np, ii) == 0) then
+        np_rows = ii
+        exit
+      end if
+    end do
+    np_cols = np / np_rows
+  end if
+
+  ! recommended block size: 64, take smaller value for smaller matrices
+  block_size = min(64, n/np_cols)
+
+  call blacs_proc_grid_init(proc_grid, mpi_world, procdim = (/np_rows, np_cols/))
+
+  ! 2. initialize and allocate distributed matrices, compute scalapack descriptors
+  ! get size of local matrix b
+  nb_rows = max(1, numroc(n, block_size, proc_grid%myrow, 0, proc_grid%nprow))
+  nb_cols = max(1, numroc(n, block_size, proc_grid%mycol, 0, proc_grid%npcol))
+
+  ! get ScaLAPACK descriptor
+  call descinit(desc(1), n, n, block_size, block_size, 0, 0, proc_grid%context, &
+    nb_rows, info)
+
+  SAFE_ALLOCATE(b(nb_rows, nb_cols))
+  SAFE_ALLOCATE(eigenvectors(nb_rows, nb_cols))
+
+  ! 3. copy entries to distributed matrix
+  ! assumes (0,0) as start of processor grid (also needed for ELPA)
+  ! use pXlacp3 helper function from ScaLAPACK to distribute the matrix a
+  call pX(lacp3)(m=n, i=1, a=b(1, 1), desca=desc(1), b=a(1, 1), ldb=n, ii=0, jj=0, rev=1)
+
+#ifdef HAVE_ELPA
+  ! 4. eigensolver settings (allocate workspace)
+  if (elpa_init(20170403) /= elpa_ok) then
+    write(message(1),'(a)') "ELPA API version not supported"
+    call messages_fatal(1)
+  endif
+  elpa => elpa_allocate()
+
+  ! set parameters describing the matrix
+  call elpa%set("na", n, info)
+  call elpa%set("nev", n, info)
+  call elpa%set("local_nrows", nb_rows, info)
+  call elpa%set("local_ncols", nb_cols, info)
+  call elpa%set("nblk", block_size, info)
+  call elpa%set("mpi_comm_parent", mpi_world%comm, info)
+  call elpa%set("process_row", proc_grid%myrow, info)
+  call elpa%set("process_col", proc_grid%mycol, info)
+
+  info = elpa%setup()
+
+  call elpa%set("solver", elpa_solver_2stage, info)
+
+  ! 5. call eigensolver
+  call elpa%eigenvectors(b, e, eigenvectors, info)
+
+  ! error handling
+  if (info /= elpa_ok) then
+    write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
+      elpa_strerr(info)
+    call messages_fatal(1)
+  end if
+
+  call elpa_deallocate(elpa)
+  call elpa_uninit()
+
+#else
+  ! use ScaLAPACK solver if ELPA not available
+  ! 4. eigensolver settings (allocate workspace)
+  ! workspace query
+#ifdef R_TREAL
+  call pdsyev(jobz='V', uplo='U', n=n, &
+    a=b(1, 1), ia=1, ja=1, desca=desc(1), w=e(1), &
+    z=eigenvectors(1, 1), iz=1, jz=1, descz=desc(1), &
+    work=worksize, lwork=-1, info=info)
+#else
+  call pzheev(jobz='V', uplo='U', n=n, &
+    a=b(1, 1), ia=1, ja=1, desca=desc(1), w=e(1), &
+    z=eigenvectors(1, 1), iz=1, jz=1, descz=desc(1), &
+    work=worksize, lwork=-1, rwork=rworksize, lrwork=-1, info=info)
+#endif
+
+  if(info /= 0) then
+    write(message(1),'(a,i6)') "ScaLAPACK workspace query failure, error code=", info
+    call messages_fatal(1)
+  end if
+
+  SAFE_ALLOCATE(work(1:int(worksize)))
+#ifdef R_TCOMPLEX
+  SAFE_ALLOCATE(rwork(1:int(rworksize)))
+#endif
+
+  ! 5. call eigensolver
+#ifdef R_TREAL
+  call pdsyev(jobz='V', uplo='U', n=n, &
+    a=b(1, 1) , ia=1, ja=1, desca=desc(1), w=e(1), &
+    z=eigenvectors(1, 1), iz=1, jz=1, descz=desc(1), &
+    work=work(1), lwork=int(worksize), info=info)
+#else
+  call pzheev(jobz='V', uplo='U', n=n, &
+    a=b(1, 1), ia=1, ja=1, desca=desc(1), w=e(1), &
+    z=eigenvectors(1, 1), iz=1, jz=1, descz=desc(1), &
+    work=work(1), lwork=int(worksize), &
+    rwork=rwork(1), lrwork=int(rworksize), info=info)
+#endif
+
+  SAFE_DEALLOCATE_A(work)
+#ifdef R_TCOMPLEX
+  SAFE_DEALLOCATE_A(rwork)
+#endif
+
+  ! error handling
+  if(info /= 0) then
+    if(optional_default(bof, .true.)) then
+#ifdef R_TCOMPLEX
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(heev)), &
+        ' returned error message ', info
+#else
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(syev)), &
+        ' returned error message ', info
+#endif
+!*  INFO    (global output) INTEGER
+!*          = 0:  successful exit
+!*          < 0:  If the i-th argument is an array and the j-entry had
+!*                an illegal value, then INFO = -(i*100+j), if the i-th
+!*                argument is a scalar and had an illegal value, then
+!*                INFO = -i.
+!*          > 0:  If INFO = 1 through N, the i(th) eigenvalue did not
+!*                converge in DSTEQR2 after a total of 30*N iterations.
+!*                If INFO = N+1, then PDSYEV has detected heterogeneity
+!*                by finding that eigenvalues were not identical across
+!*                the process grid.  In this case, the accuracy of
+!*                the results from PDSYEV cannot be guaranteed.
+      if(info < 0) then
+        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+      else if(info == n+1) then
+        write(message(2), '(a)') 'Eigenvalues were not identical over the process grid.'
+      else
+        write(message(2), '(i5,a)') info, 'th eigenvalue did not converge.'
+      end if
+      call messages_fatal(2)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
+#endif
+!(HAVE_ELPA)
+
+  ! 6. copy eigenvector entries back from distributed matrix
+  ! use pXlacp3 helper function from ScaLAPACK to collect the eigenvectors on
+  ! all cores
+  call pX(lacp3)(m=n, i=1, a=eigenvectors(1, 1), desca=desc(1), b=a(1,1), ldb=n, ii=-1, jj=-1, rev=0)
+
+  ! 7. deallocate and finalize unused matrices/structures
+  SAFE_DEALLOCATE_A(b)
+  SAFE_DEALLOCATE_A(eigenvectors)
+
+  call blacs_proc_grid_end(proc_grid)
+
+  call profiling_out(eigensolver_prof)
+  POP_SUB(X(eigensolve_parallel))
+#endif
+!(HAVE_SCALAPACK)
+end subroutine X(eigensolve_parallel)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

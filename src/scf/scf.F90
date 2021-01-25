@@ -74,7 +74,7 @@ module scf_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
   use wfs_elec_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_oep_oct_m
   
   implicit none
@@ -98,13 +98,12 @@ module scf_oct_m
   type scf_t
     private
     integer, public :: max_iter   !< maximum number of SCF iterations
-    integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
     FLOAT, public :: lmm_r
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
+    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
     FLOAT :: conv_energy_diff
     FLOAT :: energy_diff
     logical :: conv_eigen_error
@@ -122,21 +121,21 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr 
+    type(berry_t) :: berry
   end type scf_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
     type(scf_t),              intent(inout) :: scf
+    type(grid_t),             intent(in)    :: gr
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),     target, intent(inout) :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
-    FLOAT,          optional, intent(in)    :: conv_force
+    type(v_ks_t),             intent(in)    :: ks
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -159,19 +158,8 @@ contains
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
-    !%Variable MaximumIterBerry
-    !%Type integer
-    !%Default 10
-    !%Section SCF::Convergence
-    !%Description
-    !% Maximum number of iterations for the Berry potential, within each SCF iteration.
-    !% Only applies if a <tt>StaticElectricField</tt> is applied in a periodic direction.
-    !% The code will move on to the next SCF iteration even if convergence
-    !% has not been achieved. -1 means unlimited.
-    !%End
     if(associated(hm%vberry)) then
-      call parse_variable(namespace, 'MaximumIterBerry', 10, scf%max_iter_berry)
-      if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
+      call berry_init(scf%berry, namespace)
     end if
     
     !%Variable ConvEnergy
@@ -258,31 +246,16 @@ contains
     !% If this criterion is used, the SCF loop will only stop once it is
     !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev)
 
-    call messages_obsolete_variable(namespace, 'ConvAbsForce', 'ConvForce')
-    call messages_obsolete_variable(namespace, 'ConvRelForce', 'ConvForce')
-
-    !%Variable ConvForce
-    !%Type float
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the forces: maximum variation of any
-    !% component of the ionic forces in consecutive iterations.  A
-    !% zero value means do not use this criterion. The default is
-    !% zero, except for geometry optimization, which sets a default of
-    !% 1e-8 H/b.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
+    call messages_obsolete_variable(namespace, 'ConvAbsForce')
+    call messages_obsolete_variable(namespace, 'ConvRelForce')
+    call messages_obsolete_variable(namespace, 'ConvForce')
 
     scf%check_conv = &
       scf%conv_energy_diff > M_ZERO .or. &
       scf%conv_abs_dens > M_ZERO .or. scf%conv_rel_dens > M_ZERO .or. &
-      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO .or. &
-      scf%conv_abs_force > M_ZERO
+      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO 
 
     if(.not. scf%check_conv .and. scf%max_iter < 0) then
       call messages_write("All convergence criteria are disabled. Octopus is cowardly refusing")
@@ -295,7 +268,7 @@ contains
       call messages_new_line()
       call messages_write(" | MaximumIter | ConvEnergy | ConvAbsDens | ConvRelDens |")
       call messages_new_line()
-      call messages_write(" |  ConvAbsEv  | ConvRelEv  |  ConvForce  |")
+      call messages_write(" |  ConvAbsEv  | ConvRelEv  |")
       call messages_new_line()
       call messages_fatal()
     end if
@@ -406,7 +379,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, mc)
 
     !The evolution operator is a very specific propagation that requires a specific 
     !setting to work in the current framework
@@ -461,7 +434,16 @@ contains
 
     if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
       message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
-      call messages_fatal(1)
+      write(message(2),'(a)') 'Please use SCFCalculateForces = no.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+    if(scf%calc_force) then
+      if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+        write(message(1),'(a)') 'The forces are currently not properly calculated if static'
+        write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
+        write(message(3),'(a)') 'Please use SCFCalculateForces = no.'
+        call messages_fatal(3, namespace=namespace)
+      end if
     end if
 
     !%Variable SCFCalculateStress
@@ -473,6 +455,19 @@ contains
     !% default is no.
     !%End
     call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
+    if(scf%calc_stress) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
+        (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
+        write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+      if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+        write(message(1),'(a)') 'The stress tensor is currently not properly computed with vdW corrections'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+    end if 
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -524,8 +519,6 @@ contains
 
     scf%forced_finish = .false.
 
-    scf%gr => gr
-    
     POP_SUB(scf_init)
   end subroutine scf_init
 
@@ -536,7 +529,7 @@ contains
     
     PUSH_SUB(scf_end)
 
-    call eigensolver_end(scf%eigens, scf%gr)
+    call eigensolver_end(scf%eigens)
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
@@ -581,16 +574,16 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, converged_current, converged_last, gs_run_, berry_conv
-    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
+    logical :: finish, converged_current, converged_last, gs_run_
+    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
+    FLOAT :: evsum_out, evsum_in
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
-    FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
+    FLOAT, allocatable :: tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
 #ifdef HAVE_MPI
     logical :: forced_finish_tmp    
@@ -684,13 +677,12 @@ contains
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
-        .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
+    if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
       vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
     
-
+  
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
       call mixfield_set_vin(scf%mixfield, hm%vhxc)
@@ -714,17 +706,6 @@ contains
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
     evsum_in = states_elec_eigenvalues_sum(st)
-
-    ! allocate and compute forces only if they are used as convergence criteria
-    if (scf%conv_abs_force > M_ZERO) then
-      SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
-      SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
-      SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, namespace, geo, hm, st, ks)
-      do iatom = 1, geo%natoms
-        forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
-      end do
-    end if
 
     call create_convergence_file(STATIC_DIR, "convergence")
     
@@ -756,35 +737,24 @@ contains
       scf%energy_diff = hm%energy%total
 
       !Used for the contribution to the forces
-      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
-          (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) & 
+      if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+      end if
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm, namespace)
       else
+
+        !We check if the system is coupled with a partner that requires self-consistency
+      !  if(hamiltonian_has_scf_partner(hm)) then
         if(associated(hm%vberry)) then
+          !In this case, v_Hxc is frozen and we do an internal SCF loop over the 
+          ! partners that require SCF
           ks%frozen_hxc = .true.
-          do iberry = 1, scf%max_iter_berry
-            scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
-
-            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
-
-            dipole_prev = dipole
-            call calc_dipole(dipole)
-            write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
-            call messages_info(1)
-
-            berry_conv = .true.
-            do idir = 1, gr%sb%periodic_dim
-              berry_conv = berry_conv .and. &
-                (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
-                .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
-            end do
-            if(berry_conv) exit
-          end do
+         ! call perform_scf_partners()
+          call berry_perform_internal_scf(scf%berry, namespace, scf%eigens, gr, st, hm, iter, ks, geo)
+          !and we unfreeze the potential once finished
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
@@ -834,22 +804,10 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
       ! compute forces only if they are used as convergence criterion
-      if (scf%conv_abs_force > M_ZERO) then
+      if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
+         .and. outp%output_interval /= 0 &
+         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
-        scf%abs_force = M_ZERO
-        do iatom = 1, geo%natoms
-          forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
-          forcediff(1:gr%sb%dim) = abs( forceout(iatom,1:gr%sb%dim) - forcein(iatom,1:gr%sb%dim) )
-          forcetmp = maxval( forcediff )
-          if ( forcetmp > scf%abs_force ) then
-            scf%abs_force = forcetmp
-          end if
-        end do
-      else
-        if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
-           .and. outp%output_interval /= 0 &
-           .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -872,7 +830,6 @@ contains
       converged_current = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
-        (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
         (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
         (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
@@ -1006,6 +963,17 @@ contains
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
+      ! restart mixing
+      if (scf%mix_field /= OPTION__MIXFIELD__NONE) then
+        if (scf%smix%ns_restart > 0) then
+          if (mod(iter, scf%smix%ns_restart) == 0) then
+            message(1) = "Info: restarting mixing."
+            call messages_info(1)
+            call scf_mix_clear(scf)
+          end if
+        end if
+      end if
+
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
           call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
@@ -1015,10 +983,6 @@ contains
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
-      if (scf%conv_abs_force > M_ZERO) then
-        forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
-      end if
-
 
       if(scf%forced_finish) then
         call profiling_out(prof)
@@ -1034,7 +998,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
-      call v_ks_calc(ks, namespace, hm, st, geo)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current=output_needs_current(outp, states_are_real(st)))
     end if
 
     select case(scf%mix_field)
@@ -1068,7 +1032,7 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo, ks)
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
@@ -1104,6 +1068,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
+      FLOAT :: dipole(1:MAX_DIM)
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1115,14 +1080,7 @@ contains
           ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
         write(message(2),'(a,es15.2,2(a,es9.2))') &
           ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO) then
-          write(message(3),'(23x,a,es9.2)') &
-            ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
-          call messages_info(3)
-        else
-          call messages_info(2)
-        end if
+        call messages_info(2)
 
         if(.not.scf%lcao_restricted) then
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
@@ -1134,7 +1092,7 @@ contains
         end if
 
         if(associated(hm%vberry)) then
-          call calc_dipole(dipole)
+          call calc_dipole(dipole, gr, st, geo)
           call write_dipole(stdout, dipole)
         end if
 
@@ -1158,21 +1116,11 @@ contains
       end if
 
       if ( verbosity_ == VERB_COMPACT ) then
-        ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO) then
-          write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
-            'iter ', iter, &
-            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' : abs_dens', scf%abs_dens, &
-            ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
-            ' : etime ', etime, 's'
-        else
-          write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
-            'iter ', iter, &
-            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' : abs_dens', scf%abs_dens, &
-            ' : etime ', etime, 's'
-        end if
+        write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
+          'iter ', iter, &
+          ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
+          ' : abs_dens', scf%abs_dens, &
+          ' : etime ', etime, 's'
         call messages_info(1)
       end if
 
@@ -1186,6 +1134,7 @@ contains
 
       integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
+      FLOAT :: dipole(1:MAX_DIM)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1193,12 +1142,12 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
+          call kpoints_write_info(gr%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -1244,7 +1193,7 @@ contains
         end if 
 
       if(scf%calc_dipole) then
-        call calc_dipole(dipole)
+        call calc_dipole(dipole, gr, st, geo)
         call write_dipole(iunit, dipole)
       end if
 
@@ -1255,7 +1204,8 @@ contains
             ' (', scf%conv_abs_dens, ')'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
             ' (', scf%conv_rel_dens, ')'
-          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
+          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', &
+                  units_from_atomic(units_out%energy, scf%abs_ev), &
             ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
             ' [',  trim(units_abbrev(units_out%energy)), ']'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
@@ -1313,44 +1263,6 @@ contains
       POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
 
-
-    ! ---------------------------------------------------------
-    subroutine calc_dipole(dipole)
-      FLOAT, intent(out) :: dipole(:)
-
-      integer :: ispin, idir
-      FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
-
-      PUSH_SUB(scf_run.calc_dipole)
-
-      dipole(1:MAX_DIM) = M_ZERO
-
-      do ispin = 1, st%d%nspin
-        call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
-      end do
-
-      call geometry_dipole(geo, n_dip)
-
-      do idir = 1, gr%sb%dim
-        ! in periodic directions use single-point Berry`s phase calculation
-        if(idir  <=  gr%sb%periodic_dim) then
-          dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
-
-          ! use quantum of polarization to reduce to smallest possible magnitude
-          nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-          dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
-
-          ! in aperiodic directions use normal dipole formula
-        else
-          e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-          dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
-        end if
-      end do
-
-      POP_SUB(scf_run.calc_dipole)
-    end subroutine calc_dipole
-
-
     ! ---------------------------------------------------------
     subroutine write_dipole(iunit, dipole)
       integer, intent(in) :: iunit
@@ -1359,7 +1271,7 @@ contains
       PUSH_SUB(scf_run.write_dipole)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
+        call output_dipole(iunit, dipole, gr%sb%dim)
 
         if (simul_box_is_periodic(gr%sb)) then
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
@@ -1405,10 +1317,6 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-        if (scf%conv_abs_force > M_ZERO) then
-          label = 'force_diff'
-          write(iunit, '(1x,a)', advance = 'no') label
-        end if
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) then
             label = 'OEP norm2ss'
@@ -1437,10 +1345,7 @@ contains
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
         write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
-        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%rel_ev)
-        if (scf%conv_abs_force > M_ZERO) then
-          write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
-        end if
+        write(iunit, '(es13.5)', advance = 'no') scf%rel_ev
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) &
             write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss

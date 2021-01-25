@@ -159,7 +159,6 @@
       ps%g%nrval = ps%g%nrval + 1
     end if
 
-    nullify(ps%g%drdi, ps%g%s)
     SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
     SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
     ps%g%rofi(1) = M_ZERO
@@ -311,7 +310,6 @@
     SAFE_ALLOCATE(proj(1:ps%g%nrval))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
-    nullify(ps%k)
 
     was_init = .false.
     ps%h = M_ZERO

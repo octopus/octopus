@@ -97,11 +97,11 @@ module projector_oct_m
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer, public :: hgh_p(:, :) => null()
-    type(kb_projector_t),  pointer, public :: kb_p(:, :)  => null()
-    type(rkb_projector_t), pointer         :: rkb_p(:, :) => null()
-    CMPLX,                 pointer, public :: phase(:, :, :) => null()
-    integer,                        public :: ndim
+    type(hgh_projector_t), allocatable, public :: hgh_p(:, :)
+    type(kb_projector_t),  allocatable, public :: kb_p(:, :)
+    type(rkb_projector_t), allocatable         :: rkb_p(:, :)
+    CMPLX,                 allocatable, public :: phase(:, :, :)
+    integer,                            public :: ndim
   end type projector_t
 
 contains
@@ -149,7 +149,6 @@ contains
     call projector_null(p)
     ps => species_ps(atm%species)
 
-    nullify(p%phase)
     p%reltype = reltype
     p%lmax = ps%lmax
 
@@ -207,7 +206,7 @@ contains
     nphase = 1
     if(bnd%spiralBC) nphase = 3
 
-    if(.not. associated(this%phase) .and. ns > 0) then
+    if(.not. allocated(this%phase) .and. ns > 0) then
       SAFE_ALLOCATE(this%phase(1:ns, 1:nphase, std%kpt%start:std%kpt%end))
     end if
 
@@ -288,7 +287,6 @@ contains
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
-          call kb_projector_null(p%kb_p(ll, mm))
           call kb_projector_init(p%kb_p(ll, mm), p%sphere, gr, a, ll, mm)
         end do
       end do
@@ -298,14 +296,12 @@ contains
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
-          call rkb_projector_null(p%rkb_p(ll, mm))
           call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, a, ll, mm, so_strength)
         end do
       end do
       ! for rkb, l = 0 is a normal kb
       if(p%lloc /= 0) then
         SAFE_ALLOCATE(p%kb_p(1:1, 1:1))
-        call kb_projector_null(p%kb_p(1, 1))
         call kb_projector_init(p%kb_p(1, 1), p%sphere, gr, a, 0, 0)
       end if
 
@@ -332,7 +328,7 @@ contains
           call hgh_projector_end(p%hgh_p(ll, mm))
         end do
       end do
-      SAFE_DEALLOCATE_P(p%hgh_p)
+      SAFE_DEALLOCATE_A(p%hgh_p)
 
     case(PROJ_KB)
       do ll = 0, p%lmax
@@ -341,7 +337,7 @@ contains
           call kb_projector_end(p%kb_p(ll, mm))
         end do
       end do
-      SAFE_DEALLOCATE_P(p%kb_p)
+      SAFE_DEALLOCATE_A(p%kb_p)
 
     case(PROJ_RKB)
       do ll = 1, p%lmax
@@ -350,17 +346,17 @@ contains
           call rkb_projector_end(p%rkb_p(ll, mm))
         end do
       end do
-      SAFE_DEALLOCATE_P(p%rkb_p)
+      SAFE_DEALLOCATE_A(p%rkb_p)
       if(p%lloc /= 0) then
         call kb_projector_end(p%kb_p(1, 1))
-        SAFE_DEALLOCATE_P(p%kb_p)
+        SAFE_DEALLOCATE_A(p%kb_p)
       end if
 
     end select
     
     p%type = PROJ_NONE
 
-    SAFE_DEALLOCATE_P(p%phase)
+    SAFE_DEALLOCATE_A(p%phase)
 
     POP_SUB(projector_end)
   end subroutine projector_end

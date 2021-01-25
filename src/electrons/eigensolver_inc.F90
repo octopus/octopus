@@ -31,15 +31,6 @@
 
     maxiter = eigens%es_maxiter
 
-    if(st%calc_eigenval) then
-      if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type == RS_PSD &
-        .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
-
-        call X(subspace_diag)(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
-      end if
-    end if
-
-
     select case(eigens%es_type)
     case(RS_CG_NEW)
       call X(eigensolver_cg2_new)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -69,11 +60,10 @@
       call X(eigensolver_rmmdiis_min)(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
     end select
 
-    ! FEAST: subspace diag or not?
+    ! Do subspace diagonalization always after the eigensolver
+    ! Tests have shown that this leads to better convergence
     if(st%calc_eigenval) then
-      if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-        call X(subspace_diag)(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
-      end if
+      call X(subspace_diag)(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
     end if
 
 

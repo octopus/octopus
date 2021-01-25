@@ -90,7 +90,8 @@ module states_elec_oct_m
     states_elec_block_size,                &
     states_elec_count_pairs,               &
     occupied_states,                       &
-    states_elec_set_phase
+    states_elec_set_phase,                 &
+    states_elec_set_zero
 
   type, extends(states_abst_t) :: states_elec_t
     ! Components are public by default
@@ -159,6 +160,7 @@ module states_elec_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
+    integer, pointer            :: st_kpt_task(:,:)   !< For a given task, what are kpt and st start/end
     type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -220,11 +222,8 @@ contains
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
     nullify(st%node)
-    nullify(st%ap%schedule)
+    nullify(st%st_kpt_task)
 
     st%packed = .false.
 
@@ -240,7 +239,7 @@ contains
     type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ntot, default, nthreads
+    integer :: nempty, ntot, default
     integer :: nempty_conv
     logical :: force
 
@@ -385,7 +384,7 @@ contains
     ! For non-periodic systems this should just return the Gamma point
     call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
-    call geometry_val_charge(geo, st%val_charge)
+    st%val_charge = geometry_val_charge(geo)
 
     st%qtot = -(st%val_charge + excess_charge)
 
@@ -439,23 +438,14 @@ contains
     !% Some routines work over blocks of eigenfunctions, which
     !% generally improves performance at the expense of increased
     !% memory consumption. This variable selects the size of the
-    !% blocks to be used. If OpenCl is enabled, the default is 32;
-    !% otherwise it is max(4, 2*nthreads).
+    !% blocks to be used. If GPUs are used, the default is 32;
+    !% otherwise it is 4.
     !%End
-
-    nthreads = 1
-#ifdef HAVE_OPENMP
-    !$omp parallel
-    !$omp master
-    nthreads = omp_get_num_threads()
-    !$omp end master
-    !$omp end parallel
-#endif    
 
     if(accel_is_enabled()) then
       default = 32
     else
-      default = max(4, 2*nthreads)
+      default = 4
     end if
 
     if(default > pad_pow2(st%nst)) default = pad_pow2(st%nst)
@@ -476,10 +466,8 @@ contains
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
-    if(simul_box_is_periodic(gr%sb)) then
-      if(.not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
-        call states_set_complex(st)
-      end if
+    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
+      call states_set_complex(st)
     end if
 
     !%Variable OnlyUserDefinedInitialStates
@@ -563,10 +551,6 @@ contains
     !%End
     call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
-
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
 
     !%Variable ForceComplex
     !%Type logical
@@ -1175,10 +1159,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_densities_init(st, gr, geo)
+  subroutine states_elec_densities_init(st, gr)
     type(states_elec_t), target, intent(inout) :: st
     type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: fsize
 
@@ -1186,11 +1169,6 @@ contains
 
     SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
-
-    if(geo%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
-      st%rho_core(:) = M_ZERO
-    end if
 
     fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size
 
@@ -1209,12 +1187,12 @@ contains
     PUSH_SUB(states_elec_allocate_current)
     
     if(.not. associated(st%current)) then
-      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
 
     if(.not. associated(st%current_kpt)) then
-      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
 
@@ -1398,7 +1376,9 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    stout%dom_st_mpi_grp     = stin%dom_st_mpi_grp
     SAFE_ALLOCATE_SOURCE_P(stout%node, stin%node)
+    SAFE_ALLOCATE_SOURCE_P(stout%st_kpt_task, stin%st_kpt_task)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
@@ -1416,7 +1396,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_wfns_) call states_elec_group_copy(stin%d,stin%group, stout%group)
+    if(.not. exclude_wfns_) call states_elec_group_copy(stin%d, stin%group, stout%group)
 
     stout%packed = stin%packed
 
@@ -1466,9 +1446,10 @@ contains
     call distributed_end(st%dist)
 
     SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_P(st%st_kpt_task)
 
     if(st%parallel_in_states) then
-      SAFE_DEALLOCATE_P(st%ap%schedule)
+      SAFE_DEALLOCATE_A(st%ap%schedule)
     end if
 
     POP_SUB(states_elec_end)
@@ -1526,7 +1507,7 @@ contains
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
               do ip = 1, mesh%np
-                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+                zpsi(ip,1) = TOCMPLX(dpsi(ip,1), M_ZERO)
               end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
@@ -1567,7 +1548,7 @@ contains
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
               do ip = 1, mesh%np
-                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+                zpsi(ip,1) = TOCMPLX(dpsi(ip,1), M_ZERO)
               end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
@@ -1658,8 +1639,7 @@ contains
     call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
-    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%kweights, &
-      st%d%nik, st%nst)
+    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%nik, st%nst)
         
     ! check if everything is OK
     charge = M_ZERO
@@ -1690,11 +1670,9 @@ contains
       end do
       SAFE_DEALLOCATE_A(zpsi)
 
-#if defined(HAVE_MPI)        
-        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-          call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
-        end if
-#endif      
+      if(st%parallel_in_states .or. st%d%kpt%parallel) then
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+      end if
             
     end if
 
@@ -1771,8 +1749,6 @@ contains
       if(multicomm_have_slaves(mc)) &
         call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)", namespace=namespace)
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
-    else
-      call blacs_proc_grid_nullify(st%dom_st_proc_grid)
     end if
 #else
     st%scalapack_compatible = .false.
@@ -1799,6 +1775,8 @@ contains
       st%parallel_in_states = st%dist%parallel
 
     end if
+
+    call states_elec_kpoints_distribution(st)
 
     POP_SUB(states_elec_distribute_nodes)
   end subroutine states_elec_distribute_nodes
@@ -2076,7 +2054,7 @@ contains
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
            density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
-                                                                    gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+                                                                    real(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1))
          end do
        end if
 
@@ -2085,7 +2063,7 @@ contains
          call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
 
          do is = 1, st%d%spin_channels
-           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
+           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + real(lwf_psi(1:der%mesh%np, 1))
          end do
       end if
     end if
@@ -2593,6 +2571,29 @@ subroutine states_elec_set_phase(st_d, psi, phase, np, conjugate)
   POP_SUB(states_elec_set_phase)
 
 end subroutine  states_elec_set_phase
+
+  ! ---------------------------------------------------------
+  ! The routine attributes the rank index for the states-kpoint distribution
+  ! They might a better of doing this
+  subroutine states_elec_kpoints_distribution(st)
+    type(states_elec_t),    intent(inout) :: st
+
+    PUSH_SUB(states_elec_kpoints_distribution)
+
+    !We want to know for a fiven task the start and end of the states contained
+    if(.not.associated(st%st_kpt_task)) &
+      SAFE_ALLOCATE(st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4))
+    st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4) = 0
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,1) = st%st_start
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,2) = st%st_end
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
+    end if
+
+    POP_SUB(states_elec_kpoints_distribution)
+  end subroutine states_elec_kpoints_distribution
 
   
 #include "undef.F90"

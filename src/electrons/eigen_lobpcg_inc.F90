@@ -146,7 +146,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   type(hamiltonian_elec_t), intent(in)    :: hm
   integer,                  intent(in)    :: st_start
   integer,                  intent(in)    :: st_end
-  R_TYPE, target,           intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE, target, contiguous, intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
   integer,                  intent(in)    :: constr_start
   integer,                  intent(in)    :: constr_end
   integer,                  intent(in)    :: ik
@@ -316,7 +316,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   call hpsib%end()
 
   niter = niter+lnst
-  call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1 = all_ev, xpsi2 = all_ev, symm = .true.)
+  call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1 = all_ev, xpsi2 = all_ev)
 
   SAFE_ALLOCATE(ritz_vec(1:nst, 1:nst))
   no_bof = .false.
@@ -420,7 +420,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Since h_dir also has to be modified (to avoid a full calculation of
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
     if(iter > 1) then
-      call X(blockt_mul)(gr%mesh, st, st_start, dir, dir, nuc_tmp, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
+      call X(blockt_mul)(gr%mesh, st, st_start, dir, dir, nuc_tmp, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc))
       call profiling_in(C_PROFILING_LOBPCG_CHOL, TOSTRING(X(LOBPCG_CHOL)))
       no_bof = .false.
       call lalg_cholesky(nuc, nuc_tmp, bof = no_bof)
@@ -471,7 +471,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     ! (2, 2)-block: res^+ (H res).
     call X(blockt_mul)(gr%mesh, st, st_start, res, h_res, gram_h(nst+1:nst+nuc, nst+1:nst+nuc), &
-      xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
+      xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc))
 
     if(iter > 1) then
       ! (1, 3)-block: (H |psi>)^+ dir.
@@ -483,7 +483,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
       ! (3, 3)-block: dir^+ (H dir)
       call X(blockt_mul)(gr%mesh, st, st_start, dir, h_dir, &
-        gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
+        gram_h(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc))
     end if
 
     ! gram_i matrix.
@@ -683,7 +683,7 @@ contains
 
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
-    call states_elec_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
+    call states_elec_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc))
     call profiling_in(C_PROFILING_LOBPCG_CHOL, TOSTRING(X(LOBPCG_CHOL)))
     call lalg_cholesky(nuc, vv, bof = chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -781,7 +781,7 @@ end subroutine X(lobpcg)
 
 
 ! ---------------------------------------------------------
-subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2, symm)
+subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2)
   type(mesh_t),        intent(in)  :: mesh
   type(states_elec_t), intent(in)  :: st
   integer,             intent(in)  :: st_start
@@ -790,11 +790,10 @@ subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2, symm
   R_TYPE,              intent(out) :: res(:, :)
   integer,             intent(in)  :: xpsi1(:)
   integer,             intent(in)  :: xpsi2(:)
-  logical, optional,   intent(in)  :: symm
   
   PUSH_SUB(X(blockt_mul))
   
-  call states_elec_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1 = xpsi1, xpsi2 = xpsi2, symm = symm)
+  call states_elec_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1 = xpsi1, xpsi2 = xpsi2)
   
   POP_SUB(X(blockt_mul))
 end subroutine X(blockt_mul)

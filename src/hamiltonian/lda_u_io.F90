@@ -608,7 +608,10 @@ contains
     if(this%level == DFT_U_ACBN0 .and. .not. optional_default(occ_only, .false.)) then
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
-      if (err /= 0) ierr = ierr + 1
+      if (err /= 0) then
+        ierr = ierr + 1
+        Ueff = M_ZERO
+      end if
       call lda_u_set_effectiveU(this, Ueff)
       SAFE_DEALLOCATE_A(Ueff)
 
@@ -619,7 +622,10 @@ contains
         end do
         SAFE_ALLOCATE(Veff(1:ncount))
         call drestart_read_binary(restart, "lda_u_Veff", ncount, Veff, err)
-        if (err /= 0) ierr = ierr + 1
+        if (err /= 0) then
+          ierr = ierr + 1
+          Veff = M_ZERO
+        end if
         call lda_u_set_effectiveV(this, Veff)
         SAFE_DEALLOCATE_A(Veff)
       end if
@@ -639,13 +645,19 @@ contains
       if (states_are_real(st)) then
         SAFE_ALLOCATE(docc(1:occsize))
         call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
-        if (err /= 0) ierr = ierr + 1
+        if (err /= 0) then
+          ierr = ierr + 1
+          docc = M_ZERO
+        end if
         call dlda_u_set_occupations(this, docc)
         SAFE_DEALLOCATE_A(docc)
       else
         SAFE_ALLOCATE(zocc(1:occsize))
         call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
-        if (err /= 0) ierr = ierr + 1
+        if (err /= 0) then
+          ierr = ierr + 1
+          zocc = M_z0
+        end if
         call zlda_u_set_occupations(this, zocc)
         SAFE_DEALLOCATE_A(zocc)
       end if

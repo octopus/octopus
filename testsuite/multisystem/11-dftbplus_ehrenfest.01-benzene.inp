@@ -1,0 +1,48 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+FromScratch = yes
+#Debug = trace
+Dimensions = 3
+
+%Systems
+ "benzene" | dftbplus
+%
+%Coordinates
+   'C' |    0.00000000  |     0.41727209*angstrom  |    1.34035331*angstrom
+   'C' |    0.00000000  |     1.36277581*angstrom  |    0.31264346*angstrom
+   'C' |    0.00000000  |     0.94549248*angstrom  |   -1.02003049*angstrom
+   'C' |    0.00000000  |    -0.41727209*angstrom  |   -1.32501204*angstrom
+   'C' |    0.00000000  |    -1.36277581*angstrom  |   -0.29730219*angstrom
+   'C' |    0.00000000  |    -0.94549248*angstrom  |    1.03537176*angstrom
+   'H' |    0.00000000  |     0.74550740*angstrom  |    2.38862741*angstrom
+   'H' |    0.00000000  |     2.43471932*angstrom  |    0.55254238*angstrom
+   'H' |    0.00000000  |     1.68922144*angstrom  |   -1.82842183*angstrom
+   'H' |    0.00000000  |    -0.74550739*angstrom  |   -2.37328614*angstrom
+   'H' |    0.00000000  |    -2.43471932*angstrom  |   -0.53720110*angstrom
+   'H' |    0.00000000  |    -1.68922144*angstrom  |    1.84376309*angstrom
+%						        
+SccTolerance = 1.0e-10
+%MaxAngularMomentum
+ " C " | " p"					        
+ " H " | " s "					        
+%
+
+TDDynamics = Ehrenfest
+TDSystemPropagator = verlet
+MoveIons = yes
+TDTimeStep = 0.2
+TDPropagationTime = 400.0
+UnitsOutput = eV_angstrom
+
+omega = 6.795*eV
+amplitude = 0.01*eV/angstrom
+Tpulse = 6.0*femtosecond
+
+%TDExternalFields
+  0 | 1 | 1 | omega | "sin2" | "phasefunc"
+%
+
+%TDFunctions
+  "sin2" | tdf_from_expr | "amplitude * sin(pi*t/Tpulse)^2 * (1-step(t-Tpulse))"
+  "phasefunc" | tdf_cw | -pi/2
+%

@@ -109,11 +109,11 @@ contains
     PUSH_SUB(lr_calc_current)
 
     if(.not. associated(lr%dl_j)) then
-      SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
     end if
 
     np = gr%mesh%np
-    ndim = gr%mesh%sb%dim
+    ndim = gr%sb%dim
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:ndim))
     SAFE_ALLOCATE(gpsi(1:np, 1:ndim))
@@ -138,7 +138,7 @@ contains
 
             call zderivatives_grad(gr%der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
-            do idir = 1, gr%mesh%sb%dim 
+            do idir = 1, gr%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
                 + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &
@@ -150,7 +150,7 @@ contains
 
           else 
 
-            do idir = 1, gr%mesh%sb%dim 
+            do idir = 1, gr%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
                 + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &

@@ -7,18 +7,13 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 TDEnergyUpdateIter = 1
 
-ExperimentalFeatures = yes
-
 FromScratch = yes
 
 Radius = 3
 
 Spacing = 0.6
 
-ConvRelDens = 2e-6
-
-ExtraStates = 130
-MaximumIter = 3
+ExtraStates = 20
 StatesBlocksize = 32
 
 StatesPack = No

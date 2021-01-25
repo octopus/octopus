@@ -23,7 +23,6 @@ module preconditioners_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -68,24 +67,23 @@ module preconditioners_oct_m
     private
     integer :: which
 
-    type(nl_operator_t), pointer :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
-    type(nl_operator_t), pointer :: op           !< pointer to access op_array(1) simply as op
+    type(nl_operator_t), allocatable :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
+    type(nl_operator_t), pointer, public :: op   !< pointer to access op_array(1) simply as op
 
-    FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
+    FLOAT, allocatable  :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
 
-    type(multigrid_t), pointer  :: mgrid  ! multigrid object
+    type(multigrid_t) :: mgrid  ! multigrid object
   end type preconditioner_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, namespace, gr, geo, mc)
-    type(preconditioner_t), intent(out)    :: this
-    type(namespace_t),      intent(in)     :: namespace
-    type(grid_t),           intent(in)     :: gr
-    type(geometry_t),       intent(in)     :: geo
-    type(multicomm_t),      intent(in)     :: mc
+  subroutine preconditioner_init(this, namespace, gr, mc)
+    type(preconditioner_t), target, intent(out)    :: this
+    type(namespace_t),              intent(in)     :: namespace
+    type(grid_t),                   intent(in)     :: gr
+    type(multicomm_t),              intent(in)     :: mc
 
     FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
@@ -204,7 +202,7 @@ contains
         end do
       end do
 
-      SAFE_DEALLOCATE_P(this%diag_lapl)
+      SAFE_DEALLOCATE_A(this%diag_lapl)
 
       call nl_operator_update_weights(this%op)
 
@@ -242,8 +240,7 @@ contains
       !%End
       call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
 
-      SAFE_ALLOCATE(this%mgrid)
-      call multigrid_init(this%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     POP_SUB(preconditioner_init)
@@ -272,17 +269,16 @@ contains
       call nl_operator_end(this%op)
 
     case (PRE_JACOBI)
-      SAFE_DEALLOCATE_P(this%diag_lapl)
+      SAFE_DEALLOCATE_A(this%diag_lapl)
 
     case (PRE_MULTIGRID)
-      SAFE_DEALLOCATE_P(this%diag_lapl)
+      SAFE_DEALLOCATE_A(this%diag_lapl)
       call multigrid_end(this%mgrid)
-      SAFE_DEALLOCATE_P(this%mgrid)
 
     end select
 
     nullify(this%op)
-    SAFE_DEALLOCATE_P(this%op_array)
+    SAFE_DEALLOCATE_A(this%op_array)
 
     call preconditioner_null(this)
     POP_SUB(preconditioner_end)

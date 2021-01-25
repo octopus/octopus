@@ -67,7 +67,7 @@ module orbitalset_oct_m
     integer             :: ndim
     integer             :: iatom 
     type(submesh_t)     :: sphere             !> The submesh of the orbital
-    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
+    CMPLX, allocatable  :: phase(:,:)         !> Correction to the global phase 
                                               !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
@@ -80,14 +80,14 @@ module orbitalset_oct_m
     CMPLX, allocatable  :: phase_shift(:,:)
 
     FLOAT               :: radius
-    type(species_t), pointer :: spec          
+    type(species_t), pointer :: spec
 
-    FLOAT, pointer      :: dorb(:,:,:) !> The orbital, if real, on the submesh
-    CMPLX, pointer      :: zorb(:,:,:) !> The orbital, if complex, on the submesh
-    CMPLX, pointer      :: eorb_submesh(:,:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
-    CMPLX, pointer      :: eorb_mesh(:,:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
+    FLOAT, allocatable  :: dorb(:,:,:) !> The orbital, if real, on the submesh
+    CMPLX, allocatable  :: zorb(:,:,:) !> The orbital, if complex, on the submesh
+    CMPLX, allocatable  :: eorb_submesh(:,:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
+    CMPLX, allocatable  :: eorb_mesh(:,:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
 
-    logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
+    logical             :: submesh            !> Do we use or not submeshes for the orbitals
 
     type(poisson_t)     :: poisson            !> For computing the Coulomb integrals
   end type orbitalset_t
@@ -98,13 +98,6 @@ contains
   type(orbitalset_t),             intent(inout) :: this
 
   PUSH_SUB(orbitalset_nullify)
-
-  nullify(this%phase)
-  nullify(this%spec)
-  nullify(this%dorb)
-  nullify(this%zorb)
-  nullify(this%eorb_submesh)
-  nullify(this%eorb_mesh)
 
   call submesh_null(this%sphere)
   call orbitalset_init(this)
@@ -142,11 +135,11 @@ contains
 
    PUSH_SUB(orbitalset_end)  
 
-   SAFE_DEALLOCATE_P(this%phase)
-   SAFE_DEALLOCATE_P(this%dorb)
-   SAFE_DEALLOCATE_P(this%zorb)
-   SAFE_DEALLOCATE_P(this%eorb_submesh)
-   SAFE_DEALLOCATE_P(this%eorb_mesh)
+   SAFE_DEALLOCATE_A(this%phase)
+   SAFE_DEALLOCATE_A(this%dorb)
+   SAFE_DEALLOCATE_A(this%zorb)
+   SAFE_DEALLOCATE_A(this%eorb_submesh)
+   SAFE_DEALLOCATE_A(this%eorb_mesh)
    nullify(this%spec)
    call submesh_end(this%sphere)
 
@@ -225,7 +218,7 @@ contains
         os%phase(is, iq) = exp(M_zI*kr)
       end do
 
-      if(simul_box_is_periodic(sb) .and. .not. os%submeshforperiodic) then
+      if(.not. os%submesh) then
         !We now compute the so-called Bloch sum of the localized orbitals
         os%eorb_mesh(:,:,:,iq) = M_Z0
         do idim = 1, os%ndim

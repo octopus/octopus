@@ -36,17 +36,17 @@ module stencil_oct_m
 
   type stargeneral_arms_t
     ! Components are public by default
-    integer          :: arms(1:3,1:3)
-    integer          :: narms  
+    integer          :: arms(1:3,1:3) = reshape([0,0,0,0,0,0,0,0,0], (/3, 3/))
+    integer          :: narms = 0
   end type stargeneral_arms_t
 
 
   type stencil_t
     ! Components are public by default
-    integer          :: center
-    integer          :: size
-    integer          :: npoly
-    integer, pointer :: points(:, :) 
+    integer              :: center
+    integer              :: size
+    integer              :: npoly
+    integer, allocatable :: points(:, :)
     
     ! The stargeneral arms
     type(stargeneral_arms_t) :: stargeneral 
@@ -56,7 +56,7 @@ contains
 
   !-------------------------------------------------------  
   subroutine stencil_allocate(this, size)
-    type(stencil_t), intent(out) :: this
+    type(stencil_t), intent(inout) :: this
     integer,         intent(in)  :: size
 
     PUSH_SUB(stencil_allocate)
@@ -83,6 +83,9 @@ contains
     output%center = input%center
     output%npoly = input%npoly
 
+    output%stargeneral%narms = input%stargeneral%narms
+    output%stargeneral%arms = input%stargeneral%arms
+
     POP_SUB(stencil_copy)
   end subroutine stencil_copy
 
@@ -93,7 +96,7 @@ contains
 
     PUSH_SUB(stencil_end)
 
-    SAFE_DEALLOCATE_P(this%points)
+    SAFE_DEALLOCATE_A(this%points)
 
     POP_SUB(stencil_end)
   end subroutine stencil_end

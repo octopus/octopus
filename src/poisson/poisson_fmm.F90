@@ -75,8 +75,8 @@ module poisson_fmm_oct_m
     integer(kind = fcs_integer_kind_isoc) :: nlocalcharges
     integer    :: sp !< Local start point
     integer    :: ep !< Local end point
-    integer, pointer :: disps(:)
-    integer, pointer :: dsize(:) !< Local size
+    integer, allocatable :: disps(:)
+    integer, allocatable :: dsize(:) !< Local size
     type(nl_operator_t) :: corrector
     type(derivatives_t), pointer :: der
     type(c_ptr) ::  handle !< The FMM identifier
@@ -284,8 +284,8 @@ contains
     call nl_operator_end(this%corrector)
 
     if (mpi_world%size > 1) call MPI_Comm_free(this%perp_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_P(this%disps)
-    SAFE_DEALLOCATE_P(this%dsize)
+    SAFE_DEALLOCATE_A(this%disps)
+    SAFE_DEALLOCATE_A(this%dsize)
     ret = fcs_destroy(this%handle)
 
     POP_SUB(poisson_fmm_end)

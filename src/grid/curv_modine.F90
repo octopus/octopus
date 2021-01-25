@@ -50,15 +50,15 @@ module curv_modine_oct_m
 
   type curv_modine_t
     private
-    FLOAT          :: L(MAX_DIM) !< size of the box
-    FLOAT          :: xbar       !< size of central flat region (in units of L)
-    FLOAT          :: Jbar       !< increase in density of points is 1/J
+    FLOAT              :: L(MAX_DIM) !< size of the box
+    FLOAT              :: xbar       !< size of central flat region (in units of L)
+    FLOAT              :: Jbar       !< increase in density of points is 1/J
 
-    FLOAT, pointer :: Jlocal(:)  !< local (around the atoms) refinement
-    FLOAT, pointer :: Jrange(:)  !< local refinement range
+    FLOAT, allocatable :: Jlocal(:)  !< local (around the atoms) refinement
+    FLOAT, allocatable :: Jrange(:)  !< local refinement range
 
-    FLOAT, pointer :: chi_atoms(:,:)
-    FLOAT, pointer :: csi(:,:)
+    FLOAT, allocatable :: chi_atoms(:,:)
+    FLOAT, allocatable :: csi(:,:)
 
     integer :: natoms
   end type curv_modine_t
@@ -299,18 +299,19 @@ contains
   subroutine curv_modine_copy(this_out, this_in)
     type(curv_modine_t), intent(inout) :: this_out
     type(curv_modine_t), intent(in)    :: this_in
-    !
+
     PUSH_SUB(curv_modine_copy)
-    this_out%L=this_in%L
-    this_out%xbar=this_in%xbar
-    this_out%Jbar=this_in%Jbar
-    SAFE_ALLOCATE_SOURCE_P(this_out%Jlocal, this_in%Jlocal)
-    SAFE_ALLOCATE_SOURCE_P(this_out%Jrange, this_in%Jrange)
-    SAFE_ALLOCATE_SOURCE_P(this_out%chi_atoms, this_in%chi_atoms)
-    SAFE_ALLOCATE_SOURCE_P(this_out%csi, this_in%csi)
-    this_out%natoms=this_in%natoms
+
+    this_out%L = this_in%L
+    this_out%xbar = this_in%xbar
+    this_out%Jbar = this_in%Jbar
+    SAFE_ALLOCATE_SOURCE_A(this_out%Jlocal, this_in%Jlocal)
+    SAFE_ALLOCATE_SOURCE_A(this_out%Jrange, this_in%Jrange)
+    SAFE_ALLOCATE_SOURCE_A(this_out%chi_atoms, this_in%chi_atoms)
+    SAFE_ALLOCATE_SOURCE_A(this_out%csi, this_in%csi)
+    this_out%natoms = this_in%natoms
+
     POP_SUB(curv_modine_copy)
-    return
   end subroutine curv_modine_copy
 
   ! ---------------------------------------------------------
@@ -319,12 +320,12 @@ contains
 
     PUSH_SUB(curv_modine_end)
 
-    SAFE_DEALLOCATE_P(cv%Jlocal)
-    SAFE_DEALLOCATE_P(cv%Jrange)
-    SAFE_DEALLOCATE_P(cv%chi_atoms)
+    SAFE_DEALLOCATE_A(cv%Jlocal)
+    SAFE_DEALLOCATE_A(cv%Jrange)
+    SAFE_DEALLOCATE_A(cv%chi_atoms)
+    SAFE_DEALLOCATE_A(cv%csi)
 
     POP_SUB(curv_modine_end)
-
   end subroutine curv_modine_end
 
 

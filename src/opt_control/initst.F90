@@ -63,7 +63,7 @@ contains
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals
     type(block_t)     :: blk
-    FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
+    FLOAT             :: xx(1:sys%gr%sb%dim), rr, psi_re, psi_im
     type(restart_t) :: restart
     CMPLX, allocatable :: zpsi(:, :)
 
@@ -189,7 +189,7 @@ contains
                 
                 do ip = 1, sys%gr%mesh%np
                   xx = sys%gr%mesh%x(ip, :)
-                  rr = sqrt(sum(xx(:)**2))
+                  rr = sqrt(sum(xx**2))
                   
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &

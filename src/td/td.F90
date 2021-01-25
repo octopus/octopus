@@ -355,21 +355,15 @@ contains
     !% updates the total energy during a time-propagation run. For
     !% iterations where the energy is not updated, the last calculated
     !% value is reported. If you set this variable to 1, the energy
-    !% will be calculated in each step. The default value is 10,
-    !% unless the ions move, in which case the default is 1.
+    !% will be calculated in each step.
     !%End
 
     default = 10
-    if (ion_dynamics_ions_move(td%ions)) default = 1
     call parse_variable(namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
-    if (ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
-      call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
-    end if
-
     if(gr%der%boundaries%spiralBC .and. hm%ep%reltype == SPIN_ORBIT) then
-      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
-      call messages_fatal(1, namespace=namespace)
+       message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+       call messages_fatal(1, namespace=namespace)
     end if
 
     if (gr%der%boundaries%spiralBC .and. any(abs(hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
@@ -434,7 +428,7 @@ contains
       end if
     else
       call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-      call scf_init(td%scf, namespace, gr, geo, st, mc, hm)
+      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks)
     end if
 
     if (hm%scdm_EXX) then
@@ -541,8 +535,9 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_elec_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, &
-          geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter))
+        call propagator_elec_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
+          geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
+          move_ions = ion_dynamics_ions_move(td%ions) )
       case(BO)
         call propagator_elec_dt_bo(td%scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
       end select
@@ -840,7 +835,7 @@ contains
       call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
     end if
 #endif
-    call hm%update_span(minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
+    call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
     call energy_calc_total(namespace, hm, gr, st)
@@ -966,15 +961,15 @@ contains
     read(iunit, '(28x)', advance='no') ! skip the time index.
 
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%sb%dim)
       geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
     end do
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%sb%dim)
       geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
     end do
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%sb%dim)
       geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
     end do
 

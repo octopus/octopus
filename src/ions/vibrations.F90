@@ -53,14 +53,14 @@ module vibrations_oct_m
   
   type vibrations_t
     private
-    integer,        public :: num_modes
-    integer,        public :: ndim
-    integer,        public :: natoms
-    FLOAT, pointer, public :: dyn_matrix(:,:)
-    FLOAT, pointer, public :: infrared(:,:)
-    FLOAT, pointer, public :: normal_mode(:,:)
-    FLOAT, pointer, public :: freq(:)
-    FLOAT,          public :: disp
+    integer,            public :: num_modes
+    integer,            public :: ndim
+    integer,            public :: natoms
+    FLOAT, allocatable, public :: dyn_matrix(:,:)
+    FLOAT, allocatable, public :: infrared(:,:)
+    FLOAT, allocatable, public :: normal_mode(:,:)
+    FLOAT, allocatable, public :: freq(:)
+    FLOAT,              public :: disp
     FLOAT :: total_mass
     character (len=2) :: suffix
     character (len=80) :: filename_dynmat
@@ -118,10 +118,10 @@ contains
 
     PUSH_SUB(vibrations_end)
 
-    SAFE_DEALLOCATE_P(this%dyn_matrix)
-    SAFE_DEALLOCATE_P(this%infrared)
-    SAFE_DEALLOCATE_P(this%freq)
-    SAFE_DEALLOCATE_P(this%normal_mode)
+    SAFE_DEALLOCATE_A(this%dyn_matrix)
+    SAFE_DEALLOCATE_A(this%infrared)
+    SAFE_DEALLOCATE_A(this%freq)
+    SAFE_DEALLOCATE_A(this%normal_mode)
 
     POP_SUB(vibrations_end)
   end subroutine vibrations_end

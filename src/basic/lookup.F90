@@ -36,9 +36,9 @@ module lookup_oct_m
     
   type lookup_t
     private
-    integer        :: nobjs
-    integer        :: dim
-    FLOAT, pointer :: pos(:, :)
+    integer            :: nobjs
+    integer            :: dim
+    FLOAT, allocatable :: pos(:, :)
   end type lookup_t
   
 contains
@@ -48,7 +48,6 @@ contains
 
     this%nobjs = 0
     this%dim = 0
-    nullify(this%pos)
 
   end subroutine lookup_nullify
   
@@ -74,7 +73,7 @@ contains
     type(lookup_t), intent(inout) :: this
 
     PUSH_SUB(lookup_end)
-    SAFE_DEALLOCATE_P(this%pos)
+    SAFE_DEALLOCATE_A(this%pos)
 
     POP_SUB(lookup_end)
   end subroutine lookup_end
@@ -89,8 +88,8 @@ contains
 
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
-    SAFE_ALLOCATE_SOURCE_P(cout%pos, cin%pos)
-   
+    SAFE_ALLOCATE_SOURCE_A(cout%pos, cin%pos)
+
     POP_SUB(lookup_copy)
   end subroutine lookup_copy
 
@@ -99,7 +98,7 @@ contains
   subroutine lookup_get_list(this, npoint, points, radius, nlist, list)
     type(lookup_t), intent(in)  :: this
     integer,        intent(in)  :: npoint
-    FLOAT,          intent(in)  :: points(:, :)
+    FLOAT,          intent(in)  :: points(:, :) !< (1:npoint, 1:this%dim)
     FLOAT,          intent(in)  :: radius
     integer,        intent(out) :: nlist(:)
     integer, optional, pointer  :: list(:, :)
@@ -115,9 +114,9 @@ contains
 
     nlist(1:npoint) = 0    
 
-    do ipoint = 1, npoint
-      do ii = 1, this%nobjs
-        r2 = sum((this%pos(1:this%dim, ii) - points(1:this%dim, ipoint))**2)
+    do ii = 1, this%nobjs
+      do ipoint = 1, npoint
+        r2 = sum((this%pos(1:this%dim, ii) - points(ipoint, 1:this%dim))**2)
         if(r2 < radius**2) then
           nlist(ipoint) = nlist(ipoint) + 1
 !This is a PGI pragma to force the optimization level of this file to -O0.

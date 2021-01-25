@@ -1,0 +1,22 @@
+CalculationMode = gs
+  
+ExperimentalFeatures = yes
+DerivativesOrder = 1
+
+SymmetriesCompute = false
+
+BoxShape = parallelepiped
+lsize = 5
+spacing = 5
+
+Poisson1DSoftCoulombParam = 1
+
+%Species
+ "H4_1D" | species_user_defined | potential_formula  | "-1/sqrt(x^2+y^2+z^2+1)" | valence | 2
+%
+
+%Coordinates
+"H4_1D" | 0 | 0 | 0
+%
+ExtraStates = 26
+

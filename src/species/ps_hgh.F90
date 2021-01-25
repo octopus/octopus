@@ -60,25 +60,17 @@ module ps_hgh_oct_m
     type(valconf_t)  :: conf
     integer          :: l_max     !< Maximum l for the Kleinman-Bylander component.
 
-    FLOAT, pointer   :: vlocal(:) !< Local potential
-    FLOAT, pointer   :: kb(:,:,:) !< KB projectors
-    FLOAT, pointer   :: kbr(:)    !< KB radii
-    FLOAT, pointer   :: rphi(:,:)
-    FLOAT, pointer, private :: eigen(:)
+    FLOAT, allocatable   :: vlocal(:) !< Local potential
+    FLOAT, allocatable   :: kb(:,:,:) !< KB projectors
+    FLOAT, allocatable   :: kbr(:)    !< KB radii
+    FLOAT, allocatable   :: rphi(:,:)
+    FLOAT, allocatable, private :: eigen(:)
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g
   end type ps_hgh_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
-
-  interface vlocalr
-    module procedure vlocalr_scalar, vlocalr_vector
-  end interface vlocalr
-
-  interface projectorr
-    module procedure projectorr_scalar, projectorr_vector
-  end interface projectorr
 
 contains
 
@@ -136,12 +128,12 @@ contains
     PUSH_SUB(hgh_end)
 
     if(psp%l_max >= 0) then
-      SAFE_DEALLOCATE_P(psp%kbr)
-      SAFE_DEALLOCATE_P(psp%kb)
+      SAFE_DEALLOCATE_A(psp%kbr)
+      SAFE_DEALLOCATE_A(psp%kb)
     end if
-    SAFE_DEALLOCATE_P(psp%vlocal)
-    SAFE_DEALLOCATE_P(psp%rphi)
-    SAFE_DEALLOCATE_P(psp%eigen)
+    SAFE_DEALLOCATE_A(psp%vlocal)
+    SAFE_DEALLOCATE_A(psp%rphi)
+    SAFE_DEALLOCATE_A(psp%eigen)
     call logrid_end(psp%g)
 
     POP_SUB(hgh_end)
@@ -154,22 +146,17 @@ contains
     type(namespace_t), intent(in)    :: namespace
 
     integer :: l, i, ierr
-    FLOAT, pointer :: ptr(:)
 
     PUSH_SUB(hgh_process)
 
 
     ! Fixes the local potential
-    ptr => vlocalr(psp%g%rofi, psp)
-    psp%vlocal(1:psp%g%nrval) = ptr(1:psp%g%nrval)
-    SAFE_DEALLOCATE_P(ptr)
+    call vlocalr_scalar(psp%g%rofi, psp%g%nrval, psp, psp%vlocal)
 
     ! And the projectors
     do l = 0, psp%l_max
       do i = 1, 3
-        ptr => projectorr(psp%g%rofi, psp, i, l)
-        psp%kb(1:psp%g%nrval, l, i) = ptr(1:psp%g%nrval)
-        SAFE_DEALLOCATE_P(ptr)
+        call projectorr_scalar(psp%g%rofi, psp%g%nrval, psp, i, l, psp%kb(:, l, i))
       end do
     end do
 
@@ -346,87 +333,50 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Local pseudopotential, both in real and reciprocal space.
-  function vlocalr_scalar(r, p)
+  ! Local pseudopotential, both in real space.
+  ! See Eq. (1)
+  subroutine vlocalr_scalar(r, np, p, vloc)
     type(ps_hgh_t), intent(in)    :: p
-    FLOAT,          intent(in)    :: r
-    FLOAT                         :: vlocalr_scalar
+    FLOAT,          intent(in)    :: r(:)
+    integer,        intent(in)    :: np
+    FLOAT,          intent(inout) :: vloc(:)
 
+    integer :: ip
     FLOAT :: r1, r2, r4, r6
 
     PUSH_SUB(vlocalr_scalar)
 
-    r1 = r/p%rlocal
-    r2 = r1**2
-    r4 = r2**2
-    r6 = r4*r2
+    do ip = 1, np
+      if(r(ip) < CNST(1.0e-7)) then
+        vloc(ip) = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
+      else
+        r1 = r(ip)/p%rlocal
+        r2 = r1**2
+        r4 = r2**2
+        r6 = r4*r2
 
-    if(r < CNST(1.0e-7)) then
-      vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
-      POP_SUB(vlocalr_scalar)
-      return
-    end if
+        vloc(ip) = - (p%z_val/r(ip))*loct_erf(r1/sqrt(M_TWO))   &
+          + exp( -M_HALF*r2 ) *    &
+          ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
-    vlocalr_scalar = - (p%z_val/r)*loct_erf(r1/sqrt(M_TWO))   &
-      + exp( -M_HALF*r2 ) *    &
-      ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
-
-    POP_SUB(vlocalr_scalar)
-  end function vlocalr_scalar
-
-
-  ! ---------------------------------------------------------
-  function vlocalr_vector(r, p)
-    type(ps_hgh_t), intent(in)    :: p
-    FLOAT, intent(in)             :: r(:)
-    FLOAT, pointer                :: vlocalr_vector(:)
-
-    integer :: i
-
-    PUSH_SUB(vlocalr_vector)
-
-    SAFE_ALLOCATE(vlocalr_vector(1:size(r)))
-    do i = 1, size(r)
-      vlocalr_vector(i) = vlocalr_scalar(r(i), p)
+      end if
     end do
 
-    POP_SUB(vlocalr_vector)
-  end function vlocalr_vector
+    POP_SUB(vlocalr_scalar)
+  end subroutine vlocalr_scalar
 
 
   ! ---------------------------------------------------------
-  function vlocalg(g, p)
+  ! Projector in real space, see Eq. 3
+  subroutine projectorr_scalar(r, np, p, i, l, proj)
     type(ps_hgh_t), intent(in)    :: p
-    FLOAT, intent(in)             :: g
-    FLOAT                         :: vlocalg
-
-    FLOAT :: g1, g2, g4, g6
-
-    PUSH_SUB(vlocalg)
-
-    g1 = g*p%rlocal
-    g2 = g1*g1
-    g4 = g2*g2
-    g6 = g4*g2
-
-    vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) + &
-      sqrt(CNST(8.0)*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) * &
-      ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - CNST(10.0)*g2 + g4) + &
-      p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
-
-    POP_SUB(vlocalg)
-  end function vlocalg
-
-
-  ! ---------------------------------------------------------
-  function projectorr_scalar(r, p, i, l)
-    type(ps_hgh_t), intent(in)    :: p
-    FLOAT,          intent(in)    :: r
+    FLOAT,          intent(in)    :: r(:)
+    integer,        intent(in)    :: np
     integer,        intent(in)    :: i
     integer,        intent(in)    :: l
-    
-    FLOAT                       :: projectorr_scalar
+    FLOAT,          intent(inout) :: proj(:)
 
+    integer :: ip
     FLOAT :: x, y, rr
 
     PUSH_SUB(projectorr_scalar)
@@ -434,101 +384,21 @@ contains
     x = l + TOFLOAT(4*i-1)/M_TWO
     y = loct_gamma(x)
     x = sqrt(y)
-    if(l==0 .and. i==1) then
-      rr = M_ONE
-    else
-      rr = r ** (l + 2*(i-1))
-    end if
+    rr = M_ONE
 
-    projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
-      (  p%rc(l)**(l + TOFLOAT(4*i-1)/M_TWO) * x )
+    do ip = 1, np
 
-    POP_SUB(projectorr_scalar)
-  end function projectorr_scalar
+      if(l /=0 .or. i /= 1) then
+        rr = r(ip) ** (l + 2*(i-1))
+      end if
 
+      proj(ip) = sqrt(M_TWO) * rr * exp(-r(ip)**2/(M_TWO*p%rc(l)**2)) / &
+            (  p%rc(l)**(l + TOFLOAT(4*i-1)/M_TWO) * x )
 
-  ! ---------------------------------------------------------
-  function projectorr_vector(r, p, i, l)
-    type(ps_hgh_t), intent(in)    :: p
-    FLOAT,          intent(in)    :: r(:)
-    integer,        intent(in)    :: i
-    integer,        intent(in)    :: l
-    FLOAT,          pointer       :: projectorr_vector(:)
-
-    integer :: j
-
-    PUSH_SUB(projectorr_vector)
-
-    SAFE_ALLOCATE(projectorr_vector(1:size(r)))
-    do j = 1, size(r)
-      projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
-    POP_SUB(projectorr_vector)
-  end function projectorr_vector
-
-
-  ! ---------------------------------------------------------
-  function projectorg(g, p, i, l)
-    type(ps_hgh_t), intent(in)    :: p
-    FLOAT,          intent(in)    :: g
-    integer,        intent(in)    :: i
-    integer,        intent(in)    :: l
-    FLOAT                         :: projectorg
-
-    FLOAT :: pif, ex
-
-    PUSH_SUB(projectorg)
-
-    pif = M_Pi**(M_FIVE/M_FOUR)
-
-    ex = exp( M_HALF*(g*p%rc(l))**2 )
-
-    projectorg = M_ZERO
-
-    select case(l)
-    case(0)
-      select case(i)
-      case(1)
-        projectorg = ( M_FOUR*sqrt(M_TWO*p%rc(0)**3)*pif ) / ex
-      case(2)
-        projectorg = ( sqrt(CNST(8.0)*2*p%rc(0)**3/CNST(15.0))*pif * &
-          (M_THREE - (g*p%rc(0))**2) ) / ex
-      case(3)
-        projectorg = ( CNST(16.0)*sqrt(M_TWO*p%rc(0)**3/CNST(105.0)) * pif * &
-          (CNST(15.0) - CNST(10.0)*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (M_THREE*ex)
-      end select
-
-    case(1)
-      select case(i)
-      case(1)
-        projectorg = ( CNST(8.0)*sqrt(p%rc(1)**5/M_THREE)*pif*g ) / ex
-      case(2)
-        projectorg = ( CNST(16.0)*sqrt(p%rc(1)**5/CNST(105.0))* pif * g * &
-          ( M_FIVE - (g*p%rc(1))**2 ) ) / ex
-      case(3)
-        projectorg = ( CNST(32.0)*sqrt(p%rc(1)**5/CNST(1155.0))* pif * g * &
-          ( CNST(35.0) - CNST(14.0)*g**2*p%rc(1)**2 + (g*p%rc(1))**4 ) ) / &
-          (M_THREE*ex)
-      end select
-
-    case(2)
-      select case(i)
-      case(1)
-        projectorg = ( CNST(8.0) * sqrt(M_TWO*p%rc(2)**7/CNST(15.0)) * pif * g**2 ) / ex
-      case(2)
-        projectorg = ( CNST(16.0) * sqrt(M_TWO*p%rc(2)**7/CNST(105.0)) * pif * g**2 * &
-          (CNST(7.0) - g**2*p%rc(2)**2) ) / (M_THREE*ex)
-      case(3)
-        projectorg = M_ZERO ! ??
-      end select
-
-    case(3)
-      ! This should be checked. Probably will not be needed in an near future...
-    end select
-
-    POP_SUB(projectorg)
-  end function projectorg
+    POP_SUB(projectorr_scalar)
+  end subroutine projectorr_scalar
 
 
   ! ---------------------------------------------------------

@@ -36,9 +36,9 @@ module mesh_cube_map_oct_m
 
   type mesh_cube_map_t
     ! Components are public by default
-    integer            :: nmap      !< The number of maps
-    integer, pointer   :: map(:, :)
-    type(accel_mem_t) :: map_buffer
+    integer              :: nmap      !< The number of maps
+    integer, allocatable :: map(:, :)
+    type(accel_mem_t)    :: map_buffer
   end type mesh_cube_map_t
 
   integer, public, parameter :: MCM_POINT = 4, MCM_COUNT = 5
@@ -90,8 +90,6 @@ contains
         call accel_write_buffer(this%map_buffer, this%nmap*5, this%map)
       end if
 
-    else
-      nullify(this%map)
     end if
 
     POP_SUB(mesh_cube_map_init)
@@ -104,9 +102,9 @@ contains
 
     PUSH_SUB(mesh_cube_map_end)
 
-    if(associated(this%map)) then
+    if (allocated(this%map)) then
 
-      SAFE_DEALLOCATE_P(this%map)
+      SAFE_DEALLOCATE_A(this%map)
       
       if(accel_is_enabled()) call accel_release_buffer(this%map_buffer)
 

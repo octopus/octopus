@@ -26,7 +26,8 @@ module pblas_oct_m
   public ::            &
     pblas_gemm,        &
     pblas_herk,        &
-    pblas_trsm
+    pblas_trsm,        &
+    pblas_tran
   
 
   !> Performs any one of the following combined matrix computations:
@@ -181,6 +182,35 @@ module pblas_oct_m
     end subroutine pztrsm
 
   end interface pblas_trsm
+
+  !  PDTRAN  transposes a matrix
+  !
+  !     sub( C ) := beta*sub( C ) + alpha*op( sub( A ) )
+  !
+  !  where
+  !
+  !     sub( C ) denotes C(IC:IC+M-1,JC:JC+N-1),
+  !
+  !     sub( A ) denotes A(IA:IA+N-1,JA:JA+M-1), and, op( X ) = X**T.
+  !
+  !  Thus, op( sub( A ) ) denotes A(IA:IA+N-1,JA:JA+M-1)**T.
+  !
+  !  Beta is a scalar, sub( C ) is an m by n submatrix, and sub( A ) is an
+  !  n by m submatrix.
+  interface pblas_tran
+    subroutine pdtran(M, N, ALPHA, A, IA, JA, DESCA, BETA, C, IC, JC, DESCC)
+      implicit none
+      integer :: M, N, IA, JA, DESCA, IC, JC, DESCC
+      real(8) :: ALPHA, A, BETA, C
+    end subroutine
+
+    ! conjugated transpose
+    subroutine pztranc(M, N, ALPHA, A, IA, JA, DESCA, BETA, C, IC, JC, DESCC)
+      implicit none
+      integer :: M, N, IA, JA, DESCA, IC, JC, DESCC
+      complex(8) :: ALPHA, A, BETA, C
+    end subroutine
+  end interface pblas_tran
 
 end module pblas_oct_m
 

@@ -64,16 +64,16 @@ module modelmb_particles_oct_m
     !!   %
     character(80), allocatable :: labels_particles(:)
 
-    integer, pointer, public :: particletype(:)
-    integer, pointer, public :: nparticles_per_type(:)
-    integer, pointer, public :: particles_of_type(:,:)
-    integer, pointer, public :: bosonfermion(:)
+    integer, allocatable, public :: particletype(:)
+    integer, allocatable, public :: nparticles_per_type(:)
+    integer, allocatable, public :: particles_of_type(:,:)
+    integer, allocatable, public :: bosonfermion(:)
     
-    integer, pointer :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
+    integer, allocatable :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
     
-    FLOAT, pointer :: mass_particle(:)
+    FLOAT, allocatable :: mass_particle(:)
     
-    FLOAT, pointer, public :: charge_particle(:)
+    FLOAT, allocatable, public :: charge_particle(:)
 
     !>   %block densitiestocalc
     !!   label1 |  particletokeep1(integer in [1:nparticle])
@@ -84,7 +84,7 @@ module modelmb_particles_oct_m
     !!   %
     character(80), allocatable :: labels_densities(:)
     
-    integer, pointer :: particle_kept_densities(:)
+    integer, allocatable :: particle_kept_densities(:)
 
   end type modelmb_particle_t
 
@@ -96,14 +96,6 @@ contains
     PUSH_SUB(modelmb_particles_nullify)
     
     this%nparticle = 0
-    nullify(this%particletype)
-    nullify(this%nparticles_per_type)
-    nullify(this%particles_of_type)
-    nullify(this%exchange_symmetry)
-    nullify(this%bosonfermion)
-    nullify(this%mass_particle)
-    nullify(this%charge_particle)
-    nullify(this%particle_kept_densities)
     
     POP_SUB(modelmb_particles_nullify)
   end subroutine modelmb_particles_nullify
@@ -179,7 +171,7 @@ contains
     !%Type block
     !%Section States::ModelMB
     !%Description
-    !% Characterization of different modelmb particles in gr%mesh%sb%dim dimensional space.
+    !% Characterization of different modelmb particles in gr%sb%dim dimensional space.
     !%
     !% <tt>%DescribeParticlesModelmb
     !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
@@ -279,19 +271,18 @@ contains
     PUSH_SUB(modelmb_particles_end)
     
     SAFE_DEALLOCATE_A(this%labels_particles)
-    SAFE_DEALLOCATE_P(this%particletype)
-    SAFE_DEALLOCATE_P(this%mass_particle)
-    SAFE_DEALLOCATE_P(this%charge_particle)
-    SAFE_DEALLOCATE_P(this%nparticles_per_type)
-    SAFE_DEALLOCATE_P(this%particles_of_type)
-    SAFE_DEALLOCATE_P(this%exchange_symmetry)
-    SAFE_DEALLOCATE_P(this%bosonfermion)
+    SAFE_DEALLOCATE_A(this%particletype)
+    SAFE_DEALLOCATE_A(this%mass_particle)
+    SAFE_DEALLOCATE_A(this%charge_particle)
+    SAFE_DEALLOCATE_A(this%nparticles_per_type)
+    SAFE_DEALLOCATE_A(this%particles_of_type)
+    SAFE_DEALLOCATE_A(this%exchange_symmetry)
+    SAFE_DEALLOCATE_A(this%bosonfermion)
     
     SAFE_DEALLOCATE_A(this%labels_densities)
-    SAFE_DEALLOCATE_P(this%particle_kept_densities)
+    SAFE_DEALLOCATE_A(this%particle_kept_densities)
     
     POP_SUB(modelmb_particles_end)
-    
   end subroutine modelmb_particles_end
   
   subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
@@ -307,19 +298,18 @@ contains
     modelmb_out%ndensities_to_calculate = modelmb_in%ndensities_to_calculate
     
     SAFE_ALLOCATE_SOURCE_A(modelmb_out%labels_particles,modelmb_in%labels_particles)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particletype,modelmb_in%particletype)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%mass_particle,modelmb_in%mass_particle)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%charge_particle,modelmb_in%charge_particle)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%particletype,modelmb_in%particletype)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%mass_particle,modelmb_in%mass_particle)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%charge_particle,modelmb_in%charge_particle)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
     
     SAFE_ALLOCATE_SOURCE_A(modelmb_out%labels_densities,modelmb_in%labels_densities)
-    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
     
     POP_SUB(modelmb_particles_copy)
-
   end subroutine modelmb_particles_copy
 
   !>==============================================================

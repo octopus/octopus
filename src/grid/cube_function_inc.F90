@@ -28,43 +28,41 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
   logical, optional,     intent(in)    :: in_device
   logical, optional,     intent(in)    :: force_alloc
 
-  logical :: allocated
+  logical :: is_allocated
   
   PUSH_SUB(X(cube_function_alloc_rs))
 
   ASSERT(.not.associated(cf%X(rs)))
 
-  allocated = .false.
+  is_allocated = .false.
 
   cf%forced_alloc = optional_default(force_alloc, .false.)
 
-  if(associated(cube%fft)) then
+  if (allocated(cube%fft)) then
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
 
-      ASSERT(associated(cube%fft))
       if(.not. cf%forced_alloc) then 
-        allocated = .true.
+        is_allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     case(FFTLIB_ACCEL)
       if(optional_default(in_device, .true.)) then
-        allocated = .true.
+        is_allocated = .true.
         cf%in_device_memory = .true.
         call accel_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
       end if
     !We use aligned memory for FFTW
     case(FFTLIB_FFTW)
       if(.not. cf%forced_alloc) then
-        ASSERT(associated(cube%fft))
         ASSERT(cube%fft%aligned_memory)
-        allocated = .true.
+        is_allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     end select
   end if
 
-  if(.not. allocated) then
+  if(.not. is_allocated) then
     SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
   end if
 
@@ -84,7 +82,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
 
   deallocated = .false.
 
-  if(associated(cube%fft)) then
+  if(allocated(cube%fft)) then
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
       if(.not. cf%forced_alloc) then
@@ -227,9 +225,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   if(local_) then
     ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
     SAFE_ALLOCATE(gmf(1:mesh%np_global))
-#ifdef HAVE_MPI
     call vec_allgather(mesh%vp, gmf, mf)
-#endif
   else
     ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
     gmf => mf
@@ -246,7 +242,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       !$omp end parallel workshare
     end if
 
-    ASSERT(associated(mesh%cube_map%map))
+    ASSERT(allocated(mesh%cube_map%map))
     ASSERT(mesh%sb%dim <= 3)
 
     !$omp parallel do private(ix, iy, iz, ip, nn, ii)
@@ -339,7 +335,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   if(.not. cf%in_device_memory) then
 
     ASSERT(associated(cf%X(rs)))
-    ASSERT(associated(mesh%cube_map%map))
+    ASSERT(allocated(mesh%cube_map%map))
 
     !$omp parallel do private(ix, iy, iz, ip, nn, ii)
     do im = 1, mesh%cube_map%nmap
@@ -652,7 +648,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   cf%X(rs) = M_ZERO
   !$omp end parallel workshare
 
-  ASSERT(associated(sm%cube_map%map))
+  ASSERT(allocated(sm%cube_map%map))
   ASSERT(sm%mesh%sb%dim <= 3)
 
   do im = 1, sm%np
@@ -703,7 +699,7 @@ subroutine X(cube_to_submesh) (cube, cf, sm, mf)
 
   ASSERT(associated(cf%X(rs)))
 
-  ASSERT(associated(sm%cube_map%map))
+  ASSERT(allocated(sm%cube_map%map))
 
   do im = 1, sm%np
     ix = sm%cube_map%map(1, im) + cube%center(1)

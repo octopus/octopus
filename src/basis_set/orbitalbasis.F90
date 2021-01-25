@@ -23,8 +23,10 @@ module orbitalbasis_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use lalg_basic_oct_m
   use messages_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use namespace_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
@@ -50,20 +52,20 @@ module orbitalbasis_oct_m
 
   type orbitalbasis_t
     private
-    type(orbitalset_t), pointer, public :: orbsets(:) !> All the orbital sets of the system
+    type(orbitalset_t), allocatable, public :: orbsets(:) !> All the orbital sets of the system
 
     integer,            public :: norbsets           !> Number of orbital sets
     integer,            public :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer,            public :: max_np             !> Max. number of points in all orbitals submesh spheres
     integer,            public :: size               !> Size of the full basis
-    integer, pointer,   public :: global2os(:,:)     !> Mapping functions
-    integer, pointer           :: os2global(:,:)
+    integer, allocatable, public :: global2os(:,:)     !> Mapping functions
+    integer, allocatable         :: os2global(:,:)
 
     integer(8)                 :: truncation         !> Truncation method for the orbitals
     FLOAT                      :: threshold          !> Threshold for orbital truncation
 
     logical                    :: normalize          !> Do we normalize the orbitals
-    logical,            public :: submeshforperiodic !> Do we use or not submeshes for the orbitals
+    logical,            public :: submesh            !> Do we use or not submeshes for the orbitals
     logical,            public :: orthogonalization  !> Orthogonalization of the basis
 
     character(len=256), public :: debugdir !> For debug
@@ -71,18 +73,14 @@ module orbitalbasis_oct_m
 
 contains
 
- subroutine orbitalbasis_nullify(this)
+subroutine orbitalbasis_nullify(this)
   type(orbitalbasis_t),    intent(inout) :: this
 
   PUSH_SUB(orbitalbasis_nullify)
 
   this%normalize = .true.
-  this%submeshforperiodic = .false.
+  this%submesh   = .false.
   this%orthogonalization = .false.
-
-  nullify(this%orbsets)
-  nullify(this%global2os)
-  nullify(this%os2global)
 
   this%norbsets = 0
   this%maxnorbs = 0
@@ -93,11 +91,12 @@ contains
 
   POP_SUB(orbitalbasis_nullify)
 
- end subroutine orbitalbasis_nullify
+end subroutine orbitalbasis_nullify
 
- subroutine orbitalbasis_init(this, namespace)
-   type(orbitalbasis_t),    intent(inout) :: this
-   type(namespace_t),       intent(in)    :: namespace
+subroutine orbitalbasis_init(this, namespace, sb)
+  type(orbitalbasis_t),    intent(inout) :: this
+  type(namespace_t),       intent(in)    :: namespace
+  type(simul_box_t),       intent(in)    :: sb
 
   PUSH_SUB(orbitalbasis_init)
 
@@ -144,23 +143,28 @@ contains
   !%Default yes
   !%Section Atomic Orbitals
   !%Description
-  !% If set to yes, Octopus will normalize the atomic orbitals
+  !% If set to yes, Octopus will normalize the atomic orbitals individually.
+  !% This variable is ignored is <tt>AOLoewdin<\tt> is set to yes.
   !%End
   call parse_variable(namespace, 'AONormalize', .true., this%normalize)
   call messages_print_var_value(stdout, 'AONormalize', this%normalize)
 
-  !%Variable AOSubmeshForPeriodic
+  !%Variable AOSubmesh
   !%Type logical
-  !%Default no
   !%Section Atomic Orbitals
   !%Description
   !% If set to yes, Octopus will use submeshes to internally store the orbitals with
   !% their phase instead of storing them on the mesh. This is usually slower for small
   !% periodic systems, but becomes advantageous for large supercells.
-  !% At the moment this option is not compatible with Loewdin orthogonalization
+  !% Submeshes are not compatible with Loewdin orthogonalization.
+  !% For periodic systems, the default is set to ye, whereas it is set to no for isolated systems.
   !%End
-  call parse_variable(namespace, 'AOSubmeshForPeriodic', .false., this%submeshforperiodic)
-  call messages_print_var_value(stdout, 'AOSubmeshForPeriodic', this%submeshforperiodic)
+  if(sb%periodic_dim > 0) then
+    call parse_variable(namespace, 'AOSubmesh', .false., this%submesh)
+  else
+    call parse_variable(namespace, 'AOSubmesh', .true., this%submesh)
+  end if
+  call messages_print_var_value(stdout, 'AOSubmesh', this%submesh)
 
   !%Variable AOLoewdin
   !%Type logical
@@ -175,9 +179,10 @@ contains
   call parse_variable(namespace, 'AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
   if(this%orthogonalization) call messages_experimental("AOLoewdin")
+  if(this%orthogonalization) this%normalize = .false.
 
-  if(this%orthogonalization .and. this%submeshforperiodic) &
-    call messages_not_implemented("AOLoewdin=yes with AOSubmeshForPeriodic=yes.") 
+  if(this%orthogonalization .and. this%submesh) &
+    call messages_not_implemented("AOLoewdin=yes with AOSubmesh=yes.") 
 
   if(debug%info) then
     write(this%debugdir, '(a)') 'debug/ao_basis'
@@ -199,10 +204,10 @@ contains
    do ios = 1, this%norbsets
      call orbitalset_end(this%orbsets(ios))
    end do
-   SAFE_DEALLOCATE_P(this%orbsets)
+   SAFE_DEALLOCATE_A(this%orbsets)
   
-   SAFE_DEALLOCATE_P(this%global2os)
-   SAFE_DEALLOCATE_P(this%os2global)
+   SAFE_DEALLOCATE_A(this%global2os)
+   SAFE_DEALLOCATE_A(this%os2global)
 
    POP_SUB(orbitalbasis_end)
  end subroutine orbitalbasis_end

@@ -59,18 +59,18 @@ module cube_oct_m
     integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
     integer :: center(1:3)      !< the coordinates of the center of the cube
 
-    FLOAT, pointer :: Lrs(:,:)  !< The real space coordinates vector: Lrs(i,{1,2,3})={x,y,z}(i)
-    FLOAT, pointer :: Lfs(:,:)  !< The fourier space coordinates vector: Lfs(i,{1,2,3})={kx,ky,kz}(i)
+    FLOAT, allocatable :: Lrs(:,:)  !< The real space coordinates vector: Lrs(i,{1,2,3})={x,y,z}(i)
+    FLOAT, allocatable :: Lfs(:,:)  !< The fourier space coordinates vector: Lfs(i,{1,2,3})={kx,ky,kz}(i)
 
-    integer, pointer :: np_local(:)    !< Number of points in each partition
-    integer, pointer :: xlocal(:)      !< where does each process start when gathering a function
-    integer, pointer :: local(:,:)     !< local to global map used when gathering a function
-    integer, pointer :: np_local_fs(:) !< Number of points in each fs partition
-    integer, pointer :: xlocal_fs(:)   !< where does each process start when gathering a fs function
-    integer, pointer :: local_fs(:,:)  !< local to global map used when gathering a fs function
+    integer, allocatable :: np_local(:)    !< Number of points in each partition
+    integer, allocatable :: xlocal(:)      !< where does each process start when gathering a function
+    integer, allocatable :: local(:,:)     !< local to global map used when gathering a function
+    integer, allocatable :: np_local_fs(:) !< Number of points in each fs partition
+    integer, allocatable :: xlocal_fs(:)   !< where does each process start when gathering a fs function
+    integer, allocatable :: local_fs(:,:)  !< local to global map used when gathering a fs function
 
 
-    type(fft_t), pointer :: fft !< the fft object
+    type(fft_t), allocatable :: fft !< the fft object
     logical, private :: has_cube_mapping !< Saves if a mapping with the cube is needed.
                                          !! Until now, is needed with par_states (without par_domains) and PES.
   end type cube_t
@@ -128,18 +128,6 @@ contains
     end if
 
     effdim_fft = min (3, sb%dim)
-
-    nullify(cube%fft)
-    
-    nullify(cube%Lrs)
-    nullify(cube%Lfs)
-    
-    nullify(cube%np_local)
-    nullify(cube%xlocal)
-    nullify(cube%local)
-    nullify(cube%np_local_fs)
-    nullify(cube%xlocal_fs)
-    nullify(cube%local_fs)
 
     mpi_grp_ = mpi_world
     if (present(mpi_grp)) mpi_grp_ = mpi_grp
@@ -225,7 +213,7 @@ contains
 
     end if
 
-    if(present(spacing) .and. .not. associated(cube%Lrs)) then
+    if(present(spacing) .and. .not. allocated(cube%Lrs)) then
       call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
     end if
 
@@ -257,23 +245,23 @@ contains
     
     PUSH_SUB(cube_end)
 
-    if(associated(cube%fft)) then
+    if (allocated(cube%fft)) then
       call fft_end(cube%fft)
-      SAFE_DEALLOCATE_P(cube%fft)
+      SAFE_DEALLOCATE_A(cube%fft)
     end if
 
     if (cube%has_cube_mapping) then
-      SAFE_DEALLOCATE_P(cube%np_local)
-      SAFE_DEALLOCATE_P(cube%xlocal)
-      SAFE_DEALLOCATE_P(cube%local)
+      SAFE_DEALLOCATE_A(cube%np_local)
+      SAFE_DEALLOCATE_A(cube%xlocal)
+      SAFE_DEALLOCATE_A(cube%local)
 
-      SAFE_DEALLOCATE_P(cube%np_local_fs)
-      SAFE_DEALLOCATE_P(cube%xlocal_fs)
-      SAFE_DEALLOCATE_P(cube%local_fs)
+      SAFE_DEALLOCATE_A(cube%np_local_fs)
+      SAFE_DEALLOCATE_A(cube%xlocal_fs)
+      SAFE_DEALLOCATE_A(cube%local_fs)
     end if
     
-    SAFE_DEALLOCATE_P(cube%Lrs)
-    SAFE_DEALLOCATE_P(cube%Lfs)
+    SAFE_DEALLOCATE_A(cube%Lrs)
+    SAFE_DEALLOCATE_A(cube%Lfs)
     
     POP_SUB(cube_end)
   end subroutine cube_end
@@ -396,7 +384,7 @@ contains
   integer function cube_getFFTLibrary(cube) result(fft_library)
     type(cube_t), intent(in)  :: cube
 
-    if (associated(cube%fft)) then
+    if (allocated(cube%fft)) then
        fft_library = cube%fft%library
     else
        fft_library = FFTLIB_NONE

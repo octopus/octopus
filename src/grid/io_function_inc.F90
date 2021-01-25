@@ -46,18 +46,14 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
-  !
 
-#if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
-#endif
-  !
+
   PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! ff_global for the whole function.
     SAFE_ALLOCATE(ff_global(1:1))
@@ -71,7 +67,9 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
     call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
+#if defined(HAVE_MPI)
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
+#endif
     call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
@@ -80,10 +78,6 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
-#else
-    ! internal error
-    ASSERT(.false.) 
-#endif
   else
     call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   end if
@@ -506,9 +500,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
       !lives
 
       do ivd = 1, vector_dim
-#ifdef HAVE_MPI        
         call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
-#endif
       end do
       
     else
@@ -549,8 +541,6 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -656,9 +646,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
-#ifdef HAVE_MPI
     call comm_allreduce(comm, ff_global)
-#endif
   else
     ff_global => ff
   end if
@@ -691,8 +679,6 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -777,8 +763,6 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 
   if(mesh%parallel_in_domains .and. .not. is_global_) then
@@ -908,7 +892,7 @@ contains
     integer, intent(in) :: d1, d2, d3
     
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM)
+    FLOAT   :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_axis)
@@ -939,7 +923,7 @@ contains
     integer :: ix, iy, iz, jdim
     integer :: ixvect(MAX_DIM)
     integer :: ixvect_test(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM)
+    FLOAT   :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_plane)
@@ -1001,7 +985,7 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM), zz
+    FLOAT   :: xx(1:mesh%sb%dim), zz
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_integrate_plane)
@@ -1054,7 +1038,7 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
-    FLOAT :: xx(MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_matlab)
@@ -1097,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
+          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = mesh%idx%lxyz_inv(ix,  0, iy)    ! plane_y
+          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = mesh%idx%lxyz_inv(ix, iy,  0)    ! plane_z
+          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)
@@ -1142,7 +1126,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
-    FLOAT :: xx(1:MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
     R_TYPE :: fu
 
     integer :: idir
@@ -1247,7 +1231,6 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
-    integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1265,10 +1248,10 @@ contains
 
     ! the offset is different in periodic directions
     offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
+    offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
 
     do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
+      offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".cube", namespace, action='write')
@@ -1277,20 +1260,15 @@ contains
     write(iunit, '(4a)') 'git: ', trim(conf%git_commit), " build: ",  trim(conf%build_time)
     write(iunit, '(i5,3f12.6)') geo%natoms, offset(1:3)
 
-    ! According to http://gaussian.com/cubegen/
-    ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
-    int_unit(1:3) = 1
-    if (units_out%length%abbrev == "b") then
-      int_unit(1) = -1
-    end if
-
+    ! According to http://gaussian.com/cubegen/, cube files are always in atomic units.
+    ! Although the specifications mention a way of indicating Angstrom units,
+    ! this is only for Gaussian input files, not for output files.
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') int_unit(idir)*cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
-        mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
+      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), &
+        (mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
-      write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, &
-        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
+      write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, (geo%atom(iatom)%x(idir), idir = 1, 3)
     end do
 
     do ix = 1, cube%rs_n_global(1)
@@ -1298,10 +1276,10 @@ contains
         do iz = 1, cube%rs_n_global(3), 6
 
           if(iz + 6 - 1 <= cube%rs_n_global(3)) then
-            write(iunit,'(6e14.6)') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:iz + 6 - 1)))
+            write(iunit,'(6e14.6)') R_REAL(cf%X(RS)(ix, iy, iz:iz + 6 - 1))
           else
             write(fmt, '(a,i1,a)') '(', cube%rs_n_global(3) - iz + 1, 'e14.6)'
-            write(iunit, trim(fmt)) units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3))))
+            write(iunit, trim(fmt)) R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3)))
           end if
         
         end do

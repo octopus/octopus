@@ -30,7 +30,6 @@ module hypercube_oct_m
   public ::                           &
        hypercube_t,                   &
        hypercube_init,                &
-       hypercube_nullify,             &
        hypercube_end,                 &
        hypercube_i_to_x,              &
        hypercube_x_to_i,              &
@@ -39,7 +38,7 @@ module hypercube_oct_m
 
   type hypercube_t
     private
-    integer, pointer :: boxdim(:)
+    integer, allocatable :: boxdim(:)
   end type hypercube_t
 
 contains
@@ -89,24 +88,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hypercube_nullify(this)
-    type(hypercube_t), intent(inout) :: this
-
-    PUSH_SUB(hypercube_nullify)
-
-    nullify(this%boxdim)
-
-    POP_SUB(hypercube_nullify)
-  end subroutine hypercube_nullify
-
-
-  ! ---------------------------------------------------------
   subroutine hypercube_end(this)
     type(hypercube_t), intent(inout) :: this
 
     PUSH_SUB(hypercube_end)
 
-    SAFE_DEALLOCATE_P(this%boxdim)
+    SAFE_DEALLOCATE_A(this%boxdim)
 
     POP_SUB(hypercube_end)
   end subroutine hypercube_end

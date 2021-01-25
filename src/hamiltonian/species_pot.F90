@@ -23,6 +23,7 @@ module species_pot_oct_m
   use curvilinear_oct_m
   use global_oct_m
   use io_function_oct_m
+  use index_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -45,7 +46,7 @@ module species_pot_oct_m
 
   private
   public ::                         &
-    species_get_density,            &
+    species_get_long_range_density, &
     species_get_nlcc,               &
     species_get_nlcc_grad,          &
     species_get_local,              &
@@ -75,7 +76,7 @@ contains
 
     integer :: isp, ip, in_points, icell
     FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
-    FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
+    FLOAT :: xx(sb%dim), yy(sb%dim), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(volume_t) :: volume
@@ -232,7 +233,7 @@ contains
 
       if(ps_has_density(ps)) then
 
-        ASSERT(associated(ps%density))
+        ASSERT(allocated(ps%density))
 
         rmax = CNST(0.0)
         do isp = 1, spin_channels
@@ -323,7 +324,7 @@ contains
 
       if(ps_has_density(ps)) then
 
-        ASSERT(associated(ps%density))
+        ASSERT(allocated(ps%density))
 
         rmax = CNST(0.0)
 
@@ -545,7 +546,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, namespace, pos, mesh, rho)
+  subroutine species_get_long_range_density(species, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     type(namespace_t),          intent(in)  :: namespace
     FLOAT,                      intent(in)  :: pos(:)
@@ -556,7 +557,7 @@ contains
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho1, rerho
+    FLOAT   :: delta, alpha, beta, xx(mesh%sb%dim), yy(mesh%sb%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
@@ -572,9 +573,9 @@ contains
     FLOAT, parameter      :: threshold = CNST(1e-6)
     FLOAT                 :: norm_factor
     
-    PUSH_SUB(species_get_density)
+    PUSH_SUB(species_get_long_range_density)
 
-    call profiling_in(prof, "SPECIES_DENSITY")
+    call profiling_in(prof, "SPECIES_LONG_RANGE_DENSITY")
 
     select case(species_type(species))
 
@@ -743,8 +744,8 @@ contains
     end select
 
     call profiling_out(prof)
-    POP_SUB(species_get_density)
-  end subroutine species_get_density
+    POP_SUB(species_get_long_range_density)
+  end subroutine species_get_long_range_density
 
 
   ! ---------------------------------------------------------
@@ -786,11 +787,12 @@ contains
   end subroutine func
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc(species, pos, mesh, rho_core)
-    type(species_t), target, intent(in)  :: species
-    FLOAT,                   intent(in)  :: pos(MAX_DIM)
-    type(mesh_t),            intent(in)  :: mesh
-    FLOAT,                   intent(out) :: rho_core(:)
+  subroutine species_get_nlcc(species, pos, mesh, rho_core, accumulate)
+    type(species_t), target, intent(in)    :: species
+    FLOAT,                   intent(in)    :: pos(MAX_DIM)
+    type(mesh_t),            intent(in)    :: mesh
+    FLOAT,                   intent(inout) :: rho_core(:)
+    logical, optional,       intent(in)    :: accumulate
 
     FLOAT :: center(MAX_DIM), rr
     integer :: icell, ip
@@ -802,7 +804,7 @@ contains
     ! only for 3D pseudopotentials, please
     if(species_is_ps(species)) then
       ps => species_ps(species)
-      rho_core = M_ZERO
+      if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
       call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
         center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
@@ -815,7 +817,7 @@ contains
       end do
       call periodic_copy_end(pp)
     else
-      rho_core = M_ZERO
+      if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
     end if
 
     POP_SUB(species_get_nlcc)
@@ -867,7 +869,7 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
 
-    integer :: ip, jp, idir, dim
+    integer :: ip, jp, idir, dim, idx(MAX_DIM)
     FLOAT   :: r, chi(MAX_DIM)
 
     PUSH_SUB(getrho)
@@ -880,7 +882,8 @@ contains
       if(mesh_p%parallel_in_domains) &
         jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
 
-      chi(1:dim) = mesh_p%idx%lxyz(jp, 1:dim) * mesh_p%spacing(1:dim)
+      call index_to_coords(mesh_p%idx, jp, idx)
+      chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 
@@ -911,7 +914,7 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2, threshold
+    FLOAT :: xx(mesh%sb%dim), x_atom_per(MAX_DIM), r, r2, threshold
     integer :: ip, err, idim, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
@@ -936,7 +939,7 @@ contains
         do icell = 1, periodic_copy_num(pp)
           x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
+            call mesh_r(mesh, ip, r, origin = x_atom_per)
             r2 = r*r
             vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
           end do

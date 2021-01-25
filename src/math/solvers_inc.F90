@@ -82,12 +82,12 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   interface
     subroutine op(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
     R_TYPE function dotp(x, y) result(res)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(in)    :: y(:)
     end function dotp
   end interface
@@ -122,7 +122,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   iter = 1
   do while(iter < max_iter)
     gamma = dotp(r, r)
-    if(abs(gamma) < threshold_) exit
+    if(abs(gamma) < threshold_**2) exit
     call op(p, ap)
     alpha   = gamma/dotp(p, ap)
     call lalg_axpy(np, -alpha, ap, r)
@@ -133,7 +133,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     end do
     iter    = iter + 1
   end do
-  if(present(residue)) residue = gamma
+  if(present(residue)) residue = sqrt(abs(gamma))
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(ax)
@@ -152,14 +152,14 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   interface
     subroutine op(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
   end interface
   interface
     subroutine opt(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine opt
     R_TYPE function dotp(x, y) result(res)
@@ -203,8 +203,8 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   iter     = 1
   do while(iter < max_iter)
     gamma = R_REAL(dotp(rr, r))
-    err   = dotp(r, r)
-    if(abs(err) < threshold_) exit
+    err   = R_REAL(dotp(r, r))
+    if(abs(err) < threshold_**2) exit
     call op (p,  ap)
     call opt(pp, atp)
     alpha = gamma/R_REAL(dotp(pp, ap))
@@ -218,7 +218,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     call lalg_axpy(np, R_TOTYPE(M_ONE), rr, pp)
     iter = iter + 1
   end do
-  if(present(residue)) residue = err
+  if(present(residue)) residue = sqrt(abs(err))
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(rr)
@@ -330,7 +330,7 @@ end subroutine X(bi_conjugate_gradients)
   !> for complex symmetric matrices
   !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
   subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
-    residue, threshold, showprogress, converged)
+    residue, threshold, showprogress, converged, use_initial_guess)
     integer, intent(in)    :: np    !< number of points
     R_TYPE,  intent(inout) :: x(:)  !< the initial guess and the result
     R_TYPE,  intent(in)    :: b(:)  !< the right side
@@ -366,6 +366,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< should there be a progress bar
     logical, optional, intent(out)   :: converged    !< has the algorithm converged
+    logical, optional, intent(in)    :: use_initial_guess !< do we have a guess or not
 
     R_TYPE, allocatable :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
     R_TYPE              :: eta, delta, epsilon, beta, rtmp
@@ -387,13 +388,18 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
 
-    ! use v as temp var
-    call op(x, v)
-
-    do ip = 1, np
-      r(ip) = b(ip) - v(ip)
-      v(ip) = r(ip)
-    end do
+    if(optional_default(use_initial_guess, .true.)) then
+      call op(x, v)
+      do ip = 1, np
+        r(ip) = b(ip) - v(ip)
+        v(ip) = r(ip)
+      end do
+    else
+      !The initial starting point is zero
+      x = M_ZERO
+      call lalg_copy(np, b, r)
+      call lalg_copy(np, b, v)
+    end if
 
     rho      = nrm2(v)
     norm_b   = nrm2(b)
@@ -416,7 +422,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
+        ilog_thr = max(0, -int(CNST(100.0)*log(threshold_)))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -426,15 +432,12 @@ end subroutine X(bi_conjugate_gradients)
           err = 1
           exit
         end if
+
         alpha = alpha*xsi/rho
-        tmp = M_ONE/rho
-        do ip = 1, np
-          v(ip) = tmp*v(ip)
-        end do
-        tmp = M_ONE/xsi
-        do ip = 1, np
-          z(ip) = tmp*z(ip)
-        end do
+
+        call lalg_scal(np, M_ONE/rho, v)
+  
+        call lalg_scal(np, M_ONE/xsi, z)
 
         delta = dotu(v, z)
 
@@ -442,20 +445,18 @@ end subroutine X(bi_conjugate_gradients)
           err = 2
           exit
         end if
+
         if(iter == 1) then
-          do ip = 1, np
-            q(ip) = z(ip)
-          end do
+          call lalg_copy(np, z, q)
         else
           rtmp = -rho*delta/epsilon
           do ip = 1, np
             q(ip) = rtmp*q(ip) + z(ip)
           end do
         end if
+
         call op(q, p)
-        do ip = 1, np
-          p(ip) = alpha*p(ip)
-        end do
+        call lalg_scal(np, alpha, p)
 
         epsilon = dotu(q, p)
 
@@ -463,30 +464,31 @@ end subroutine X(bi_conjugate_gradients)
           err = 3
           exit
         end if
+
         beta = epsilon/delta
         do ip = 1, np
           v(ip) = -beta*v(ip) + p(ip)
         end do
-        oldrho = rho
 
+        oldrho = rho
         rho = nrm2(v)
 
         call prec(v, z)
-        tmp = M_ONE/alpha
-        do ip = 1, np
-          z(ip) = tmp*z(ip)
-        end do
+        call lalg_scal(np, M_ONE/alpha, z)
 
         xsi = nrm2(z)
 
         oldtheta = theta
         theta    = rho/(gamma*abs(beta))
+
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
+
         if(abs(gamma) < M_EPSILON) then
           err = 4
           exit
         end if
+
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
         rtmp = eta*alpha
@@ -525,10 +527,10 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         if(showprogress_) then
-          ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
+          ilog_res = max(0, -int(CNST(100.0)*log(res)))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
-        
+
         if(res < threshold_) exit
       end do
     end if
@@ -673,7 +675,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
+        ilog_thr = max(0, -int(CNST(100.0)*log(threshold_)))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -750,7 +752,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         if(showprogress_) then
-          ilog_res = max(M_ZERO, -CNST(100.0)*log(res))
+          ilog_res = max(0, -int(CNST(100.0)*log(res)))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
         
@@ -1008,8 +1010,7 @@ end subroutine X(bi_conjugate_gradients)
       call RANDOM_NUMBER(P)
       do j = 1,s
          do k = 1,j-1
-            alpha(k) = dtrace_dot( P(:,:,k),P(:,:,j) )
-            P(:,:,j) = P(:,:,j) - alpha(k)*P(:,:,k)
+            P(:,:,j) = P(:,:,j) - dtrace_dot( P(:,:,k),P(:,:,j) )*P(:,:,k)
          end do
          P(:,:,j) = P(:,:,j)/dfrob_norm(P(:,:,j))
       end do
@@ -1313,7 +1314,7 @@ end subroutine X(bi_conjugate_gradients)
       integer :: k
       zfrob_norm = M_ZERO
       do k = 1, size(v, 2)
-        zfrob_norm = zfrob_norm + zdotprod( v(:, k), v(:, k) )
+        zfrob_norm = zfrob_norm + real(zdotprod( v(:, k), v(:, k) ))
       end do
       zfrob_norm = sqrt( zfrob_norm )
     end function zfrob_norm

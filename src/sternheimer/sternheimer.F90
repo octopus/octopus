@@ -20,6 +20,7 @@
 
 module sternheimer_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use density_oct_m
   use global_oct_m
   use grid_oct_m
@@ -53,7 +54,7 @@ module sternheimer_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 
@@ -94,8 +95,8 @@ module sternheimer_oct_m
      type(linear_solver_t) :: solver
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
-     FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
-     FLOAT, pointer        :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
+     FLOAT, allocatable    :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
+     FLOAT, allocatable    :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
      FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
      FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
@@ -114,8 +115,8 @@ module sternheimer_oct_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, wfs_are_cplx, &
-    set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
+  subroutine sternheimer_init(this, sys, wfs_are_cplx, set_ham_var, set_occ_response, set_last_occ_response, &
+    occ_response_by_sternheimer)
     type(sternheimer_t),  intent(out)   :: this
     type(electrons_t),    intent(inout) :: sys
     logical,              intent(in)    :: wfs_are_cplx
@@ -123,12 +124,13 @@ contains
     logical,    optional, intent(in)    :: set_occ_response
     logical,    optional, intent(in)    :: set_last_occ_response
     logical,    optional, intent(in)    :: occ_response_by_sternheimer
-    integer(8), optional, intent(in)    :: set_default_solver
 
     integer :: ham_var
     logical :: default_preorthog
 
     PUSH_SUB(sternheimer_init)
+
+    call sternheimer_nullify(this)
 
     if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
@@ -233,7 +235,7 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%geo, sys%mc, set_default_solver)
+    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%mc)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
@@ -244,13 +246,22 @@ contains
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
 
+    POP_SUB(sternheimer_init)
+  end subroutine sternheimer_init
+
+  !-----------------------------------------------------------
+  subroutine sternheimer_nullify(this)
+    type(sternheimer_t), intent(inout) :: this
+
+    PUSH_SUB(sternheimer_nullify)
+
     nullify(this%drhs)
     nullify(this%zrhs)
     nullify(this%dinhomog)
     nullify(this%zinhomog)
-    POP_SUB(sternheimer_init)
-  end subroutine sternheimer_init
 
+    POP_SUB(sternheimer_nullify)
+  end subroutine sternheimer_nullify
 
   !-----------------------------------------------------------
   subroutine sternheimer_end(this)
@@ -262,9 +273,7 @@ contains
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)
 
-    if (this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%fxc)
-    end if
+    SAFE_DEALLOCATE_A(this%fxc)
 
     POP_SUB(sternheimer_end)
   end subroutine sternheimer_end
@@ -327,9 +336,7 @@ contains
     
     PUSH_SUB(sternheimer_unset_kxc)
 
-    if(this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%kxc)
-    end if
+    SAFE_DEALLOCATE_A(this%kxc)
 
     POP_SUB(sternheimer_unset_kxc)
   end subroutine sternheimer_unset_kxc

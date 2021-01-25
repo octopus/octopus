@@ -24,7 +24,7 @@ module atomic_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 use iso_c_binding
   implicit none
 
@@ -298,7 +298,7 @@ contains
       F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),   &
       EPSX(1), EPSC(1),                                              &
       DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
-    type(XC_F90(func_t)) :: x_conf, c_conf
+    type(xc_f03_func_t) :: x_conf, c_conf
 
     PUSH_SUB(atomxc)
 
@@ -319,15 +319,15 @@ contains
 
     ! initialize xc functional
     if(GGA) then
-      call XC_F90(func_init)(x_conf, XC_GGA_X_PBE, NSPIN)
-      call XC_F90(func_init)(c_conf, XC_GGA_C_PBE, NSPIN)
+      call xc_f03_func_init(x_conf, XC_GGA_X_PBE, NSPIN)
+      call xc_f03_func_init(c_conf, XC_GGA_C_PBE, NSPIN)
     else
-      call XC_F90(func_init)(x_conf, XC_LDA_X, NSPIN)
+      call xc_f03_func_init(x_conf, XC_LDA_X, NSPIN)
       if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
         AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-        call XC_F90(func_init)(c_conf, XC_LDA_C_PZ, NSPIN)
+        call xc_f03_func_init(c_conf, XC_LDA_C_PZ, NSPIN)
       else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-        call XC_F90(func_init)(c_conf, XC_LDA_C_PW, NSPIN)
+        call xc_f03_func_init(c_conf, XC_LDA_C_PW, NSPIN)
       else
         write(message(1),'(a,a)') 'LDAXC: Unknown author ', AUTHOR
         call messages_fatal(1)
@@ -414,7 +414,7 @@ contains
         GD = M_ZERO
       end if
       
-      ! The XC_F90(gga) routines need as input these combinations of 
+      ! The xc_f03_gga routines need as input these combinations of 
       ! the gradient of the densities.
       sigma(1) = gd(3, 1)*gd(3, 1)
       if(NSPIN > 1) then
@@ -425,11 +425,11 @@ contains
       ! Find exchange and correlation energy densities and their
       ! derivatives with respect to density and density gradient
       if (GGA) then
-        call XC_F90(gga_exc_vxc)(x_conf, int(1, XC_SIZE_T), D, sigma, EPSX, DEXDD, vxsigma)
-        call XC_F90(gga_exc_vxc)(c_conf, int(1, XC_SIZE_T), D, sigma, EPSC, DECDD, vcsigma)
+        call xc_f03_gga_exc_vxc(x_conf, int(1, XC_SIZE_T), D, sigma, EPSX, DEXDD, vxsigma)
+        call xc_f03_gga_exc_vxc(c_conf, int(1, XC_SIZE_T), D, sigma, EPSC, DECDD, vcsigma)
       else
-        call XC_F90(lda_exc_vxc)(x_conf, int(1, XC_SIZE_T), D, EPSX, DEXDD)
-        call XC_F90(lda_exc_vxc)(c_conf, int(1, XC_SIZE_T), D, EPSC, DECDD)
+        call xc_f03_lda_exc_vxc(x_conf, int(1, XC_SIZE_T), D, EPSX, DEXDD)
+        call xc_f03_lda_exc_vxc(c_conf, int(1, XC_SIZE_T), D, EPSC, DECDD)
       end if
       
       ! The derivatives of the exchange and correlation energies per particle with
@@ -495,8 +495,8 @@ contains
       end do
     end do
 
-    call XC_F90(func_end)(x_conf)
-    call XC_F90(func_end)(c_conf)
+    call xc_f03_func_end(x_conf)
+    call xc_f03_func_end(c_conf)
     
     POP_SUB(atomxc)
   end subroutine atomxc

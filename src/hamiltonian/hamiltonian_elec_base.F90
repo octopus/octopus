@@ -60,8 +60,6 @@ module hamiltonian_elec_base_oct_m
     zhamiltonian_elec_base_local_sub,               &
     dhamiltonian_elec_base_magnetic,                &
     zhamiltonian_elec_base_magnetic,                &
-    dhamiltonian_elec_base_rashba,                  &
-    zhamiltonian_elec_base_rashba,                  &
     dhamiltonian_elec_base_nlocal_start,            &
     zhamiltonian_elec_base_nlocal_start,            &
     dhamiltonian_elec_base_nlocal_finish,           &
@@ -76,10 +74,9 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_build_proj,               &
     hamiltonian_elec_base_update,                   &
     hamiltonian_elec_base_accel_copy_pot,           &
-    dhamiltonian_elec_base_phase,                   &
-    zhamiltonian_elec_base_phase,                   &
-    dhamiltonian_elec_base_phase_spiral,            &
-    zhamiltonian_elec_base_phase_spiral,            &
+    hamiltonian_elec_base_phase,                    &
+    hamiltonian_elec_base_phase_spiral,             &
+    hamiltonian_elec_base_rashba,                   &
     dhamiltonian_elec_base_nlocal_force,            &
     zhamiltonian_elec_base_nlocal_force,            &
     projection_t,                                   &
@@ -853,14 +850,14 @@ contains
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
     if(phase_correction) then
-      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .false., psib)
+      call hamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .false., psib)
     end if
 
     POP_SUB(hamiltonian_elec_base_set_phase_corr)
 
   end subroutine hamiltonian_elec_base_set_phase_corr
 
- ! ----------------------------------------------------------------------------------
+  ! ----------------------------------------------------------------------------------
 
   subroutine hamiltonian_elec_base_unset_phase_corr(hm_base, mesh, psib)
     type(hamiltonian_elec_base_t), intent(in) :: hm_base
@@ -878,13 +875,295 @@ contains
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
     if(phase_correction) then
-      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .true., psib)
+      call hamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .true., psib)
     end if
 
     POP_SUB(hamiltonian_elec_base_unset_phase_corr)
 
   end subroutine hamiltonian_elec_base_unset_phase_corr
 
+  ! ---------------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_phase(this, mesh, np, conjugate, psib, src)
+    type(hamiltonian_elec_base_t),         intent(in)    :: this
+    type(mesh_t),                          intent(in)    :: mesh
+    integer,                               intent(in)    :: np
+    logical,                               intent(in)    :: conjugate
+    type(wfs_elec_t),              target, intent(inout) :: psib
+    type(wfs_elec_t),    optional, target, intent(in)    :: src
+
+    integer :: ip, ii
+    type(wfs_elec_t), pointer :: src_
+    type(profile_t), save :: phase_prof
+    CMPLX :: phase
+    integer :: wgsize
+    type(accel_kernel_t), save :: ker_phase
+
+    PUSH_SUB(hamiltonian_elec_base_phase)
+    call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+
+    call profiling_count_operations(6*np*psib%nst_linear)
+
+    ASSERT(np <= mesh%np_part)
+    ASSERT(psib%type() == TYPE_CMPLX)
+
+    src_ => psib
+    if(present(src)) src_ => src
+
+    ASSERT(src_%has_phase .eqv. conjugate)
+    ASSERT(src_%ik == psib%ik)
+    ASSERT(src_%type() == TYPE_CMPLX)
+
+    select case(psib%status())
+    case(BATCH_PACKED)
+
+      if(conjugate) then
+
+        !$omp parallel do private(ip, ii, phase)
+        do ip = 1, np
+          phase = conjg(this%phase(ip, psib%ik))
+          do ii = 1, psib%nst_linear
+            psib%zff_pack(ii, ip) = phase*src_%zff_pack(ii, ip)
+          end do
+        end do
+        !$omp end parallel do
+
+      else
+
+        !$omp parallel do private(ip, ii, phase)
+        do ip = 1, np
+          phase = this%phase(ip, psib%ik)
+          do ii = 1, psib%nst_linear
+            psib%zff_pack(ii, ip) = phase*src_%zff_pack(ii, ip)
+          end do
+        end do
+        !$omp end parallel do
+
+      end if
+
+    case(BATCH_NOT_PACKED)
+
+      if(conjugate) then
+
+        !$omp parallel private(ii, ip)
+        do ii = 1, psib%nst_linear
+          !$omp do
+          do ip = 1, np
+            psib%zff_linear(ip, ii) = conjg(this%phase(ip, psib%ik))*src_%zff_linear(ip, ii)
+          end do
+          !$omp end do nowait
+        end do
+        !$omp end parallel
+
+      else
+        !$omp parallel private(ii, ip)
+        do ii = 1, psib%nst_linear
+          !$omp do
+          do ip = 1, np
+            psib%zff_linear(ip, ii) = this%phase(ip, psib%ik)*src_%zff_linear(ip, ii)
+          end do
+          !$omp end do nowait
+        end do
+        !$omp end parallel
+
+      end if
+
+    case(BATCH_DEVICE_PACKED)
+      call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
+
+      if(conjugate) then
+        call accel_set_kernel_arg(ker_phase, 0, 1_4)
+      else
+        call accel_set_kernel_arg(ker_phase, 0, 0_4)
+      end if
+
+      call accel_set_kernel_arg(ker_phase, 1, (psib%ik - this%buff_phase_qn_start)*mesh%np_part)
+      call accel_set_kernel_arg(ker_phase, 2, np)
+      call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
+      call accel_set_kernel_arg(ker_phase, 4, src_%ff_device)
+      call accel_set_kernel_arg(ker_phase, 5, log2(src_%pack_size(1)))
+      call accel_set_kernel_arg(ker_phase, 6, psib%ff_device)
+      call accel_set_kernel_arg(ker_phase, 7, log2(psib%pack_size(1)))
+
+      wgsize = accel_kernel_workgroup_size(ker_phase)/psib%pack_size(1)
+
+      call accel_kernel_run(ker_phase, (/psib%pack_size(1), pad(np, wgsize)/), (/psib%pack_size(1), wgsize/))
+
+      call accel_finish()
+    end select
+
+    psib%has_phase = .not. conjugate
+
+    call profiling_out(phase_prof)
+    POP_SUB(hamiltonian_elec_base_phase)
+  end subroutine hamiltonian_elec_base_phase
+
+  ! ---------------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_phase_spiral(this, der, psib)
+    type(hamiltonian_elec_base_t),         intent(in)    :: this
+    type(derivatives_t),                   intent(in)    :: der
+    class(wfs_elec_t),                     intent(inout) :: psib
+
+    integer               :: ip, ii, sp
+    integer, allocatable  :: spin_label(:)
+    type(accel_mem_t)     :: spin_label_buffer 
+    type(profile_t), save :: phase_prof
+    integer :: wgsize
+
+    PUSH_SUB(hamiltonian_elec_base_phase_spiral)
+    call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
+
+    call profiling_count_operations(6*(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
+
+    ASSERT(der%boundaries%spiral)
+    ASSERT(psib%type() == TYPE_CMPLX)
+
+    sp = der%mesh%np
+    if(der%mesh%parallel_in_domains) sp = der%mesh%np + der%mesh%vp%np_ghost
+
+
+    select case(psib%status())
+    case(BATCH_PACKED)
+
+      !$omp parallel do private(ip, ii)
+      do ip = sp + 1, der%mesh%np_part
+        do ii = 1, psib%nst_linear, 2
+          if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
+            psib%zff_pack(ii+1, ip) = psib%zff_pack(ii+1, ip)*this%phase_spiral(ip-sp, 1)
+          else
+            psib%zff_pack(ii, ip) = psib%zff_pack(ii, ip)*this%phase_spiral(ip-sp, 2)
+          end if
+        end do
+      end do
+      !$omp end parallel do
+
+    case(BATCH_NOT_PACKED)
+
+      !$omp parallel private(ii, ip)
+      do ii = 1, psib%nst_linear, 2
+        if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
+          !$omp do
+          do ip = sp + 1, der%mesh%np_part
+            psib%zff_linear(ip, ii+1) = psib%zff_linear(ip, ii+1)*this%phase_spiral(ip-sp, 1)
+          end do
+          !$omp end do nowait
+        else
+          !$omp do
+          do ip = sp + 1, der%mesh%np_part
+            psib%zff_linear(ip, ii) = psib%zff_linear(ip, ii)*this%phase_spiral(ip-sp, 2)
+          end do
+          !$omp end do nowait
+        end if
+      end do
+      !$omp end parallel
+
+    case(BATCH_DEVICE_PACKED)
+
+      ASSERT(accel_is_enabled())
+
+      ! generate array of offsets for access of psib and phase_spiral:
+      ! TODO: Move this to the routine where spin(:,:,:) is generated
+      !       and also move the buffer to the GPU at this point to
+      !       avoid unecessary latency here!
+ 
+      SAFE_ALLOCATE(spin_label(1:psib%nst_linear))
+      spin_label = 0
+      do ii = 1, psib%nst_linear, 2
+        if(this%spin(3, psib%linear_to_ist(ii), psib%ik) > 0) spin_label(ii)=1
+      end do
+
+      call accel_create_buffer(spin_label_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, psib%nst_linear)
+      call accel_write_buffer(spin_label_buffer, psib%nst_linear, spin_label)
+
+      call accel_kernel_start_call(kernel_phase_spiral, 'phase_spiral.cl', 'phase_spiral_apply')
+
+      call accel_set_kernel_arg(kernel_phase_spiral, 0, psib%nst) 
+      call accel_set_kernel_arg(kernel_phase_spiral, 1, sp) 
+      call accel_set_kernel_arg(kernel_phase_spiral, 2, der%mesh%np_part) 
+      call accel_set_kernel_arg(kernel_phase_spiral, 3, psib%ff_device)
+      call accel_set_kernel_arg(kernel_phase_spiral, 4, log2(psib%pack_size(1)))
+      call accel_set_kernel_arg(kernel_phase_spiral, 5, this%buff_phase_spiral)
+      call accel_set_kernel_arg(kernel_phase_spiral, 6, spin_label_buffer)
+
+      wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack_size(1)
+
+      call accel_kernel_run(kernel_phase_spiral, &
+                            (/psib%pack_size(1)/2, pad(der%mesh%np_part - sp, 2*wgsize)/), &
+                            (/psib%pack_size(1)/2, 2*wgsize/))
+
+      call accel_finish()
+
+      call accel_release_buffer(spin_label_buffer)
+
+      SAFE_DEALLOCATE_A(spin_label)
+
+    end select
+
+    call profiling_out(phase_prof)
+    POP_SUB(hamiltonian_elec_base_phase_spiral)
+  end subroutine hamiltonian_elec_base_phase_spiral
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine hamiltonian_elec_base_rashba(this, mesh, der, std, psib, vpsib)
+    type(hamiltonian_elec_base_t),  intent(in)    :: this
+    type(mesh_t),                   intent(in)    :: mesh
+    type(derivatives_t),            intent(in)    :: der
+    type(states_elec_dim_t),        intent(in)    :: std
+    type(wfs_elec_t), target,       intent(in)    :: psib
+    type(wfs_elec_t), target,       intent(inout) :: vpsib
+
+    integer :: ist, idim, ip
+    CMPLX, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
+
+    PUSH_SUB(hamiltonian_elec_base_rashba)
+
+    if(abs(this%rashba_coupling) < M_EPSILON) then
+      POP_SUB(hamiltonian_elec_base_rashba)
+      return
+    end if
+    ASSERT(std%ispin == SPINORS)
+    ASSERT(mesh%sb%dim == 2)
+    ASSERT(psib%type() == TYPE_CMPLX)
+    ASSERT(vpsib%type() == TYPE_CMPLX)
+
+    SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+    SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+    SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
+
+    do ist = 1, psib%nst
+      call batch_get_state(psib, ist, mesh%np_part, psi)
+      call batch_get_state(vpsib, ist, mesh%np, vpsi)
+
+      do idim = 1, std%dim
+        call zderivatives_grad(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+      end do
+
+      if(allocated(this%vector_potential)) then
+        do ip = 1, mesh%np
+          vpsi(ip, 1) = vpsi(ip, 1) + &
+            (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
+          vpsi(ip, 2) = vpsi(ip, 2) + &
+            (this%rashba_coupling) * (this%vector_potential(2, ip) - M_zI * this%vector_potential(1, ip)) * psi(ip, 1)
+        end do
+      end if
+
+      do ip = 1, mesh%np
+        vpsi(ip, 1) = vpsi(ip, 1) - &
+          this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
+        vpsi(ip, 2) = vpsi(ip, 2) + &
+          this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
+      end do
+
+      call batch_set_state(vpsib, ist, mesh%np, vpsi)
+    end do
+
+    SAFE_DEALLOCATE_A(grad)
+    SAFE_DEALLOCATE_A(vpsi)
+    SAFE_DEALLOCATE_A(psi)
+  
+    POP_SUB(hamiltonian_elec_base_rashba)
+  end subroutine hamiltonian_elec_base_rashba
 
 #include "undef.F90"
 #include "real.F90"

@@ -64,9 +64,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
     i011 = 7,            &
     i111 = 8
   integer :: pt(1:8), npt, ipt
-#ifdef HAVE_MPI
   logical :: inner_point, boundary_point
-#endif
 
   PUSH_SUB(X(mesh_interpolation_evaluate))
 
@@ -93,23 +91,22 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
     ! get the point indices (this could be done in a loop with bit tricks)
     
-    pt(i000) = mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 0 + nm(3))
-    pt(i100) = mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 0 + nm(3))
+    pt(i000) = index_from_coords(mesh%idx, [0 + nm(1), 0 + nm(2), 0 + nm(3)])
+    pt(i100) = index_from_coords(mesh%idx, [1 + nm(1), 0 + nm(2), 0 + nm(3)])
 
     if(mesh%sb%dim >= 2) then
-      pt(i010) = mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 0 + nm(3))
-      pt(i110) = mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 0 + nm(3))
+      pt(i010) = index_from_coords(mesh%idx, [0 + nm(1), 1 + nm(2), 0 + nm(3)])
+      pt(i110) = index_from_coords(mesh%idx, [1 + nm(1), 1 + nm(2), 0 + nm(3)])
     end if
 
     if(mesh%sb%dim >= 3) then
-      pt(i001) = mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 1 + nm(3))
-      pt(i101) = mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 1 + nm(3))
-      pt(i011) = mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 1 + nm(3))
-      pt(i111) = mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 1 + nm(3))
+      pt(i001) = index_from_coords(mesh%idx, [0 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i101) = index_from_coords(mesh%idx, [1 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i011) = index_from_coords(mesh%idx, [0 + nm(1), 1 + nm(2), 1 + nm(3)])
+      pt(i111) = index_from_coords(mesh%idx, [1 + nm(1), 1 + nm(2), 1 + nm(3)])
     end if
 
      if(mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
        do ipt = 1, npt
          pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
          lvalues(ipt) = CNST(0.0)
@@ -117,7 +114,6 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
          inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
          if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
       end do
-#endif
     else
       do ipt=1, npt
         lvalues(ipt) = values(pt(ipt))
@@ -186,7 +182,11 @@ subroutine X(mesh_interpolation_test)(mesh)
   ! generate the field to be interpolated
   if(mesh%mpi_grp%rank == 0) then
     do idir = 1, mesh%sb%dim
-      coeff(idir) = loct_ran_gaussian(random_gen_pointer, CNST(100.0)) + M_ZI*loct_ran_gaussian(random_gen_pointer, CNST(100.0))
+#ifdef R_TCOMPLEX
+      coeff(idir) = TOCMPLX(loct_ran_gaussian(random_gen_pointer, CNST(100.0)), loct_ran_gaussian(random_gen_pointer, CNST(100.0)))
+#else
+      coeff(idir) = loct_ran_gaussian(random_gen_pointer, CNST(100.0))
+#endif
     end do
   end if
 

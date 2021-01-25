@@ -217,7 +217,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
 #endif
   SAFE_DEALLOCATE_A(status)
-  SAFE_DEALLOCATE_P(handle%requests)
+  SAFE_DEALLOCATE_A(handle%requests)
 
   if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
@@ -321,18 +321,21 @@ contains
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
+    integer :: idx(1:3)
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
     SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
+    ASSERT(boundaries%mesh%idx%dim == 3)
     
     do ist = 1, ffb%nst_linear
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
       
       do ip = bndry_start, bndry_end
-        ix = boundaries%mesh%idx%lxyz(ip, 1)
-        iy = boundaries%mesh%idx%lxyz(ip, 2)
-        iz = boundaries%mesh%idx%lxyz(ip, 3)
+        call index_to_coords(boundaries%mesh%idx, ip, idx)
+        ix = idx(1)
+        iy = idx(2)
+        iz = idx(3)
 
         i_lev = boundaries%mesh%resolution(ix,iy,iz)
 
@@ -349,10 +352,10 @@ contains
                   boundaries%mesh%sb%hr_area%interp%ww(jj) *        &
                   boundaries%mesh%sb%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(boundaries%mesh%idx%lxyz_inv(   &
-                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,       &
-                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,       &
-                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz))
+                ff(ip) = ff(ip) + weight * ff(index_from_coords(boundaries%mesh%idx, [ &
+                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,   &
+                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,   &
+                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz]))
               end do
             end do
           end do
@@ -513,8 +516,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_linear)(ip2, ist) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_linear(ip2, ist) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -542,8 +550,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_pack)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_pack(ist, ip2) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -631,9 +644,14 @@ contains
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
           do ip = 1, boundaries%nper
+#ifdef R_TCOMPLEX
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if
@@ -659,7 +677,12 @@ contains
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
           do ist = 1, ffb%nst_linear
+#ifdef R_TCOMPLEX
             ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if
@@ -719,9 +742,9 @@ end subroutine X(boundaries_set_batch)
 ! ---------------------------------------------------------
 
 subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
-  type(boundaries_t),  intent(in)    :: boundaries
-  R_TYPE, target,      intent(inout) :: ff(:)
-  CMPLX, optional,     intent(in)    :: phase_correction(:)
+  type(boundaries_t),         intent(in)    :: boundaries
+  R_TYPE, target, contiguous, intent(inout) :: ff(:)
+  CMPLX, optional,            intent(in)    :: phase_correction(:)
 
   type(batch_t) :: batch_ff
 

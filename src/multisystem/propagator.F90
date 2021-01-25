@@ -70,16 +70,16 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  character(len=30), public, parameter ::          &
-    SKIP                 = 'SKIP',                 &
-    FINISHED             = 'FINISHED',             &
-    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',  &
-    START_SCF_LOOP       = 'START_SCF_LOOP',       &
-    END_SCF_LOOP         = 'END_SCF_LOOP',         &
+  character(len=ALGO_LABEL_LEN), public, parameter ::   &
+    SKIP                 = 'SKIP',                      &
+    FINISHED             = 'FINISHED',                  &
+    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',       &
+    START_SCF_LOOP       = 'START_SCF_LOOP',            &
+    END_SCF_LOOP         = 'END_SCF_LOOP',              &
     STORE_CURRENT_STATUS = 'STORE_CURRENT_STATUS'
 
   type(algorithmic_operation_t), public, parameter :: &
-    OP_SKIP                 = algorithmic_operation_t(SKIP,                 'Skipping propagation step'), &
+    OP_SKIP                 = algorithmic_operation_t(SKIP, 'Skipping propagation step'), &
     OP_FINISHED             = algorithmic_operation_t(FINISHED,             'Propagation step finished'), &
     OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS,  'Updating interactions'),     &
     OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP,       'Starting SCF loop'),         &

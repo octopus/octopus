@@ -20,6 +20,7 @@
 
 module double_grid_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -60,7 +61,7 @@ module double_grid_oct_m
      integer :: interpolation_max
      integer :: nn
      logical :: use_double_grid
-     FLOAT, pointer :: co(:)
+     FLOAT, allocatable :: co(:)
   end type double_grid_t
 
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
@@ -144,9 +145,10 @@ contains
     type(double_grid_t), intent(inout) :: this
  
     PUSH_SUB(double_grid_end)
-    SAFE_DEALLOCATE_P(this%co)
-    POP_SUB(double_grid_end)
 
+    SAFE_DEALLOCATE_A(this%co)
+
+    POP_SUB(double_grid_end)
   end subroutine double_grid_end
   
   FLOAT function double_grid_get_hmax(this, mesh) result(hmax)
@@ -208,6 +210,7 @@ contains
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
+    integer :: idx(1:3)
     
     ! no push_sub, threadsafe function
     
@@ -231,7 +234,8 @@ contains
 #endif
     end if
     
-    start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
+    call index_to_coords(mesh%idx, ip, idx)
+    start(1:3) = idx(1:3) + this%interpolation_min * (/ii, jj, kk/)
     
     pp = start(1)
     do ll = this%interpolation_min, this%interpolation_max
@@ -242,11 +246,9 @@ contains
         rr = start(3)
         do nn = this%interpolation_min, this%interpolation_max
           
-          ip = mesh%idx%lxyz_inv(pp, qq, rr)
-#ifdef HAVE_MPI      
+          ip = index_from_coords(mesh%idx, [pp, qq, rr])
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
           if (ip > 0) then
             is2 = jxyz_inv(ip)
             if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv

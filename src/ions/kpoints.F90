@@ -64,18 +64,19 @@ module kpoints_oct_m
     kpoints_is_compatible_downsampling, &
     kpoints_is_valid_symmetry,    &
     kpoints_grid_end,             & 
-    kpoints_nkpt_in_path
+    kpoints_nkpt_in_path,         &
+    kpoints_gamma_only
 
   type kpoints_grid_t
     ! Components are public by default
-    FLOAT, pointer   :: point(:, :)
-    FLOAT, pointer   :: point1BZ(:, :)
-    FLOAT, pointer   :: red_point(:, :)
-    FLOAT, pointer   :: weight(:)
-    integer          :: nshifts            !< number of shifts
-    FLOAT, pointer   :: shifts(:,:)
-    integer          :: npoints
-    integer          :: dim
+    FLOAT, allocatable :: point(:, :)
+    FLOAT, allocatable :: point1BZ(:, :)
+    FLOAT, allocatable :: red_point(:, :)
+    FLOAT, allocatable :: weight(:)
+    integer            :: nshifts            !< number of shifts
+    FLOAT, allocatable :: shifts(:,:)
+    integer            :: npoints
+    integer            :: dim
   end type kpoints_grid_t
 
   type kpoints_t
@@ -90,13 +91,13 @@ module kpoints_oct_m
     integer              :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer                   :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer                   :: niq_axis(MAX_DIM)    !< number of MP divisions
-    integer, pointer, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
-    integer, pointer, private :: num_symmetry_ops(:) !< (reduced%npoints)
+    integer                       :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer                       :: niq_axis(MAX_DIM)    !< number of MP divisions
+    integer, allocatable, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, allocatable, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
-    FLOAT, pointer            :: coord_along_path(:)
+    FLOAT, allocatable            :: coord_along_path(:)
 
     integer              :: downsampling(MAX_DIM) !< downsampling coefficients
   end type kpoints_t
@@ -112,7 +113,6 @@ contains
   elemental subroutine  kpoints_grid_nullify(this)
     type(kpoints_grid_t), intent(out) :: this
 
-    nullify(this%point, this%point1BZ, this%red_point, this%weight, this%shifts)
     this%npoints = 0
     this%dim = 0
     this%nshifts = 1
@@ -147,11 +147,11 @@ contains
 
     PUSH_SUB(kpoints_grid_end)
 
-    SAFE_DEALLOCATE_P(this%red_point)
-    SAFE_DEALLOCATE_P(this%point)
-    SAFE_DEALLOCATE_P(this%point1BZ)
-    SAFE_DEALLOCATE_P(this%weight)
-    SAFE_DEALLOCATE_P(this%shifts)
+    SAFE_DEALLOCATE_A(this%red_point)
+    SAFE_DEALLOCATE_A(this%point)
+    SAFE_DEALLOCATE_A(this%point1BZ)
+    SAFE_DEALLOCATE_A(this%weight)
+    SAFE_DEALLOCATE_A(this%shifts)
 
     POP_SUB(kpoints_grid_end)
   end subroutine kpoints_grid_end
@@ -165,11 +165,11 @@ contains
     PUSH_SUB(kpoints_grid_copy)
     
     call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
-    aa%weight = bb%weight
-    aa%point  = bb%point
-    aa%point1BZ = bb%point1BZ
-    aa%red_point = bb%red_point
-    aa%shifts = bb%shifts
+    aa%weight(1:bb%npoints) = bb%weight(1:bb%npoints)
+    aa%point(1:bb%dim, 1:bb%npoints)  = bb%point(1:bb%dim, 1:bb%npoints)
+    aa%point1BZ(1:bb%dim, 1:bb%npoints) = bb%point1BZ(1:bb%dim, 1:bb%npoints)
+    aa%red_point(1:bb%dim, 1:bb%npoints) = bb%red_point(1:bb%dim, 1:bb%npoints)
+    aa%shifts(1:bb%dim, 1:bb%nshifts) = bb%shifts(1:bb%dim, 1:bb%nshifts)
 
     POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
@@ -183,12 +183,12 @@ contains
       
     PUSH_SUB(kpoints_grid_addto)
 
-    if (.not. associated(that%point)) then
+    if (.not. allocated(that%point)) then
       POP_SUB(kpoints_grid_addto)
       return
     end if   
 
-    if (.not. associated(this%point)) then
+    if (.not. allocated(this%point)) then
       call kpoints_grid_copy(that, this)       
       POP_SUB(kpoints_grid_addto)
       return
@@ -236,8 +236,6 @@ contains
     this%nik_skip = 0
     this%nik_axis = 0
     this%niq_axis = 0
-    nullify(this%symmetry_ops, this%num_symmetry_ops)
-    nullify(this%coord_along_path)
     this%downsampling = 1
 
   end subroutine kpoints_nullify
@@ -576,7 +574,6 @@ contains
 
       call kpoints_grid_copy(this%full, this%reduced)
 
-      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
 
       if(this%use_symmetries) then
 
@@ -606,6 +603,7 @@ contains
         end do
 
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         
         this%num_symmetry_ops(1:this%reduced%npoints) = num_symm_ops(1:this%reduced%npoints)
         this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)) = &
@@ -616,6 +614,7 @@ contains
 
       else
 
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
         this%num_symmetry_ops(1:this%reduced%npoints) = 1
         this%symmetry_ops(1:this%reduced%npoints, 1) = 1
@@ -708,9 +707,6 @@ contains
 
       call parse_block_end(blk)
 
-      !We do not use axis
-      this%nik_axis(1:MAX_DIM) = 1
-
       !We do not have shifts
       nshifts = 1
       call kpoints_grid_init(dim, path_kpoints_grid, nkpoints, nshifts)
@@ -743,7 +739,7 @@ contains
 
       !We need to copy the arrays containing the information on the symmetries
       !Before calling kpoints_grid_addto
-      if(associated(this%symmetry_ops)) then
+      if (allocated(this%symmetry_ops)) then
         npoints = this%reduced%npoints
         SAFE_ALLOCATE(num_symm_ops(1:npoints))
         SAFE_ALLOCATE(symm_ops(1:npoints, 1:maxval(this%num_symmetry_ops)))
@@ -757,9 +753,9 @@ contains
       call kpoints_grid_addto(this%full   , path_kpoints_grid)
       call kpoints_grid_addto(this%reduced, path_kpoints_grid)
 
-      if(associated(this%symmetry_ops)) then
-        SAFE_DEALLOCATE_P(this%num_symmetry_ops)
-        SAFE_DEALLOCATE_P(this%symmetry_ops)
+      if (allocated(this%symmetry_ops)) then
+        SAFE_DEALLOCATE_A(this%num_symmetry_ops)
+        SAFE_DEALLOCATE_A(this%symmetry_ops)
         SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints,1:maxval(num_symm_ops)))
 
@@ -925,9 +921,9 @@ contains
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
-    SAFE_DEALLOCATE_P(this%symmetry_ops)
-    SAFE_DEALLOCATE_P(this%num_symmetry_ops)
-    SAFE_DEALLOCATE_P(this%coord_along_path) 
+    SAFE_DEALLOCATE_A(this%symmetry_ops)
+    SAFE_DEALLOCATE_A(this%num_symmetry_ops)
+    SAFE_DEALLOCATE_A(this%coord_along_path) 
 
     POP_SUB(kpoints_end)
   end subroutine kpoints_end
@@ -992,12 +988,12 @@ contains
 
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
 
-    if(associated(kin%coord_along_path)) then
+    if (allocated(kin%coord_along_path)) then
       SAFE_ALLOCATE(kout%coord_along_path(1:kin%full%npoints))
       kout%coord_along_path(1:kin%full%npoints) = kin%coord_along_path(1:kin%full%npoints)
     end if
 
-    if(associated(kin%symmetry_ops)) then
+    if (allocated(kin%symmetry_ops)) then
       SAFE_ALLOCATE(kout%num_symmetry_ops(1:kin%reduced%npoints))
       SAFE_ALLOCATE(kout%symmetry_ops(1:kin%reduced%npoints, 1:maxval(kin%num_symmetry_ops)))
       kout%num_symmetry_ops(1:kin%reduced%npoints) = kin%num_symmetry_ops(1:kin%reduced%npoints)
@@ -1730,9 +1726,22 @@ contains
     type(kpoints_t), intent(in) :: this
 
     npath = 0
-    if(associated(this%coord_along_path)) npath = SIZE(this%coord_along_path)
+    if (allocated(this%coord_along_path)) then
+      npath = SIZE(this%coord_along_path)
+    end if
 
   end function kpoints_nkpt_in_path
+
+  ! ---------------------------------------------------------
+  logical function kpoints_gamma_only(this) result(gamma_only)
+    type(kpoints_t), intent(in) :: this
+
+    PUSH_SUB(kpoints_gamma_only)
+
+    gamma_only = kpoints_number(this) == 1 .and. kpoints_point_is_gamma(this, 1)
+
+    POP_SUB(kpoints_gamma_only)
+  end function kpoints_gamma_only
 
 end module kpoints_oct_m
 
