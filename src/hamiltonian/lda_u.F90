@@ -94,20 +94,20 @@ module lda_u_oct_m
 
   type lda_u_t
     private
-    integer,        public   :: level
-    FLOAT, pointer, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
-    FLOAT, pointer           :: dV(:,:,:,:) !> Potentials for the standard scheme
+    integer,            public   :: level
+    FLOAT, allocatable, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
+    FLOAT, allocatable           :: dV(:,:,:,:) !> Potentials for the standard scheme
 
-    CMPLX, pointer, public   :: zn(:,:,:,:)
-    CMPLX, pointer           :: zV(:,:,:,:)
-    FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
-    CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
+    CMPLX, allocatable, public   :: zn(:,:,:,:)
+    CMPLX, allocatable           :: zV(:,:,:,:)
+    FLOAT, allocatable, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
+    CMPLX, allocatable, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
 
-    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
+    FLOAT, allocatable           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
 
-    FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+    FLOAT, allocatable           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional)
-    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
+    CMPLX, allocatable           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors)
 
     type(orbitalbasis_t),        public :: basis        !> The full basis of localized orbitals
@@ -124,7 +124,7 @@ module lda_u_oct_m
     logical                      :: skipSOrbitals      !> Not using s orbitals
     logical                      :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical                      :: freeze_u           !> U is not recomputed during TD evolution
-    logical, public              :: intersite          !> intersite V are computed or not
+    logical,              public :: intersite          !> intersite V are computed or not
     FLOAT                        :: intersite_radius   !> Maximal distance for considering neighboring atoms
     logical,              public :: basisfromstates    !> We can construct the localized basis from user-defined states
     FLOAT                        :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
@@ -136,8 +136,8 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
 
     integer, public     :: maxneighbors
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
+    FLOAT, allocatable  :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
+    CMPLX, allocatable  :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -176,22 +176,7 @@ contains
     this%double_couting = DFT_U_FLL
     this%sm_poisson = SM_POISSON_DIRECT
 
-    nullify(this%dn)
-    nullify(this%zn)
-    nullify(this%dn_alt)
-    nullify(this%zn_alt)
-    nullify(this%dV)
-    nullify(this%zV)
-    nullify(this%coulomb)
-    nullify(this%zcoulomb)
-    nullify(this%renorm_occ)
     nullify(this%orbsets)
-    nullify(this%dn_ij)
-    nullify(this%zn_ij)
-    nullify(this%dn_alt_ij)
-    nullify(this%zn_alt_ij)
-    nullify(this%dn_alt_ii)
-    nullify(this%zn_alt_ii)
 
     call distributed_nullify(this%orbs_dist, 0)
 
@@ -520,21 +505,21 @@ contains
 
     this%level = DFT_U_NONE
 
-    SAFE_DEALLOCATE_P(this%dn)
-    SAFE_DEALLOCATE_P(this%zn)
-    SAFE_DEALLOCATE_P(this%dn_alt)
-    SAFE_DEALLOCATE_P(this%zn_alt)
-    SAFE_DEALLOCATE_P(this%dV)
-    SAFE_DEALLOCATE_P(this%zV)
-    SAFE_DEALLOCATE_P(this%coulomb)
-    SAFE_DEALLOCATE_P(this%zcoulomb)
-    SAFE_DEALLOCATE_P(this%renorm_occ)
-    SAFE_DEALLOCATE_P(this%dn_ij)
-    SAFE_DEALLOCATE_P(this%zn_ij)
-    SAFE_DEALLOCATE_P(this%dn_alt_ij)
-    SAFE_DEALLOCATE_P(this%zn_alt_ij)
-    SAFE_DEALLOCATE_P(this%dn_alt_ii)
-    SAFE_DEALLOCATE_P(this%zn_alt_ii)
+    SAFE_DEALLOCATE_A(this%dn)
+    SAFE_DEALLOCATE_A(this%zn)
+    SAFE_DEALLOCATE_A(this%dn_alt)
+    SAFE_DEALLOCATE_A(this%zn_alt)
+    SAFE_DEALLOCATE_A(this%dV)
+    SAFE_DEALLOCATE_A(this%zV)
+    SAFE_DEALLOCATE_A(this%coulomb)
+    SAFE_DEALLOCATE_A(this%zcoulomb)
+    SAFE_DEALLOCATE_A(this%renorm_occ)
+    SAFE_DEALLOCATE_A(this%dn_ij)
+    SAFE_DEALLOCATE_A(this%zn_ij)
+    SAFE_DEALLOCATE_A(this%dn_alt_ij)
+    SAFE_DEALLOCATE_A(this%zn_alt_ij)
+    SAFE_DEALLOCATE_A(this%dn_alt_ii)
+    SAFE_DEALLOCATE_A(this%zn_alt_ii)
     SAFE_DEALLOCATE_A(this%basisstates)
 
     nullify(this%orbsets)
@@ -596,23 +581,23 @@ contains
       nspin = this%nspins
 
       if(states_are_real(st)) then
-        SAFE_DEALLOCATE_P(this%dn_ij)
+        SAFE_DEALLOCATE_A(this%dn_ij)
         SAFE_ALLOCATE(this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-        SAFE_DEALLOCATE_P(this%dn_alt_ij)
+        SAFE_DEALLOCATE_A(this%dn_alt_ij)
         SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-        SAFE_DEALLOCATE_P(this%dn_alt_ii)
+        SAFE_DEALLOCATE_A(this%dn_alt_ii)
         SAFE_ALLOCATE(this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
       else
-        SAFE_DEALLOCATE_P(this%zn_ij)
+        SAFE_DEALLOCATE_A(this%zn_ij)
         SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-        SAFE_DEALLOCATE_P(this%zn_alt_ij)
+        SAFE_DEALLOCATE_A(this%zn_alt_ij)
         SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-        SAFE_DEALLOCATE_P(this%zn_alt_ii)
+        SAFE_DEALLOCATE_A(this%zn_alt_ii)
         SAFE_ALLOCATE(this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
       end if
