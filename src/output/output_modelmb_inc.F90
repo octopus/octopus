@@ -75,7 +75,6 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
 
   SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
-  call modelmb_density_matrix_nullify(denmat)
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
     call modelmb_density_matrix_init(dirname, namespace, st, denmat)
   end if

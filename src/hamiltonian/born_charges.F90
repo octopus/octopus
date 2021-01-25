@@ -42,7 +42,7 @@ module born_charges_oct_m
 
   type Born_charges_t
     private
-    CMPLX, pointer, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    CMPLX, allocatable, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
     CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?
@@ -62,7 +62,6 @@ contains
 
     PUSH_SUB(born_charges_init)
 
-    nullify(this%charge)
     SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
     this%charge(1:dim, 1:dim, 1:geo%natoms) = M_ZERO
     this%delta(1:dim, 1:dim) = M_ZERO
@@ -94,7 +93,7 @@ contains
 
     PUSH_SUB(Born_charges_end)
 
-    SAFE_DEALLOCATE_P(this%charge)
+    SAFE_DEALLOCATE_A(this%charge)
 
     POP_SUB(Born_charges_end)
   end subroutine Born_charges_end

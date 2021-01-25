@@ -81,7 +81,7 @@ module partition_oct_m
     !> The following components are process-dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
     integer :: istart            !< The position of the first point stored in this process.
-    integer, pointer :: part(:)  !< The local portion of the partition.
+    integer, allocatable :: part(:)  !< The local portion of the partition.
 
   end type partition_t
 
@@ -114,7 +114,6 @@ contains
     end if
 
     !Allocate memory for the partition
-    nullify(partition%part)
     SAFE_ALLOCATE(partition%part(1:partition%np_local))
 
     POP_SUB(partition_init)
@@ -126,7 +125,7 @@ contains
 
     PUSH_SUB(partition_end)
 
-    SAFE_DEALLOCATE_P(partition%part)
+    SAFE_DEALLOCATE_A(partition%part)
 
     POP_SUB(partition_end)
   end subroutine partition_end

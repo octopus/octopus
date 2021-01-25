@@ -44,18 +44,17 @@ module modelmb_density_matrix_oct_m
 
   public :: zmodelmb_density_matrix_write, &
             dmodelmb_density_matrix_write, &
-            modelmb_density_matrix_init, &
-            modelmb_density_matrix_end, &
-            modelmb_density_matrix_nullify, &
+            modelmb_density_matrix_init,   &
+            modelmb_density_matrix_end,    &
             modelmb_denmat_t
 
   type modelmb_denmat_t
     private
     integer :: ndensmat_to_calculate
     character(len=200) :: dirname
-    character(80), pointer :: labels(:)
-    integer, pointer :: particle_kept(:)
-    integer, pointer :: nnatorb_prt(:)
+    character(80), allocatable :: labels(:)
+    integer, allocatable :: particle_kept(:)
+    integer, allocatable :: nnatorb_prt(:)
   end type modelmb_denmat_t
 
 contains
@@ -137,23 +136,7 @@ contains
     denmat%dirname = trim(dir)
 
     POP_SUB(modelmb_density_matrix_init)
-
   end subroutine modelmb_density_matrix_init
-
-
-  ! ---------------------------------------------------------
-  subroutine modelmb_density_matrix_nullify(this)
-    type(modelmb_denmat_t), intent(out) :: this
-
-    PUSH_SUB(modelmb_density_matrix_nullify)
-
-    nullify(this%labels)
-    nullify(this%particle_kept)
-    nullify(this%nnatorb_prt)
-
-    POP_SUB(modelmb_density_matrix_nullify)
-  end subroutine modelmb_density_matrix_nullify
-
 
   ! ---------------------------------------------------------
   subroutine modelmb_density_matrix_end(this)
@@ -161,9 +144,9 @@ contains
 
     PUSH_SUB(modelmb_density_matrix_end)
 
-    SAFE_DEALLOCATE_P(this%labels)
-    SAFE_DEALLOCATE_P(this%particle_kept)
-    SAFE_DEALLOCATE_P(this%nnatorb_prt)
+    SAFE_DEALLOCATE_A(this%labels)
+    SAFE_DEALLOCATE_A(this%particle_kept)
+    SAFE_DEALLOCATE_A(this%nnatorb_prt)
 
     POP_SUB(modelmb_density_matrix_end)
   end subroutine modelmb_density_matrix_end

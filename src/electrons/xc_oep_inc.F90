@@ -140,10 +140,10 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       end if
     end do spin2
   end if
-  SAFE_DEALLOCATE_P(oep%eigen_type)
-  SAFE_DEALLOCATE_P(oep%eigen_index)
-  SAFE_DEALLOCATE_P(oep%X(lxc))
-  SAFE_DEALLOCATE_P(oep%uxc_bar)
+  SAFE_DEALLOCATE_A(oep%eigen_type)
+  SAFE_DEALLOCATE_A(oep%eigen_index)
+  SAFE_DEALLOCATE_A(oep%X(lxc))
+  SAFE_DEALLOCATE_A(oep%uxc_bar)
 
   POP_SUB(X(xc_oep_calc))
   call profiling_out(C_PROFILING_XC_OEP)

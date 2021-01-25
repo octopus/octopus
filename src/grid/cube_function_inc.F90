@@ -241,7 +241,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     cf%X(rs) = M_ZERO
     !$omp end parallel workshare
 
-    ASSERT(associated(mesh%cube_map%map))
+    ASSERT(allocated(mesh%cube_map%map))
     ASSERT(mesh%sb%dim <= 3)
 
     !$omp parallel do private(ix, iy, iz, ip, nn, ii)
@@ -334,7 +334,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   if(.not. cf%in_device_memory) then
 
     ASSERT(associated(cf%X(rs)))
-    ASSERT(associated(mesh%cube_map%map))
+    ASSERT(allocated(mesh%cube_map%map))
 
     !$omp parallel do private(ix, iy, iz, ip, nn, ii)
     do im = 1, mesh%cube_map%nmap
@@ -647,7 +647,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   cf%X(rs) = M_ZERO
   !$omp end parallel workshare
 
-  ASSERT(associated(sm%cube_map%map))
+  ASSERT(allocated(sm%cube_map%map))
   ASSERT(sm%mesh%sb%dim <= 3)
 
   do im = 1, sm%np
@@ -698,7 +698,7 @@ subroutine X(cube_to_submesh) (cube, cf, sm, mf)
 
   ASSERT(associated(cf%X(rs)))
 
-  ASSERT(associated(sm%cube_map%map))
+  ASSERT(allocated(sm%cube_map%map))
 
   do im = 1, sm%np
     ix = sm%cube_map%map(1, im) + cube%center(1)

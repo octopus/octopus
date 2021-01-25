@@ -417,7 +417,7 @@ contains
     SAFE_DEALLOCATE_P(mgrid%ep)
     SAFE_DEALLOCATE_P(mgrid%ep_part)
 
-    SAFE_DEALLOCATE_P(mgrid%level(0)%tt%fine_i)
+    SAFE_DEALLOCATE_A(mgrid%level(0)%tt%fine_i)
 
     do i = 1, mgrid%n_levels
       level => mgrid%level(i)
@@ -427,12 +427,12 @@ contains
       SAFE_DEALLOCATE_P(level%mesh)
       SAFE_DEALLOCATE_P(level%der)
 
-      SAFE_DEALLOCATE_P(level%tt%to_coarse)
-      SAFE_DEALLOCATE_P(level%tt%to_fine1)
-      SAFE_DEALLOCATE_P(level%tt%to_fine2)
-      SAFE_DEALLOCATE_P(level%tt%to_fine4)
-      SAFE_DEALLOCATE_P(level%tt%to_fine8)
-      SAFE_DEALLOCATE_P(level%tt%fine_i)
+      SAFE_DEALLOCATE_A(level%tt%to_coarse)
+      SAFE_DEALLOCATE_A(level%tt%to_fine1)
+      SAFE_DEALLOCATE_A(level%tt%to_fine2)
+      SAFE_DEALLOCATE_A(level%tt%to_fine4)
+      SAFE_DEALLOCATE_A(level%tt%to_fine8)
+      SAFE_DEALLOCATE_A(level%tt%fine_i)
     end do
 
     SAFE_DEALLOCATE_P(mgrid%level)
