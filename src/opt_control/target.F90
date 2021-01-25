@@ -111,33 +111,33 @@ module target_oct_m
     integer :: type
     type(states_elec_t) :: st
     type(excited_states_t) :: est
-    FLOAT, pointer :: rho(:) => null()
-    FLOAT, pointer :: td_fitness(:) => null()
+    FLOAT, allocatable :: rho(:)
+    FLOAT, allocatable :: td_fitness(:)
     character(len=200) :: td_local_target
     character(len=80) :: excluded_states_list
     character(len=4096) :: vel_input_string
     character(len=4096) :: classical_input_string
-    character(len=1024), pointer :: vel_der_array(:,:) => null()
-    character(len=1024), pointer :: mom_der_array(:,:) => null()
-    character(len=1024), pointer :: pos_der_array(:,:) => null()
-    FLOAT, pointer :: grad_local_pot(:,:,:) => null()
+    character(len=1024), allocatable :: vel_der_array(:,:)
+    character(len=1024), allocatable :: mom_der_array(:,:)
+    character(len=1024), allocatable :: pos_der_array(:,:)
+    FLOAT, allocatable :: grad_local_pot(:,:,:)
     logical :: move_ions
     integer :: hhg_nks
-    integer, pointer :: hhg_k(:) => null()
-    FLOAT,   pointer :: hhg_alpha(:) => null()
-    FLOAT,   pointer :: hhg_a(:) => null()
+    integer, allocatable :: hhg_k(:)
+    FLOAT,   allocatable :: hhg_alpha(:)
+    FLOAT,   allocatable :: hhg_a(:)
     FLOAT   :: hhg_w0
     FLOAT   :: dt
     integer :: curr_functional
     FLOAT   :: density_weight
     FLOAT   :: curr_weight
     integer :: strt_iter_curr_tg
-    FLOAT, pointer :: spatial_curr_wgt(:) => null()
+    FLOAT, allocatable :: spatial_curr_wgt(:)
     character(len=1000) :: plateau_string
-    CMPLX, pointer :: acc(:, :)
-    CMPLX, pointer :: vel(:, :)
-    CMPLX, pointer :: gvec(:, :)
-    FLOAT, pointer :: alpha(:)
+    CMPLX, allocatable :: acc(:, :)
+    CMPLX, allocatable :: vel(:, :)
+    CMPLX, allocatable :: gvec(:, :)
+    FLOAT, allocatable :: alpha(:)
     CMPLX :: spin_matrix(2, 2)
     type(fft_t) :: fft_handler
   end type target_t
@@ -270,7 +270,6 @@ contains
     call states_elec_copy(tg%st, stin)
     call states_elec_deallocate_wfns(tg%st)
     call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
-    nullify(tg%td_fitness)
     call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
@@ -700,7 +699,9 @@ contains
   ! ----------------------------------------------------------------------
   logical pure function is_spatial_curr_wgt(tg)
     type(target_t), intent(in) :: tg
-    is_spatial_curr_wgt = associated(tg%spatial_curr_wgt)
+
+    is_spatial_curr_wgt = allocated(tg%spatial_curr_wgt)
+
   end function is_spatial_curr_wgt
   ! ----------------------------------------------------------------------
 

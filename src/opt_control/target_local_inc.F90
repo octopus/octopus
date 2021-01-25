@@ -66,8 +66,11 @@
   !> 
   subroutine target_end_local(tg)
     type(target_t),   intent(inout) :: tg
+
     PUSH_SUB(target_end_local)
-    SAFE_DEALLOCATE_P(tg%rho)
+
+    SAFE_DEALLOCATE_A(tg%rho)
+
     POP_SUB(target_end_local)
   end subroutine target_end_local
 

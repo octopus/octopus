@@ -195,11 +195,14 @@
   !> 
   subroutine target_end_hhg(tg)
     type(target_t),   intent(inout) :: tg
+
     PUSH_SUB(target_end_hhg)
-    SAFE_DEALLOCATE_P(tg%hhg_k)
-    SAFE_DEALLOCATE_P(tg%hhg_alpha)
-    SAFE_DEALLOCATE_P(tg%hhg_a)
-    SAFE_DEALLOCATE_P(tg%td_fitness)
+
+    SAFE_DEALLOCATE_A(tg%hhg_k)
+    SAFE_DEALLOCATE_A(tg%hhg_alpha)
+    SAFE_DEALLOCATE_A(tg%hhg_a)
+    SAFE_DEALLOCATE_A(tg%td_fitness)
+
     POP_SUB(target_end_hhg)
   end subroutine target_end_hhg
 
@@ -229,17 +232,20 @@
   subroutine target_end_hhgnew(tg, oct)
     type(target_t), intent(inout) :: tg
     type(oct_t),    intent(in)    :: oct
+
     PUSH_SUB(target_init_hhgnew)
+
     if((oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG) .or. (oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS)) then
-      SAFE_DEALLOCATE_P(tg%grad_local_pot)
-      SAFE_DEALLOCATE_P(tg%rho)
-      SAFE_DEALLOCATE_P(tg%vel)
-      SAFE_DEALLOCATE_P(tg%acc)
-      SAFE_DEALLOCATE_P(tg%gvec)
-      SAFE_DEALLOCATE_P(tg%alpha)
-      SAFE_DEALLOCATE_P(tg%td_fitness)
+      SAFE_DEALLOCATE_A(tg%grad_local_pot)
+      SAFE_DEALLOCATE_A(tg%rho)
+      SAFE_DEALLOCATE_A(tg%vel)
+      SAFE_DEALLOCATE_A(tg%acc)
+      SAFE_DEALLOCATE_A(tg%gvec)
+      SAFE_DEALLOCATE_A(tg%alpha)
+      SAFE_DEALLOCATE_A(tg%td_fitness)
       call fft_end(tg%fft_handler)
     end if
+
     POP_SUB(target_end_hhgnew)
   end subroutine target_end_hhgnew
 
@@ -388,7 +394,7 @@
   !> 
   !!
   subroutine target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
-    type(target_t),           intent(in)    :: tg
+    type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
