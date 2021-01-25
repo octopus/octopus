@@ -67,13 +67,13 @@ module multigrid_oct_m
 
   type multigrid_t
     private
-    integer                                  :: n_levels
-    type(multigrid_level_t), pointer, public :: level(:)
+    integer                                      :: n_levels
+    type(multigrid_level_t), allocatable, public :: level(:)
 
-    integer          :: tp
-    integer, pointer :: sp(:)
-    integer, pointer :: ep(:)
-    integer, pointer :: ep_part(:)
+    integer              :: tp
+    integer, allocatable :: sp(:)
+    integer, allocatable :: ep(:)
+    integer, allocatable :: ep_part(:)
   end type multigrid_t
 
   type(profile_t), save :: interp_prof, injection_prof, restrict_prof
@@ -413,9 +413,9 @@ contains
 
     PUSH_SUB(multigrid_end)
 
-    SAFE_DEALLOCATE_P(mgrid%sp)
-    SAFE_DEALLOCATE_P(mgrid%ep)
-    SAFE_DEALLOCATE_P(mgrid%ep_part)
+    SAFE_DEALLOCATE_A(mgrid%sp)
+    SAFE_DEALLOCATE_A(mgrid%ep)
+    SAFE_DEALLOCATE_A(mgrid%ep_part)
 
     SAFE_DEALLOCATE_A(mgrid%level(0)%tt%fine_i)
 
@@ -435,7 +435,7 @@ contains
       SAFE_DEALLOCATE_A(level%tt%fine_i)
     end do
 
-    SAFE_DEALLOCATE_P(mgrid%level)
+    SAFE_DEALLOCATE_A(mgrid%level)
 
     POP_SUB(multigrid_end)
   end subroutine multigrid_end
