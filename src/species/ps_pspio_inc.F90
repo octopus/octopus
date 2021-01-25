@@ -310,7 +310,6 @@
     SAFE_ALLOCATE(proj(1:ps%g%nrval))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
-    nullify(ps%k)
 
     was_init = .false.
     ps%h = M_ZERO

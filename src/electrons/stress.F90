@@ -212,7 +212,7 @@ contains
          end if
       end if
       
-      ASSERT(associated(cube%fft))
+      ASSERT(allocated(cube%fft))
       ASSERT(cube%fft%library /= FFTLIB_NONE)
       
       SAFE_ALLOCATE(rho_total_fs(1:cube%rs_n_global(1),1:cube%rs_n_global(2),1:cube%rs_n_global(3)))
@@ -228,7 +228,7 @@ contains
          write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
          call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
-         if(associated(cube%Lrs))then
+         if (allocated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
          else

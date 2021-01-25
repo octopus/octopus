@@ -92,8 +92,8 @@ module pes_mask_oct_m
   
   type pes_mask_t
     private
-    CMPLX, pointer, public :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
-                                                       !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
+    CMPLX, allocatable, public :: k(:,:,:,:,:,:) !< The states in momentum space
+                                                 !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
                                                
     ! mesh- and cube-related stuff      
     integer          :: np                     !< number of mesh points associated with the mesh
@@ -105,19 +105,19 @@ module pes_mask_oct_m
     
     FLOAT            :: spacing(3)       !< the spacing
     
-    type(mesh_t), pointer, public  :: mesh             !< a pointer to the mesh
+    type(mesh_t), pointer, public  :: mesh => NULL()   !< a pointer to the mesh
     type(cube_t)                   :: cube             !< the cubic mesh
     
-    FLOAT, pointer, public :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, allocatable, public :: vec_pot(:,:) !< external time-dependent potential i.e. the lasers
     
-    FLOAT, pointer, public :: Mk(:,:,:) => NULL()      !< the momentum space filter
-    type(cube_function_t)  :: cM                       !< the mask cube function
-    FLOAT, pointer, public :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
-    integer                :: shape                    !< which mask function?
-    FLOAT, pointer         :: ufn(:) => NULL()         !< user-defined mask function
-    logical                :: user_def
+    FLOAT, allocatable, public :: Mk(:,:,:)    !< the momentum space filter
+    type(cube_function_t)      :: cM           !< the mask cube function
+    FLOAT, allocatable, public :: mask_R(:)    !< the mask inner (component 1) and outer (component 2) radius
+    integer                    :: shape        !< which mask function?
+    FLOAT, allocatable         :: ufn(:)       !< user-defined mask function
+    logical                    :: user_def
     
-    FLOAT, pointer, public :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
+    FLOAT, allocatable, public :: Lk(:,:)      !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
     
     FLOAT            :: enlarge(3)             !< Fourier space enlargement
     FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
@@ -680,7 +680,6 @@ contains
     !%End
     call parse_variable(namespace, 'PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
     
-    nullify(mask%Mk)
     mask%filter_k = .false.
     
     if(pCutOff > M_ZERO) then       
@@ -783,15 +782,15 @@ contains
     
     PUSH_SUB(pes_mask_end)
     
-    SAFE_DEALLOCATE_P(mask%k)
+    SAFE_DEALLOCATE_A(mask%k)
     
-    SAFE_DEALLOCATE_P(mask%vec_pot)
-    SAFE_DEALLOCATE_P(mask%mask_R)
-    SAFE_DEALLOCATE_P(mask%Lk)
+    SAFE_DEALLOCATE_A(mask%vec_pot)
+    SAFE_DEALLOCATE_A(mask%mask_R)
+    SAFE_DEALLOCATE_A(mask%Lk)
     
     
-    if ( mask%filter_k ) then
-      SAFE_DEALLOCATE_P(mask%Mk)
+    if (mask%filter_k) then
+      SAFE_DEALLOCATE_A(mask%Mk)
     end if
     
     if (mask%mesh%parallel_in_domains .and. mask%cube%parallel_in_domains) then
@@ -802,7 +801,7 @@ contains
     call cube_end(mask%cube)   
 
     if (mask%user_def) then 
-      SAFE_DEALLOCATE_P(mask%ufn)
+      SAFE_DEALLOCATE_A(mask%ufn)
     end if
     
     POP_SUB(pes_mask_end)
@@ -1358,7 +1357,7 @@ contains
 
 
               if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
-                ASSERT(associated(mask%Mk))
+                ASSERT(allocated(mask%Mk))
                 cf2%Fs = cf2%Fs * mask%Mk 
               end if
               

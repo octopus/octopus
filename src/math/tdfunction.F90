@@ -102,8 +102,8 @@ module tdfunction_oct_m
 
     type(spline_t)         :: amplitude
     character(len=1024)     :: expression
-    FLOAT, pointer :: val(:)    => NULL()
-    FLOAT, pointer :: valww(:)  => NULL()
+    FLOAT, allocatable :: val(:)
+    FLOAT, allocatable :: valww(:)
     type(fft_t) :: fft_handler
   end type tdf_t
 
@@ -295,8 +295,6 @@ contains
     f%mode = TDF_EMPTY
     f%niter = 0
     f%dt = M_ZERO
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(tdf_init)
   end subroutine tdf_init
@@ -325,8 +323,6 @@ contains
     f%mode = TDF_CW
     f%a0 = a0
     f%omega0 = omega0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(tdf_init_cw)
   end subroutine tdf_init_cw
@@ -345,8 +341,6 @@ contains
     f%omega0 = omega0
     f%t0 = t0
     f%tau0 = tau0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(tdf_init_gaussian)
   end subroutine tdf_init_gaussian
@@ -365,8 +359,6 @@ contains
     f%omega0 = omega0
     f%t0 = t0
     f%tau0 = tau0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(tdf_init_cosinoidal)
   end subroutine tdf_init_cosinoidal
@@ -386,8 +378,6 @@ contains
     f%t0 = t0
     f%tau0 = tau0
     f%tau1 = tau1
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(tdf_init_trapezoidal)
   end subroutine tdf_init_trapezoidal
@@ -403,8 +393,6 @@ contains
 
     f%mode = TDF_FROM_EXPR
     f%expression = trim(expression)
-    nullify(f%val)
-    nullify(f%valww)
     
     POP_SUB(tdf_init_fromexpr)
   end subroutine tdf_init_fromexpr
@@ -454,10 +442,9 @@ contains
     call spline_init(f%amplitude)
     call spline_fit(lines, t, am, f%amplitude)
 
-    nullify(f%val)
-    nullify(f%valww)
     SAFE_DEALLOCATE_A(t)
     SAFE_DEALLOCATE_A(am)
+
     POP_SUB(tdf_init_fromfile)
   end subroutine tdf_init_fromfile
   !------------------------------------------------------------
@@ -505,11 +492,11 @@ contains
 
     if(present(rep)) then
       select case(rep)
-        case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
-          SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-          f%valww = M_ZERO
-          SAFE_DEALLOCATE_P(f%val)
-          f%mode = rep
+      case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
+        SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
+        f%valww = M_ZERO
+        SAFE_DEALLOCATE_A(f%val)
+        f%mode = rep
       end select
     end if
 
@@ -573,7 +560,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_P(f%val)
+    SAFE_DEALLOCATE_A(f%val)
+
     POP_SUB(tdf_numerical_to_fourier)
   end subroutine tdf_numerical_to_fourier
   !------------------------------------------------------------
@@ -601,7 +589,8 @@ contains
     f%mode = TDF_NUMERICAL
 
     SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_P(f%valww)
+    SAFE_DEALLOCATE_A(f%valww)
+
     POP_SUB(tdf_fourier_to_numerical)
   end subroutine tdf_fourier_to_numerical
   !------------------------------------------------------------
@@ -897,11 +886,11 @@ contains
     case(TDF_NUMERICAL)
       call fft_end(f%fft_handler)
     case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
-      SAFE_DEALLOCATE_P(f%valww)
+      SAFE_DEALLOCATE_A(f%valww)
       call fft_end(f%fft_handler)
     end select
     f%mode = TDF_EMPTY
-    SAFE_DEALLOCATE_P(f%val)
+    SAFE_DEALLOCATE_A(f%val)
 
     POP_SUB(tdf_end)
   end subroutine tdf_end
