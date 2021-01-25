@@ -65,16 +65,16 @@ module kdotp_oct_m
     type(pert_t) :: perturbation
     type(pert_t) :: perturbation2
 
-    FLOAT, pointer :: eff_mass_inv(:,:,:,:)  !< inverse effective-mass tensor
-                                             !! (idir1, idir2, ist, ik)
-    FLOAT, pointer :: velocity(:,:,:) !< group velocity vector (idir, ist, ik)
+    FLOAT, allocatable :: eff_mass_inv(:,:,:,:)  !< inverse effective-mass tensor
+                                                 !! (idir1, idir2, ist, ik)
+    FLOAT, allocatable :: velocity(:,:,:) !< group velocity vector (idir, ist, ik)
 
-    type(lr_t), pointer :: lr(:,:) !< linear response for (sys%gr%sb%periodic_dim,1)
-                                   !! second index is dummy; should only be 1
-                                   !! for compatibility with em_resp routines
+    type(lr_t), allocatable :: lr(:,:) !< linear response for (sys%gr%sb%periodic_dim,1)
+                                       !! second index is dummy; should only be 1
+                                       !! for compatibility with em_resp routines
 
-    type(lr_t), pointer :: lr2(:,:,:) !< second-order response for 
-                                      !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
+    type(lr_t), allocatable :: lr2(:,:,:) !< second-order response for 
+                                          !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
 
     logical :: ok                   !< is converged?
     integer :: occ_solution_method  !< how to get occupied components of response
@@ -203,7 +203,7 @@ contains
       call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:), sys%namespace)
     end if
-    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
+    SAFE_DEALLOCATE_A(kdotp_vars%velocity)
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
@@ -351,7 +351,7 @@ contains
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
       call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
 
-      SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
+      SAFE_DEALLOCATE_A(kdotp_vars%eff_mass_inv)
     end if
 
     ! clean up some things
@@ -369,13 +369,13 @@ contains
     call restart_end(restart_dump)
     call sternheimer_end(sh)
     call pert_end(kdotp_vars%perturbation)
-    SAFE_DEALLOCATE_P(kdotp_vars%lr)
+    SAFE_DEALLOCATE_A(kdotp_vars%lr)
 
     if(calc_2nd_order) then
       call sternheimer_end(sh2)
       call pert_end(pert2)
       call pert_end(kdotp_vars%perturbation2)
-      SAFE_DEALLOCATE_P(kdotp_vars%lr2)
+      SAFE_DEALLOCATE_A(kdotp_vars%lr2)
     end if
 
     call states_elec_deallocate_wfns(sys%st)
