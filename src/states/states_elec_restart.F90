@@ -1203,7 +1203,7 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
                 write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
-                call messages_info(3)
+                call messages_info(3, all_nodes=.true.)
 
                 ! convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
@@ -1228,7 +1228,7 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with data from file:'
                 write(message(3), '(2a)') '  ',trim(filename)
-                call messages_info(3)
+                call messages_info(3, all_nodes=.true.)
 
                 ! finally read the state
                 call zio_function_input(filename, namespace, mesh, zpsi(:, 1), ierr)
@@ -1244,8 +1244,6 @@ contains
                 call messages_fatal(2, namespace=namespace)
               end select
 
-              call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
-
               ! normalize orbital
               if(parse_block_cols(blk, ib - 1)  ==  6) then
                 call parse_block_integer(blk, ib - 1, 5, normalize)
@@ -1254,8 +1252,9 @@ contains
               end if
               select case(normalize)
               case(NORMALIZE_NO)
+                call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
               case(NORMALIZE_YES)
-                call states_elec_get_state(st, mesh, is, ik, zpsi)
+                ASSERT(st%d%dim == 1)
                 call zmf_normalize(mesh, st%d%dim, zpsi)
                 call states_elec_set_state(st, mesh, is, ik, zpsi)
               case default
