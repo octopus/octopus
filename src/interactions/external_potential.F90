@@ -57,10 +57,10 @@ module external_potential_oct_m
 
     FLOAT, allocatable, public :: pot(:)
 
-    FLOAT, pointer, public :: B_field(:)           !< static magnetic field
-    integer                :: gauge_2D
-    FLOAT, pointer, public :: A_static(:,:)        !< static vector potential
-    FLOAT, pointer, public :: E_field(:)           !< static electric field
+    FLOAT, allocatable, public :: B_field(:)           !< static magnetic field
+    integer                    :: gauge_2D
+    FLOAT, allocatable, public :: A_static(:,:)        !< static vector potential
+    FLOAT, allocatable, public :: E_field(:)           !< static electric field
     !Auxiliary arrays for the electrons only
     !TODO: Suppress once electrons fully use the new framework
     FLOAT, allocatable, public :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
@@ -100,9 +100,6 @@ contains
     this%namespace = namespace_t("ExternalPotential", parent=namespace)
 
     this%type = -1
-    nullify(this%B_field)
-    nullify(this%A_static)
-    nullify(this%E_field)
 
     ! Initialize clock without a time-step, as the potential will not be propagated
     this%clock = clock_t()
@@ -152,13 +149,12 @@ contains
     PUSH_SUB(external_potential_deallocate)
 
     SAFE_DEALLOCATE_A(this%pot)
-    SAFE_DEALLOCATE_P(this%B_field)
-    SAFE_DEALLOCATE_P(this%A_static)
-    SAFE_DEALLOCATE_P(this%E_field)
+    SAFE_DEALLOCATE_A(this%B_field)
+    SAFE_DEALLOCATE_A(this%A_static)
+    SAFE_DEALLOCATE_A(this%E_field)
     SAFE_DEALLOCATE_A(this%v_ext)
 
     POP_SUB(external_potential_deallocate)
-
   end subroutine external_potential_deallocate
 
   ! ---------------------------------------------------------
@@ -291,7 +287,7 @@ contains
       SAFE_DEALLOCATE_A(den)
 
     case(EXTERNAL_POT_STATIC_BFIELD)
-      ASSERT(associated(this%B_field))
+      ASSERT(allocated(this%B_field))
 
       ! Compute the vector potential
       SAFE_ALLOCATE(grx(1:mesh%sb%dim))
@@ -327,7 +323,7 @@ contains
     SAFE_DEALLOCATE_A(grx)
 
     case(EXTERNAL_POT_STATIC_EFIELD)
-      ASSERT(associated(this%E_field))
+      ASSERT(allocated(this%E_field))
 
       if(mesh%sb%periodic_dim < mesh%sb%dim) then
         ! Compute the scalar potential
