@@ -340,7 +340,6 @@ contains
             end if
           end do
 
-          nullify(os%phase)
           if(associated(hm%hm_base%phase)) then
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))

@@ -270,7 +270,6 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     os => this%orbsets(iorbset)
     if( os%norbs > this%maxnorbs ) this%maxnorbs = os%norbs
 
-    nullify(os%phase)
     ! In case of complex wavefunction, we allocate the array for the phase correction
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
@@ -374,7 +373,6 @@ subroutine X(orbitalbasis_build_empty)(this, mesh, kpt, ndim, nstates, verbose)
   this%maxnorbs = nstates
   this%max_np = mesh%np 
 
-  nullify(os%phase)
   ! In case of complex wavefunction, we allocate the array for the phase correction
 #ifdef R_TCOMPLEX
   SAFE_ALLOCATE(os%phase(1:mesh%np, kpt%start:kpt%end))
