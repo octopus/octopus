@@ -19,14 +19,14 @@
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
 subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all_orb, verbose)
-  type(orbitalbasis_t),      intent(inout)    :: this
-  type(geometry_t), target,  intent(in)       :: geo
-  type(mesh_t),              intent(in)       :: mesh
-  type(distributed_t),       intent(in)       :: kpt
-  integer,                   intent(in)       :: ndim
-  logical,                   intent(in)       :: skip_s_orb 
-  logical,                   intent(in)       :: use_all_orb
-  logical, optional,         intent(in)       :: verbose
+  type(orbitalbasis_t), target, intent(inout)    :: this
+  type(geometry_t),     target, intent(in)       :: geo
+  type(mesh_t),                 intent(in)       :: mesh
+  type(distributed_t),          intent(in)       :: kpt
+  integer,                      intent(in)       :: ndim
+  logical,                      intent(in)       :: skip_s_orb 
+  logical,                      intent(in)       :: use_all_orb
+  logical, optional,            intent(in)       :: verbose
 
   integer :: ia, iorb, norb, offset, ios
   integer :: hubbardl, ii, nn, ll, mm, work, work2, iorbset
@@ -331,12 +331,12 @@ end subroutine X(orbitalbasis_build)
 !> This routine constructd an empty orbital basis.
 ! ---------------------------------------------------------
 subroutine X(orbitalbasis_build_empty)(this, mesh, kpt, ndim, nstates, verbose)
-  type(orbitalbasis_t),      intent(inout)    :: this
-  type(distributed_t),       intent(in)       :: kpt
-  type(mesh_t), target,      intent(in)       :: mesh
-  integer,                   intent(in)       :: ndim
-  integer,                   intent(in)       :: nstates
-  logical, optional,         intent(in)       :: verbose
+  type(orbitalbasis_t), target, intent(inout)    :: this
+  type(distributed_t),          intent(in)       :: kpt
+  type(mesh_t),         target, intent(in)       :: mesh
+  integer,                      intent(in)       :: ndim
+  integer,                      intent(in)       :: nstates
+  logical, optional,            intent(in)       :: verbose
 
   integer :: ios, iorb, offset
   type(orbitalset_t), pointer :: os

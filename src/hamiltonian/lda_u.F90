@@ -203,11 +203,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
-    type(lda_u_t),             intent(inout) :: this
+    type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: level
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t), target,  intent(in)    :: geo
+    type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
 
@@ -553,9 +553,9 @@ contains
 
   ! When moving the ions, the basis must be reconstructed
   subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, has_phase)
-    type(lda_u_t),             intent(inout) :: this
+    type(lda_u_t),     target, intent(inout) :: this
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t), target,  intent(in)    :: geo
+    type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(namespace_t),         intent(in)    :: namespace
