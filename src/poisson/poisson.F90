@@ -138,7 +138,7 @@ module poisson_oct_m
     type(PokeGrid)   :: poke_grid
     type(PokeSolver) :: poke_solver
 #endif
-    type(multigrid_t), public, pointer  :: mgrid => null()
+    type(multigrid_t), allocatable, public  :: mgrid
   end type poisson_t
 
   integer, parameter ::             &
@@ -696,9 +696,9 @@ contains
     end if
     this%is_dressed = .false.
 
-    if(associated(this%mgrid)) then
+    if (allocated(this%mgrid)) then
       call multigrid_end(this%mgrid)
-      SAFE_DEALLOCATE_P(this%mgrid)
+      SAFE_DEALLOCATE_A(this%mgrid)
     end if
 
     POP_SUB(poisson_end)
