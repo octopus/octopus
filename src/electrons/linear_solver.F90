@@ -62,7 +62,7 @@ module linear_solver_oct_m
     integer,                public :: solver
     type(preconditioner_t), public :: pre
     integer                        :: max_iter
-    type(multigrid_t), pointer     :: mgrid => null()
+    type(multigrid_t), allocatable :: mgrid
   end type linear_solver_t
 
   type(profile_t), save :: prof, prof_batch
@@ -229,9 +229,9 @@ contains
     this%solver = -1
 
     call preconditioner_end(this%pre)
-    if(associated(this%mgrid)) then
+    if (allocated(this%mgrid)) then
       call multigrid_end(this%mgrid)
-      SAFE_DEALLOCATE_P(this%mgrid)
+      SAFE_DEALLOCATE_A(this%mgrid)
     end if
 
   end subroutine linear_solver_end
