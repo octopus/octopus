@@ -83,8 +83,8 @@ module submesh_oct_m
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
-    integer,      pointer :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
-    FLOAT,        pointer :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
+    integer,  allocatable :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
+    FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
     type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
                                             !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
@@ -113,8 +113,6 @@ contains
 
     sm%np = -1
     sm%radius = M_ZERO
-    nullify(sm%map)
-    nullify(sm%x)
     nullify(sm%mesh)
 
     sm%np_global = -1
@@ -494,8 +492,8 @@ contains
     if( this%np /= -1 ) then
       nullify(this%mesh)
       this%np = -1
-      SAFE_DEALLOCATE_P(this%map)
-      SAFE_DEALLOCATE_P(this%x)
+      SAFE_DEALLOCATE_A(this%map)
+      SAFE_DEALLOCATE_A(this%x)
     end if
 
     POP_SUB(submesh_end)
