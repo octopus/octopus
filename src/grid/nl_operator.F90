@@ -67,21 +67,21 @@ module nl_operator_oct_m
 
   type nl_operator_index_t
     private
-    integer          :: nri
-    integer, pointer :: imin(:)
-    integer, pointer :: imax(:)
-    integer, pointer :: ri(:, :)
+    integer              :: nri
+    integer, allocatable :: imin(:)
+    integer, allocatable :: imax(:)
+    integer, allocatable :: ri(:, :)
   end type nl_operator_index_t
 
   type nl_operator_t
     private
-    type(stencil_t),  public :: stencil
-    type(mesh_t), pointer    :: mesh      !< pointer to the underlying mesh
-    integer, pointer         :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
+    type(stencil_t),   public :: stencil
+    type(mesh_t), pointer     :: mesh      !< pointer to the underlying mesh
+    integer,      allocatable :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
     integer,          public :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
-    integer, pointer, public :: index(:,:)    !< index of the points. Unique on each parallel process.
-    FLOAT,   pointer, public :: w(:,:)        !< weights. Unique on each parallel process.
+    integer, allocatable, public :: index(:,:)    !< index of the points. Unique on each parallel process.
+    FLOAT,   allocatable, public :: w(:,:)        !< weights. Unique on each parallel process.
 
     logical,          public :: const_w   !< are the weights independent of index i
 
@@ -89,9 +89,9 @@ module nl_operator_oct_m
 
     !> the compressed index of grid points
     integer, public :: nri
-    integer, pointer, public :: ri(:,:)
-    integer, pointer, public :: rimap(:)
-    integer, pointer, public :: rimap_inv(:)
+    integer, allocatable, public :: ri(:,:)
+    integer, allocatable, public :: rimap(:)
+    integer, allocatable, public :: rimap_inv(:)
 
     integer                   :: ninner
     integer                   :: nouter
@@ -276,11 +276,6 @@ contains
 
     PUSH_SUB(nl_operator_init)
 
-    nullify(op%mesh, op%index, op%w, op%ri, op%rimap, op%rimap_inv)
-    nullify(op%inner%imin, op%inner%imax, op%inner%ri)
-    nullify(op%outer%imin, op%outer%imax, op%outer%ri)
-    nullify(op%nn)
-
     op%label = label
 
     call accel_mem_nullify(op%buff_imin)
@@ -315,29 +310,29 @@ contains
     opo%np           =  opi%np
     opo%mesh         => opi%mesh
 
-    SAFE_ALLOCATE_SOURCE_P(opo%nn, opi%nn)
-    SAFE_ALLOCATE_SOURCE_P(opo%index, opi%index)
-    SAFE_ALLOCATE_SOURCE_P(opo%w, opi%w)
+    SAFE_ALLOCATE_SOURCE_A(opo%nn, opi%nn)
+    SAFE_ALLOCATE_SOURCE_A(opo%index, opi%index)
+    SAFE_ALLOCATE_SOURCE_A(opo%w, opi%w)
 
     opo%const_w   = opi%const_w
 
     opo%nri       =  opi%nri
-    ASSERT(associated(opi%ri))
+    ASSERT(allocated(opi%ri))
 
-    SAFE_ALLOCATE_SOURCE_P(opo%ri, opi%ri)
-    SAFE_ALLOCATE_SOURCE_P(opo%rimap, opi%rimap)
-    SAFE_ALLOCATE_SOURCE_P(opo%rimap_inv, opi%rimap_inv)
+    SAFE_ALLOCATE_SOURCE_A(opo%ri, opi%ri)
+    SAFE_ALLOCATE_SOURCE_A(opo%rimap, opi%rimap)
+    SAFE_ALLOCATE_SOURCE_A(opo%rimap_inv, opi%rimap_inv)
     
     if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
-      SAFE_ALLOCATE_SOURCE_P(opo%inner%imin, opi%inner%imin)
-      SAFE_ALLOCATE_SOURCE_P(opo%inner%imax, opi%inner%imax)
-      SAFE_ALLOCATE_SOURCE_P(opo%inner%ri,   opi%inner%ri)      
+      SAFE_ALLOCATE_SOURCE_A(opo%inner%imin, opi%inner%imin)
+      SAFE_ALLOCATE_SOURCE_A(opo%inner%imax, opi%inner%imax)
+      SAFE_ALLOCATE_SOURCE_A(opo%inner%ri,   opi%inner%ri)
 
       opo%outer%nri = opi%outer%nri
-      SAFE_ALLOCATE_SOURCE_P(opo%outer%imin, opi%outer%imin)
-      SAFE_ALLOCATE_SOURCE_P(opo%outer%imax, opi%outer%imax)
-      SAFE_ALLOCATE_SOURCE_P(opo%outer%ri,   opi%outer%ri)
+      SAFE_ALLOCATE_SOURCE_A(opo%outer%imin, opi%outer%imin)
+      SAFE_ALLOCATE_SOURCE_A(opo%outer%imax, opi%outer%imax)
+      SAFE_ALLOCATE_SOURCE_A(opo%outer%ri,   opi%outer%ri)
     end if
 
 
@@ -946,21 +941,21 @@ contains
     end if
 
     if(op%mesh%parallel_in_domains) then
-      SAFE_DEALLOCATE_P(op%inner%imin)
-      SAFE_DEALLOCATE_P(op%inner%imax)
-      SAFE_DEALLOCATE_P(op%inner%ri)
-      SAFE_DEALLOCATE_P(op%outer%imin)
-      SAFE_DEALLOCATE_P(op%outer%imax)
-      SAFE_DEALLOCATE_P(op%outer%ri)
+      SAFE_DEALLOCATE_A(op%inner%imin)
+      SAFE_DEALLOCATE_A(op%inner%imax)
+      SAFE_DEALLOCATE_A(op%inner%ri)
+      SAFE_DEALLOCATE_A(op%outer%imin)
+      SAFE_DEALLOCATE_A(op%outer%imax)
+      SAFE_DEALLOCATE_A(op%outer%ri)
     end if
 
-    SAFE_DEALLOCATE_P(op%index)
-    SAFE_DEALLOCATE_P(op%w)
+    SAFE_DEALLOCATE_A(op%index)
+    SAFE_DEALLOCATE_A(op%w)
 
-    SAFE_DEALLOCATE_P(op%ri)
-    SAFE_DEALLOCATE_P(op%rimap)
-    SAFE_DEALLOCATE_P(op%rimap_inv)
-    SAFE_DEALLOCATE_P(op%nn)
+    SAFE_DEALLOCATE_A(op%ri)
+    SAFE_DEALLOCATE_A(op%rimap)
+    SAFE_DEALLOCATE_A(op%rimap_inv)
+    SAFE_DEALLOCATE_A(op%nn)
 
     call stencil_end(op%stencil)
 
