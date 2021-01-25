@@ -52,14 +52,14 @@ module orbitalbasis_oct_m
 
   type orbitalbasis_t
     private
-    type(orbitalset_t), pointer, public :: orbsets(:) !> All the orbital sets of the system
+    type(orbitalset_t), allocatable, public :: orbsets(:) !> All the orbital sets of the system
 
     integer,            public :: norbsets           !> Number of orbital sets
     integer,            public :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer,            public :: max_np             !> Max. number of points in all orbitals submesh spheres
     integer,            public :: size               !> Size of the full basis
-    integer, pointer,   public :: global2os(:,:)     !> Mapping functions
-    integer, pointer           :: os2global(:,:)
+    integer, allocatable, public :: global2os(:,:)     !> Mapping functions
+    integer, allocatable         :: os2global(:,:)
 
     integer(8)                 :: truncation         !> Truncation method for the orbitals
     FLOAT                      :: threshold          !> Threshold for orbital truncation
@@ -81,10 +81,6 @@ subroutine orbitalbasis_nullify(this)
   this%normalize = .true.
   this%submesh   = .false.
   this%orthogonalization = .false.
-
-  nullify(this%orbsets)
-  nullify(this%global2os)
-  nullify(this%os2global)
 
   this%norbsets = 0
   this%maxnorbs = 0
@@ -208,10 +204,10 @@ subroutine orbitalbasis_init(this, namespace, sb)
    do ios = 1, this%norbsets
      call orbitalset_end(this%orbsets(ios))
    end do
-   SAFE_DEALLOCATE_P(this%orbsets)
+   SAFE_DEALLOCATE_A(this%orbsets)
   
-   SAFE_DEALLOCATE_P(this%global2os)
-   SAFE_DEALLOCATE_P(this%os2global)
+   SAFE_DEALLOCATE_A(this%global2os)
+   SAFE_DEALLOCATE_A(this%os2global)
 
    POP_SUB(orbitalbasis_end)
  end subroutine orbitalbasis_end

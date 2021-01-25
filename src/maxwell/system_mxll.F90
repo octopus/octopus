@@ -153,7 +153,7 @@ contains
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
 
-    nullify(this%geo%space, this%geo%atom, this%geo%catom, this%geo%species)
+    nullify(this%geo%space)
     this%geo%natoms = 0
     this%geo%ncatoms = 0
     this%geo%nspecies = 0

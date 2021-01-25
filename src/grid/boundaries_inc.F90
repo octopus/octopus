@@ -217,7 +217,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
 #endif
   SAFE_DEALLOCATE_A(status)
-  SAFE_DEALLOCATE_P(handle%requests)
+  SAFE_DEALLOCATE_A(handle%requests)
 
   if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to

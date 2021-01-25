@@ -55,10 +55,10 @@ module poisson_isf_oct_m
   ! on different communicators (configurations).
   type isf_cnf_t
     private
-    real(8), pointer  :: kernel(:, :, :)
-    integer           :: nfft1, nfft2, nfft3
-    type(mpi_grp_t)   :: mpi_grp
-    logical           :: all_nodes
+    real(8), allocatable :: kernel(:, :, :)
+    integer              :: nfft1, nfft2, nfft3
+    type(mpi_grp_t)      :: mpi_grp
+    logical              :: all_nodes
   end type isf_cnf_t
 
   type poisson_isf_t
@@ -102,12 +102,6 @@ contains
     init_world_ = .true.
     if(present(init_world)) init_world_ = init_world
 #endif
-
-    ! we need to nullify the pointer so they can be deallocated safely
-    ! afterwards
-    do i_cnf = 1, N_CNF
-      nullify(this%cnf(i_cnf)%kernel)
-    end do
 
     if(.not. mesh%parallel_in_domains) then
       ! The serial version is always needed (as used, e.g., in the casida runmode)
@@ -193,7 +187,6 @@ contains
       if( (i_cnf == WORLD .and. .not. init_world_) &                  ! world is disabled
         .or. (i_cnf == DOMAIN .and. .not. mesh%parallel_in_domains) & ! not parallel in domains
         ) then
-        nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
       if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= WORLD ) then
@@ -214,7 +207,6 @@ contains
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm, &
           this%cnf(i_cnf)%kernel)
       else
-      	nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
     end do
@@ -321,13 +313,13 @@ contains
 
 #if defined(HAVE_MPI)
     do i_cnf = 1, N_CNF
-      SAFE_DEALLOCATE_P(this%cnf(i_cnf)%kernel)
+      SAFE_DEALLOCATE_A(this%cnf(i_cnf)%kernel)
     end do
     if(this%cnf(WORLD)%mpi_grp%comm /= MPI_COMM_NULL) then
       call MPI_Comm_free(this%cnf(WORLD)%mpi_grp%comm, mpi_err)
     end if
 #else
-    SAFE_DEALLOCATE_P(this%cnf(SERIAL)%kernel)
+    SAFE_DEALLOCATE_A(this%cnf(SERIAL)%kernel)
 #endif
 
     POP_SUB(poisson_isf_end)
