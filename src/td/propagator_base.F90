@@ -51,7 +51,7 @@ module propagator_base_oct_m
     !> Storage of the KS potential of previous iterations.
     type(potential_interpolation_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
-    FLOAT, pointer      :: vmagnus(:, :, :) => null() 
+    FLOAT, allocatable  :: vmagnus(:, :, :)
     integer             :: scf_propagation_steps 
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
