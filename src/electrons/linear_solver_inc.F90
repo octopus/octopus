@@ -878,7 +878,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
         status(ii) = QMR_RES_ZERO
         residue(ii) = rho(ii)
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
-        saved_iter(ii) = iter
+        saved_iter(ii) = 0
         saved_res(ii) = residue(ii)
       end if
     end do
