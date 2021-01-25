@@ -89,8 +89,8 @@ module em_resp_calc_oct_m
 
   type matrix_t
     private
-    FLOAT, pointer :: dmatrix(:, :)
-    CMPLX, pointer :: zmatrix(:, :)
+    FLOAT, allocatable :: dmatrix(:, :)
+    CMPLX, allocatable :: zmatrix(:, :)
   end type matrix_t
 
 contains

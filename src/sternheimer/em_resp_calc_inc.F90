@@ -650,7 +650,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
         do ifreq = 1, 3
           do jfreq = 1, 3
             do isigma = 1,2
-              SAFE_DEALLOCATE_P(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
+              SAFE_DEALLOCATE_A(me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
             end do
           end do
         end do
@@ -1114,9 +1114,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
   chi(:,:,:) = chi(:,:,:) / P_C * factor
   
   do isigma = 1, nsigma
-    SAFE_DEALLOCATE_P(prod_eb(isigma)%X(matrix))
+    SAFE_DEALLOCATE_A(prod_eb(isigma)%X(matrix))
   end do
-  SAFE_DEALLOCATE_P(prod_ee%X(matrix))
+  SAFE_DEALLOCATE_A(prod_ee%X(matrix))
   
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(psi1)
@@ -1536,15 +1536,15 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfa
     zpol_kout(:,:,:,:) = -M_zI / (frequency) * zpol_kout(:,:,:,:)
     if(nfactor_ke > 1) zpol_kout(:,:,:,:) = M_HALF * zpol_kout(:,:,:,:) 
   end if
-  SAFE_DEALLOCATE_P(mat_eb%X(matrix))
-  SAFE_DEALLOCATE_P(mat_be%X(matrix))
+  SAFE_DEALLOCATE_A(mat_eb%X(matrix))
+  SAFE_DEALLOCATE_A(mat_be%X(matrix))
   do idir2 = 1, ndir
     do isigma = 1, nsigma
-      SAFE_DEALLOCATE_P(mat_g(idir2, isigma)%X(matrix))
+      SAFE_DEALLOCATE_A(mat_g(idir2, isigma)%X(matrix))
     end do
     do idir3 = 1, ndir
-      SAFE_DEALLOCATE_P(mat_kek(idir2, idir3)%X(matrix))
-      SAFE_DEALLOCATE_P(mat_kke(idir2, idir3)%X(matrix))
+      SAFE_DEALLOCATE_A(mat_kek(idir2, idir3)%X(matrix))
+      SAFE_DEALLOCATE_A(mat_kke(idir2, idir3)%X(matrix))
     end do
   end do
   
@@ -2008,9 +2008,9 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, lr_k, lr_b, lr_kk, lr_kb, mag
   
   do idir1 = 1, ndir
     do idir2 = 1, ndir
-      SAFE_DEALLOCATE_P(Hk_mat(idir1, idir2)%X(matrix))
-      SAFE_DEALLOCATE_P(kH_mat(idir1, idir2)%X(matrix))
-      SAFE_DEALLOCATE_P(kk_mat(idir1, idir2)%X(matrix))
+      SAFE_DEALLOCATE_A(Hk_mat(idir1, idir2)%X(matrix))
+      SAFE_DEALLOCATE_A(kH_mat(idir1, idir2)%X(matrix))
+      SAFE_DEALLOCATE_A(kk_mat(idir1, idir2)%X(matrix))
     end do
   end do
 
@@ -2117,7 +2117,7 @@ subroutine X(inhomog_per_component)(sys, idir, ik, &
   end do 
   
   call pert_end(pert_kdotp)
-  SAFE_DEALLOCATE_P(vel_mat%X(matrix))
+  SAFE_DEALLOCATE_A(vel_mat%X(matrix))
  
   SAFE_DEALLOCATE_A(f_out)
   SAFE_DEALLOCATE_A(vel)
@@ -2205,8 +2205,8 @@ subroutine X(inhomog_per_component_2nd_order)(sys, idir, ik, &
 
   call pert_end(pert_kdotp)
 
-  SAFE_DEALLOCATE_P(vel_mat%X(matrix))
-  SAFE_DEALLOCATE_P(prod_mat%X(matrix))
+  SAFE_DEALLOCATE_A(vel_mat%X(matrix))
+  SAFE_DEALLOCATE_A(prod_mat%X(matrix))
   SAFE_DEALLOCATE_A(f_out)
   SAFE_DEALLOCATE_A(vel)
   SAFE_DEALLOCATE_A(psi)
@@ -2386,8 +2386,8 @@ contains
       end if
     end do
   
-    SAFE_DEALLOCATE_P(prod_mat%X(matrix))
-    SAFE_DEALLOCATE_P(prod_mat2%X(matrix))
+    SAFE_DEALLOCATE_A(prod_mat%X(matrix))
+    SAFE_DEALLOCATE_A(prod_mat2%X(matrix))
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(psi0)
   
@@ -2639,8 +2639,8 @@ subroutine X(inhomog_kb)(sys, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi
 
   call pert_end(pert_kdotp2)
   
-  SAFE_DEALLOCATE_P(vel_mat1%X(matrix))
-  SAFE_DEALLOCATE_P(vel_mat2%X(matrix))
+  SAFE_DEALLOCATE_A(vel_mat1%X(matrix))
+  SAFE_DEALLOCATE_A(vel_mat2%X(matrix))
   SAFE_DEALLOCATE_A(f_out1)
   SAFE_DEALLOCATE_A(f_out2)
   SAFE_DEALLOCATE_A(psi)
@@ -2870,7 +2870,7 @@ subroutine X(calc_rho)(sys, factor, factor_sum, factor_e, &
     end do
   end do
 
-  SAFE_DEALLOCATE_P(mat%X(matrix))
+  SAFE_DEALLOCATE_A(mat%X(matrix))
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(psi1)
 
@@ -2966,7 +2966,7 @@ subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
     end if
   end do
    
-  SAFE_DEALLOCATE_P(mat%X(matrix))
+  SAFE_DEALLOCATE_A(mat%X(matrix))
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(psi0)
   
