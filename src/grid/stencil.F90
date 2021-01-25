@@ -43,10 +43,10 @@ module stencil_oct_m
 
   type stencil_t
     ! Components are public by default
-    integer          :: center
-    integer          :: size
-    integer          :: npoly
-    integer, pointer :: points(:, :) 
+    integer              :: center
+    integer              :: size
+    integer              :: npoly
+    integer, allocatable :: points(:, :)
     
     ! The stargeneral arms
     type(stargeneral_arms_t) :: stargeneral 
@@ -96,7 +96,7 @@ contains
 
     PUSH_SUB(stencil_end)
 
-    SAFE_DEALLOCATE_P(this%points)
+    SAFE_DEALLOCATE_A(this%points)
 
     POP_SUB(stencil_end)
   end subroutine stencil_end
