@@ -884,8 +884,8 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, st, psia, 
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   R_TYPE,                   intent(out)   :: density(:)
   integer, optional,        intent(in)    :: pert_order
 
@@ -935,8 +935,8 @@ R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, st, psi
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: density(:)

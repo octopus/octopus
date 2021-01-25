@@ -60,10 +60,10 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   SAFE_ALLOCATE(    de(1:gr%mesh%np, 1:st%d%nspin))
   SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
 
-  if( .not. associated(lr%X(dl_de)) ) then
+  if( .not. allocated(lr%X(dl_de)) ) then
     SAFE_ALLOCATE(lr%X(dl_de)(1:gr%mesh%np, 1:st%d%nspin)) 
   end if
-  if( .not. associated(lr%X(dl_elf))) then
+  if( .not. allocated(lr%X(dl_elf))) then
     SAFE_ALLOCATE(lr%X(dl_elf)(1:gr%mesh%np, 1:st%d%nspin))
   end if
 

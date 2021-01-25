@@ -181,8 +181,8 @@ contains
     call profiling_in(prof_write, "RESTART_WRITE")
 
     if (present(lr)) then
-      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
+      lr_wfns_are_associated = (allocated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+                               (allocated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_wfns_are_associated)
     end if
 
@@ -430,8 +430,8 @@ contains
 
     ! sanity check
     if (present(lr)) then
-      lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
+      lr_allocated = (allocated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+                     (allocated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
     end if
 
