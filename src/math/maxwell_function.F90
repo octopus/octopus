@@ -80,8 +80,6 @@ module maxwell_function_oct_m
 
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
-    FLOAT, pointer :: val(:)    => NULL()
-    FLOAT, pointer :: valww(:)  => NULL()
     type(fft_t) :: fft_handler
   end type mxf_t
 
@@ -281,8 +279,6 @@ contains
     f%mode = MXF_EMPTY
     f%niter = 0
     f%dx = M_ZERO
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init)
   end subroutine mxf_init
@@ -312,8 +308,6 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_const_wave)
   end subroutine mxf_init_const_wave
@@ -331,8 +325,6 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_const_phase)
   end subroutine mxf_init_const_phase
@@ -351,8 +343,6 @@ contains
     f%k_vector = k_vector
     f%r0 = r0
     f%width = width
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_gaussian_wave)
   end subroutine mxf_init_gaussian_wave
@@ -371,8 +361,6 @@ contains
     f%k_vector = k_vector
     f%r0 = r0
     f%width = width
-    nullify(f%val)
-    nullify(f%valww)
 
     POP_SUB(mxf_init_cosinoidal_wave)
   end subroutine mxf_init_cosinoidal_wave
@@ -393,9 +381,6 @@ contains
     f%growth = growth
     f%width = width
 
-    nullify(f%val)
-    nullify(f%valww)
-
     POP_SUB(mxf_init_logistic_wave)
   end subroutine
   !------------------------------------------------------------
@@ -415,9 +400,6 @@ contains
     f%growth = growth
     f%width = width
 
-    nullify(f%val)
-    nullify(f%valww)
-
     POP_SUB(mxf_init_trapezoidal_wave)
   end subroutine
   !------------------------------------------------------------
@@ -432,8 +414,6 @@ contains
 
     f%mode       = MXF_FROM_EXPR
     f%expression = trim(expression)
-    nullify(f%val)
-    nullify(f%valww)
     
     POP_SUB(mxf_init_fromexpr)
   end subroutine mxf_init_fromexpr
