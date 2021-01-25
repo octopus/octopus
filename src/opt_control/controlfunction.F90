@@ -120,9 +120,9 @@ module controlfunction_oct_m
     FLOAT   :: w0                  = M_ZERO                        !< The carrier frequency, in case the mode is set to control the
                                                                    !! "envelope" or the "phase".
     integer :: no_controlfunctions = 0                             !! The number of control functions to be optimized.
-    FLOAT,       pointer :: alpha(:) => NULL()                     !< A factor that determines the "penalty", for each of the
+    FLOAT,       allocatable :: alpha(:)                           !< A factor that determines the "penalty", for each of the
                                                                    !! control functions.
-    type(tdf_t), pointer :: td_penalty(:) => NULL()                !< The penalties, if these are time-dependent.
+    type(tdf_t), allocatable :: td_penalty(:)                      !< The penalties, if these are time-dependent.
   end type controlfunction_common_t
 
   !> This is the data type used to hold a control function.
@@ -137,17 +137,17 @@ module controlfunction_oct_m
                                                  !! that the parameters are the coefficients of the basis set.
     integer :: dof           = 0                 !< This is the number of degrees of freedom, or number of parameters, used to 
                                                  !! represent a control function (this may be different -- smaller -- than "dim").
-    type(tdf_t), pointer :: f(:) => NULL()
-    FLOAT, pointer :: alpha(:) => NULL()
+    type(tdf_t), allocatable :: f(:)
+    FLOAT, allocatable :: alpha(:)
 
     integer :: current_representation = 0
 
     FLOAT   :: w0       = M_ZERO
-    FLOAT, pointer :: u(:, :) => NULL()
-    FLOAT, pointer :: utransf(:, :) => NULL()
-    FLOAT, pointer :: utransfi(:, :) => NULL()
+    FLOAT, allocatable :: u(:, :)
+    FLOAT, allocatable :: utransf(:, :)
+    FLOAT, allocatable :: utransfi(:, :)
 
-    FLOAT, pointer :: theta(:) => NULL()
+    FLOAT, allocatable :: theta(:)
   end type controlfunction_t
   
   !> the next variable has to be a pointer to avoid a bug in the IBM compiler
@@ -169,8 +169,6 @@ contains
     this%w0                  = M_ZERO
     this%mode                = controlfunction_mode_none
     this%no_controlfunctions = 0
-    nullify(this%alpha)
-    nullify(this%td_penalty)
 
   end subroutine controlfunction_common_nullify
 
@@ -524,14 +522,8 @@ contains
     this%no_controlfunctions    = 0
     this%dim                    = 0
     this%dof                    = 0
-    nullify(this%f)
-    nullify(this%alpha)
     this%current_representation = 0
     this%w0                     = M_ZERO
-    nullify(this%u)
-    nullify(this%utransf)
-    nullify(this%utransfi)
-    nullify(this%theta)
 
   end subroutine controlfunction_nullify
   
@@ -553,7 +545,7 @@ contains
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions
     cp%current_representation = ctr_internal
-    SAFE_ALLOCATE_SOURCE_P(cp%alpha, cf_common%alpha)
+    SAFE_ALLOCATE_SOURCE_A(cp%alpha, cf_common%alpha)
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
     do ipar = 1, cp%no_controlfunctions
@@ -915,17 +907,17 @@ contains
 
     PUSH_SUB(controlfunction_end)
 
-    if(associated(cp%f)) then
+    if (allocated(cp%f)) then
       do ipar = 1, cp%no_controlfunctions
         call tdf_end(cp%f(ipar))
       end do
     end if
-    SAFE_DEALLOCATE_P(cp%f)
-    SAFE_DEALLOCATE_P(cp%alpha)
-    SAFE_DEALLOCATE_P(cp%u)
-    SAFE_DEALLOCATE_P(cp%utransf)
-    SAFE_DEALLOCATE_P(cp%utransfi)
-    SAFE_DEALLOCATE_P(cp%theta)
+    SAFE_DEALLOCATE_A(cp%f)
+    SAFE_DEALLOCATE_A(cp%alpha)
+    SAFE_DEALLOCATE_A(cp%u)
+    SAFE_DEALLOCATE_A(cp%utransf)
+    SAFE_DEALLOCATE_A(cp%utransfi)
+    SAFE_DEALLOCATE_A(cp%theta)
 
     POP_SUB(controlfunction_end)
   end subroutine controlfunction_end
@@ -1228,7 +1220,7 @@ contains
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
 
-    SAFE_ALLOCATE_SOURCE_P(cp_out%alpha, cp_in%alpha)
+    SAFE_ALLOCATE_SOURCE_A(cp_out%alpha, cp_in%alpha)
     SAFE_ALLOCATE(cp_out%f(1:cp_out%no_controlfunctions))
 
     do ipar = 1, cp_in%no_controlfunctions
@@ -1236,10 +1228,10 @@ contains
       call tdf_copy(cp_out%f(ipar), cp_in%f(ipar))
     end do
 
-    SAFE_ALLOCATE_SOURCE_P(cp_out%u, cp_in%u)
-    SAFE_ALLOCATE_SOURCE_P(cp_out%utransf, cp_in%utransf)
-    SAFE_ALLOCATE_SOURCE_P(cp_out%utransfi, cp_in%utransfi)
-    SAFE_ALLOCATE_SOURCE_P(cp_out%theta, cp_in%theta)
+    SAFE_ALLOCATE_SOURCE_A(cp_out%u, cp_in%u)
+    SAFE_ALLOCATE_SOURCE_A(cp_out%utransf, cp_in%utransf)
+    SAFE_ALLOCATE_SOURCE_A(cp_out%utransfi, cp_in%utransfi)
+    SAFE_ALLOCATE_SOURCE_A(cp_out%theta, cp_in%theta)
 
     POP_SUB(controlfunction_copy)
   end subroutine controlfunction_copy
@@ -1409,13 +1401,13 @@ contains
       end if
 
     cf_common_initialized=.false.
-    SAFE_DEALLOCATE_P(cf_common%alpha)
+    SAFE_DEALLOCATE_A(cf_common%alpha)
 
     do ipar = 1, cf_common%no_controlfunctions
       call tdf_end(cf_common%td_penalty(ipar))
     end do
 
-    SAFE_DEALLOCATE_P(cf_common%td_penalty)
+    SAFE_DEALLOCATE_A(cf_common%td_penalty)
     SAFE_DEALLOCATE_P(cf_common)
 
     POP_SUB(controlfunction_mod_close)
