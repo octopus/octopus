@@ -80,19 +80,19 @@ module simul_box_oct_m
 
   type :: interp_t
     ! Components are public by default
-    integer          :: nn, order  !< interpolation points and order
-    FLOAT,   pointer :: ww(:)      !< weights
-    integer, pointer :: posi(:)    !< positions
+    integer              :: nn, order  !< interpolation points and order
+    FLOAT,   allocatable :: ww(:)      !< weights
+    integer, allocatable :: posi(:)    !< positions
   end type interp_t
 
 
   type :: multiresolution_t
     ! Components are public by default
-    type(interp_t)   :: interp          !< interpolation points
-    integer, private :: num_areas       !< number of multiresolution areas
-    integer          :: num_radii       !< number of radii (resolution borders)
-    FLOAT, pointer   :: radius(:)       !< radius of the high-resolution area
-    FLOAT            :: center(MAX_DIM) !< central point
+    type(interp_t)     :: interp          !< interpolation points
+    integer,   private :: num_areas       !< number of multiresolution areas
+    integer            :: num_radii       !< number of radii (resolution borders)
+    FLOAT, allocatable :: radius(:)       !< radius of the high-resolution area
+    FLOAT              :: center(MAX_DIM) !< central point
   end type multiresolution_t
 
   type, extends(box_t) :: simul_box_t
@@ -287,9 +287,6 @@ contains
 
         sb%mr_flag = .true.
       else
-        nullify(sb%hr_area%radius)
-        nullify(sb%hr_area%interp%posi)
-        nullify(sb%hr_area%interp%ww)
         sb%mr_flag = .false.
       end if
 
@@ -993,9 +990,9 @@ contains
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
-    SAFE_DEALLOCATE_P(sb%hr_area%radius)
-    SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
-    SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
+    SAFE_DEALLOCATE_A(sb%hr_area%radius)
+    SAFE_DEALLOCATE_A(sb%hr_area%interp%ww)
+    SAFE_DEALLOCATE_A(sb%hr_area%interp%posi)
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
