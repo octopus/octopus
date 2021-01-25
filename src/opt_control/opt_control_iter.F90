@@ -55,7 +55,7 @@ module opt_control_iter_oct_m
     FLOAT              :: bestJ1_fluence
     FLOAT              :: bestJ1_J
     integer            :: bestJ1_ctr_iter
-    type(controlfunction_t), pointer :: best_par
+    type(controlfunction_t) :: best_par
     integer            :: convergence_iunit
     integer            :: velocities_iunit
     logical            :: dump_intermediate
@@ -129,7 +129,6 @@ contains
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
 
-    SAFE_ALLOCATE(iterator%best_par)
     call controlfunction_copy(iterator%best_par, par)
 
     iterator%convergence_iunit = io_open(OCT_DIR//'convergence', namespace, action='write')
@@ -160,7 +159,6 @@ contains
     call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par, namespace)
 
     call controlfunction_end(iterator%best_par)
-    SAFE_DEALLOCATE_P(iterator%best_par)
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
@@ -355,7 +353,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_iterator_bestpar(par, iterator)
-    type(oct_iterator_t), intent(inout) :: iterator
+    type(oct_iterator_t), target, intent(inout) :: iterator
     type(controlfunction_t), pointer    :: par
 
     PUSH_SUB(oct_iterator_bestpar)
