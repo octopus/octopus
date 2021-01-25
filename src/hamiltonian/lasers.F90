@@ -79,8 +79,8 @@ module lasers_oct_m
     type(tdf_t) :: phi                    !< The phase
     FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
-    FLOAT, pointer :: v(:)    => NULL()
-    FLOAT, pointer :: a(:, :) => NULL()
+    FLOAT, allocatable :: v(:)
+    FLOAT, allocatable :: a(:, :)
   end type laser_t
 
 contains
@@ -509,9 +509,9 @@ contains
         call tdf_end(lasers(il)%phi)
         select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_DEALLOCATE_P(lasers(il)%v)
+          SAFE_DEALLOCATE_A(lasers(il)%v)
         case(E_FIELD_MAGNETIC)
-          SAFE_DEALLOCATE_P(lasers(il)%a)
+          SAFE_DEALLOCATE_A(lasers(il)%a)
         end select
       end do
       SAFE_DEALLOCATE_P(lasers)
