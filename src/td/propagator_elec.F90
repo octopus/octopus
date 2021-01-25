@@ -71,30 +71,12 @@ module propagator_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagator_elec_nullify(this)
-    type(propagator_base_t), intent(out) :: this
-
-    PUSH_SUB(propagator_elec_nullify)
-
-    !this%method
-    !call exponential_nullify(this%te)
-    !this%scf_propagation_steps 
-    !this%first
-
-    nullify(this%tdsk)
-
-    POP_SUB(propagator_elec_nullify)
-  end subroutine propagator_elec_nullify
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
   subroutine propagator_elec_copy(tro, tri)
     type(propagator_base_t), intent(inout) :: tro
     type(propagator_base_t), intent(in)    :: tri
 
     PUSH_SUB(propagator_elec_copy)
     
-    call propagator_elec_nullify(tro)
     tro%method = tri%method
 
     select case(tro%method)
@@ -102,17 +84,14 @@ contains
       SAFE_ALLOCATE_SOURCE_A(tro%vmagnus, tri%vmagnus)
 
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
       call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
     case(PROP_RUNGE_KUTTA4)
-      SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
       call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
     case(PROP_RUNGE_KUTTA2)
-      SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
       call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
@@ -143,8 +122,6 @@ contains
 
     PUSH_SUB(propagator_elec_init)
     
-    call propagator_elec_nullify(tr)
-
     !%Variable TDPropagator
     !%Type integer
     !%Default etrs
@@ -266,7 +243,6 @@ contains
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 3
       tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
-      SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(namespace, tr%tdsk_size, tr%tdsk, .true.)
 
 #ifndef HAVE_SPARSKIT
@@ -283,7 +259,6 @@ contains
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 2
       tr%tdsk_size = st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
-      SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(namespace, tr%tdsk_size, tr%tdsk, .true.)
 
 #ifndef HAVE_SPARSKIT
@@ -299,7 +274,6 @@ contains
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 1
       tr%tdsk_size = st%d%dim*gr%mesh%np
-      SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(namespace, st%d%dim*gr%mesh%np, tr%tdsk, .true.)
 
 #ifndef HAVE_SPARSKIT
@@ -450,7 +424,6 @@ contains
 
     case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
       call sparskit_solver_end(tr%tdsk)
-      SAFE_DEALLOCATE_P(tr%tdsk)
       
     end select
 
