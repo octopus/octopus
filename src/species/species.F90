@@ -134,8 +134,8 @@ module species_oct_m
 
     FLOAT :: sc_alpha                !< the soft-Coulomb parameter
 
-    type(ps_t), pointer :: ps
-    logical             :: nlcc   !< true if we have non-local core corrections
+    type(ps_t), allocatable :: ps
+    logical                 :: nlcc   !< true if we have non-local core corrections
 
 
     FLOAT :: sigma                !< If we have an all-electron atom:
@@ -148,8 +148,8 @@ module species_oct_m
 
 
     integer :: niwfs              !< The number of initial wavefunctions
-    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
-    FLOAT, pointer :: iwf_j(:)    !< j as a function of iorb
+    integer, allocatable :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
+    FLOAT, allocatable :: iwf_j(:)    !< j as a function of iorb
 
     integer :: hubbard_l          !< For the LDA+U, the angular momentum for the applied U
     FLOAT   :: hubbard_U          !< For the LDA+U, the effective U
@@ -195,18 +195,12 @@ contains
     this%filename=""
     this%jradius=M_ZERO
     this%jthick=M_ZERO
-    nullify(this%ps)
     this%nlcc=.false.
     this%sigma=M_ZERO
     this%density_formula=""
     this%def_rsize = CNST(-1.0)
     this%def_h = CNST(-1.0)
     this%niwfs=-1
-    nullify(this%iwf_l)
-    nullify(this%iwf_m)
-    nullify(this%iwf_i)
-    nullify(this%iwf_n)
-    nullify(this%iwf_j)
     this%hubbard_l=-1
     this%hubbard_U=M_ZERO
     this%hubbard_j=M_ZERO
@@ -871,7 +865,6 @@ contains
     if(.not. species_is_ps(spec)) then
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
       if(print_info_) call messages_info(1)
-      nullify(spec%ps)
     end if
 
     POP_SUB(species_build)
@@ -1026,7 +1019,7 @@ contains
   ! ---------------------------------------------------------
   function species_ps(spec)
     type(ps_t), pointer :: species_ps
-    type(species_t), intent(in) :: spec
+    type(species_t), target, intent(in) :: spec
     species_ps => spec%ps
   end function species_ps
   ! ---------------------------------------------------------
@@ -1499,7 +1492,6 @@ contains
     this%filename=that%filename
     this%jradius=that%jradius
     this%jthick=that%jthick
-    nullify(this%ps)
     !> To be implemented.
     !> ps_t has no copy procedure.
     !> if(associated(that%ps))then
@@ -1512,12 +1504,11 @@ contains
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
     this%niwfs=that%niwfs
-    nullify(this%iwf_n, this%iwf_l, this%iwf_m, this%iwf_i)
-    SAFE_ALLOCATE_SOURCE_P(this%iwf_n, that%iwf_n)
-    SAFE_ALLOCATE_SOURCE_P(this%iwf_l, that%iwf_l)
-    SAFE_ALLOCATE_SOURCE_P(this%iwf_m, that%iwf_m)
-    SAFE_ALLOCATE_SOURCE_P(this%iwf_i, that%iwf_i)
-    SAFE_ALLOCATE_SOURCE_P(this%iwf_j, that%iwf_j)
+    SAFE_ALLOCATE_SOURCE_A(this%iwf_n, that%iwf_n)
+    SAFE_ALLOCATE_SOURCE_A(this%iwf_l, that%iwf_l)
+    SAFE_ALLOCATE_SOURCE_A(this%iwf_m, that%iwf_m)
+    SAFE_ALLOCATE_SOURCE_A(this%iwf_i, that%iwf_i)
+    SAFE_ALLOCATE_SOURCE_A(this%iwf_j, that%iwf_j)
     this%hubbard_l=that%hubbard_l
     this%hubbard_U=that%hubbard_U
     this%hubbard_alpha=that%hubbard_alpha
@@ -1538,16 +1529,16 @@ contains
     if(spec%pseudopotential_set_initialized) call pseudo_set_end(spec%pseudopotential_set)
     
     if (species_is_ps(spec)) then 
-      if(associated(spec%ps)) then 
+      if(allocated(spec%ps)) then 
         call ps_end(spec%ps)
-        SAFE_DEALLOCATE_P(spec%ps)
+        SAFE_DEALLOCATE_A(spec%ps)
       end if
     end if
-    SAFE_DEALLOCATE_P(spec%iwf_n)
-    SAFE_DEALLOCATE_P(spec%iwf_l)
-    SAFE_DEALLOCATE_P(spec%iwf_m)
-    SAFE_DEALLOCATE_P(spec%iwf_i)
-    SAFE_DEALLOCATE_P(spec%iwf_j)
+    SAFE_DEALLOCATE_A(spec%iwf_n)
+    SAFE_DEALLOCATE_A(spec%iwf_l)
+    SAFE_DEALLOCATE_A(spec%iwf_m)
+    SAFE_DEALLOCATE_A(spec%iwf_i)
+    SAFE_DEALLOCATE_A(spec%iwf_j)
 
     POP_SUB(species_end_species)
   end subroutine species_end_species
@@ -1556,7 +1547,7 @@ contains
   ! ---------------------------------------------------------
   subroutine species_end_array(ns, spec)
     integer,         intent(in) :: ns
-    type(species_t), pointer    :: spec(:)
+    type(species_t)             :: spec(:)
 
     integer :: i
 
