@@ -38,14 +38,14 @@ module states_elec_group_oct_m
 
   type states_elec_group_t
     ! Components are public by default
-    type(wfs_elec_t), pointer :: psib(:, :)            !< A set of wave-functions blocks
+    type(wfs_elec_t), allocatable :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
     integer                  :: block_start           !< The lowest index of local blocks
     integer                  :: block_end             !< The highest index of local blocks
-    integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
-    integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
-    integer, pointer         :: block_size(:)         !< The number of states in each block.
-    logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
+    integer, allocatable     :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
+    integer, allocatable     :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
+    integer, allocatable     :: block_size(:)         !< The number of states in each block.
+    logical, allocatable     :: block_is_local(:, :)  !< It is true if the block is in this node.
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
@@ -58,12 +58,6 @@ contains
     type(states_elec_group_t), intent(out)   :: this
 
     PUSH_SUB(states_elec_group_null)
-
-    nullify(this%psib)
-    nullify(this%iblock)
-    nullify(this%block_range)
-    nullify(this%block_size)
-    nullify(this%block_is_local)
 
     this%block_initialized = .false.
 
@@ -88,12 +82,12 @@ contains
         end do
       end do
 
-      SAFE_DEALLOCATE_P(this%psib)
+      SAFE_DEALLOCATE_A(this%psib)
 
-      SAFE_DEALLOCATE_P(this%iblock)
-      SAFE_DEALLOCATE_P(this%block_range)
-      SAFE_DEALLOCATE_P(this%block_size)
-      SAFE_DEALLOCATE_P(this%block_is_local)
+      SAFE_DEALLOCATE_A(this%iblock)
+      SAFE_DEALLOCATE_A(this%block_range)
+      SAFE_DEALLOCATE_A(this%block_size)
+      SAFE_DEALLOCATE_A(this%block_is_local)
       SAFE_DEALLOCATE_A(this%block_node)
       this%block_initialized = .false.
     end if
@@ -123,7 +117,7 @@ contains
 
     if(group_out%block_initialized) then
 
-      ASSERT(associated(group_in%psib))
+      ASSERT(allocated(group_in%psib))
 
       qn_start = d%kpt%start 
       qn_end   = d%kpt%end 
@@ -136,10 +130,10 @@ contains
         end do
       end do
       
-      SAFE_ALLOCATE_SOURCE_P(group_out%iblock, group_in%iblock)
-      SAFE_ALLOCATE_SOURCE_P(group_out%block_range, group_in%block_range)
-      SAFE_ALLOCATE_SOURCE_P(group_out%block_size, group_in%block_size)
-      SAFE_ALLOCATE_SOURCE_P(group_out%block_is_local, group_in%block_is_local)
+      SAFE_ALLOCATE_SOURCE_A(group_out%iblock, group_in%iblock)
+      SAFE_ALLOCATE_SOURCE_A(group_out%block_range, group_in%block_range)
+      SAFE_ALLOCATE_SOURCE_A(group_out%block_size, group_in%block_size)
+      SAFE_ALLOCATE_SOURCE_A(group_out%block_is_local, group_in%block_is_local)
       SAFE_ALLOCATE_SOURCE_A(group_out%block_node, group_in%block_node)
       SAFE_ALLOCATE_SOURCE_A(group_out%rma_win, group_in%rma_win)
     
