@@ -46,20 +46,20 @@ module boundaries_oct_m
   type boundaries_t
     private
     type(mesh_t), pointer :: mesh
-    integer          :: nper             !< the number of points that correspond to pbc
-    integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
-    integer, pointer :: per_send(:, :)
-    integer, pointer :: per_recv(:, :)
-    integer, pointer :: nsend(:)
-    integer, pointer :: nrecv(:)
-    type(accel_mem_t) :: buff_per_points
-    type(accel_mem_t) :: buff_per_send
-    type(accel_mem_t) :: buff_per_recv
-    type(accel_mem_t) :: buff_nsend
-    type(accel_mem_t) :: buff_nrecv
-    logical, public   :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
-    logical, public   :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
-    FLOAT,   public   :: spiral_q(MAX_DIM)
+    integer              :: nper             !< the number of points that correspond to pbc
+    integer, allocatable :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
+    integer, allocatable :: per_send(:, :)
+    integer, allocatable :: per_recv(:, :)
+    integer, allocatable :: nsend(:)
+    integer, allocatable :: nrecv(:)
+    type(accel_mem_t)    :: buff_per_points
+    type(accel_mem_t)    :: buff_per_send
+    type(accel_mem_t)    :: buff_per_recv
+    type(accel_mem_t)    :: buff_nsend
+    type(accel_mem_t)    :: buff_nrecv
+    logical, public      :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
+    logical, public      :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
+    FLOAT,   public      :: spiral_q(MAX_DIM)
   end type boundaries_t
 
   public ::                        &
@@ -85,7 +85,7 @@ module boundaries_oct_m
   type pv_handle_batch_t
     private
     type(batch_t)        :: ghost_send
-    integer,     pointer :: requests(:)
+    integer, allocatable :: requests(:)
     integer              :: nnb
     ! these are needed for CL
     FLOAT, pointer       :: drecv_buffer(:)
@@ -110,8 +110,6 @@ contains
 
     nullify(this%mesh)
     this%nper = 0
-    nullify(this%per_points, this%per_send, this%per_recv)
-    nullify(this%nsend, this%nrecv)
     call accel_mem_nullify(this%buff_per_points)
     call accel_mem_nullify(this%buff_per_send)
     call accel_mem_nullify(this%buff_per_recv)
@@ -142,8 +140,6 @@ contains
     PUSH_SUB(boundaries_init)
 
     this%mesh => mesh
-
-    nullify(this%per_points)
 
     if (simul_box_is_periodic(mesh%sb)) then
 
@@ -365,13 +361,13 @@ contains
     if(simul_box_is_periodic(this%mesh%sb)) then
       if(this%mesh%parallel_in_domains) then    
         
-        ASSERT(associated(this%nsend))
-        ASSERT(associated(this%nrecv))
+        ASSERT(allocated(this%nsend))
+        ASSERT(allocated(this%nrecv))
         
-        SAFE_DEALLOCATE_P(this%per_send)
-        SAFE_DEALLOCATE_P(this%per_recv)
-        SAFE_DEALLOCATE_P(this%nsend)
-        SAFE_DEALLOCATE_P(this%nrecv)
+        SAFE_DEALLOCATE_A(this%per_send)
+        SAFE_DEALLOCATE_A(this%per_recv)
+        SAFE_DEALLOCATE_A(this%nsend)
+        SAFE_DEALLOCATE_A(this%nrecv)
 
         if(accel_is_enabled()) then
           call accel_release_buffer(this%buff_per_send)
@@ -383,7 +379,7 @@ contains
 
       if(accel_is_enabled()) call accel_release_buffer(this%buff_per_points)
 
-      SAFE_DEALLOCATE_P(this%per_points)
+      SAFE_DEALLOCATE_A(this%per_points)
     end if
 
     POP_SUB(boundaries_end)
