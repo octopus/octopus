@@ -66,28 +66,27 @@ module geometry_oct_m
     geometry_set_positions,          &
     geometry_end
 
-      type geometry_t
+  type geometry_t
     ! Components are public by default
 
     type(space_t), pointer :: space
 
-    integer               :: natoms
-    type(atom_t), pointer :: atom(:)
+    integer                   :: natoms
+    type(atom_t), allocatable :: atom(:)
 
-    integer                         :: ncatoms  !< For QM+MM calculations
-    type(atom_classical_t), pointer :: catom(:)
+    integer                             :: ncatoms  !< For QM+MM calculations
+    type(atom_classical_t), allocatable :: catom(:)
 
     FLOAT   :: kinetic_energy      !< the ion kinetic energy
     logical :: reduced_coordinates !< If true the coordinates are stored in
                                    !! reduced coordinates and need to be converted.
-
     type(distributed_t) :: atoms_dist
 
     !> Information about the species
-    integer                  :: nspecies
-    type(species_t), pointer :: species(:)
-    logical                  :: only_user_def          !< Do we want to treat only user-defined species?
-    logical,         private :: species_time_dependent !< For time-dependent user defined species
+    integer                      :: nspecies
+    type(species_t), allocatable :: species(:)
+    logical                      :: only_user_def          !< Do we want to treat only user-defined species?
+    logical,         private     :: species_time_dependent !< For time-dependent user defined species
 
     !> variables for passing info from XSF input to simul_box_init
     integer :: periodic_dim
@@ -141,7 +140,6 @@ contains
 
     ! copy information from xyz to geo
     geo%natoms = xyz%n
-    nullify(geo%atom)
     if (geo%natoms>0) then
       SAFE_ALLOCATE(geo%atom(1:geo%natoms))
       do ia = 1, geo%natoms
@@ -159,7 +157,6 @@ contains
 
     ! load positions of the classical atoms, if any
     call read_coords_init(xyz)
-    nullify(geo%catom)
     geo%ncatoms = 0
     call read_coords_read('Classical', xyz, geo%space, namespace)
     if (xyz%source /= READ_COORDS_ERR) then ! found classical atoms
@@ -885,13 +882,13 @@ contains
 
     call distributed_end(geo%atoms_dist)
 
-    SAFE_DEALLOCATE_P(geo%atom)
+    SAFE_DEALLOCATE_A(geo%atom)
     geo%natoms=0
-    SAFE_DEALLOCATE_P(geo%catom)
+    SAFE_DEALLOCATE_A(geo%catom)
     geo%ncatoms=0
 
     call species_end(geo%nspecies, geo%species)
-    SAFE_DEALLOCATE_P(geo%species)
+    SAFE_DEALLOCATE_A(geo%species)
     geo%nspecies=0
 
     call species_end_global()
