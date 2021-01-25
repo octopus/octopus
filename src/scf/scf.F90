@@ -438,7 +438,7 @@ contains
       call messages_fatal(2, namespace=namespace)
     end if
     if(scf%calc_force) then
-      if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+      if (allocated(hm%ep%B_field) .or. allocated(hm%ep%A_static)) then
         write(message(1),'(a)') 'The forces are currently not properly calculated if static'
         write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
         write(message(3),'(a)') 'Please use SCFCalculateForces = no.'

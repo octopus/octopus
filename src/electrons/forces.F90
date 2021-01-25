@@ -402,7 +402,7 @@ contains
       end do
     end if
 
-    if(associated(hm%ep%E_field)) then
+    if (allocated(hm%ep%E_field)) then
       do iatom = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
         geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) &
@@ -412,7 +412,7 @@ contains
       end do
     end if
 
-    if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+    if (allocated(hm%ep%B_field) .or. allocated(hm%ep%A_static)) then
       write(message(1),'(a)') 'The forces are currently not properly calculated if static'
       write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
       call messages_fatal(2, namespace=namespace)

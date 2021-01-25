@@ -941,7 +941,7 @@ contains
           call states_elec_get_state(psi, gr%mesh, p, ik, zpsi)
           
           zoppsi = M_z0
-          if(associated(hm%ep%a_static)) then
+          if (allocated(hm%ep%a_static)) then
             call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else

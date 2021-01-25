@@ -677,20 +677,20 @@ contains
             call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
 
           case(EXTERNAL_POT_STATIC_BFIELD)
-            if(.not.associated(hm%ep%B_field)) then
+            if (.not. allocated(hm%ep%B_field)) then
               SAFE_ALLOCATE(hm%ep%B_field(1:3)) !Cannot be gr%sb%dim
               hm%ep%B_field(1:3) = M_ZERO
             end if
             hm%ep%B_field(1:3) = hm%ep%B_field(1:3) + potential%B_field(1:3)
             
-            if(.not.associated(hm%ep%A_static)) then
+            if (.not. allocated(hm%ep%A_static)) then
               SAFE_ALLOCATE(hm%ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
               hm%ep%A_static(1:gr%mesh%np, 1:gr%sb%dim) = M_ZERO
             end if
             call lalg_axpy(gr%mesh%np, gr%sb%dim, M_ONE, potential%A_static, hm%ep%A_static)
 
           case(EXTERNAL_POT_STATIC_EFIELD)
-            if(.not.associated(hm%ep%E_field)) then
+            if (.not. allocated(hm%ep%E_field)) then
               SAFE_ALLOCATE(hm%ep%E_field(1:gr%sb%dim))
               hm%ep%E_field(1:gr%sb%dim) = M_ZERO
             end if
@@ -698,11 +698,11 @@ contains
 
             !In the fully periodic case, we use Berry phases
             if(gr%sb%periodic_dim < gr%sb%dim) then
-              if(.not.associated(hm%ep%v_static)) then
+              if (.not. allocated(hm%ep%v_static)) then
                 SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
                 hm%ep%v_static(1:gr%mesh%np) = M_ZERO
               end if
-              if(.not.allocated(hm%ep%v_ext)) then
+              if (.not. allocated(hm%ep%v_ext)) then
                 SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
                 hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
               end if     
@@ -757,7 +757,7 @@ contains
       PUSH_SUB(hamiltonian_elec_init.build_interactions)      
 
       nullify(hm%vberry)
-      if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
+      if (allocated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
         ! only need vberry if there is a field in a periodic direction
         ! and we are not setting a gauge field
         if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
@@ -1029,7 +1029,7 @@ contains
       end if
 
       ! the electric field for a periodic system through the gauge field
-      if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
+      if (allocated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
         this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
@@ -1037,7 +1037,7 @@ contains
     end if
 
     ! the vector potential of a static magnetic field
-    if(associated(this%ep%a_static)) then
+    if (allocated(this%ep%a_static)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
       !$omp parallel do schedule(static)
       do ip = 1, mesh%np
@@ -1051,7 +1051,7 @@ contains
     call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
-    if(associated(this%ep%b_field)) then
+    if (allocated(this%ep%b_field)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
       do idir = 1, 3
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
@@ -1307,8 +1307,9 @@ contains
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
       !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
-      if( this%pcm%localf .and. associated(this%ep%v_static)) &
+      if (this%pcm%localf .and. allocated(this%ep%v_static)) then
         call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+      end if
 
     end if
 
@@ -1607,7 +1608,7 @@ contains
       end if
 
       ! the electric field for a periodic system through the gauge field
-      if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
+      if (allocated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
         this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
@@ -1615,7 +1616,7 @@ contains
     end do
 
     ! the vector potential of a static magnetic field
-    if(associated(this%ep%a_static)) then
+    if (allocated(this%ep%a_static)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
@@ -1629,7 +1630,7 @@ contains
     call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
-    if(associated(this%ep%b_field)) then
+    if (allocated(this%ep%b_field)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
       do idir = 1, 3
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)

@@ -1183,7 +1183,7 @@ contains
       SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
-    if(associated(hm%ep%v_static)) then
+    if (allocated(hm%ep%v_static)) then
       hm%energy%intnvstatic = dmf_dotp(ks%gr%mesh, ks%calc%total_density, hm%ep%v_static) 
     else
       hm%energy%intnvstatic = M_ZERO
