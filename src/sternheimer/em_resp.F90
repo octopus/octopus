@@ -80,12 +80,12 @@ module em_resp_oct_m
 
     FLOAT :: eta                     !< small imaginary part to add to the frequency
     FLOAT :: freq_factor(3)
-    FLOAT,      pointer :: omega(:)  !< the frequencies to consider
-    type(lr_t), pointer :: lr(:,:,:) !< linear response for (gr%sb%dim, nsigma, nfactor)
-    CMPLX,      pointer :: alpha_k(:, :, :, :)    !< contributions of k-points to 
-                                                  !! the linear polarizability
-    CMPLX,      pointer :: alpha_be_k(:, :, :, :) !< contributions of k-points to 
-                                                  !! the magneto-optical response
+    FLOAT,      allocatable :: omega(:)  !< the frequencies to consider
+    type(lr_t), allocatable :: lr(:,:,:) !< linear response for (gr%sb%dim, nsigma, nfactor)
+    CMPLX,      allocatable :: alpha_k(:, :, :, :)    !< contributions of k-points to 
+                                                      !! the linear polarizability
+    CMPLX,      allocatable :: alpha_be_k(:, :, :, :) !< contributions of k-points to 
+                                                      !! the magneto-optical response
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
     CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
@@ -639,7 +639,7 @@ contains
     end if
 
     if(em_vars%kpt_output) then
-      SAFE_DEALLOCATE_P(em_vars%alpha_k)
+      SAFE_DEALLOCATE_A(em_vars%alpha_k)
     end	if
 
     if(em_vars%calc_magnetooptics .or. &
@@ -678,15 +678,15 @@ contains
         end do
         SAFE_DEALLOCATE_A(ke_lr)
         if(em_vars%kpt_output) then
-          SAFE_DEALLOCATE_P(em_vars%alpha_be_k)
+          SAFE_DEALLOCATE_A(em_vars%alpha_be_k)
         end if        
       else
         call pert_end(pert_b)
       end if
     end if
 
-    SAFE_DEALLOCATE_P(em_vars%omega)
-    SAFE_DEALLOCATE_P(em_vars%lr)
+    SAFE_DEALLOCATE_A(em_vars%omega)
+    SAFE_DEALLOCATE_A(em_vars%lr)
     do ifactor = 1, em_vars%nfactor
       call Born_charges_end(em_vars%Born_charges(ifactor))
     end do
