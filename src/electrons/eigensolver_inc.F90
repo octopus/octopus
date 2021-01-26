@@ -56,8 +56,6 @@
         call X(eigensolver_rmmdiis)(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
           eigens%converged(ik), ik, eigens%diff(:, ik))
       end if
-    case(RS_PSD)
-      call X(eigensolver_rmmdiis_min)(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
     end select
 
     ! Do subspace diagonalization always after the eigensolver

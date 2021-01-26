@@ -106,8 +106,7 @@ module eigensolver_oct_m
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
-       RS_RMMDIIS = 10,         &
-       RS_PSD     = 14
+       RS_RMMDIIS = 10
   
 contains
 
@@ -161,8 +160,6 @@ contains
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
     !% Usage with more than one block of states per node is experimental, unfortunately.
-    !%Option psd 14
-    !% (Experimental) Precondtioned steepest descent optimization of the eigenvectors.
     !%End
 
     if(st%parallel_in_states) then
@@ -175,7 +172,7 @@ contains
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
-      message(2) = "Please use the lobpcg, psd, or rmmdiis eigensolvers."
+      message(2) = "Please use the lobpcg, or rmmdiis eigensolvers."
       call messages_fatal(2, namespace=namespace)
     end if
 
@@ -297,10 +294,6 @@ contains
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
-    case(RS_PSD)
-      default_iter = 18
-      call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
-
     case default
       call messages_input_error(namespace, 'Eigensolver')
     end select
@@ -353,7 +346,7 @@ contains
       call messages_warning(namespace=namespace)
     end if
 
-    if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
+    if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS/))) then
       call preconditioner_init(eigens%pre, namespace, gr, mc)
     else
       call preconditioner_null(eigens%pre)
@@ -417,7 +410,7 @@ contains
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)
     end select
 
@@ -541,7 +534,7 @@ contains
     par_stat = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_LOBPCG, RS_PSD)
+    case(RS_RMMDIIS, RS_LOBPCG)
       par_stat = .true.
     end select
 
