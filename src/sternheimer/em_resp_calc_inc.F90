@@ -777,7 +777,7 @@ contains
                                                  em_lr(jj, isigma,   jfreq)%X(dl_psi)(:, :, ist, ik))
                   end do
                 else
-                  call states_elec_blockt_mul(mesh, st, st%st_start, st%st_start, &
+                  call X(mf_dotp_matrix)(mesh, st%nst, st%d%dim, &
                     em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
                     em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
                     me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
@@ -1036,11 +1036,11 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
           end do
           do ii = 1, nfactor 
             do isigma = 1, nsigma
-              call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+              call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
                 lr_e(dir(swap_sigma(ii)), swap_sigma(isigma), swap_sigma(ii))%X(dl_psi)(:, :, :, ik), &
                 lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb(isigma)%X(matrix))
             end do
-            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
               lr_e(dir(ii), nsigma, ii)%X(dl_psi)(:, :, :, ik), lr_e(dir(swap_sigma(ii)), 1, &
               swap_sigma(ii))%X(dl_psi)(:, :, :, ik), prod_ee%X(matrix))
 
@@ -1418,26 +1418,26 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfa
           end if
         end do
         do isigma = 1, nsigma
-          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
             lr0(1)%X(dl_psi)(:, :, :, ik), factor * gpsi(:, :, :, isigma), mat_g(idir1, isigma)%X(matrix))
         end do
       end do
       do idir1 = 1, ndir
         do idir2 = 1, ndir
           do idir3 = 1, ndir  
-            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
               factor0 * lr_k(idir3, 1)%X(dl_psi)(:,:,:, ik), lr_ke(idir2, idir1, 1, ii)%X(dl_psi)(:,:,:, ik),&
               mat_kke(idir3, idir2)%X(matrix))
-            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
               lr_ke(idir3, idir1, nsigma, ii)%X(dl_psi)(:,:,:, ik), factor0 * lr_k(idir2, 1)%X(dl_psi)(:,:,:, ik),&
               mat_kek(idir3, idir2)%X(matrix))
           end do
         end do
         do idir2 = 1, ndir
-          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
             factor1 * lr_b(idir2, 1)%X(dl_psi)(:,:,:, ik), lr_e(idir1, 1, ii)%X(dl_psi)(:,:,:, ik),&
             mat_be%X(matrix))
-          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
             lr_e(idir1, nsigma, ii)%X(dl_psi)(:,:,:, ik), lr_b(idir2, 1)%X(dl_psi)(:,:,:, ik),&
             mat_eb%X(matrix))
           do idir3 = 1, ndir
@@ -1895,13 +1895,13 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, lr_k, lr_b, lr_kk, lr_kb, mag
 
     do idir1 = 1, ndir
       do idir2 = 1, ndir
-        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
           lr_k(idir1)%X(dl_psi)(:,:,:, ik), Hdl_k(:,:,:, idir2), kH_mat(idir1, idir2)%X(matrix))
     
-        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
           Hdl_k(:,:,:, idir1), lr_k(idir2)%X(dl_psi)(:,:,:, ik), Hk_mat(idir1, idir2)%X(matrix))
     
-        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
           lr_k(idir1)%X(dl_psi)(:,:,:, ik), lr_k(idir2)%X(dl_psi)(:,:,:, ik), kk_mat(idir1, idir2)%X(matrix))
       end do
     end do
@@ -2088,7 +2088,7 @@ subroutine X(inhomog_per_component)(sys, idir, ik, &
     end if
   end do  
     
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     psi(:,:,:), vel(:,:,:), vel_mat%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2180,10 +2180,10 @@ subroutine X(inhomog_per_component_2nd_order)(sys, idir, ik, &
     end if
   end do  
 
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     factor_e * psi_e(:,:,:), vel(:,:,:), vel_mat%X(matrix))
 
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     factor_e * psi_e(:,:,:), factor_k * psi_k2(:,:,:), prod_mat%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2363,10 +2363,10 @@ contains
       end if
     end do
       
-    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
       factor_k * tlr_k1(:,:,:), factor_k * tlr_k2(:,:,:), prod_mat%X(matrix))
 
-    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
       factor_k * tlr_k1(:,:,:), psi(:,:,:), prod_mat2%X(matrix))
   
     do ist1 = 1, sys%st%nst
@@ -2615,10 +2615,10 @@ subroutine X(inhomog_kb)(sys, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi
     end if
   end do
     
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     psi, f_out1(:,:,:), vel_mat1%X(matrix))
 
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     psi, f_out2(:,:,:), vel_mat2%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2841,7 +2841,7 @@ subroutine X(calc_rho)(sys, factor, factor_sum, factor_e, &
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
-    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
       factor_k * lr_k%X(dl_psi)(:,:,:, ik), factor_e*lr_e%X(dl_psi)(:,:,:, ik), mat%X(matrix))
 
     do ist  = 1, sys%st%nst
@@ -2948,7 +2948,7 @@ subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
     end if
   end do
 
-  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call X(mf_dotp_matrix)(sys%gr%mesh, sys%st%nst, sys%st%d%dim, &
     psi0, psi(:,:,:), mat%X(matrix))
         
   do ist = 1, sys%st%nst
@@ -2973,6 +2973,30 @@ subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
   POP_SUB(X(calc_hvar_lr))
 end subroutine X(calc_hvar_lr)
 
+! ---------------------------------------------------------
+!> Multiplication of two blocks of states
+subroutine X(mf_dotp_matrix)(mesh, nst, dim, psi1, psi2, res)
+  type(mesh_t),                   intent(in)    :: mesh
+  integer,                        intent(in)    :: nst
+  integer,                        intent(in)    :: dim
+  R_TYPE, target, contiguous,     intent(in)    :: psi1(:, :, :)
+  R_TYPE, target, contiguous,     intent(in)    :: psi2(:, :, :)
+  R_TYPE,                         intent(inout) :: res(:, :)
+
+  type(batch_t)        :: psi1b, psi2b
+
+  PUSH_SUB(X(mf_dotp_matrix))
+
+  call batch_init(psi1b, dim, 1, nst, psi1(:, :, :))
+  call batch_init(psi2b, dim, 1, nst, psi2(:, :, :))
+
+  call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res)
+
+  call psi1b%end()
+  call psi2b%end()
+
+  POP_SUB(X(mf_dotp_matrix))
+end subroutine X(mf_dotp_matrix)
 
 !! Local Variables:
 !! mode: f90

@@ -387,7 +387,6 @@ states_f_srcs =                                 \
 	states/opt_control_state.F90            \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_elec_block.F90            \
 	states/states_elec_calc.F90             \
 	states/states_elec_dim.F90              \
 	states/states_abst.F90                  \
@@ -409,7 +408,6 @@ noinst_HEADERS +=                               \
 	states/modelmb_density_matrix_inc.F90   \
 	states/modelmb_exchange_syms_inc.F90    \
 	states/physics_op_inc.F90               \
-	states/states_elec_block_inc.F90        \
 	states/states_elec_calc_inc.F90         \
 	states/states_elec_inc.F90              \
 	states/states_elec_parallel_inc.F90     \
