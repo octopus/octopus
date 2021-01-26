@@ -5,20 +5,9 @@ Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
-# This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution, and rmmdiis with CH4.
+# This test checks the eigensolvers cg, cg_new, plan, evolution, and rmmdiis with CH4.
 
-Input: 20-eigensolver.01-lobpcg.inp
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142330
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142330
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107420
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
-
-Input: 20-eigensolver.02-cg.inp
+Input: 20-eigensolver.01-cg.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741
 match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142336
@@ -29,7 +18,7 @@ match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)
 match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
 match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
 
-Input: 20-eigensolver.03-cg_new.inp
+Input: 20-eigensolver.02-cg_new.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ;  Eigenvalue  1  ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539803
 match ;  Eigenvalue  2  ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142382
@@ -40,7 +29,7 @@ match ;  Partial charge 2  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 
 match ;  Partial charge 3  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
 match ;  Partial charge 4  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
 
-Input: 20-eigensolver.04-plan.inp
+Input: 20-eigensolver.03-plan.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision: 0.00011
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539719
@@ -53,7 +42,7 @@ match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)
 match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
 match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
 
-Input: 20-eigensolver.05-evolution.inp
+Input: 20-eigensolver.04-evolution.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539769
 match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142283
@@ -65,7 +54,7 @@ match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)
 match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
 
 Processors : 3
-Input: 20-eigensolver.06-rmmdiis.inp
+Input: 20-eigensolver.05-rmmdiis.inp
 Precision : 0.00015
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539769
@@ -78,7 +67,7 @@ match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)
 match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
 
 Processors : 3
-Input: 20-eigensolver.07-rmmdiis-noscalapack.inp
+Input: 20-eigensolver.06-rmmdiis-noscalapack.inp
 Precision : 0.00015
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539769

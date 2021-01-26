@@ -23,7 +23,6 @@ module eigensolver_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
   use eigen_cg_oct_m
-  use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use exponential_oct_m
   use global_oct_m
@@ -105,7 +104,6 @@ module eigensolver_oct_m
        RS_CG      =  5,         &
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
-       RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10
   
 contains
@@ -131,7 +129,7 @@ contains
     !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
     !% conjugate gradients (<tt>cg</tt>), except that when parallelization in states is
-    !% enabled, the default is <tt>lobpcg</tt>.
+    !% enabled, the default is <tt>rmmdiis</tt>.
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
@@ -143,12 +141,6 @@ contains
     !% Ref: Jiang et al., <i>Phys. Rev. B</i> <b>68</b>, 165337 (2003)
     !%Option evolution 9
     !% (Experimental) Propagation in imaginary time.
-    !%Option lobpcg 8
-    !% (Experimental) Locally optimal block-preconditioned
-    !% conjugate-gradient algorithm. Ref: A. Knyazev, Toward the
-    !% Optimal Preconditioned Eigensolver: Locally Optimal Block
-    !% Preconditioned Conjugate Gradient Method, <i>SIAM Journal on
-    !% Scientific Computing</i>, 23(2):517-541, 2001.  
     !%Option rmmdiis 10 
     !% Residual minimization scheme, direct inversion in the
     !% iterative subspace eigensolver, based on the implementation of
@@ -163,7 +155,7 @@ contains
     !%End
 
     if(st%parallel_in_states) then
-      default_es = RS_LOBPCG
+      default_es = RS_RMMDIIS
     else
       default_es = RS_CG
     end if
@@ -172,12 +164,8 @@ contains
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
-      message(2) = "Please use the lobpcg, or rmmdiis eigensolvers."
+      message(2) = "Please use the rmmdiis eigensolvers."
       call messages_fatal(2, namespace=namespace)
-    end if
-
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) then
-      call messages_experimental("lobpcg eigensolver with more than one block per node")
     end if
 
     call messages_obsolete_variable(namespace, 'EigensolverVerbose')
@@ -275,7 +263,6 @@ contains
         call messages_fatal(1)
       end if
       
-    case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
 
@@ -346,7 +333,7 @@ contains
       call messages_warning(namespace=namespace)
     end if
 
-    if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS/))) then
+    if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_RMMDIIS/))) then
       call preconditioner_init(eigens%pre, namespace, gr, mc)
     else
       call preconditioner_null(eigens%pre)
@@ -410,7 +397,7 @@ contains
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_RMMDIIS)
       call preconditioner_end(eigens%pre)
     end select
 
@@ -534,7 +521,7 @@ contains
     par_stat = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_LOBPCG)
+    case(RS_RMMDIIS)
       par_stat = .true.
     end select
 
@@ -551,7 +538,7 @@ contains
     has = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_CG, RS_CG_NEW, RS_LOBPCG)
+    case(RS_RMMDIIS, RS_CG, RS_CG_NEW)
       has = .true.
     end select
 

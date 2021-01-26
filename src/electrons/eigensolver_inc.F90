@@ -45,9 +45,6 @@
       maxiter = 1
       call X(eigensolver_evolution)(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
         eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
-    case(RS_LOBPCG)
-      call X(eigensolver_lobpcg)(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-        eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
     case(RS_RMMDIIS)
       if(iter <= eigens%rmmdiis_minimization_iter) then
         maxiter = 2

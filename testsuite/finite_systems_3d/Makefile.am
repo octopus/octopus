@@ -86,17 +86,13 @@ dist_share_DATA = \
     17-scfinlcao_alt.01-gs.inp                    \
 	18-preconditioner_poisson.test                \
 	18-preconditioner_poisson.01-poisson.inp      \
-	20-eigensolver.01-lobpcg.inp \
-	20-eigensolver.02-cg.inp \
-	20-eigensolver.03-cg_new.inp \
-	20-eigensolver.04-plan.inp \
-	20-eigensolver.05-evolution.inp \
-	20-eigensolver.06-rmmdiis.inp \
-	20-eigensolver.07-rmmdiis-noscalapack.inp \
+	20-eigensolver.01-cg.inp \
+	20-eigensolver.02-cg_new.inp \
+	20-eigensolver.03-plan.inp \
+	20-eigensolver.04-evolution.inp \
+	20-eigensolver.05-rmmdiis.inp \
+	20-eigensolver.06-rmmdiis-noscalapack.inp \
 	20-eigensolver.test \
-	21-lobpcg.01-spin_polarized.inp \
-	21-lobpcg.02-spinors.inp \
-	21-lobpcg.test \
 	22-preconditioner.test                       \
 	22-preconditioner.01-none.inp                \
 	22-preconditioner.02-filter.inp              \

@@ -536,7 +536,6 @@ electrons_f_srcs =                                 \
 	electrons/current.F90                      \
 	electrons/dos.F90                          \
 	electrons/eigen_cg.F90                     \
-	electrons/eigen_lobpcg.F90                 \
 	electrons/eigen_rmmdiis.F90                \
 	electrons/eigensolver.F90                  \
 	electrons/elf.F90                          \
@@ -561,7 +560,6 @@ noinst_HEADERS +=                                  \
         electrons/eigensolver_inc.F90              \
 	electrons/eigen_cg_inc.F90                 \
 	electrons/eigen_evolution_inc.F90          \
-	electrons/eigen_lobpcg_inc.F90             \
 	electrons/eigen_plan_inc.F90               \
 	electrons/eigen_rmmdiis_inc.F90            \
 	electrons/energy_calc_inc.F90              \
