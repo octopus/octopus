@@ -1038,6 +1038,13 @@ contains
             else
               call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
+          else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
+            if (states_are_real(st)) then
+              call  dx_fbe_calc(namespace, hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+            else
+              call  zx_fbe_calc(namespace, hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+            end if
+
           else
 
             if (states_are_real(st)) then
@@ -1554,10 +1561,12 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "xc_slater_inc.F90"
+#include "x_fbe_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "xc_slater_inc.F90"
+#include "x_fbe_inc.F90"
 
 end module v_ks_oct_m
 
