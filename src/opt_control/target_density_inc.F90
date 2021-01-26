@@ -228,7 +228,7 @@
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
-      if (.not. associated(stin%current)) then
+      if (.not. allocated(stin%current)) then
         SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%sb%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
       end if
