@@ -377,7 +377,7 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
 
   type(states_elec_t), pointer :: st
   integer :: dir1, dir2, ndir_, startdir, np
-  R_TYPE, pointer :: psi(:, :, :, :)
+  R_TYPE, allocatable :: psi(:, :, :, :)
   
   PUSH_SUB(X(calc_polarizability_finite))
 
@@ -410,10 +410,9 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
     end do
   end do
 
-  SAFE_DEALLOCATE_P(psi)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(calc_polarizability_finite))
-
 end subroutine X(calc_polarizability_finite)
 
 
@@ -428,7 +427,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, ch
   type(states_elec_t), pointer :: st
   integer :: dir1, dir2, np
   R_TYPE  :: trace
-  R_TYPE, pointer :: psi(:, :, :, :)
+  R_TYPE, allocatable :: psi(:, :, :, :)
   
   PUSH_SUB(X(lr_calc_susceptibility))
 
@@ -466,7 +465,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, ch
     end do
   end do
   
-  SAFE_DEALLOCATE_P(psi)
+  SAFE_DEALLOCATE_A(psi)
   
   ! We now add the minus sign from the definition of the susceptibility (chi = -d^2 E /d B^2)
   chi_para(:,:) = -chi_para(:,:)/P_C**2

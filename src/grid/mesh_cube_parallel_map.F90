@@ -75,7 +75,7 @@ contains
 
     integer :: im, ip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
     integer, allocatable :: cube_part_local(:), global_index(:)
-    integer, pointer :: mf_order(:), cf_order(:)
+    integer, allocatable :: mf_order(:), cf_order(:)
     type(dimensions_t), allocatable :: part(:)
 
     type(profile_t), save :: prof
@@ -160,8 +160,8 @@ contains
 
       this%m2c_cf_order(ip, 1:3) = lxyz(1:3)
     end do
-    SAFE_DEALLOCATE_P(mf_order)
-    SAFE_DEALLOCATE_P(cf_order)
+    SAFE_DEALLOCATE_A(mf_order)
+    SAFE_DEALLOCATE_A(cf_order)
     SAFE_DEALLOCATE_A(cube_part_local)
     SAFE_DEALLOCATE_A(global_index)
 
@@ -224,8 +224,8 @@ contains
       this%c2m_mf_order(1:this%c2m_nrec) = mf_order(1:this%c2m_nrec)
     end if
     
-    SAFE_DEALLOCATE_P(mf_order)
-    SAFE_DEALLOCATE_P(cf_order)
+    SAFE_DEALLOCATE_A(mf_order)
+    SAFE_DEALLOCATE_A(cf_order)
     SAFE_DEALLOCATE_A(cube_part_local)
     SAFE_DEALLOCATE_A(global_index)
 

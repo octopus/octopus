@@ -231,7 +231,7 @@ contains
   ! progress
     integer              :: idone, ntodo
 
-    FLOAT, pointer :: cube_f(:)
+    FLOAT, allocatable :: cube_f(:)
     type(qshep_t) :: interp
 
     PUSH_SUB(pes_out_velocity_map_cut)
@@ -472,14 +472,14 @@ contains
   !
   ! ---------------------------------------------------------
   subroutine pes_out_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
-    type(namespace_t), intent(in)  :: namespace
-    FLOAT,           intent(in)    :: pesK(:,:,:)
-    FLOAT,           intent(in)    :: Lk(:,:)
-    integer,         intent(in)    :: ll(:)
-    integer,         intent(in)    :: dim
-    FLOAT, pointer,  intent(inout) :: cube_f(:)
-    type(qshep_t),   intent(out)   :: interp
-    FLOAT, optional, intent(in)   :: pmesh(:,:,:,:)
+    type(namespace_t),  intent(in)    :: namespace
+    FLOAT,              intent(in)    :: pesK(:,:,:)
+    FLOAT,              intent(in)    :: Lk(:,:)
+    integer,            intent(in)    :: ll(:)
+    integer,            intent(in)    :: dim
+    FLOAT, allocatable, intent(out)   :: cube_f(:)
+    type(qshep_t),      intent(out)   :: interp
+    FLOAT, optional,    intent(in)    :: pmesh(:,:,:,:)
 
     integer :: np, ii, ix, iy, iz
     FLOAT   :: KK(3)
@@ -573,14 +573,14 @@ contains
   !>  Destroy the interpolation objects
   ! ---------------------------------------------------------
   subroutine pes_out_interpolator_end(cube_f, interp)
-    FLOAT, pointer, intent(inout) :: cube_f(:)
-    type(qshep_t),  intent(inout) :: interp
+    FLOAT, allocatable, intent(inout) :: cube_f(:)
+    type(qshep_t),      intent(inout) :: interp
 
     PUSH_SUB(pes_out_interpolator_end)
 
     call qshep_end(interp)
 
-    SAFE_DEALLOCATE_P(cube_f)
+    SAFE_DEALLOCATE_A(cube_f)
 
     POP_SUB(pes_out_interpolator_end)
   end subroutine pes_out_interpolator_end

@@ -61,9 +61,9 @@ program photoelectron_spectrum
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
   FLOAT                :: center(3)
-  FLOAT, pointer       :: Lg(:,:), RR(:)
+  FLOAT, allocatable   :: Lg(:,:), RR(:)
   FLOAT, allocatable   :: pmesh(:,:,:,:)   !< The final momentum-space (p) mesh 
-  integer, pointer     :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
+  integer, allocatable :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
   logical              :: need_pmesh, resolve_states
   integer              :: ii, i1,i2,i3, idxZero(1:3), st_range(2)
   type(block_t)        :: blk  
@@ -477,10 +477,10 @@ program photoelectron_spectrum
   
   SAFE_DEALLOCATE_A(pesP)    
   SAFE_DEALLOCATE_A(pmesh)
-  SAFE_DEALLOCATE_P(Lp)
+  SAFE_DEALLOCATE_A(Lp)
   SAFE_DEALLOCATE_A(Ekin)
   if (.not. need_pmesh .or. pes_method == OPTION__PHOTOELECTRONSPECTRUM__PES_MASK) then
-    SAFE_DEALLOCATE_P(Lg)
+    SAFE_DEALLOCATE_A(Lg)
   end if
   contains
     

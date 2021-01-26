@@ -68,9 +68,8 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   R_TYPE,                         intent(inout) :: force(:, :)
 
   FLOAT,  allocatable :: vloc(:)
-  R_TYPE, pointer     :: zvloc(:)
   integer             :: ip, idir, iatom
-  R_TYPE, allocatable  :: force_tmp(:,:)
+  R_TYPE, allocatable  :: zvloc(:), force_tmp(:,:)
   type(profile_t), save :: prof
  
   PUSH_SUB(X(forces_from_local_potential))
@@ -110,7 +109,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   force(1:gr%sb%dim, 1:geo%natoms) = force(1:gr%sb%dim, 1:geo%natoms) + force_tmp(1:gr%sb%dim, 1:geo%natoms)
 
   SAFE_DEALLOCATE_A(vloc)
-  SAFE_DEALLOCATE_P(zvloc)
+  SAFE_DEALLOCATE_A(zvloc)
   SAFE_DEALLOCATE_A(force_tmp)
 
   call profiling_out(prof)
@@ -141,7 +140,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   FLOAT :: ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  pointer :: grad_rho(:, :)
+  FLOAT,  allocatable :: grad_rho(:, :)
   FLOAT,  allocatable :: force_psi(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(wfs_elec_t) :: psib, grad_psib(1:MAX_DIM)
@@ -382,7 +381,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
 
   SAFE_DEALLOCATE_A(force_psi)
-  SAFE_DEALLOCATE_P(grad_rho)
+  SAFE_DEALLOCATE_A(grad_rho)
 
   call profiling_out(prof)
   

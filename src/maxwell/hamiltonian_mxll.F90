@@ -404,7 +404,7 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof
-    class(batch_t), pointer :: gradb(:)
+    type(batch_t), allocatable :: gradb(:)
     integer :: idir, ifield, field_dir, pml_dir, rs_sign
     integer :: ip, ip_in, il
     FLOAT :: pml_c, grad_real, grad_imag
@@ -435,7 +435,7 @@ contains
       endif
     end if
 
-    allocate(gradb(1:der%dim), mold=psib)
+    SAFE_ALLOCATE(gradb(1:der%dim))
     do idir = 1, der%dim
       call psib%copy_to(gradb(idir))
     end do
@@ -472,7 +472,7 @@ contains
     do idir = 1, der%dim
       call gradb(idir)%end()
     end do
-    SAFE_DEALLOCATE_P(gradb)
+    SAFE_DEALLOCATE_A(gradb)
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_apply_batch)

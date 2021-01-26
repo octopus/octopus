@@ -1217,8 +1217,9 @@ contains
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character(len=3) :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48), ecutrho, ecutwfc
-    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
-    CMPLX, pointer :: field_g(:,:), zpsi(:,:)
+    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:)
+    FLOAT, allocatable :: vxc(:,:), dpsi(:,:)
+    CMPLX, allocatable :: field_g(:,:), zpsi(:,:)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell_density, shell_wfn
@@ -1304,7 +1305,7 @@ contains
     vxc(:,:) = vxc(:,:) * M_TWO / (product(cube%rs_n_global(1:3)) * gr%mesh%volume_element)
     call dbgw_write_FS(iunit, vxc, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
-    SAFE_DEALLOCATE_P(vxc)
+    SAFE_DEALLOCATE_A(vxc)
 
 
     message(1) = "BerkeleyGW output: RHO"
@@ -1369,12 +1370,12 @@ contains
     call cube_end(cube)
     
     if(states_are_real(st)) then
-      SAFE_DEALLOCATE_P(dpsi)
+      SAFE_DEALLOCATE_A(dpsi)
     else
-      SAFE_DEALLOCATE_P(zpsi)
+      SAFE_DEALLOCATE_A(zpsi)
     end if
-    SAFE_DEALLOCATE_P(vxc)
-    SAFE_DEALLOCATE_P(field_g)
+    SAFE_DEALLOCATE_A(vxc)
+    SAFE_DEALLOCATE_A(field_g)
     SAFE_DEALLOCATE_P(ifmin)
     SAFE_DEALLOCATE_P(ifmax)
     SAFE_DEALLOCATE_P(ngk)
