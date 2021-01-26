@@ -141,7 +141,7 @@ contains
       hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
 
-    if(associated(hm%vberry)) then
+    if (allocated(hm%vberry)) then
       hm%energy%total = hm%energy%total + hm%energy%berry
     else
       hm%energy%berry = M_ZERO
@@ -187,7 +187,7 @@ contains
         write(message(4), '(6x,a, f18.8)')'Int[n*v_E]  = ', units_from_atomic(units_out%energy, hm%energy%intnvstatic)
         call messages_info(4, iunit)
       end if
-      if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
+      if (allocated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  

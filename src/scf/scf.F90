@@ -158,7 +158,7 @@ contains
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
-    if(associated(hm%vberry)) then
+    if (allocated(hm%vberry)) then
       call berry_init(scf%berry, namespace)
     end if
     
@@ -482,7 +482,7 @@ contains
     !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
     call parse_variable(namespace, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
-    if(associated(hm%vberry)) scf%calc_dipole = .true.
+    if (allocated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
     !%Type logical
@@ -748,7 +748,7 @@ contains
 
         !We check if the system is coupled with a partner that requires self-consistency
       !  if(hamiltonian_has_scf_partner(hm)) then
-        if(associated(hm%vberry)) then
+        if (allocated(hm%vberry)) then
           !In this case, v_Hxc is frozen and we do an internal SCF loop over the 
           ! partners that require SCF
           ks%frozen_hxc = .true.
@@ -1091,7 +1091,7 @@ contains
           call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
-        if(associated(hm%vberry)) then
+        if (allocated(hm%vberry)) then
           call calc_dipole(dipole, gr, st, geo)
           call write_dipole(stdout, dipole)
         end if
