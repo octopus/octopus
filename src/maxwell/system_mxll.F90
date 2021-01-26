@@ -74,10 +74,10 @@ module system_mxll_oct_m
     MULTIGRID_MX_TO_MA_LARGE   = 2
 
   type, extends(system_t) :: system_mxll_t
-    type(states_mxll_t), pointer :: st    !< the states
+    type(states_mxll_t)          :: st    !< the states
     type(hamiltonian_mxll_t)     :: hm
     type(geometry_t)             :: geo
-    type(grid_t),        pointer :: gr    !< the mesh
+    type(grid_t)                 :: gr    !< the mesh
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
 
@@ -144,9 +144,6 @@ contains
     call profiling_in(prof,"SYSTEM_MXLL_INIT")
 
     this%namespace = namespace
-
-    SAFE_ALLOCATE(this%gr)
-    SAFE_ALLOCATE(this%st)
 
     call messages_obsolete_variable(this%namespace, 'SystemName')
     call space_init(this%space, this%namespace)
@@ -664,15 +661,10 @@ contains
 
     call multicomm_end(this%mc)
 
-    if(associated(this%st)) then
-      call states_mxll_end(this%st)
-      SAFE_DEALLOCATE_P(this%st)
-    end if
+    call states_mxll_end(this%st)
 
     call simul_box_end(this%gr%sb)
     call grid_end(this%gr)
-
-    SAFE_DEALLOCATE_P(this%gr)
 
     call profiling_out(prof)
 
