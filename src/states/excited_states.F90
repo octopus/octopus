@@ -73,10 +73,10 @@ module excited_states_oct_m
 
   type excited_states_t
     ! Components are public by default
-    type(states_elec_t),      pointer :: st
-    integer                      :: n_pairs
-    type(states_pair_t), pointer :: pair(:)
-    FLOAT,               pointer :: weight(:)
+    type(states_elec_t),     pointer :: st
+    integer                          :: n_pairs
+    type(states_pair_t), allocatable :: pair(:)
+    FLOAT,               allocatable :: weight(:)
   end type excited_states_t
 
 contains
@@ -306,8 +306,8 @@ contains
     PUSH_SUB(excited_states_kill)
 
     nullify(excited_state%st)
-    SAFE_DEALLOCATE_P(excited_state%pair)
-    SAFE_DEALLOCATE_P(excited_state%weight)
+    SAFE_DEALLOCATE_A(excited_state%pair)
+    SAFE_DEALLOCATE_A(excited_state%weight)
 
     POP_SUB(excited_states_kill)
   end subroutine excited_states_kill

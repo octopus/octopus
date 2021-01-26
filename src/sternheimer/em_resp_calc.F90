@@ -89,8 +89,8 @@ module em_resp_calc_oct_m
 
   type matrix_t
     private
-    FLOAT, pointer :: dmatrix(:, :)
-    CMPLX, pointer :: zmatrix(:, :)
+    FLOAT, allocatable :: dmatrix(:, :)
+    CMPLX, allocatable :: zmatrix(:, :)
   end type matrix_t
 
 contains
@@ -108,7 +108,7 @@ contains
 
     PUSH_SUB(lr_calc_current)
 
-    if(.not. associated(lr%dl_j)) then
+    if (.not. allocated(lr%dl_j)) then
       SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
     end if
 

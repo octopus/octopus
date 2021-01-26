@@ -82,24 +82,24 @@ module epot_oct_m
     ! Components are public by default
 
     ! Classical charges:
-    integer        :: classical_pot !< how to include the classical charges
-    FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
+    integer            :: classical_pot !< how to include the classical charges
+    FLOAT, allocatable :: Vclassical(:) !< We use it to store the potential of the classical charges
 
     ! Ions
-    FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
+    FLOAT,             allocatable :: vpsl(:)       !< the local part of the pseudopotentials
                                                 !< plus the potential from static electric fields
-    type(projector_t), pointer :: proj(:)       !< non-local projectors
-    logical                    :: non_local
-    integer                    :: natoms
+    type(projector_t), allocatable :: proj(:)       !< non-local projectors
+    logical                        :: non_local
+    integer                        :: natoms
 
     ! External e-m fields
-    integer                :: no_lasers            !< number of laser pulses used
-    type(laser_t), pointer :: lasers(:)            !< lasers stuff
-    FLOAT,         pointer :: E_field(:)           !< static electric field
-    FLOAT, pointer         :: v_static(:)          !< static scalar potential
+    integer                    :: no_lasers            !< number of laser pulses used
+    type(laser_t), allocatable :: lasers(:)            !< lasers stuff
+    FLOAT,         allocatable :: E_field(:)           !< static electric field
+    FLOAT, allocatable     :: v_static(:)          !< static scalar potential
     FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
-    FLOAT, pointer         :: B_field(:)           !< static magnetic field
-    FLOAT, pointer         :: A_static(:,:)        !< static vector potential
+    FLOAT, allocatable     :: B_field(:)           !< static magnetic field
+    FLOAT, allocatable     :: A_static(:,:)        !< static vector potential
     type(gauge_field_t)    :: gfield               !< the time-dependent gauge field
     integer                :: reltype              !< type of relativistic correction to use
 
@@ -114,12 +114,12 @@ module epot_oct_m
     FLOAT, private :: so_strength
     
     !> the ion-ion energy and force
-    FLOAT          :: eii
-    FLOAT, pointer :: fii(:, :)
+    FLOAT              :: eii
+    FLOAT, allocatable :: fii(:, :)
     FLOAT, allocatable :: vdw_forces(:, :)
     
-    FLOAT, pointer, private :: local_potential(:,:)
-    logical,        private :: local_potential_precalculated
+    FLOAT, allocatable, private :: local_potential(:,:)
+    logical,            private :: local_potential_precalculated
 
     logical          :: ignore_external_ions
     logical,                  private :: have_density
@@ -191,7 +191,6 @@ contains
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
     ep%classical_pot = 0
-    nullify(ep%Vclassical)
     if(geo%ncatoms > 0) then
 
       if(simul_box_is_periodic(gr%sb)) &
@@ -236,8 +235,6 @@ contains
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
-
-    nullify(ep%B_field, ep%A_static, ep%E_field, ep%v_static)
 
     !%Variable GyromagneticRatio
     !%Type float
@@ -339,7 +336,6 @@ contains
 
     call gauge_field_nullify(ep%gfield)
 
-    nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
     
 
@@ -417,16 +413,16 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    SAFE_DEALLOCATE_P(ep%local_potential)
-    SAFE_DEALLOCATE_P(ep%fii)
+    SAFE_DEALLOCATE_A(ep%local_potential)
+    SAFE_DEALLOCATE_A(ep%fii)
     SAFE_DEALLOCATE_A(ep%vdw_forces)
-    SAFE_DEALLOCATE_P(ep%vpsl)
+    SAFE_DEALLOCATE_A(ep%vpsl)
 
     if(ep%classical_pot > 0) then
       ep%classical_pot = 0
       ! sanity check
-      ASSERT(associated(ep%Vclassical)) 
-      SAFE_DEALLOCATE_P(ep%Vclassical)         ! and clean up
+      ASSERT(allocated(ep%Vclassical)) 
+      SAFE_DEALLOCATE_A(ep%Vclassical)         ! and clean up
     end if
 
 
@@ -436,19 +432,19 @@ contains
     call laser_end(ep%no_lasers, ep%lasers)
 
     ! the macroscopic fields
-    SAFE_DEALLOCATE_P(ep%E_field)
-    SAFE_DEALLOCATE_P(ep%v_static)
+    SAFE_DEALLOCATE_A(ep%E_field)
+    SAFE_DEALLOCATE_A(ep%v_static)
     SAFE_DEALLOCATE_A(ep%v_ext)
-    SAFE_DEALLOCATE_P(ep%B_field)
-    SAFE_DEALLOCATE_P(ep%A_static)
+    SAFE_DEALLOCATE_A(ep%B_field)
+    SAFE_DEALLOCATE_A(ep%A_static)
 
     do iproj = 1, ep%natoms
       if (projector_is_null(ep%proj(iproj))) cycle
       call projector_end(ep%proj(iproj))
     end do
 
-    ASSERT(associated(ep%proj))
-    SAFE_DEALLOCATE_P(ep%proj)
+    ASSERT(allocated(ep%proj))
+    SAFE_DEALLOCATE_A(ep%proj)
 
     POP_SUB(epot_end)
 
@@ -554,7 +550,7 @@ contains
       call lalg_axpy(mesh%np, M_ONE, ep%Vclassical, ep%vpsl) 
     end if
 
-    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) then
+    if (allocated(ep%e_field) .and. sb%periodic_dim < sb%dim) then
       call lalg_axpy(mesh%np, M_ONE, ep%v_static, ep%vpsl)
     end if
 
@@ -715,7 +711,7 @@ contains
     
     PUSH_SUB(epot_precalc_local_potential)
     
-    if(.not. associated(ep%local_potential)) then
+    if(.not. allocated(ep%local_potential)) then
       SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
     end if
 
@@ -788,7 +784,7 @@ contains
 
     epot_have_external_potentials =  .false.
 
-    if( associated(ep%v_static) .or. associated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
+    if( allocated(ep%v_static) .or. allocated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
 
     POP_SUB(epot_have_external_potentials)
 

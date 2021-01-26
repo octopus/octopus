@@ -287,7 +287,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_init(lasers, namespace, no_l, mesh)
-    type(laser_t),       pointer     :: lasers(:)
+    type(laser_t),       allocatable :: lasers(:)
     type(namespace_t),   intent(in)  :: namespace
     integer,             intent(out) :: no_l
     type(mesh_t),        intent(in)  :: mesh
@@ -496,8 +496,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_end(no_l, lasers)
-    type(laser_t), pointer :: lasers(:)
-    integer,    intent(in) :: no_l
+    type(laser_t), allocatable :: lasers(:)
+    integer,       intent(in)  :: no_l
 
     integer :: il
 
@@ -514,7 +514,7 @@ contains
           SAFE_DEALLOCATE_A(lasers(il)%a)
         end select
       end do
-      SAFE_DEALLOCATE_P(lasers)
+      SAFE_DEALLOCATE_A(lasers)
     end if
 
     POP_SUB(laser_end)

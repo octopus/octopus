@@ -77,7 +77,7 @@ module propagation_oct_m
   type oct_prop_t
     private
     integer :: number_checkpoints
-    integer, pointer :: iter(:)
+    integer, allocatable :: iter(:)
     integer :: niter
     character(len=100) :: dirname
     type(restart_t) :: restart_load
@@ -941,7 +941,7 @@ contains
           call states_elec_get_state(psi, gr%mesh, p, ik, zpsi)
           
           zoppsi = M_z0
-          if(associated(hm%ep%a_static)) then
+          if (allocated(hm%ep%a_static)) then
             call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else
@@ -1124,7 +1124,7 @@ contains
     call restart_end(prop%restart_load)
     call restart_end(prop%restart_dump)
 
-    SAFE_DEALLOCATE_P(prop%iter)
+    SAFE_DEALLOCATE_A(prop%iter)
     ! This routine should maybe delete the files?
 
     POP_SUB(oct_prop_end)
