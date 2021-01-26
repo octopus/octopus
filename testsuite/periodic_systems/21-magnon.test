@@ -11,22 +11,15 @@ Input      : 21-magnon.01-gs.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 1.10e-08
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -123.76308627
-Precision: 7.83e-14
+Precision: 1.65e-08
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -123.76308618499999
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -78.31680646
-Precision: 5.50e-09
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.445635915
-Precision: 1.10e-08
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 28.41840006
-Precision: 5.50e-09
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.498991475
-Precision: 1.33e-15
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.445635685
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 28.418400205
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.4989915
 match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.32675244
-Precision: 1.10e-08
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 50.75427283
-Precision: 2.20e-08
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -107.79320867999999
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 50.75427295
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -107.79320891500001
 
 Precision: 1.00e-15
 match ;  k-point 2 (x)   ; GREPFIELD(static/info, '#k =   2', 7) ; 0.0
