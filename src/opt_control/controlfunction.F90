@@ -150,10 +150,8 @@ module controlfunction_oct_m
     FLOAT, allocatable :: theta(:)
   end type controlfunction_t
   
-  !> the next variable has to be a pointer to avoid a bug in the IBM compiler
-  !! and it can not be properly initialized thanks to a bug in the PGI compiler
-  logical                                 :: cf_common_initialized=.false.
-  type(controlfunction_common_t), pointer :: cf_common => NULL()
+  logical                        :: cf_common_initialized=.false.
+  type(controlfunction_common_t) :: cf_common
 
 contains
 
@@ -196,17 +194,13 @@ contains
     PUSH_SUB(controlfunction_mod_init)
 
     if(.not.cf_common_initialized)then
-      nullify(cf_common)
       cf_common_initialized=.true.
     else
       message(1) = "Internal error: Cannot call controlfunction_mod_init twice."
       call messages_fatal(1)
     end if
 
-    if(.not. associated(cf_common)) then
-      SAFE_ALLOCATE(cf_common)
-      call controlfunction_common_nullify(cf_common)
-    end if
+    call controlfunction_common_nullify(cf_common)
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
 
@@ -1408,7 +1402,6 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(cf_common%td_penalty)
-    SAFE_DEALLOCATE_P(cf_common)
 
     POP_SUB(controlfunction_mod_close)
   end subroutine controlfunction_mod_close
