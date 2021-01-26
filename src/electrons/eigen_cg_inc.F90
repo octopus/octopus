@@ -502,7 +502,7 @@ end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_cg_jiang) (namespace, gr, st, hm, tol, niter, converged, ik, diff)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
@@ -519,7 +519,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
     gamma, sol(2), alpha, beta, theta, theta2, res, norm
   R_TYPE :: dot
 
-  PUSH_SUB(X(eigensolver_cg2_new))
+  PUSH_SUB(X(eigensolver_cg_jiang))
 
   dim = st%d%dim
   nst = st%nst
@@ -673,8 +673,8 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
   SAFE_DEALLOCATE_A(sd)
   SAFE_DEALLOCATE_A(cgp)
 
-  POP_SUB(X(eigensolver_cg2_new))
-end subroutine X(eigensolver_cg2_new)
+  POP_SUB(X(eigensolver_cg_jiang))
+end subroutine X(eigensolver_cg_jiang)
 
 !! Local Variables:
 !! mode: f90

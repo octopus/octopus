@@ -33,7 +33,7 @@
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
-      call X(eigensolver_cg2_new)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+      call X(eigensolver_cg_jiang)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
     case(RS_CG)
       call X(eigensolver_cg2)(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
         eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
