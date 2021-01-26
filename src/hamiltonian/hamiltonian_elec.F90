@@ -127,7 +127,7 @@ module hamiltonian_elec_oct_m
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
-    type(poisson_t), pointer :: psolver      !< Poisson solver
+    type(poisson_t)          :: psolver      !< Poisson solver
     type(poisson_t), pointer :: psolver_fine !< Poisson solver on the fine grid
 
     !> The self-induced vector potential and magnetic field
@@ -205,7 +205,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
-    type(hamiltonian_elec_t),                   intent(inout) :: hm
+    type(hamiltonian_elec_t),           target, intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
@@ -299,8 +299,6 @@ contains
     end if
 
     !Initialize Poisson solvers
-    nullify(hm%psolver)
-    SAFE_ALLOCATE(hm%psolver)
     call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
 
     if(poisson_is_multigrid(hm%psolver)) then
@@ -780,7 +778,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_end(hm)
-    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
 
     type(partner_iterator_t) :: iter
     class(interaction_partner_t), pointer :: potential
@@ -820,7 +818,6 @@ contains
       SAFE_DEALLOCATE_P(hm%psolver_fine)
     end if
     call poisson_end(hm%psolver)
-    SAFE_DEALLOCATE_P(hm%psolver)
 
     nullify(hm%xc)
 
