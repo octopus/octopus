@@ -67,8 +67,8 @@ contains
     integer,                    intent(in)  :: part_out(:) !< point -> partition
     integer,                    intent(out) :: nsend
     integer,                    intent(out) :: nrec
-    integer, pointer,           intent(out) :: order_in(:) 
-    integer, pointer,           intent(out) :: order_out(:)
+    integer, allocatable,       intent(out) :: order_in(:) 
+    integer, allocatable,       intent(out) :: order_out(:)
 
     logical :: found
     integer :: n12, tmp_partno(2), ipart, opart, ip, pcount, mycolumn, irec, isend, ipos

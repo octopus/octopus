@@ -236,14 +236,14 @@ contains
     logical                     :: found
    
     integer                     :: idir, ipart, np_inner, np_bndry
-    integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
+    integer, allocatable        :: np_ghost_tmp(:), np_bndry_tmp(:)
     !> Number of ghost points per
     !! neighbour per partition.      
-    integer, pointer            :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
-    integer, pointer            :: xghost_tmp(:)
-    integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
-    integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
-    integer, pointer            :: points(:), points_bndry(:), part_bndry(:), part_inner(:)
+    integer, allocatable        :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
+    integer, allocatable        :: xghost_tmp(:)
+    integer, allocatable        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
+    integer, allocatable        :: xghost_neigh_back(:)     !< Same as previous, but outward
+    integer, allocatable        :: points(:), points_bndry(:), part_bndry(:), part_inner(:)
 
     PUSH_SUB(vec_init)
 
@@ -341,7 +341,7 @@ contains
     end do
     call partition_get_partition_number(inner_partition, vp%np_local, &
          points, vp%part_local)
-    SAFE_DEALLOCATE_P(points)
+    SAFE_DEALLOCATE_A(points)
 
     ip       = 0
     np_inner = 0
@@ -459,10 +459,10 @@ contains
       end do
     end if
 
-    SAFE_DEALLOCATE_P(points)
-    SAFE_DEALLOCATE_P(points_bndry)
-    SAFE_DEALLOCATE_P(part_inner)
-    SAFE_DEALLOCATE_P(part_bndry)
+    SAFE_DEALLOCATE_A(points)
+    SAFE_DEALLOCATE_A(points_bndry)
+    SAFE_DEALLOCATE_A(part_inner)
+    SAFE_DEALLOCATE_A(part_bndry)
 
     call init_MPI_Alltoall()
     tmp=0
@@ -627,8 +627,8 @@ contains
         end if
       end do
     end if  
-    SAFE_DEALLOCATE_P(part_bndry)
-    SAFE_DEALLOCATE_P(points)
+    SAFE_DEALLOCATE_A(part_bndry)
+    SAFE_DEALLOCATE_A(points)
     SAFE_DEALLOCATE_A(irr)
     
     do inode = ip, jp
@@ -649,10 +649,10 @@ contains
       end do
     end do
     vp%xbndry = xbndry_tmp(vp%partno)
-    SAFE_DEALLOCATE_P(np_ghost_tmp)
-    SAFE_DEALLOCATE_P(np_bndry_tmp)
-    SAFE_DEALLOCATE_P(xbndry_tmp)
-    SAFE_DEALLOCATE_P(xghost_tmp)    
+    SAFE_DEALLOCATE_A(np_ghost_tmp)
+    SAFE_DEALLOCATE_A(np_bndry_tmp)
+    SAFE_DEALLOCATE_A(xbndry_tmp)
+    SAFE_DEALLOCATE_A(xghost_tmp)    
     
     ! Complete entries in vp.
     vp%comm      = comm
@@ -722,7 +722,7 @@ contains
       SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
       ! Get the destination partitions
       call partition_get_partition_number(inner_partition, vp%np_local, points, vp%part_local_rev)
-      SAFE_DEALLOCATE_P(points)
+      SAFE_DEALLOCATE_A(points)
 
       do ip = 1, vp%np_local
         ipart = vp%part_local_rev(ip)
@@ -772,8 +772,8 @@ contains
       call subarray_init(vp%ghost_spoints, total, displacements)
 
       SAFE_DEALLOCATE_A(displacements)
-      SAFE_DEALLOCATE_P(xghost_neigh_partno)
-        
+      SAFE_DEALLOCATE_A(xghost_neigh_partno)
+ 
       ! Send and receive displacements.
       ! Send displacement cannot directly be calculated
       ! from vp%xghost_neigh because those are indices for
@@ -793,7 +793,7 @@ contains
 
       ! This is like in vec_scatter/gather.
       vp%ghost_rdispls(1:vp%npart) = xghost_neigh_back(1:vp%npart) - vp%xghost
-      SAFE_DEALLOCATE_P(xghost_neigh_back)
+      SAFE_DEALLOCATE_A(xghost_neigh_back)
       
       POP_SUB(vec_init.init_send_points)
     end subroutine init_send_points

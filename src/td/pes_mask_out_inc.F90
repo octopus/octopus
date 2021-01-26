@@ -661,14 +661,14 @@ end subroutine pes_mask_fullmap
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
-  type(namespace_t), intent(in)    :: namespace
-  FLOAT,             intent(in)    :: pesK(:,:,:)
-  FLOAT,             intent(in)    :: Lk(:,:)
-  integer,           intent(in)    :: ll(:)
-  integer,           intent(in)    :: dim
-  FLOAT, pointer,    intent(inout) :: cube_f(:)
-  type(qshep_t),     intent(out)   :: interp
-  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)  
+  type(namespace_t),  intent(in)    :: namespace
+  FLOAT,              intent(in)    :: pesK(:,:,:)
+  FLOAT,              intent(in)    :: Lk(:,:)
+  integer,            intent(in)    :: ll(:)
+  integer,            intent(in)    :: dim
+  FLOAT, allocatable, intent(out)   :: cube_f(:)
+  type(qshep_t),      intent(out)   :: interp
+  FLOAT, optional,    intent(in)    :: pmesh(:,:,:,:)
   
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
@@ -762,14 +762,14 @@ end subroutine pes_mask_interpolator_init
 !>  Destroy the interpolation objects
 ! ---------------------------------------------------------
 subroutine pes_mask_interpolator_end(cube_f, interp)
-  FLOAT, pointer, intent(inout) :: cube_f(:)
-  type(qshep_t),  intent(inout) :: interp
+  FLOAT, allocatable, intent(inout) :: cube_f(:)
+  type(qshep_t),      intent(inout) :: interp
 
   PUSH_SUB(pes_mask_interpolator_end)
   
   call qshep_end(interp)
   
-  SAFE_DEALLOCATE_P(cube_f)
+  SAFE_DEALLOCATE_A(cube_f)
   
   POP_SUB(pes_mask_interpolator_end)
 end subroutine pes_mask_interpolator_end
@@ -924,7 +924,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
 ! progress
   integer              :: idone, ntodo
 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
@@ -1174,7 +1174,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
@@ -1295,7 +1295,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dphi, theta, phi, Ex, Ey, EE, phiBounds(2)
@@ -1426,7 +1426,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
@@ -1698,7 +1698,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
   FLOAT, allocatable :: npoints(:), pes(:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi,EE
@@ -2006,14 +2006,14 @@ end subroutine pes_mask_output
 !> Read pes info.
 ! ---------------------------------------------------------
 subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
-  character(len=*),  intent(in)  :: dir
-  type(namespace_t), intent(in)  :: namespace
-  integer,           intent(out) :: dim  
-  FLOAT,             intent(out) :: Emax
-  FLOAT,             intent(out) :: Estep
-  integer,           intent(out) :: ll(:)
-  FLOAT, pointer,    intent(out) :: Lk(:,:)
-  FLOAT, pointer,    intent(out) :: RR(:)
+  character(len=*),   intent(in)  :: dir
+  type(namespace_t),  intent(in)  :: namespace
+  integer,            intent(out) :: dim  
+  FLOAT,              intent(out) :: Emax
+  FLOAT,              intent(out) :: Estep
+  integer,            intent(out) :: ll(:)
+  FLOAT, allocatable, intent(out) :: Lk(:,:)
+  FLOAT, allocatable, intent(out) :: RR(:)
 
 
   character(len=256) :: filename, dummy

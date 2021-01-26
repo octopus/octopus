@@ -389,7 +389,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib
+    type(wfs_elec_t) :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
 
@@ -413,7 +413,6 @@ contains
 
 
     !Initialize external potential
-    SAFE_ALLOCATE(epsib)
     call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
@@ -432,7 +431,6 @@ contains
     SAFE_DEALLOCATE_A(psi)
 
     call epsib%end()
-    SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
@@ -445,7 +443,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib, epsib2
+    type(wfs_elec_t) :: epsib, epsib2
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -467,8 +465,6 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
-    SAFE_ALLOCATE(epsib)
-    SAFE_ALLOCATE(epsib2)
     call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
 
     !We set the phase of the batch if needed
@@ -527,9 +523,7 @@ contains
     SAFE_DEALLOCATE_A(zdot)
 
     call epsib%end()
-    SAFE_DEALLOCATE_P(epsib)
     call epsib2%end()
-    SAFE_DEALLOCATE_P(epsib2)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
@@ -543,7 +537,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: hpsib
+    type(wfs_elec_t) :: hpsib
     integer :: itime, terms
 
     PUSH_SUB(test_hamiltonian)
@@ -588,7 +582,6 @@ contains
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
-    SAFE_ALLOCATE(hpsib)
     call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
@@ -613,7 +606,6 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
 
     call hpsib%end(copy = .false.)
-    SAFE_DEALLOCATE_P(hpsib)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 

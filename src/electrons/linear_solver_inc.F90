@@ -316,8 +316,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
   integer,                  intent(out)   :: iter_used
   logical,                  intent(in)    :: occ_response
 
-  R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:), psi(:, :)
-  R_TYPE, pointer :: phat(:,:), shat(:,:)
+  R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:), psi(:, :), phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
   logical :: conv_last, conv
   integer :: iter, idim, ip
@@ -449,8 +448,8 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
   SAFE_DEALLOCATE_A(s)
   SAFE_DEALLOCATE_A(rs)
   SAFE_DEALLOCATE_A(Hs)
-  SAFE_DEALLOCATE_P(phat)
-  SAFE_DEALLOCATE_P(shat)
+  SAFE_DEALLOCATE_A(phat)
+  SAFE_DEALLOCATE_A(shat)
 
   POP_SUB(X(linear_solver_bicgstab))
 end subroutine X(linear_solver_bicgstab)

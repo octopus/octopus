@@ -96,12 +96,12 @@ contains
   ! ------------------------------------------
 
   subroutine lookup_get_list(this, npoint, points, radius, nlist, list)
-    type(lookup_t), intent(in)  :: this
-    integer,        intent(in)  :: npoint
-    FLOAT,          intent(in)  :: points(:, :) !< (1:npoint, 1:this%dim)
-    FLOAT,          intent(in)  :: radius
-    integer,        intent(out) :: nlist(:)
-    integer, optional, pointer  :: list(:, :)
+    type(lookup_t),                 intent(in)   :: this
+    integer,                        intent(in)   :: npoint
+    FLOAT,                          intent(in)   :: points(:, :) !< (1:npoint, 1:this%dim)
+    FLOAT,                          intent(in)   :: radius
+    integer,                        intent(out)  :: nlist(:)
+    integer, optional, allocatable, intent(out)  :: list(:, :)
 
     FLOAT :: r2
     integer :: ii, ipoint

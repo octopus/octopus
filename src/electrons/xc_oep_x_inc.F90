@@ -51,8 +51,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: rr, socc
-  R_TYPE, pointer     :: send_buffer(:)
-  R_TYPE, allocatable :: rho_ij(:), F_ij(:), psi(:), wf_ist(:)
+  R_TYPE, allocatable :: send_buffer(:), rho_ij(:), F_ij(:), psi(:), wf_ist(:)
 
 #if defined(HAVE_MPI)
   integer :: send_req, status(MPI_STATUS_SIZE)
@@ -254,7 +253,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   SAFE_DEALLOCATE_A(send_stack)
   SAFE_DEALLOCATE_A(F_ij)
   SAFE_DEALLOCATE_A(rho_ij)
-  SAFE_DEALLOCATE_P(send_buffer)
+  SAFE_DEALLOCATE_A(send_buffer)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(wf_ist)
 

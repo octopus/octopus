@@ -111,7 +111,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   type(cube_function_t) :: re, im
 #endif
 #endif
-  R_TYPE, pointer :: read_ff(:)
+  R_TYPE, allocatable :: read_ff(:)
 
   call profiling_in(read_prof, TOSTRING(X(DISK_READ)))
   PUSH_SUB(X(io_function_input_global))
@@ -172,7 +172,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
           end do
         end if
 
-        SAFE_DEALLOCATE_P(read_ff)
+        SAFE_DEALLOCATE_A(read_ff)
       end if
 
     else
@@ -286,7 +286,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
     
-    SAFE_DEALLOCATE_P(read_ff)
+    SAFE_DEALLOCATE_A(read_ff)
   case default
     ierr = 1
   end select

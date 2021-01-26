@@ -915,8 +915,8 @@ contains
     subroutine add_adsic(hm)
       type(hamiltonian_elec_t), intent(in)    :: hm
 
-      integer        :: ip, ispin, ist, ik
-      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
+      integer            :: ip, ispin, ist, ik
+      FLOAT, allocatable :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
       
       PUSH_SUB(add_adsic)
       
@@ -967,10 +967,10 @@ contains
         ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
       end do
 
-      SAFE_DEALLOCATE_P(vxc_sic)
-      SAFE_DEALLOCATE_P(vh_sic)                                
-      SAFE_DEALLOCATE_P(rho)
-      SAFE_DEALLOCATE_P(qsp)
+      SAFE_DEALLOCATE_A(vxc_sic)
+      SAFE_DEALLOCATE_A(vh_sic)                                
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(qsp)
 
       POP_SUB(add_adsic)
     end subroutine add_adsic

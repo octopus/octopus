@@ -771,7 +771,7 @@ contains
     integer :: iunit, isp, err, err2(2)
     character(len=80) :: filename
     character(len=300) :: lines(2)
-    FLOAT, pointer :: rho(:), rho_fine(:)
+    FLOAT, allocatable :: rho(:), rho_fine(:)
 
     PUSH_SUB(states_elec_dump_rho)
 
@@ -826,8 +826,8 @@ contains
     if (err2(2) /= 0) ierr = ierr + 4
 
     if(gr%have_fine_mesh)then
-      SAFE_DEALLOCATE_P(rho)
-      SAFE_DEALLOCATE_P(rho_fine)
+      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_A(rho_fine)
     end if
 
     lines(1) = '%'
