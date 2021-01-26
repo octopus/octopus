@@ -97,17 +97,17 @@ module v_ks_oct_m
     logical                           :: calculating
     logical                           :: time_present
     FLOAT                             :: time
-    FLOAT,                pointer     :: density(:, :)
+    FLOAT,                allocatable :: density(:, :)
     logical                           :: total_density_alloc
     FLOAT,                pointer     :: total_density(:)
     FLOAT                             :: amaldi_factor
     type(energy_t),       allocatable :: energy
     type(states_elec_t),  pointer     :: hf_st
     FLOAT,                allocatable :: vxc(:, :)
-    FLOAT,                pointer     :: vtau(:, :)
-    FLOAT,                pointer     :: axc(:, :, :)
-    FLOAT,                pointer     :: a_ind(:, :)
-    FLOAT,                pointer     :: b_ind(:, :)
+    FLOAT,                allocatable :: vtau(:, :)
+    FLOAT,                allocatable :: axc(:, :, :)
+    FLOAT,                allocatable :: a_ind(:, :)
+    FLOAT,                allocatable :: b_ind(:, :)
     logical                           :: calc_energy
 
     FLOAT,                allocatable :: vdw_forces(:, :)
@@ -816,8 +816,7 @@ contains
     ks%calc%amaldi_factor = M_ONE
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
-    nullify(ks%calc%density, ks%calc%total_density)
-    nullify(ks%calc%vtau, ks%calc%axc)
+    nullify(ks%calc%total_density)
 
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
@@ -860,7 +859,6 @@ contains
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
-    nullify(ks%calc%a_ind, ks%calc%b_ind)
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
@@ -998,7 +996,6 @@ contains
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
 
-      nullify(ks%calc%vtau)
       if (family_is_mgga_with_exc(hm%xc)) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
@@ -1186,8 +1183,8 @@ contains
       hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
       hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
 
-      SAFE_DEALLOCATE_P(ks%calc%a_ind)
-      SAFE_DEALLOCATE_P(ks%calc%b_ind)
+      SAFE_DEALLOCATE_A(ks%calc%a_ind)
+      SAFE_DEALLOCATE_A(ks%calc%b_ind)
     end if
 
     if (allocated(hm%ep%v_static)) then
@@ -1227,7 +1224,7 @@ contains
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
           end do
-          SAFE_DEALLOCATE_P(ks%calc%vtau)
+          SAFE_DEALLOCATE_A(ks%calc%vtau)
         end if
 
       else
@@ -1324,7 +1321,7 @@ contains
     end if
 
 
-    SAFE_DEALLOCATE_P(ks%calc%density)
+    SAFE_DEALLOCATE_A(ks%calc%density)
     if(ks%calc%total_density_alloc) then
       SAFE_DEALLOCATE_P(ks%calc%total_density)
     end if
