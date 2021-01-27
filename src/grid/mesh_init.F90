@@ -31,6 +31,7 @@ module mesh_init_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -77,13 +78,15 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   mesh%cv => cv
 
   ! multiresolution requires the curvilinear coordinates machinery
-  mesh%use_curvilinear = mesh%use_curvilinear .or. sb%mr_flag
+  mesh%use_curvilinear = mesh%use_curvilinear .or. multiresolution_use(sb%hr_area)
 
   mesh%idx%dim = sb%dim
   mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%enlarge = enlarge
 
-  if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
+  if (multiresolution_use(sb%hr_area)) then
+    mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
+  end if
 
   ! adjust nr
   mesh%idx%nr = 0
@@ -208,7 +211,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
-  if(sb%mr_flag) then 
+  if (multiresolution_use(sb%hr_area)) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
     mesh%resolution(:,:,:) = 0
   end if
@@ -252,7 +255,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         if (.not.in_box(ix)) cycle
         ! With multiresolution, only inner (not enlargement) points are marked now
-        if(sb%mr_flag) then
+        if (multiresolution_use(sb%hr_area)) then
           call multiresolution_mark_inner_point(ix, iy, iz)
         else ! the usual way: mark both inner and enlargement points
           ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
@@ -292,7 +295,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   SAFE_DEALLOCATE_A(xx)
   SAFE_DEALLOCATE_A(in_box)
 
-  if(sb%mr_flag) then
+  if (multiresolution_use(sb%hr_area)) then
     call multiresolution_mark_enlargement_points()
   end if
 
@@ -315,7 +318,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
 
   ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
   ! following routine checks that everything will be ok.
-  if(sb%mr_flag) then
+  if (multiresolution_use(sb%hr_area)) then
     call multiresolution_check_points()
   end if
 
@@ -330,7 +333,7 @@ contains
     PUSH_SUB(mesh_init_stage_2.multiresolution_mark_inner_point)
     ! First check: is the point beyond the multiresolution areas
     n_mod = 2**sb%hr_area%num_radii
-    if (sum((xx(ix, :) - sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+    if (sum((xx(ix, 1:sb%dim) - sb%hr_area%center(1:sb%dim))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
          mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz, n_mod) == 0) then
       mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
     end if
@@ -338,7 +341,7 @@ contains
     if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
       do i_lev = 1,sb%hr_area%num_radii
         n_mod = 2**(i_lev-1)
-        if( sum((xx(ix, :) - sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+        if( sum((xx(ix, 1:sb%dim) - sb%hr_area%center(1:sb%dim))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
             mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
           mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
         end if
@@ -1057,7 +1060,7 @@ contains
 #endif
     else ! serial mode
 
-      if(mesh%sb%mr_flag) then
+      if (multiresolution_use(mesh%sb%hr_area)) then
         call multiresolution_vol_pp(sb)
       else
         do ip = 1, np

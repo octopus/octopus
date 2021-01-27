@@ -272,7 +272,9 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   end if
     
   if(boundaries%mesh%sb%periodic_dim < boundaries%mesh%sb%dim) call zero_boundaries()
-  if(boundaries%mesh%sb%mr_flag) call multiresolution()
+  if (multiresolution_use(boundaries%mesh%sb%hr_area)) then
+    call multiresolution()
+  end if
   if(boundaries%mesh%sb%periodic_dim > 0)     call periodic()
 
   call profiling_out(set_bc_prof)

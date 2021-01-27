@@ -30,6 +30,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
@@ -715,7 +716,7 @@ contains
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
-    if(mesh%sb%mr_flag) then
+    if (multiresolution_use(mesh%sb%hr_area)) then
       memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! lxyz
