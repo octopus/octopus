@@ -565,7 +565,7 @@ contains
     
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
-    if(mesh%use_curvilinear .and. (.not. multiresolution_use(der%mesh%sb%hr_area))) then
+    if(mesh%use_curvilinear .and. (.not. multiresolution_use(der%mesh%hr_area))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)

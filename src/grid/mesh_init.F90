@@ -57,8 +57,9 @@ module mesh_init_oct_m
 contains
 
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
+subroutine mesh_init_stage_1(mesh, namespace, sb, cv, spacing, enlarge)
   type(mesh_t),                intent(inout) :: mesh
+  type(namespace_t),           intent(in)    :: namespace
   type(simul_box_t),   target, intent(in)    :: sb
   type(curvilinear_t), target, intent(in)    :: cv
   FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
@@ -77,15 +78,17 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   mesh%use_curvilinear = cv%method /= CURV_METHOD_UNIFORM
   mesh%cv => cv
 
+  call multiresolution_init(mesh%hr_area, namespace, sb%dim)
+
   ! multiresolution requires the curvilinear coordinates machinery
-  mesh%use_curvilinear = mesh%use_curvilinear .or. multiresolution_use(sb%hr_area)
+  mesh%use_curvilinear = mesh%use_curvilinear .or. multiresolution_use(mesh%hr_area)
 
   mesh%idx%dim = sb%dim
   mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%enlarge = enlarge
 
-  if (multiresolution_use(sb%hr_area)) then
-    mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
+  if (multiresolution_use(mesh%hr_area)) then
+    mesh%idx%enlarge = mesh%idx%enlarge*(2**mesh%hr_area%num_radii)
   end if
 
   ! adjust nr
@@ -153,7 +156,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   do idir = sb%periodic_dim + 1, sb%dim
     if(mesh%idx%nr(2, idir) == 0) then
       write(message(1),'(a,i2)') 'Spacing > box size in direction ', idir
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
   end do
 
@@ -211,7 +214,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
-  if (multiresolution_use(sb%hr_area)) then 
+  if (multiresolution_use(mesh%hr_area)) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
     mesh%resolution(:,:,:) = 0
   end if
@@ -255,7 +258,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         if (.not.in_box(ix)) cycle
         ! With multiresolution, only inner (not enlargement) points are marked now
-        if (multiresolution_use(sb%hr_area)) then
+        if (multiresolution_use(mesh%hr_area)) then
           call multiresolution_mark_inner_point(ix, iy, iz)
         else ! the usual way: mark both inner and enlargement points
           ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
@@ -295,7 +298,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   SAFE_DEALLOCATE_A(xx)
   SAFE_DEALLOCATE_A(in_box)
 
-  if (multiresolution_use(sb%hr_area)) then
+  if (multiresolution_use(mesh%hr_area)) then
     call multiresolution_mark_enlargement_points()
   end if
 
@@ -318,7 +321,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
 
   ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
   ! following routine checks that everything will be ok.
-  if (multiresolution_use(sb%hr_area)) then
+  if (multiresolution_use(mesh%hr_area)) then
     call multiresolution_check_points()
   end if
 
@@ -332,16 +335,16 @@ contains
 
     PUSH_SUB(mesh_init_stage_2.multiresolution_mark_inner_point)
     ! First check: is the point beyond the multiresolution areas
-    n_mod = 2**sb%hr_area%num_radii
-    if (sum((xx(ix, 1:sb%dim) - sb%hr_area%center(1:sb%dim))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+    n_mod = 2**mesh%hr_area%num_radii
+    if (sum((xx(ix, 1:sb%dim) - mesh%hr_area%center(1:sb%dim))**2) > mesh%hr_area%radius(mesh%hr_area%num_radii)**2 .and. &
          mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz, n_mod) == 0) then
       mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
     end if
     ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
     if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
-      do i_lev = 1,sb%hr_area%num_radii
+      do i_lev = 1,mesh%hr_area%num_radii
         n_mod = 2**(i_lev-1)
-        if( sum((xx(ix, 1:sb%dim) - sb%hr_area%center(1:sb%dim))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+        if( sum((xx(ix, 1:sb%dim) - mesh%hr_area%center(1:sb%dim))**2) < mesh%hr_area%radius(i_lev)**2 + DELTA .and. &
             mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
           mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
         end if
@@ -424,18 +427,18 @@ contains
           ! include enlargement points that are neither inner points nor outer boundary points.
           if( .not. btest(mesh%idx%lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
           if(  btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
-          if(  i_lev == 2**mesh%sb%hr_area%num_radii ) cycle
+          if(  i_lev == 2**mesh%hr_area%num_radii ) cycle
 
           ! the value of point (ix,iy,iz) is going to be interpolated
           dx = abs(mod(ix, 2**(i_lev)))
           dy = abs(mod(iy, 2**(i_lev)))
           dz = abs(mod(iz, 2**(i_lev)))
-          do ii = 1, mesh%sb%hr_area%interp%nn
-            do jj = 1, mesh%sb%hr_area%interp%nn
-              do kk = 1, mesh%sb%hr_area%interp%nn
-                newi = ix + mesh%sb%hr_area%interp%posi(ii)*dx
-                newj = iy + mesh%sb%hr_area%interp%posi(jj)*dy
-                newk = iz + mesh%sb%hr_area%interp%posi(kk)*dz
+          do ii = 1, mesh%hr_area%interp%nn
+            do jj = 1, mesh%hr_area%interp%nn
+              do kk = 1, mesh%hr_area%interp%nn
+                newi = ix + mesh%hr_area%interp%posi(ii)*dx
+                newj = iy + mesh%hr_area%interp%posi(jj)*dy
+                newk = iz + mesh%hr_area%interp%posi(kk)*dz
                 if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
                    any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3)) .or. &
                    mesh%idx%lxyz_inv(newi,newj,newk) == 0) then
@@ -1060,7 +1063,7 @@ contains
 #endif
     else ! serial mode
 
-      if (multiresolution_use(mesh%sb%hr_area)) then
+      if (multiresolution_use(mesh%hr_area)) then
         call multiresolution_vol_pp(sb)
       else
         do ip = 1, np
@@ -1098,17 +1101,17 @@ contains
 
     ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
 
-    nn = 2*mesh%sb%hr_area%interp%order
+    nn = 2*mesh%hr_area%interp%order
 
     SAFE_ALLOCATE(ww(1:nn))
     SAFE_ALLOCATE(pos(1:nn))
     SAFE_ALLOCATE(posi(1:nn))
 
-    do ii = 1, mesh%sb%hr_area%interp%order
+    do ii = 1, mesh%hr_area%interp%order
       posi(ii) = 1 + 2*(ii - 1)
-      posi(mesh%sb%hr_area%interp%order + ii) = -posi(ii)
+      posi(mesh%hr_area%interp%order + ii) = -posi(ii)
       pos(ii) =  posi(ii)
-      pos(mesh%sb%hr_area%interp%order + ii) = -pos(ii)
+      pos(mesh%hr_area%interp%order + ii) = -pos(ii)
     end do
 
     call interpolation_coefficients(nn, pos, M_ZERO, ww)
@@ -1129,9 +1132,9 @@ contains
     ! This continues until the last resolution level. In each step
     ! the point volumes of the neighboring points area modified.
 
-    do i_lev = 1, sb%hr_area%num_radii
+    do i_lev = 1, mesh%hr_area%num_radii
 
-      write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
+      write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/', mesh%hr_area%num_radii
       call messages_info(1)
 
       ! loop through _all_ the points

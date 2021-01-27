@@ -33,7 +33,6 @@ module simul_box_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -90,8 +89,6 @@ module simul_box_oct_m
     type(geometry_t), pointer, private :: geo
 
     character(len=1024), private :: user_def !< for the user-defined box
-
-    type(multiresolution_t) :: hr_area !< high-resolution areas
 
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
@@ -160,10 +157,6 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
-
-      integer              :: idir, irad, order
-      type(block_t)        :: blk
-
       PUSH_SUB(simul_box_init.read_misc)
 
       sb%dim = space%dim
@@ -206,8 +199,6 @@ contains
         call messages_write('of total energy and forces.')
         call messages_warning(namespace=namespace)
       end if
-
-      call multiresolution_init(sb%hr_area, namespace, space)
 
       POP_SUB(simul_box_init.read_misc)
     end subroutine read_misc
@@ -878,10 +869,6 @@ contains
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
-    if (multiresolution_use(sb%hr_area)) then
-      call multiresolution_end(sb%hr_area)
-    end if
-
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
       call gdlib_imagedestroy(sb%image)
@@ -1206,10 +1193,6 @@ contains
     sbout%periodic_dim            = sbin%periodic_dim
 
     call kpoints_copy(sbin%kpoints, sbout%kpoints)
-
-    if (multiresolution_use(sbin%hr_area)) then
-      call multiresolution_copy(sbout%hr_area, sbin%hr_area)
-    end if
 
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 

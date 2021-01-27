@@ -409,7 +409,7 @@ contains
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
-          if (multiresolution_use(mesh%sb%hr_area)) then
+          if (multiresolution_use(mesh%hr_area)) then
             st1(jj) = index_from_coords(mesh%idx, &
                  p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else

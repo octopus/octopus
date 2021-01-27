@@ -64,10 +64,10 @@ module multiresolution_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine multiresolution_init(mr, namespace, space)
+  subroutine multiresolution_init(mr, namespace, dim)
     type(multiresolution_t),             intent(inout) :: mr
     type(namespace_t),                   intent(in)    :: namespace
-    type(space_t),                       intent(in)    :: space
+    integer,                             intent(in)    :: dim
 
     integer              :: idir, irad, order
     type(block_t)        :: blk
@@ -93,11 +93,11 @@ contains
       mr%num_areas = parse_block_n(blk)
 
       ! number of radii
-      mr%num_radii = parse_block_cols(blk, 0) - space%dim
+      mr%num_radii = parse_block_cols(blk, 0) - dim
 
       ! the central point
-      SAFE_ALLOCATE(mr%center(1:space%dim))
-      do idir = 1, space%dim
+      SAFE_ALLOCATE(mr%center(1:dim))
+      do idir = 1, dim
         call parse_block_float(blk, 0, idir - 1, mr%center(idir))
       end do
 
@@ -106,7 +106,7 @@ contains
       ! the radii
       SAFE_ALLOCATE(mr%radius(1:mr%num_radii))
       do irad = 1, mr%num_radii
-        call parse_block_float(blk, 0, space%dim + irad - 1, mr%radius(irad))
+        call parse_block_float(blk, 0, dim + irad - 1, mr%radius(irad))
         mr%radius(irad) = units_to_atomic(units_inp%length, mr%radius(irad))
       end do
       call parse_block_end(blk)

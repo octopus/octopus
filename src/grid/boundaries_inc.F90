@@ -272,7 +272,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   end if
     
   if(boundaries%mesh%sb%periodic_dim < boundaries%mesh%sb%dim) call zero_boundaries()
-  if (multiresolution_use(boundaries%mesh%sb%hr_area)) then
+  if (multiresolution_use(boundaries%mesh%hr_area)) then
     call multiresolution()
   end if
   if(boundaries%mesh%sb%periodic_dim > 0)     call periodic()
@@ -342,22 +342,22 @@ contains
         i_lev = boundaries%mesh%resolution(ix,iy,iz)
 
         ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-        if(i_lev /= 2**boundaries%mesh%sb%hr_area%num_radii) then
+        if(i_lev /= 2**boundaries%mesh%hr_area%num_radii) then
           dx = abs(mod(ix, 2**(i_lev)))
           dy = abs(mod(iy, 2**(i_lev)))
           dz = abs(mod(iz, 2**(i_lev)))
 
-          do ii = 1, boundaries%mesh%sb%hr_area%interp%nn
-            do jj = 1, boundaries%mesh%sb%hr_area%interp%nn
-              do kk = 1, boundaries%mesh%sb%hr_area%interp%nn
-                weight = boundaries%mesh%sb%hr_area%interp%ww(ii) * &
-                  boundaries%mesh%sb%hr_area%interp%ww(jj) *        &
-                  boundaries%mesh%sb%hr_area%interp%ww(kk)
+          do ii = 1, boundaries%mesh%hr_area%interp%nn
+            do jj = 1, boundaries%mesh%hr_area%interp%nn
+              do kk = 1, boundaries%mesh%hr_area%interp%nn
+                weight = boundaries%mesh%hr_area%interp%ww(ii) * &
+                  boundaries%mesh%hr_area%interp%ww(jj) *        &
+                  boundaries%mesh%hr_area%interp%ww(kk)
 
                 ff(ip) = ff(ip) + weight * ff(index_from_coords(boundaries%mesh%idx, [ &
-                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,   &
-                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,   &
-                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz]))
+                  ix + boundaries%mesh%hr_area%interp%posi(ii) * dx,   &
+                  iy + boundaries%mesh%hr_area%interp%posi(jj) * dy,   &
+                  iz + boundaries%mesh%hr_area%interp%posi(kk) * dz]))
               end do
             end do
           end do
