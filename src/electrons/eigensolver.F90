@@ -264,7 +264,7 @@ contains
       end if
       
     case(RS_RMMDIIS)
-      default_iter = 3
+      default_iter = 5
 
       !%Variable EigensolverMinimizationIter
       !%Type integer
@@ -315,7 +315,7 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which performs only 3 iterations.
+    !% except for <tt>rmdiis</tt>, which performs only 5 iterations.
     !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
     !% at the cost of an increased memory footprint.
     !% In the case of imaginary time propatation, this variable is not used.
