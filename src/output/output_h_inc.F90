@@ -30,7 +30,7 @@
 
     integer :: is, err, idir, ik, ib
     character(len=MAX_PATH_LEN) :: fname
-    FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
+    FLOAT, allocatable :: vh(:), v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:, :), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
@@ -60,8 +60,10 @@
         call dio_function_output(outp%how, dir, 'vh', namespace, &
           der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
         if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
+          SAFE_ALLOCATE(vh(1:der%mesh%np_part))
           SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-          call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          vh(1:der%mesh%np) = hm%vhartree(1:der%mesh%np)
+          call dderivatives_grad(der, vh, gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
           call io_function_output_vector(outp%how, dir, 'grad_vh', namespace, &
             der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
@@ -73,6 +75,7 @@
             der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
           SAFE_DEALLOCATE_A(v0)
+          SAFE_DEALLOCATE_A(vh)
           SAFE_DEALLOCATE_A(gradvh)
         end if
         
@@ -183,7 +186,7 @@
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       
       if(states_are_complex(st)) then
-        ASSERT(associated(st%current))
+        ASSERT(allocated(st%current))
 
         do is = 1, hm%d%nspin
 

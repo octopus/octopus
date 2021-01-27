@@ -99,7 +99,7 @@ contains
 
     PUSH_SUB(berry_perform_internal_scf)
 
-    ASSERT(associated(hm%vberry))
+    ASSERT(allocated(hm%vberry))
 
     if(st%parallel_in_states) then
       call messages_not_implemented("Berry phase parallel in states", namespace=namespace)

@@ -152,7 +152,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   type(mesh_t),        intent(in)    :: mesh
   type(states_elec_t), intent(in)    :: st
   FLOAT,               intent(inout) :: lda_u_energy
-  CMPLX,     optional, pointer       :: phase(:,:) 
+  CMPLX,     optional, intent(in)    :: phase(1:mesh%np_part, st%d%kpt%start:st%d%kpt%end)
 
   integer :: ios, im, ik, ist, ispin, norbs, idim, inn, im2, ios2
   R_TYPE, allocatable :: psi(:,:) 

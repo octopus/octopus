@@ -114,13 +114,13 @@ module hamiltonian_elec_oct_m
     !! in order to be able to operate on the states.
     type(states_elec_dim_t)  :: d
     type(hamiltonian_elec_base_t) :: hm_base
-    type(energy_t), pointer  :: energy
+    type(energy_t), allocatable  :: energy
     type(bc_t)               :: bc      !< boundaries
-    FLOAT, pointer :: vhartree(:) !< Hartree potential
-    FLOAT, pointer :: vxc(:,:)    !< XC potential
-    FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
-    FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
-    FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
+    FLOAT, allocatable :: vhartree(:) !< Hartree potential
+    FLOAT, allocatable :: vxc(:,:)    !< XC potential
+    FLOAT, allocatable :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
+    FLOAT, allocatable :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
+    FLOAT, allocatable :: vberry(:,:) !< Berry phase potential from external E_field
 
     type(derivatives_t), pointer :: der !< pointer to derivatives
     
@@ -132,8 +132,8 @@ module hamiltonian_elec_oct_m
 
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
-    FLOAT, pointer :: a_ind(:, :)
-    FLOAT, pointer :: b_ind(:, :)
+    FLOAT, allocatable :: a_ind(:, :)
+    FLOAT, allocatable :: b_ind(:, :)
 
     integer :: theory_level    !< copied from sys%ks
     type(xc_t), pointer :: xc  !< pointer to xc object
@@ -283,7 +283,6 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-    nullify(hm%vhartree, hm%vxc, hm%vtau)
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np_part))
@@ -359,8 +358,6 @@ contains
       SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
 
       !(for dim = we could save some memory, but it is better to keep it simple)
-    else
-      nullify(hm%a_ind, hm%b_ind)
     end if
 
     ! Boundaries
@@ -430,8 +427,6 @@ contains
       end if 
     end if
  
-
-    nullify(hm%hm_base%phase)
     if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
       call init_phase()
     end if
@@ -756,7 +751,6 @@ contains
 
       PUSH_SUB(hamiltonian_elec_init.build_interactions)      
 
-      nullify(hm%vberry)
       if (allocated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
         ! only need vberry if there is a field in a periodic direction
         ! and we are not setting a gauge field
@@ -796,7 +790,7 @@ contains
 
     call hamiltonian_elec_base_end(hm%hm_base)
 
-    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
+    if (allocated(hm%hm_base%phase) .and. accel_is_enabled()) then
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
@@ -804,19 +798,19 @@ contains
       call accel_release_buffer(hm%hm_base%buff_phase_spiral)
     end if
 
-    SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_spiral)
-    SAFE_DEALLOCATE_P(hm%vhartree)
-    SAFE_DEALLOCATE_P(hm%vhxc)
-    SAFE_DEALLOCATE_P(hm%vxc)
-    SAFE_DEALLOCATE_P(hm%vberry)
-    SAFE_DEALLOCATE_P(hm%a_ind)
-    SAFE_DEALLOCATE_P(hm%b_ind)
+    SAFE_DEALLOCATE_A(hm%vhartree)
+    SAFE_DEALLOCATE_A(hm%vhxc)
+    SAFE_DEALLOCATE_A(hm%vxc)
+    SAFE_DEALLOCATE_A(hm%vberry)
+    SAFE_DEALLOCATE_A(hm%a_ind)
+    SAFE_DEALLOCATE_A(hm%b_ind)
     SAFE_DEALLOCATE_A(hm%v_ext_pot)
     
     if (family_is_mgga_with_exc(hm%xc)) then
-      SAFE_DEALLOCATE_P(hm%vtau)
+      SAFE_DEALLOCATE_A(hm%vtau)
     end if
 
     if (associated(hm%psolver_fine, hm%psolver)) then
@@ -842,7 +836,7 @@ contains
     call exchange_operator_end(hm%exxop)
     call lda_u_end(hm%lda_u)
 
-    SAFE_DEALLOCATE_P(hm%energy)
+    SAFE_DEALLOCATE_A(hm%energy)
 
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
@@ -1089,7 +1083,7 @@ contains
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
 
-        if(.not. associated(this%hm_base%phase)) then
+        if(.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -1149,7 +1143,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if (allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         nphase = 1
         if(this%der%boundaries%spiralBC) nphase = 3
@@ -1313,7 +1307,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, allocated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_elec_epot_generate)
   end subroutine hamiltonian_elec_epot_generate
@@ -1665,7 +1659,7 @@ contains
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
-        if(.not. associated(this%hm_base%phase)) then
+        if (.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -1691,7 +1685,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if (allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         nphase = 1
         if(this%der%boundaries%spiralBC) nphase = 3

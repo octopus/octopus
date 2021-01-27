@@ -720,8 +720,8 @@ contains
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn(mesh, st)
-    type(mesh_t),        intent(in) :: mesh
-    type(states_elec_t), intent(in) :: st
+    type(mesh_t),                intent(in) :: mesh
+    type(states_elec_t), target, intent(in) :: st
 
     integer ::  ist, jst, ik, ip, w90_mmn, iknn, G(3), idim, ibind
     FLOAT   ::  Gr(3)

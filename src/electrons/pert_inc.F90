@@ -128,7 +128,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION__KDOTPVELMETHOD__HCOM_VEL) &
     apply_kpoint = .false.
@@ -430,7 +430,7 @@ subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, ik, f_in, f_out)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
     .and. this%pert_type /= PERTURBATION_KDOTP
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   ! kdotp has the perturbation written in terms of the periodic part with the phase

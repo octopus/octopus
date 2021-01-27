@@ -324,7 +324,7 @@ contains
       call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
-    if(associated(st%rho_core)) then
+    if (allocated(st%rho_core)) then
       call forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     else 
       force_nlcc(:, :) = M_ZERO

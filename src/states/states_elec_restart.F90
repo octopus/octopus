@@ -74,7 +74,7 @@ contains
     logical,           optional, intent(in)    :: is_complex
 
     integer :: kpoints, dim, nst, ierr
-    FLOAT, pointer :: new_occ(:,:)
+    FLOAT, allocatable :: new_occ(:,:)
 
     PUSH_SUB(states_elec_look_and_load)
 
@@ -94,8 +94,8 @@ contains
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
     new_occ(:,:) = M_ZERO
     new_occ(1:min(nst, st%nst),:) = st%occ(1:min(nst, st%nst),:)
-    SAFE_DEALLOCATE_P(st%occ)
-    st%occ => new_occ
+    SAFE_DEALLOCATE_A(st%occ)
+    call move_alloc(new_occ, st%occ)
 
     ! FIXME: This wrong, one cannot just change the number of states
     ! without updating the internal structures, in the case of parallel in states.
@@ -105,11 +105,11 @@ contains
     st%st_end   = nst
     st%lnst     = nst
 
-    SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_A(st%node)
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(:)  = 0
 
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_A(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
     st%eigenval = huge(st%eigenval)
 
@@ -934,7 +934,7 @@ contains
 
     ierr = 0
 
-    ASSERT(associated(st%frozen_rho))
+    ASSERT(allocated(st%frozen_rho))
 
     if (restart_skip(restart)) then
       POP_SUB(states_elec_dump_frozen)
@@ -959,7 +959,7 @@ contains
       call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
-      if(associated(st%frozen_tau)) then 
+      if (allocated(st%frozen_tau)) then 
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_tau'
         else
@@ -969,7 +969,7 @@ contains
         if (err /= 0) err2 = err2 + 1
       end if
 
-      if(associated(st%frozen_gdens)) then
+      if (allocated(st%frozen_gdens)) then
         do idir = 1, gr%sb%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
@@ -981,7 +981,7 @@ contains
         end do
       end if
 
-      if(associated(st%frozen_ldens)) then
+      if (allocated(st%frozen_ldens)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_ldens'
         else
@@ -1018,7 +1018,7 @@ contains
 
     PUSH_SUB(states_elec_load_frozen)
 
-    ASSERT(associated(st%frozen_rho))
+    ASSERT(allocated(st%frozen_rho))
 
     ierr = 0
 
@@ -1043,7 +1043,7 @@ contains
       call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
-      if(associated(st%frozen_tau)) then
+      if (allocated(st%frozen_tau)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_tau'
         else
@@ -1053,7 +1053,7 @@ contains
         if (err /= 0) err2 = err2 + 1
       end if
       
-      if(associated(st%frozen_gdens)) then
+      if (allocated(st%frozen_gdens)) then
         do idir = 1, gr%sb%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
@@ -1065,7 +1065,7 @@ contains
         end do
       end if
 
-      if(associated(st%frozen_ldens)) then 
+      if (allocated(st%frozen_ldens)) then 
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_ldens'
         else

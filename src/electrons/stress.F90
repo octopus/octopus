@@ -160,7 +160,7 @@ contains
 
       nullify(rho_total)
 
-      if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
+      if (allocated(st%rho_core) .or. hm%d%spin_channels > 1) then
          total_density_alloc = .true.
          
          SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
@@ -170,7 +170,7 @@ contains
          end do
          
          ! remove non-local core corrections
-         if(associated(st%rho_core)) then
+         if (allocated(st%rho_core)) then
             do ip = 1, gr%fine%mesh%np
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
             end do
@@ -364,7 +364,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
           
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
@@ -547,7 +547,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           

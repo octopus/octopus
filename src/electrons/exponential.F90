@@ -254,8 +254,7 @@ contains
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    phase_correction = .false.
-    if(associated(hm%hm_base%phase)) phase_correction = .true.
+    phase_correction = allocated(hm%hm_base%phase)
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.

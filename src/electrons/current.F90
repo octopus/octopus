@@ -384,7 +384,7 @@ contains
             call st%group%psib(ib, ik)%copy_to(epsib)
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
-            if(associated(hm%hm_base%phase)) then
+            if (allocated(hm%hm_base%phase)) then
               call hamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
@@ -430,7 +430,7 @@ contains
               call boundaries_set(der%boundaries, psi(:, idim))
             end do
 
-            if(associated(hm%hm_base%phase)) then 
+            if (allocated(hm%hm_base%phase)) then 
               call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
             end if
 
@@ -462,8 +462,7 @@ contains
               end if
 
               if(hm%lda_u_level /= DFT_U_NONE) then
-                call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, namespace, ik, psi, gpsi, &
-                  associated(hm%hm_base%phase))
+                call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, namespace, ik, psi, gpsi, allocated(hm%hm_base%phase))
               end if
 
               call zexchange_operator_commute_r(hm%exxop, der%mesh, st%d, ik, psi, gpsi)
@@ -585,7 +584,7 @@ contains
       call boundaries_set(der%boundaries, ppsi_j(:, idim))
     end do
 
-    if(associated(hm%hm_base%phase)) then 
+    if (allocated(hm%hm_base%phase)) then 
       ! Apply the phase that contains both the k-point and vector-potential terms.
       do idim = 1, hm%d%dim
         !$omp parallel do
@@ -691,7 +690,7 @@ contains
           call boundaries_set(der%boundaries, psi(:, idim))
         end do
 
-        if(associated(hm%hm_base%phase)) then 
+        if (allocated(hm%hm_base%phase)) then 
           call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
         end if
 
@@ -699,7 +698,7 @@ contains
           call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
         end do
         do idir = 1, ndim
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, &
               conjugate = .true.)
           end if
@@ -712,7 +711,7 @@ contains
             call boundaries_set(der%boundaries, gpsi(:,idir, idim))
           end do
             
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
                                   der%mesh%np_part,  conjugate = .false.)
           end if

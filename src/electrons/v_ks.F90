@@ -94,24 +94,24 @@ module v_ks_oct_m
 
   type v_ks_calc_t
     private
-    logical                       :: calculating
-    logical                       :: time_present
-    FLOAT                         :: time
-    FLOAT,                pointer :: density(:, :)
-    logical                       :: total_density_alloc
-    FLOAT,                pointer :: total_density(:)
-    FLOAT                         :: amaldi_factor
-    type(energy_t),       pointer :: energy
-    type(states_elec_t),  pointer :: hf_st
-    FLOAT,                pointer :: vxc(:, :)
-    FLOAT,                pointer :: vtau(:, :)
-    FLOAT,                pointer :: axc(:, :, :)
-    FLOAT,                pointer :: a_ind(:, :)
-    FLOAT,                pointer :: b_ind(:, :)
-    logical                       :: calc_energy
+    logical                           :: calculating
+    logical                           :: time_present
+    FLOAT                             :: time
+    FLOAT,                allocatable :: density(:, :)
+    logical                           :: total_density_alloc
+    FLOAT,                pointer     :: total_density(:)
+    FLOAT                             :: amaldi_factor
+    type(energy_t),       allocatable :: energy
+    type(states_elec_t),  pointer     :: hf_st
+    FLOAT,                allocatable :: vxc(:, :)
+    FLOAT,                allocatable :: vtau(:, :)
+    FLOAT,                allocatable :: axc(:, :, :)
+    FLOAT,                allocatable :: a_ind(:, :)
+    FLOAT,                allocatable :: b_ind(:, :)
+    logical                           :: calc_energy
 
-    FLOAT, allocatable :: vdw_forces(:, :)
-    type(geometry_t), pointer :: geo
+    FLOAT,                allocatable :: vdw_forces(:, :)
+    type(geometry_t),     pointer     :: geo
   end type v_ks_calc_t
 
   type v_ks_t
@@ -816,8 +816,7 @@ contains
     ks%calc%amaldi_factor = M_ONE
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
-    nullify(ks%calc%density, ks%calc%total_density)
-    nullify(ks%calc%vxc, ks%calc%vtau, ks%calc%axc)
+    nullify(ks%calc%total_density)
 
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
@@ -860,7 +859,6 @@ contains
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
-    nullify(ks%calc%a_ind, ks%calc%b_ind)
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
@@ -886,7 +884,7 @@ contains
         ks%calc%density = ks%calc%amaldi_factor*ks%calc%density
 
       nullify(ks%calc%total_density)
-      if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
+      if (allocated(st%rho_core) .or. hm%d%spin_channels > 1) then
         ks%calc%total_density_alloc = .true.
 
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
@@ -896,7 +894,7 @@ contains
         end do
 
         ! remove non-local core corrections
-        if(associated(st%rho_core)) then
+        if (allocated(st%rho_core)) then
           do ip = 1, ks%gr%fine%mesh%np
             ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
           end do
@@ -998,7 +996,6 @@ contains
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
 
-      nullify(ks%calc%vtau)
       if (family_is_mgga_with_exc(hm%xc)) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
@@ -1179,15 +1176,15 @@ contains
     end if
 
     !change the pointer to the energy object
-    SAFE_DEALLOCATE_P(hm%energy)
-    hm%energy => ks%calc%energy
+    SAFE_DEALLOCATE_A(hm%energy)
+    call move_alloc(ks%calc%energy, hm%energy)
 
     if(hm%self_induced_magnetic) then
       hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
       hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
 
-      SAFE_DEALLOCATE_P(ks%calc%a_ind)
-      SAFE_DEALLOCATE_P(ks%calc%b_ind)
+      SAFE_DEALLOCATE_A(ks%calc%a_ind)
+      SAFE_DEALLOCATE_A(ks%calc%b_ind)
     end if
 
     if (allocated(hm%ep%v_static)) then
@@ -1216,18 +1213,18 @@ contains
             !          call dio_function_output(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
             !          call dio_function_output(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
           end do
-          SAFE_DEALLOCATE_P(ks%calc%vxc)
+          SAFE_DEALLOCATE_A(ks%calc%vxc)
         else
-          ! just change the pointer to avoid the copy
-          SAFE_DEALLOCATE_P(hm%vxc)
-          hm%vxc => ks%calc%vxc
+          ! move allocation of vxc from ks%calc to hm
+          SAFE_DEALLOCATE_A(hm%vxc)
+          call move_alloc(ks%calc%vxc, hm%vxc)
         end if
 
         if (family_is_mgga_with_exc(hm%xc)) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
           end do
-          SAFE_DEALLOCATE_P(ks%calc%vtau)
+          SAFE_DEALLOCATE_A(ks%calc%vtau)
         end if
 
       else
@@ -1243,7 +1240,7 @@ contains
       do ip = 1, ks%gr%mesh%np
         hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
       end do
-      if(associated(hm%vberry)) then
+      if (allocated(hm%vberry)) then
         do ip = 1, ks%gr%mesh%np
           hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
         end do
@@ -1253,7 +1250,7 @@ contains
         do ip = 1, ks%gr%mesh%np
           hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
         end do
-        if(associated(hm%vberry)) then
+        if (allocated(hm%vberry)) then
           do ip = 1, ks%gr%mesh%np
             hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
           end do
@@ -1289,7 +1286,7 @@ contains
             call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
           else
             call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
-            if(associated(hm%hm_base%phase)) then
+            if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
             else
@@ -1324,7 +1321,7 @@ contains
     end if
 
 
-    SAFE_DEALLOCATE_P(ks%calc%density)
+    SAFE_DEALLOCATE_A(ks%calc%density)
     if(ks%calc%total_density_alloc) then
       SAFE_DEALLOCATE_P(ks%calc%total_density)
     end if

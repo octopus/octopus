@@ -431,7 +431,7 @@ contains
       end if
 
       ! clean up all the stuff we have to reallocate
-      SAFE_DEALLOCATE_P(writ%gs_st%node)
+      SAFE_DEALLOCATE_A(writ%gs_st%node)
 
       call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
@@ -480,7 +480,7 @@ contains
         writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
         writ%gs_st%occ      = M_ZERO
         if(writ%gs_st%d%ispin == SPINORS) then
-          SAFE_DEALLOCATE_P(writ%gs_st%spin)
+          SAFE_DEALLOCATE_A(writ%gs_st%spin)
           SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         end if
 
@@ -3015,7 +3015,7 @@ contains
       call td_write_print_header_end(out_total_current)
     end if
     
-    ASSERT(associated(st%current))
+    ASSERT(allocated(st%current))
 
     if(mpi_grp_is_root(mpi_world)) &
       call write_iter_start(out_total_current)

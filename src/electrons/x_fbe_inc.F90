@@ -54,7 +54,7 @@ subroutine X(fbe) (namespace, mesh, der, psolver, st, isp, ex, vxc)
   type(mesh_t),                intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
   type(poisson_t),             intent(in)    :: psolver
-  type(states_elec_t), target, intent(in)    :: st
+  type(states_elec_t), target, intent(inout) :: st
   integer,                     intent(in)    :: isp
   FLOAT,                       intent(inout) :: ex
   FLOAT, optional,             intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
