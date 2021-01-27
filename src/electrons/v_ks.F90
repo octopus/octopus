@@ -802,6 +802,7 @@ contains
         call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
       end if
 
+      call profiling_out(prof)
       POP_SUB(v_ks_calc_start)
       return
     end if
