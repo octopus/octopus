@@ -41,8 +41,6 @@ module basis_set_abst_oct_m
     procedure(init),       deferred        :: init
     procedure(end),        deferred        :: end
     procedure(write_info), deferred        :: write_info
-    procedure(dump),       deferred        :: dump
-    procedure(load),       deferred        :: load
     procedure,             non_overridable :: is_time_dependent
     procedure,             non_overridable :: set_time_dependent
   end type basis_set_abst_t
@@ -63,30 +61,6 @@ module basis_set_abst_oct_m
       class(basis_set_abst_t), intent(in) :: this
       integer,                 intent(in) :: unit
     end subroutine write_info
-
-    subroutine dump(this, dir, filename, mpi_grp, namespace, ierr)
-      import basis_set_abst_t
-      import mpi_grp_t
-      import namespace_t
-      class(basis_set_abst_t), intent(in)  :: this
-      character(len=*),        intent(in)  :: dir
-      character(len=*),        intent(in)  :: filename
-      type(mpi_grp_t),         intent(in)  :: mpi_grp
-      type(namespace_t),       intent(in)  :: namespace
-      integer,                 intent(out) :: ierr
-    end subroutine dump
-
-    subroutine load(this, dir, filename, mpi_grp, namespace, ierr)
-      import basis_set_abst_t
-      import mpi_grp_t
-      import namespace_t
-      class(basis_set_abst_t), intent(inout) :: this
-      character(len=*),        intent(in)    :: dir
-      character(len=*),        intent(in)    :: filename
-      type(mpi_grp_t),         intent(in)    :: mpi_grp
-      type(namespace_t),       intent(in)    :: namespace
-      integer,                 intent(out)   :: ierr
-    end subroutine load
   end interface
 
 contains

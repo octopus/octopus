@@ -14,8 +14,8 @@ Input      : 12-absorption.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -5.81823431
 Precision : 1.001
-match ; IO Profiling files open ;  GREPFIELD(out, 'Number of file open', 6) ; 46
-match ; IO Profiling files close ; GREPFIELD(out, 'Number of file close', 6) ; 47
+match ; IO Profiling files open ;  GREPFIELD(out, 'Number of file open', 6) ; 42
+match ; IO Profiling files close ; GREPFIELD(out, 'Number of file close', 6) ; 43
 Precision : 1.0e-4
 
 Processors : 4
