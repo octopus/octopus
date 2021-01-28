@@ -51,7 +51,7 @@ Precision: 1.61e-16
 match ;  Eigenvalue  90      ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161035
 Precision: 8.00e-18
 match ;  Eigenvalue 100      ; GREPFIELD(static/info, '100   --', 3) ; -0.007995
-Precision: 3.85e-06
+Precision: 2.e-05
 match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.05697049999999999
 Precision: 8.64e-05
 match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.11773349999999999
@@ -62,9 +62,9 @@ Precision: 5.50e-09
 match ;  Force 10 (y)    ; GREPFIELD(static/info, '10         N', 4) ; 0.001031155
 Precision: 5.50e-09
 match ;  Force 10 (z)    ; GREPFIELD(static/info, '10         N', 5) ; -0.005506635
-Precision: 2.75e-09
+Precision: 4e-09
 match ;  Force 20 (x)    ; GREPFIELD(static/info, '20         C', 3) ; -0.0007601945
-Precision: 4.25e-18
+Precision: 1.e-08
 match ;  Force 20 (y)    ; GREPFIELD(static/info, '20         C', 4) ; -0.00424731
 Precision: 5.50e-08
 match ;  Force 20 (z)    ; GREPFIELD(static/info, '20         C', 5) ; -0.011872549999999999
