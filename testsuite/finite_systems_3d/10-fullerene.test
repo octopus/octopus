@@ -10,7 +10,7 @@ ExtraFile  : 10-fullerene.geometry.xyz
 Input      : 10-fullerene.01-gs.inp
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -318.47788209
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -318.477942845
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  3706.61777045
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.51706131
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3988.93720093
