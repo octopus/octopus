@@ -31,6 +31,7 @@ module derivatives_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
@@ -564,7 +565,7 @@ contains
     
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
-    if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
+    if(mesh%use_curvilinear .and. (.not. multiresolution_use(der%mesh%hr_area))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)

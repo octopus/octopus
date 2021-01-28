@@ -52,7 +52,6 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_lookup_init,      &
-    simul_box_interp_init,      &
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_write_short_info, &
@@ -62,9 +61,7 @@ module simul_box_oct_m
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
     simul_box_symmetry_check,   &
-    reciprocal_lattice,         &
-    interp_t,                   &
-    multiresolution_t
+    reciprocal_lattice
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -75,23 +72,6 @@ module simul_box_oct_m
     HYPERCUBE      = 6,         &
     BOX_USDEF      = 77
   !< BOX_USDEF shares a number with other 'user_defined' input file options.
-
-  type :: interp_t
-    ! Components are public by default
-    integer              :: nn, order  !< interpolation points and order
-    FLOAT,   allocatable :: ww(:)      !< weights
-    integer, allocatable :: posi(:)    !< positions
-  end type interp_t
-
-
-  type :: multiresolution_t
-    ! Components are public by default
-    type(interp_t)     :: interp          !< interpolation points
-    integer,   private :: num_areas       !< number of multiresolution areas
-    integer            :: num_radii       !< number of radii (resolution borders)
-    FLOAT, allocatable :: radius(:)       !< radius of the high-resolution area
-    FLOAT              :: center(MAX_DIM) !< central point
-  end type multiresolution_t
 
   type, extends(box_t) :: simul_box_t
     ! Components are public by default
@@ -109,9 +89,6 @@ module simul_box_oct_m
     type(geometry_t), pointer, private :: geo
 
     character(len=1024), private :: user_def !< for the user-defined box
-
-    logical :: mr_flag                 !< .true. when using multiresolution
-    type(multiresolution_t) :: hr_area !< high-resolution areas
 
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
@@ -180,10 +157,6 @@ contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
-
-      integer              :: idir, irad, order
-      type(block_t)        :: blk
-
       PUSH_SUB(simul_box_init.read_misc)
 
       sb%dim = space%dim
@@ -225,65 +198,6 @@ contains
         call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
         call messages_write('of total energy and forces.')
         call messages_warning(namespace=namespace)
-      end if
-
-      !%Variable MultiResolutionArea
-      !%Type block
-      !%Section Mesh
-      !%Description
-      !% (Experimental) Multiresolution regions are set with this
-      !% parameter. The first three numbers define the central
-      !% point of the region, and the following ones set
-      !% the radii where resolution changes (measured from the
-      !% central point).
-      !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
-      !%End
-
-      if(parse_block(namespace, 'MultiResolutionArea', blk) == 0) then
-
-        call messages_experimental('Multi-resolution')
-
-        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3', namespace=namespace)
-
-        ! number of areas
-        sb%hr_area%num_areas = parse_block_n(blk)
-
-        ! number of radii
-        sb%hr_area%num_radii = parse_block_cols(blk, 0) - sb%dim
-
-        sb%hr_area%center = M_ZERO
-
-        ! the central point
-        do idir = 1, sb%dim
-          call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
-        end do
-
-        if (sb%hr_area%num_areas /= 1) call messages_input_error(namespace, 'MultiResolutionArea')
-
-        ! the radii
-        SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
-        do irad = 1, sb%hr_area%num_radii
-          call parse_block_float(blk, 0, sb%dim + irad - 1, sb%hr_area%radius(irad))
-          sb%hr_area%radius(irad) = units_to_atomic(units_inp%length, sb%hr_area%radius(irad))
-        end do
-        call parse_block_end(blk)
-
-        ! Create interpolation points (posi) and weights (ww)
-
-        !%Variable MultiResolutionInterpolationOrder
-        !%Type integer
-        !%Default 5
-        !%Section Mesh
-        !%Description
-        !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
-        !%End
-        call messages_obsolete_variable(namespace, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_variable(namespace, 'MultiResolutionInterpolationOrder', 5, order)
-        call simul_box_interp_init(sb, order, namespace)
-
-        sb%mr_flag = .true.
-      else
-        sb%mr_flag = .false.
       end if
 
       POP_SUB(simul_box_init.read_misc)
@@ -605,37 +519,6 @@ contains
     POP_SUB(simul_box_lookup_init)
     return
   end subroutine simul_box_lookup_init
-
-  ! ------------------------------------------------------------
-  subroutine simul_box_interp_init(this, order, namespace)
-    type(simul_box_t), intent(inout) :: this
-    integer,           intent(in)    :: order
-    type(namespace_t), intent(in)    :: namespace
-    !
-    FLOAT, allocatable, dimension(:) :: pos
-    integer                          :: ii
-    !
-    PUSH_SUB(simul_box_interp_init)
-    this%hr_area%interp%order=order
-    if(this%hr_area%interp%order<=0) then
-      message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
-      call messages_fatal(1, namespace=namespace)
-    end if
-    this%hr_area%interp%nn=2*this%hr_area%interp%order
-    SAFE_ALLOCATE(pos(1:this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%ww(1:this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%posi(1:this%hr_area%interp%nn))
-    do ii = 1, this%hr_area%interp%order
-      this%hr_area%interp%posi(ii)=1+2*(ii-1)
-      this%hr_area%interp%posi(this%hr_area%interp%order+ii)=-this%hr_area%interp%posi(ii)
-      pos(ii)=this%hr_area%interp%posi(ii)
-      pos(this%hr_area%interp%order+ii)=-pos(ii)
-    end do
-    call interpolation_coefficients(this%hr_area%interp%nn, pos, M_ZERO, this%hr_area%interp%ww)
-    SAFE_DEALLOCATE_A(pos)
-    POP_SUB(simul_box_interp_init)
-    return
-  end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, namespace, rlattice_primitive)
@@ -986,10 +869,6 @@ contains
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
-    SAFE_DEALLOCATE_A(sb%hr_area%radius)
-    SAFE_DEALLOCATE_A(sb%hr_area%interp%ww)
-    SAFE_DEALLOCATE_A(sb%hr_area%interp%posi)
-
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
       call gdlib_imagedestroy(sb%image)
@@ -1312,17 +1191,8 @@ contains
     sbout%volume_element          = sbin%volume_element
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
-    sbout%mr_flag                 = sbin%mr_flag
-    sbout%hr_area%num_areas       = sbin%hr_area%num_areas
-    sbout%hr_area%num_radii       = sbin%hr_area%num_radii
-    sbout%hr_area%center(1:sbin%dim)=sbin%hr_area%center(1:sbin%dim)
 
     call kpoints_copy(sbin%kpoints, sbout%kpoints)
-
-    if(sbout%mr_flag) then
-      SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
-      sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
-    end if
 
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 

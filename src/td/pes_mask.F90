@@ -42,6 +42,7 @@ module pes_mask_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
@@ -421,8 +422,8 @@ contains
     mask%ll = 1
     mask%spacing = -M_ONE
     
-    if(sb%mr_flag) then ! multiresolution 
-      mask%spacing(1:sb%dim) = mesh%spacing(1:sb%dim)*2**(sb%hr_area%num_radii)       
+    if (multiresolution_use(mesh%hr_area)) then ! multiresolution 
+      mask%spacing(1:sb%dim) = mesh%spacing(1:sb%dim)*2**(mesh%hr_area%num_radii)
       mask%ll(1:sb%dim) = int(M_TWO*sb%rsize/mask%spacing(1:sb%dim)) + 1
     else 
       mask%spacing(1:3) = mesh%spacing(1:3)

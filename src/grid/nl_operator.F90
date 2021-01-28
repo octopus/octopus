@@ -30,6 +30,7 @@ module nl_operator_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
@@ -408,7 +409,7 @@ contains
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
-          if(mesh%sb%mr_flag) then
+          if (multiresolution_use(mesh%hr_area)) then
             st1(jj) = index_from_coords(mesh%idx, &
                  p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else

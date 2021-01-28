@@ -30,6 +30,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
@@ -109,6 +110,8 @@ module mesh_oct_m
 
     logical :: masked_periodic_boundaries
     character(len=256) :: periodic_boundary_mask
+
+    type(multiresolution_t) :: hr_area !< high-resolution areas
   contains
     procedure :: end => mesh_end
     procedure :: init => mesh_init
@@ -666,6 +669,10 @@ contains
       call partition_end(this%inner_partition)
       call partition_end(this%bndry_partition)
     end if
+
+    if (multiresolution_use(this%hr_area)) then
+      call multiresolution_end(this%hr_area)
+    end if
     
     POP_SUB(mesh_end)
   end subroutine mesh_end
@@ -715,7 +722,7 @@ contains
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
-    if(mesh%sb%mr_flag) then
+    if (multiresolution_use(mesh%hr_area)) then
       memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! lxyz

@@ -211,11 +211,10 @@ contains
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_1(gr%mesh, namespace, gr%sb, gr%cv, grid_spacing, enlarge)
     call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
-
   end subroutine grid_init_stage_1
 
 
