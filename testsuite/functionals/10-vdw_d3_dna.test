@@ -82,7 +82,7 @@ Precision: 1.47e-17
 match ;  Force 40 (z)    ; GREPFIELD(static/info, '40         H', 5) ; -0.0147137
 Precision: 1.10e-09
 match ;  Force 50 (x)    ; GREPFIELD(static/info, '50         H', 3) ; -0.000705886
-Precision: 5.50e-10
+Precision: 2.e-09
 match ;  Force 50 (y)    ; GREPFIELD(static/info, '50         H', 4) ; -0.0001351925
 Precision: 5.50e-09
 match ;  Force 50 (z)    ; GREPFIELD(static/info, '50         H', 5) ; 0.006233235
