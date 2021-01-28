@@ -53,7 +53,6 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: x      = M_ZERO
     FLOAT, dimension(MAX_DIM) :: v      = M_ZERO
     FLOAT, dimension(MAX_DIM) :: f      = M_ZERO
-    integer, dimension(MAX_DIM) :: c    = 0
     FLOAT                     :: charge = M_ZERO
   end type atom_classical_t
 
@@ -80,7 +79,6 @@ contains
     this%x     = x
     this%v     = M_ZERO
     this%f     = M_ZERO
-    this%c     = 0
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
@@ -104,7 +102,6 @@ contains
     this%x     = M_ZERO
     this%v     = M_ZERO
     this%f     = M_ZERO
-    this%c     = 0
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
@@ -243,7 +240,6 @@ contains
     this%x      = x
     this%v      = M_ZERO
     this%f      = M_ZERO
-    this%c      = 0
     this%charge = charge
 
   end subroutine atom_classical_init
@@ -256,7 +252,6 @@ contains
     this%x      = M_ZERO
     this%v      = M_ZERO
     this%f      = M_ZERO
-    this%c      = 0
     this%charge = M_ZERO
 
   end subroutine atom_classical_end
