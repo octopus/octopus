@@ -1,0 +1,59 @@
+# ----- Calculation node and parallelization ----------------------------------------------------
+
+Debug = trace_file
+ProfilingMode = yes
+CalculationMode = gs
+ParDomains = auto
+ParStates = no
+MaxwellParDomains = auto
+MaxwellParStates = no
+
+pi=3.14159265359
+c=137.035999679
+
+
+# ----- Matter box variables --------------------------------------------------------------------
+
+lsize_ma = 10.0
+dx_ma = 0.5
+
+Dimensions = 3
+BoxShape = parallelepiped
+
+%Lsize
+lsize_ma | lsize_ma | lsize_ma
+%
+
+%Spacing
+dx_ma | dx_ma | dx_ma
+%
+
+# ----- Species variables -----------------------------------------------------------------------
+
+XYZCoordinates = "geometry_z_dir.bohr.xyz"
+
+# ----- Hatter calculation variables
+
+Extrastates = 2
+XCFunctional = lda_x + lda_c_gl
+
+EigenSolver = cg
+EigenSolverTolerance = 1.00e-12
+EigensolverMaxIter = 50
+CoanelDens = 1.00e-11
+MaximumIter = 1000
+
+DerivativesStencil = stencil_starplus
+DerivativesOrder = 4
+TDExpOrder = 4
+
+SymmetriesCompute = no
+ConvForce = 0.0
+SmearingFunction = fermi_dirac
+Smearing = 0.001
+MixingScheme = broyden
+Mixing = 0.02
+LCAOStart = lcao_states
+
+AbsorbingBoundaries = not_absorbing
+

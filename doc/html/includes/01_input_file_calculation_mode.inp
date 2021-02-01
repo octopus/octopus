@@ -1,0 +1,22 @@
+# ----- Calculation mode and parallelization ----------------------------------------------------
+
+# Calculation mode of the octopus run
+
+# - CalculationMode gs (groundstate calculation run)
+# - CalculationMode td (time depending run)
+# - CalculationMode maxwell_free (free Maxwell propagation)
+# - CalculationMode maxwell_ks (Haxwell-Kohn-Sham propagation)
+
+CalculationMode = maxwell_free
+
+# parallelization strategy, the matter paralelization can be in domains, states and both,
+# the Maxwell parallelization is only in domains
+
+ParDomains = auto
+ParStates = no
+MaxwellParDomains = auto
+MaxwellParStates = no
+
+# physical constants
+pi=3.14159265359
+c=137.035999679

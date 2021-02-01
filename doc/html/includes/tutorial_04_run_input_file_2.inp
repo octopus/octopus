@@ -1,0 +1,19 @@
+# ----- Maxwell box variables -------------------------------------------------------------------
+
+# free maxwell box limit of 10.0 plus 5.0 for the absorbing mask
+# boundaries and plus 2.0 for the incident wave boundaries with der_order = 4 times dx_mx
+
+lsize_mx = 17.0 
+dx_mx = 0.5
+
+MaxwellDimensions = 3
+MaxwellBoxShape = parallelepiped
+
+%MaxwellLsize
+lsize_mx | lsize_mx | lsize_mx
+%
+
+%MaxwellSpacing
+dx_mx | dx_mx | dx_mx
+%
+
