@@ -21,9 +21,15 @@ match ; photon number                            ; GREPFIELD(static/info, 'Photo
 match ; photon exchange                          ; GREPFIELD(static/info, 'Photon ex.', 4)   ; 0.00698560574
 
 Input: 17-oep-photons.03-oep.inp
-match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; energy Total                             ; GREPFIELD(static/info, 'Total       =', 3) ; -48.96065490
-match ; eigenvalue 1                             ; GREPFIELD(static/info, '   1   --', 3)      ; -5.805610
-match ; eigenvalue 5                             ; GREPFIELD(static/info, '   5   --', 3)      ; -0.406397
-match ; photon number                            ; GREPFIELD(static/info, 'Photon number', 4)     ; 0.0112650334
-match ; photon exchange                          ; GREPFIELD(static/info, 'Photon ex.', 4)   ; 0.0069047162
+Precision: 1.00e-15
+match ;  SCF convergence                           ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+Precision: 3.06e-03
+match ;  energy Total                              ; GREPFIELD(static/info, 'Total       =', 3) ; -48.961725815
+Precision: 4.64e-04
+match ;  eigenvalue 1                              ; GREPFIELD(static/info, '   1   --', 3) ; -5.805702999999999
+Precision: 5.61e-05
+match ;  eigenvalue 5                              ; GREPFIELD(static/info, '   5   --', 3) ; -0.40640600000000004
+Precision: 6.37e-06
+match ;  photon number                             ; GREPFIELD(static/info, 'Photon number', 4) ; 0.0112687911
+Precision: 5.61e-07
+match ;  photon exchange                           ; GREPFIELD(static/info, 'Photon ex.', 4) ; 0.0069050299999999995
