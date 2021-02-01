@@ -1,0 +1,88 @@
+# ----- Calculation mode and parallelization ----------------------------------------------------
+
+CalculationMode = maxwell_free
+MaxwellParDomains = auto
+MaxwellParStates = no
+
+pi=3.14159265359
+c=137.035999679
+
+# ----- Maxwell box variables -------------------------------------------------------------------
+
+# free maxwell box limit of 10.0 plus 2.0 for the incident wave boundaries plus 4 times dx_mx for derivatives
+# since der_order = 4 
+
+lsize_mx = 12.0
+dx_mx = 0.5
+
+MaxwellDimensions = 3
+MaxwellBoxShape = parallelepiped
+%MaxwellLsize
+lsize_mx | lsize_mx | lsize_mx
+%
+
+%Maxwell$pacing
+dx_mx | dx_mx | dx_mx
+%
+
+# ----- Maxwell calculation variables -----------------------------------------------------------
+
+MaxwellHamiltonianOperator = faraday_ampere
+MaxwellTDOperatorMethod = maxwell_op_fd
+MaxwellTDPropagator = maxwell_etrs
+
+MaxwellDerivativesStencil = stencil_starplus
+MaxwellDerivativesOrder = 4
+MaxwellTDExpOrder = 4
+
+%MaxwellBoundaryConditions
+maxwell_plane_waves | maxwell_plane_waves | maxwell_plane_waves
+%
+
+%MaxwellAbsorbingBoundaries
+not_absorbing | not_absorbing | not_absorbing
+%
+
+# ----- Output variables ------------------------------------------------------------------------
+
+OutputFormat = plane_x + plane_y + plane_z + vtk + axis_x
+
+
+# ----- Maxwell output variables ----------------------------------------------------------------
+
+MaxwellOutput = maxwell_electric_field + maxwell_magnetic_field + maxwell_energy_density + maxwell_trans_electric_field 
+
+MaxwellOutputInterval = 1
+MaxwellTDOutput = maxwell_energy + maxwell_fields
+
+%MaxwellFieldsCoordinate
+0.00 | 0.00 | 0.00
+%
+
+# ----- Tine step variables ---------------------------------------------------------------------
+
+TDTimeStep = 0.002
+TDMaxSteps = 200
+
+# ----- Maxwell field variables -----------------------------------------------------------------
+
+lambda = 10.0
+omega = 2 * pi * c / lambda
+kx = omega / c
+E2 = 0.05
+pw = 10.0
+ps = - 5 * 5.0
+
+%UserDefinedMaxwellIncidentWaves
+plane_waves_mx_function | 0 | 0 | E2 | "plane_waves_function" | plane_wave
+%
+
+%MaxwellFunctions
+"plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | ps | 0 | 0 | pw
+%
+
+# cosinoidal pulse
+%UserDefinedInitialMaxwellStates
+3 | formula | electric_field | “ E2*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw)*step(pw-abs((kx*x-kx*ps)/kx“2)) " # in one line
+2 | formula | magnetic_field | “ -1/c*Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw) *step(pw-abs((kx*x-kx*ps)/kx‘2)) " # in one line
+%

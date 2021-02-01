@@ -1,0 +1,5 @@
+# ----- Maxwell calculation variables -----------------------------------------------------------
+
+# MaxwellHamilonianOperator = faraday_ampere
+MaxwellHamiltonianOperator = faraday_ampere_medium
+

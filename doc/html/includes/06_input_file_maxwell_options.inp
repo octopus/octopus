@@ -1,0 +1,89 @@
+# ----- Maxwell calculation variables -----------------------------------------------------------
+
+# Type of Maxwell Hamiltonian operator
+
+# - faraday_ampere (3x3 for vacuum calculation)
+# - faraday_ampere_medium (6x6 for medium calculation)
+
+MaxwellHamiltonianOperator = faraday_ampere
+
+# Maxwell operator method
+# - MaxwellTDOperatorMethod maxwell_op_fd (finite difference operation)
+# - MaxwellTDOperatorMethod maxwell_op_fft (fft into the fourier space, phase multiplication, fft back into real space)
+
+MaxwellTDOperatorMethod = maxwell_op_fd
+
+# Maxwell propagation method
+# - MaxwellTDPropagator = maxwell_etrs (enforced time reversal symmetry)
+
+MaxwellTDPropagator = maxwell_etrs
+
+# Option switch for Maxwell to matter coupling
+
+MatterToMaxwellCoupling = no
+
+# Option switch for matter to Maxwell coupling
+
+MaxwellToMatterCoupling = no
+
+# Multipole coupling order
+# - electric_dipole_coupling (first order of the multipole expansion)
+# - magnetic_dipole_coupling (second order of the multipole expansion)
+# - electric_quadrupole_coupling (second order of the multipole expansion)
+
+MaxwellCouplingOrder = electric_dipole_coupling
+
+# Tranverse field calculation via helmholtz decomposition
+- MaxwellTransFieldCalculationMethod = trans_field_matter (subtraction of longitudinal matter field)
+- MaxwellTransFieldCalculationMethod = trans_field_poisson (transverse field calculation with poisson equation)
+- MaxwellTransFieldCalculationMethod = trans_field_poisson_corr (same like "trans_field_poisson", but subtracting the plane waves before and adding them again afterwards)
+- MaxwellTransFieldCalculationMethod = trans_field_poisson_long (subtraction of longitudinal field calculated with via poisson equation)
+- MaxwellTransFieldCalculationMethod = trans_field_poisson_long_corr (same like "trans_field_poisson_long", but subtracting plane waves before and adding them again afterwards)
+
+MaxwellTransFieldCalculationMethod = trans_field_poisson
+
+# Poisson solver for the Maxwell calculation, i.e. the transverse field calculation
+MaxwellPoissonSolver = isf
+MaxwellPoissonSolverBoundaries = multipole
+
+# Options for the Maxwell derivative stencil and the exponential expanison of the time propagator
+
+# - MaxwellDerivativesStencil = stencil_star
+# - MaxwellDerivativesStencil = stencil_starplus
+# - MaxwellDerivativesStencil = stencil_cube
+
+MaxwellDerivativesStencil = stencil_starplus
+MaxwellDerivativesOrder = 4
+MaxwellTDExpOrder = 4
+
+# Maxwell boundary conditions for each dimension
+# - MaxwellBoundaryConditions = maxwell_zero (zero boundary condition)
+# - MaxwellBoundaryConditions = maxwell_plane_waves (plane waves at the boundary)
+# - MaxwellBoundaryConditions = maxwell_constant (constant value at the boundary)
+
+%MaxwellBoundaryConditions
+maxwell_plane_waves | maxwell_plane_waves | maxwell_plane_waves
+%
+
+# Maxwell boundaries options
+# - Maxwell_AbsorbingBoundaries = not_absorbing (zero boundary condition)
+# - Maxwell_AbsorbingBoundaries = mask (Maxwell field is muliplied by a mask function)
+# - Maxwell_AbsorbingBoundaries = cpml (Maxwell PEML with convolution method)
+%MaxwellAbsorbingBoundaries
+not_absorbing | not_absorbing | not_absorbing
+%
+
+# Absorbing boundary width for the Maxwell mask function (if using masked boundaries)
+MaxwellABMaskWidth = 5.0
+
+# Absorbing boundary width for the Maxwell PML (if using PML boundary conditions)
+MaxwellABPMLWidth = 5.0
+
+# Parameters to tune the Maxwell PML
+# - numerical tests show best performance for MaxwellABPMLPower between 2 and 3
+# - MaxwellABPMLReflectionError should be rather "small"
+
+MaxwellABPMLKappaMax = 5.0
+MaxwellABPMLAlphaMax = 1.9
+MaxwellABPMLPower = 2.0
+MaxwellABPMLReflectionError = 1e-16

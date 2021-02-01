@@ -1,0 +1,19 @@
+ # ------- Matter output variables (see https://octopus-code.org/doc/9.1/html/vars.php) ---------
+
+# Matter output variables 
+# - Output = potential
+# - Output = wfs (matter wavefunctions)
+# - Output = geometry (positions of the ions)
+# - Output = density (matter electronic density)
+# - Output = current (matter current density)
+# - Output = ELF (electron localization function)
+# - Output = forces (forces acting on the ions)
+
+Output = potential + density + current + geometry + forces + elf
+
+# Output interval steps for the matter variables. After OutputInterval steps, the
+# matter variables on the grid are written into the output_iter folder
+OutputInterval = 1
+
+# Output of the scalar matter variables for each time step, written into the td.general folder
+TDOutput = energy + multipoles + laser + geometry

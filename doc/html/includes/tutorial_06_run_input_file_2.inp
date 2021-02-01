@@ -1,0 +1,50 @@
+#----- Maxwell field variables -----------------------------------------------------------------
+
+lambda = 10.0
+omega = 2 * pi * c / lambda
+kx = omega / c
+E2 = 0.05
+pw = 10.0
+ps = - 5 * 5.0
+
+%UserDefinedHaxwellIncidentwaves
+plane_waves_mx_function | 0 | 0 | E2 | "plane_waves_function" | plane_wave
+%
+
+%MaxwellFunctions
+"plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | ps | 0 | 0 | pw
+%
+
+
+# cosinoidal pulse
+%UserDefinedInitialMaxwellStates
+3 | formula | electric_field | " Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw)*step(pw-abs((kx*x-kx*ps)/kx^2)) " # in one line
+2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw) *step(pw-abs((kx*x-kx*ps)/kx^2)) " # in one line
+%
+
+k1x = 0.707107
+k1y = - 0.707107
+k1abs = sqrt(k1x^2+k1y^2)
+k2x = - 0.447214
+k2y = - 0.223607
+k2abs = sqrt(k2x^2+k2y^2)
+
+E1z = 0.05
+E2z = 0.05
+
+pwl = 10.0
+pw2 = 15.0
+ps1x = -17.6777
+ps1y = 17.6777
+ps1y = 22.3607
+ps2y = 11.1804
+
+%UserDefinedMaxwellIncidentwaves
+plane_waves_mx_function | 0 | 0 | E1z | "plane_waves_func_1“ | plane_wave
+plane_waves_mx_function | 0 | 0 | E2z | "plane_waves_func_2" | plane_wave
+%
+
+%MaxwellFunctions
+"plane_waves_func_1" | mxf_cosinoidal_wave | k1x | k1y | 0 | ps1x | ps1y | 0 | pw1
+"plane_waves_func_2" | mxf_cosinoidal_wave | k2x | k2y | 0 | ps1y | ps2y | 0 | pw2
+%

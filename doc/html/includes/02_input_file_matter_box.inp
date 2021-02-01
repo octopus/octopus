@@ -1,0 +1,34 @@
+# ----- Matter box variables --------------------------------------------------------------------
+
+# Variable of the matter grid size
+lsize_ma = 10.8
+
+# Variable of the matter grid spacing
+dx_ma = 9.5
+
+# Number of dimensions of the matter grid
+Dimensions = 3
+
+# Box shape of the matter simulation box
+
+# - BoxShape = parallelepiped (box)
+# - BoxShape = minimum (union of all grid points inside spheres of a
+# selected radius around all ions)
+
+BoxShape = parallelepiped
+
+# Box size of the matter simulation box in each dimension
+
+%Lsize
+lsize_ma | lsize_ma | lsize_ma
+%
+
+# Sphere radius for the minimum simulation box
+Radius = lsize_ma
+
+# Grid spacing of the matter simulation box in each dimension
+
+%Spacing
+dx_ma | dx_ma | dx_ma
+%
+

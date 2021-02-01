@@ -1,0 +1,56 @@
+# ----- Maxwell field variables -----------------------------------------------------------------
+
+# Plane waves input block
+# - Column 1: input method (in this example, a a predefined Maxwell function)
+# - Column 2: electric field amplitude in the x- direction
+# - Column 3: electric field amplitude in the y- direction
+# - Column 4: electric field amplitude in the z- direction
+# - Column 5: Maxwell function name
+# - Column 6: wave type
+
+%UserDefinedMaxwellIncidentWaves
+plane_waves_mx_function | Exl | Eyl | E21 | "plane_waves_func_1" | plane_wave
+plane_waves_mx_function | Ex2 | Ey2 | E22 | "plane_waves_func_2" | plane_wave
+%
+
+# Predefined Maxwell function
+# - Column 1: Maxwell function name that corresponds to UserDefinedMaxwellIncidentWaves
+# - Column 2: envelope function of the plane wave pulse
+# - Column 3: wavevector component in x-direction
+# - Column 4: wavevector component in y-direction
+# - Column 5: wavevector component in z-direction
+# - Column 6: pulse shift in x-direction
+# - Column 7: pulse shift in y-direction
+# - Column 8: pulse shift in z-direction
+# - Column 9: pulse width
+# kxl, kx2 = wavevectors in x-direction for EM fields 1 and 2
+# ky1,ky2 = wavevectors in y-direction for EM fields 1 and 2
+# k21,k22 = wavevectors in z-direction for EM fields 1 and 2
+# psx1,psx2 = spatial shift of pulse 1 and 2 in x-direction
+# psy1,psy2 = spatial shift of pulse 1 and 2 in y-direction
+# pszl, p522 = spatial shift of pulse 1 and 2 in z-direction
+# pw1, pw2 = pulse width of pulse 1 and 2
+%MaxwellFunctions
+"plane_waves_func_1" | mxf_cosinoidal_wave | kx1 | ky1 | kz1 | psx1 | psy1 | psz1 | pw1
+"plane_waves_func_2" | mxf_cosinoidal_wave | kx2 | ky2 | kzZ | psx2 | psy2 | psz2 | pw2
+
+# cosinoidal pulse
+# - Column 1: field component
+# - Column 2: input type (formula or file)
+# - Column 3: what kind of Maxwell field
+# - Column 4: analytic formula of file input for the field component
+# e.g. Ex2(x,y,z) gives here the x component of the 2nd pulse's electric field 
+# e.g. By1(x,y,z) gives here the y component of the 1st pulse's magnetic field
+
+%UserDefinedInitialMaxwellStates
+1 | formula | electric_field | " Ex1(x,y,z) + Ex2(x,y,z) "
+2 | formula | electric_field | " Ey1(x,y,z) + Ey2(x,y,z) "
+3 | formula | electric_field | " Ez1(x,y,z) + Ez2(x,y,z) "
+1 | formula | magnetic_field | " Bx1(x,y,z) + Bx2(x,y,z) "
+2 | formula | magnetic_field | " By1(x,y,z) + By2(x,y,z) "
+3 | formula | magnetic_field | " Bz1(x,y,z) + Bz2(x,y,z) "
+%
+
+# If incident plane waves should be used to calculate the analytical Maxwell field inside the simulation box (no propagation, just evaluation of the plane waves inside the simulation box) 
+
+MaxwellIncidentWavesInBox = no

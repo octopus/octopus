@@ -1,0 +1,8 @@
+# ----- General output variables ----------------------------------------------------------------
+
+# Output format
+# - Output format = plane_{axis} (with {axis}=x,y,z: plotting plane with {axis}=O)
+# - Output format = vtk (full 3D box values in vtk format)
+# - Output format = xyz (output format for coordinates of ions)
+# - Output format = axis_x (1D plot along x axix with y=O and z=O)
+OutputFormat= plane_ x + plane_ y + plane_ 2 + vtk + xyz + axis_x

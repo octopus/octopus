@@ -1,0 +1,16 @@
+# ----- Maxwell box variables -------------------------------------------------------------------
+
+lsize_mx = 10.0 # free naxwell box limit of 10.0
+dx_mx = 0.5
+
+MaxwellDimensions = 3
+MaxwellBoxShape = parallelepiped
+
+%MaxwellLsize
+lsize_mx | lsize_mx | lsize_mx
+%
+
+%MaxwellSpacing
+dx_mx | dx_mx | dx_mx
+%
+

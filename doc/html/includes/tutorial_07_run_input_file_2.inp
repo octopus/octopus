@@ -1,0 +1,15 @@
+# ----- Maxwell box variables -------------------------------------------------------------------
+lsize mx = 15.0 # free maxwell box limit of 10.0 plus 5.0 for the absorbing mask boundaries
+
+dx_mx_= 0.5
+
+MaxwellDimensions = 3
+MaxwellBoxShape = parallelepiped
+
+%MaxwellLsize
+lsize_mx | lsize_mx | lsize_mx
+%
+
+%MaxwellSpacing
+dx_mx | dx_mx | dx_mx
+%

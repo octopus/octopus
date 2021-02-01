@@ -1,0 +1,25 @@
+# ----- Medium Box ------------------------------------------------------------------------------
+
+# Medium box parameters like size, epsilon, mu, electric loss and magnetic loss
+# Column 1: Length of the box in x-direction
+# Column 2: Length of the box in y-direction
+# Column 3: Length of the box in z-direction
+# Column 4: Center coordinate of the box in x-direction
+# Column 5: Center coordinate of the box in y-direction
+# Column 6: Center coordinate of the box in z-direction
+# Column 7: Electric permittivity factor (epsilon_r)
+# Column 8: Magnetic permeability factor (mu_r)
+# Column 9: Electric loss (sigma_e)
+# Column 10: Magnetic loss (sigma_m)
+# Column 11: Edge option ("edged" for sharp edges, "smooth" for using a smoothing function)
+
+% MaxwellMediumBox
+0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 2.0 | 2.0 | 0.0 | 0.0 | edged
+%
+
+# Maxwell operation calculated via Riemann-Silberstein vector or separately by
+# the electric and magnetic field with standard Maxwell's equations to avoid errors
+# by calculating descrete gradients for sharped edged boxes
+
+MaxwellMediumCalculation = riemann_silberstein
+

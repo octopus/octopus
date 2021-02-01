@@ -1,0 +1,44 @@
+# ----- Maxwell output variables ----------------------------------------------------------------
+
+# Maxwell output variables are written every MaxwellOutputInterval time steps into the output_ iter folder
+# MaxwellOutput = maxwell_ electric_ field (electric field output)
+# MaxwellOutput = maxwell_magnetic_field (magnetic field output)
+# MaxwellOutput = maxwell_trans_electric_field (transverse electric field output)
+# MaxwellOutput = maxwell_trans_magnetic_field (transverse magnetic field output)
+# MaxwellOutput = maxwell_long_electric_field (longitudinal electric field output)
+# MaxwellOutput = maxwell_long_magnetic_field (longitudinal magnetic field output)
+# MaxwellOutput = maxwell_div_electric_field (divergence of the electric field output)
+# MaxwellOutput = maxwell_div_magnetic_field (divergence of the magnetic field output)
+# MaxwellOutput = maxwell_vector_potential (vector potential output)
+# MaxwellOutput = maxwell_poynting_vector (poynting vector output)
+# MaxwellOutput = maxwell_energy_density (electromagnetic energy density output)
+# MaxwellOutput = maxwell_current (electromagnetic current density on the Maxwell grid)
+# MaxwellOutput = maxwell_external_current (external current density on the Maxwell grid)
+# MaxwellOutput = maxwell_electric_dipole_potential (electric dipole potential output)
+# MaxwellOutput =  maxwell_electric_quadrupole_potential (electric quadrupole potential output)
+# MaxwellOutput = maxwell_charge_density (electromagnetic charge density via div(E))
+# MaxwellOutput = maxwell_charge_density_diff (difference between div(E) and KS charge density)
+
+MaxwellOutput = maxwell_electric_field + maxwell_magnetic_field
+
+# Output interval steps for the Maxwell variables. After MaxwellOutputInterval steps,
+# the Maxwell variables on the grid are written into the output_iter folder
+MaxwellOutputInterval = 1
+
+# Output of the scalar Maxwell variables for each time step, written into the td.general folder
+
+# MaxwellTDOutput = maxwell_energy (electromagnetic and Maxwell-matter energies)
+# MaxwellTDOutput = maxwell_spectrum (variables to calculate the spectrum via the Maxwell system)
+# MaxwellTDOutput = maxwell_fields (Mx fields at coordinates given by MaxwellFieldsCoordinate)
+# MaxwellTDOutput = maxwell_mean_poynting (mean poynting vector in each direction)
+# MaxwellTDOutput = maxwell_poynting_surface (mean poynting vector of boundary surfaces)
+# MaxwellTDOutput = maxwell_e_field_surface (mean electric field vector of boundary surfaces)
+# MaxwellTDOutput = maxwell_b_field_surface (mean magnetic field vector of boundary surfaces)
+
+MaxwellTDOutput = maxwell_energy + maxwell_fields
+
+# Coordinates of the grid points, which corresponding electromagnetic field values are
+# written into td.general/maxwell_fields
+%MaxwellFieldsCoordinate
+0.00 | 0.00 | 0.00
+%

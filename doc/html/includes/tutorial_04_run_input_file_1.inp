@@ -1,0 +1,7 @@
+# ----- Maxwell calculation variables -----------------------------------------------------------
+
+%MaxwellAbsorbingBoundaries
+mask | mask | mask
+%
+
+MaxwellABMaskWidth = 5.0

@@ -1,0 +1,17 @@
+# ----- Species variables -----------------------------------------------------------------------
+
+# Defining the ion species and their pseudopotential
+
+%Species
+'Na' | species_pseudo | file | '/path/to/Na.psf'
+%
+
+# Geometry coordinates of the matter ions
+%Coordinates
+'Na' | 0 | 0 | -1.53945
+'Na' | 0 | 0 | 1.53945
+%
+
+# Geoemetry file of matter ions written as coordinates in xyz format
+XYZCoordinates = "Na2.geometry_z_dir.bohr.xyz"
+

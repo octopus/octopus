@@ -1,0 +1,33 @@
+# ----- External current options ------------------------
+
+# Switch on external current density
+MaxwellExternalCurrent = yes
+
+# External current parameters
+# - Column 1: input option for the td function which is here a predefined function
+# - Column 2: spatial distribution of the current in x- direction
+# - Column 3: spatial distribution of the current in y-direction
+# - Column 4: spatial distribution of the current in z-direction
+# - Column 5: frequency of the temoral current density pulse
+# - Column 6: name of the temporal current pulse envelope function
+# t0 = time shift of the current density signal
+# tw = width of the current density signal in time
+# jx(x,y,z) = spatial current density distribution in x-direction
+# jy(x,y,z) = spatial current density distribution in y-direction
+# jz(x,y,z) = spatial current density distribution in z-direction
+# omega = frequency of the temoral current density pulse
+# env_func = name of the temporal current pulse envelope function
+%UserDefinedMaxwellExternalCurrent
+external_current_td_function | "jx(x.y,z)" | ”jy(x,y,z)" | "jz(x,y,z)" | omega | "env_func"
+%
+
+# Function in time
+# - Column 1: name of the envelope function
+# - Column 2: function type
+# - Column 3: amplitude
+# - Column 4: envelope function width
+# - Column 5: shift of the function f(t-t0)
+
+%TDFunctions
+"env_func” | tdf_gaussian | 1.0 | tw | to
+%
