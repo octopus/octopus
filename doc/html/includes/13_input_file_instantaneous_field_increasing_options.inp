@@ -1,0 +1,30 @@
+# ----- Spatial constant field propagation ------------------------------------------------------
+
+Ez           = 0.000010000000
+By           = 0.000010000000
+pulse_width  = 500.0
+pulse_shift  = 270.0
+pulse_slope  = 100.0
+
+# Column 1: constant electric field component in x-direction
+# Column 2: constant electric field component in y-direction
+# Column 3: constant electric field component in z-direction
+# Column 4: constant magnetic field component in x-direction
+# Column 5: constant magnetic field component in y-direction
+# Column 6: constant magnetic field component in z-direction
+# Column 7: name of the td function
+
+%UserDefinedConstantSpacialMaxwellField
+0 | 0 | Ez | 0 | By | 0 | "time_function"
+%
+
+# Column 1: name of the td function
+# Column 2: function
+# Column 3: amplitude
+# Column 4: pulse 510
+# Column 5: pulse wid
+# Column 6: pulse shi
+
+%TDFunctions
+"time_function" | tdf_logistic | 1.0 | pulse_slope | pulse_width | pulse_shift
+%

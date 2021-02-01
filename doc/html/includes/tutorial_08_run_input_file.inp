@@ -1,0 +1,11 @@
+# ----- Maxwell calculation variables -----------------------------------------------------------
+
+%MaxwellAbsorbingBoundaries
+cpml | cpml | cpml
+%
+
+MaxwellABPMLWidth = 5.0
+MaxwellABPMLKappaMax = 1.0
+MaxwellABPMLAlphaMax = 1.0 
+MaxwellABPMLPower = 2.0
+MaxwellABPMLReflectionError = 1.0e-16

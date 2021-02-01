@@ -1,0 +1,18 @@
+# ----- External current ------------------------------------------------------------------------
+
+MaxwellExternalCurrent = yes
+t1 = 4 * 5.0 / c
+t2 = 6 * 5.0 / c
+tw = 0.03
+j = 1.0000
+
+%UserDefinedMaxwe11ExternalCurrent
+external_current_td_function | "0" | "0" | " j*exp(-x^2/2)*exp(-y^2/2)*exp(-z^2/2)" | 0 |"env_func_1 "
+external_current_td_function | "0" |" 0" | "j*exp(-x^2/2)*exp(-y^2/2)*exp(-z^2/2)" | 0 | "env_func_2"
+%
+
+%TDFunctions
+"env_func_1" | tdf _gaussian |  1.0 | tw | t1
+"env_func_2" | tdf _gaussian | -1.0 | tw | t2
+%
+

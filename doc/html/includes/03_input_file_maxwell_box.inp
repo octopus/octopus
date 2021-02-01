@@ -1,0 +1,25 @@
+# ----- Maxwell box variables -------------------------------------------------------------------
+
+# Variable of the Maxwell grid size
+lsize_mx = 12.0
+
+# Variable of the Maxwell grid spacing
+dx_mx = 9.5
+
+# Number of dimensions of the Maxwell grid
+MaxwellDimensions = 3
+
+# Box shape of the Maxwell simulation box
+MaxwellBoxShape = parallelepiped
+
+# Box size of the Maxwell simulation box in each dimension
+
+%MaxwellLsize
+lsize_mx | lsize_mx | lsize_mx
+%
+
+# Grid spacing of the Maxwell simulation box in each dimension
+
+%MaxwellSpacing
+dx_mx | dx_mx | dx_mx
+%

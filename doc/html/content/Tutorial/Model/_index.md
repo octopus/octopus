@@ -12,8 +12,3 @@ description: "Model Systems"
 * Lesson 2: {{< tutorial "Model/Particle in a box" "Particle in a box" >}}
 * Lesson 3: {{< tutorial "Model/1D Helium" "1D Helium" >}}
 * Lesson 4: {{< tutorial "Model/Particle in an octopus" "Particle in an octopus" >}}
-
-
-<span class=noprint><hr>
-
-Back to [[Tutorials]]

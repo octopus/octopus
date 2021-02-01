@@ -1,0 +1,39 @@
+# ----- Time step variables ---------------------------------------------------------------------
+
+# Time step of the propagation
+# In case of coupled Maxwell-Kohn Sham propagation, this variable is the matter timestep.
+# The Maxwell system time step is given by TDTimeStep/MaxwellTDIntervalSteps
+# so that the Maxwell system propagates several intermediate steps between consecutive matter steps.
+#
+# TDTimeStep should be equal or smaller than the Courant criterion, which is here
+# S_Courant = 1 / (sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2))
+
+TDTimeStep = 0.002
+
+# Total number of Matter steps to run
+TDMaxSteps = 200
+
+# Maxwell intermediate time steps only plays a role in the maxwell_ks mode. It
+# indicates the number of Maxwell time propagations between consecutive matter steps
+MaxwellTDIntervalSteps = 1
+
+# The Maxwell TD relaxation steps are the number of steps in the maxwell_ks mode,
+# where the run propagates only in a standard TD mode to relax the starting
+# groundstate if necessary.
+
+TDMaxwellTDRelaxationSteps = 0
+
+# The Maxwell ks relaxation steps denote the number of steps in the maxwell_ks mode,
+# where the run propagates in a maxwell_ks mode without any external field to relax
+# the starting groundstate if necessary.
+
+TDMaxwellKSRelaxationSteps = 0
+
+# Approximation method for the Maxwell ETRS propagator
+# MaxwellTDETRSApprox = no (no approximation)
+# MaxwellTDETRSApprox = const_steps (assumption that the current density is approximately constant
+# between two matter time steps and using the arithmetic mean of the current density at the latest # matter time step and the next matter time step)
+MaxwellTDETRSApprox = no
+
+# Internal current test run, the test function is hard coded in current.F90
+CurrentPropagationTest = no

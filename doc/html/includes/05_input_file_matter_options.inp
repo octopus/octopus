@@ -1,0 +1,42 @@
+# ----- Matter calculation variables ------------------------------------------------------------
+
+# extra Kohn-Sham orbitals added to the number of HOMO of the matter system
+
+Extrastates = 5
+
+# Exchange and correlation functionals for the matter electron density
+
+# - XCFunctional gga_x_pbe_r + gga_c_pbe (GGA_PBE functionals)
+# - XCFunctional lda_x + lda_c_gl (LDA functionals)
+
+XCFunctional = lda_x + lda_c_gl
+
+# Options and variables for the eigensolver to calculate the groundstate
+
+EigenSolver = cg
+EigenSolverTolerance = 1.00e-13
+EigensolverMaxIter = 50
+ConvRelDens = 1.00e-12
+MaximumIter = 1600
+
+# Option for the matter derivative stencil and the exponential expanison of the time propagator
+
+# - DerivativesStencil stencil_star
+# - DerivativesStencil stencil_starplus
+# - DerivativesStencil stencil_cube
+
+DerivativesStencil = stencil_starplus
+DerivativesOrder 4
+TDExpOrder 4
+
+# Moving ions option
+
+MoveIons = no
+
+# Matter absorbing boundaries option and variable
+
+# - AbsorbingBoundaries not_absorbing (zero boundary condition)
+# - AbsorbingBoundaries = mask (wave function is muliplied by a mask function)
+
+AbsorbingBoundaries = not_absorbing
+ABWidth = 2.0
