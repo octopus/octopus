@@ -36,6 +36,8 @@ module box_parallelepiped_oct_m
   type, extends(box_shape_t) :: box_parallelepiped_t
     private
     FLOAT, allocatable :: half_length(:) !< half the length of the parallelepiped in each direction.
+
+    integer :: n_periodic_boundaries = 0 !< in how many directions the parallelepiped boundaries are periodic
   contains
     procedure :: contains_points => box_parallelepiped_contains_points
     final     :: box_parallelepiped_finalize
@@ -48,10 +50,11 @@ module box_parallelepiped_oct_m
 contains
 
   !--------------------------------------------------------------
-  function box_parallelepiped_constructor(dim, center, length) result(box)
+  function box_parallelepiped_constructor(dim, center, length, n_periodic_boundaries) result(box)
     integer,            intent(in) :: dim
     FLOAT,              intent(in) :: center(dim)
-    FLOAT,              intent(in) :: length(dim) !< length of the parallelepiped along each Cartesian direction
+    FLOAT,              intent(in) :: length(dim)           !< length of the parallelepiped along each Cartesian direction
+    integer, optional,  intent(in) :: n_periodic_boundaries !< in how many directions the parallelepiped boundaries are periodic
     class(box_parallelepiped_t), pointer :: box
 
     PUSH_SUB(box_parallelepiped_constructor)
@@ -63,6 +66,9 @@ contains
     call box_shape_init(box, dim, center)
     SAFE_ALLOCATE(box%half_length(1:dim))
     box%half_length = M_HALF*length
+    if (present(n_periodic_boundaries)) then
+      box%n_periodic_boundaries = n_periodic_boundaries
+    end if
 
     POP_SUB(box_parallelepiped_constructor)
   end function box_parallelepiped_constructor
@@ -86,14 +92,28 @@ contains
     FLOAT,                       intent(in)  :: xx(:,:)
     logical :: contained(1:nn)
 
-    integer :: ip
+    integer :: ip, idir
     FLOAT :: ulimit(this%dim), llimit(this%dim)
 
-    do ip = 1, nn
-      llimit = this%center - this%half_length - BOX_BOUNDARY_DELTA
-      ulimit = this%center + this%half_length + BOX_BOUNDARY_DELTA
+    llimit = this%center - this%half_length - BOX_BOUNDARY_DELTA
+    do idir = 1, this%dim
+      if (idir <= this%n_periodic_boundaries) then
+        ! When periodic, we exclude one of the faces from the box.
+        ulimit(idir) = this%center(idir) + this%half_length(idir) - BOX_BOUNDARY_DELTA
+      else
+        ulimit(idir) = this%center(idir) + this%half_length(idir) + BOX_BOUNDARY_DELTA
+      end if
+    end do
 
-      contained(ip) = all(xx(ip, 1:this%dim) >= llimit .and. xx(ip, 1:this%dim) <= ulimit) .neqv. this%is_inside_out()
+    do ip = 1, nn
+      contained(ip) = .true.
+      do idir = 1, this%dim
+        contained(ip) = contained(ip) .and. xx(ip, idir) >= llimit(idir) .and. xx(ip, idir) <= ulimit(idir)
+        if (idir > this%n_periodic_boundaries) then
+          ! We only consider the box to be inside out along the non-periodic directions.
+          contained(ip) = contained(ip) .neqv. this%is_inside_out()
+        end if
+      end do
     end do
 
   end function box_parallelepiped_contains_points
