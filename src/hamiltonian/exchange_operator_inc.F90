@@ -59,7 +59,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   if(this%useACE) then
     call X(exchange_operator_apply_ACE)(this, der, st_d, psib, hpsib)
   else
-    call X(exchange_operator_apply_noACE)(this, namespace, der, st_d, psib, hpsib, rdmft)
+    call X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib, hpsib, rdmft)
   end if
 
   POP_SUB(X(exchange_operator_apply))
@@ -68,7 +68,7 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply_noACE)(this, namespace, der, st_d, psib, hpsib, rdmft)
+subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib, hpsib, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
@@ -89,7 +89,7 @@ subroutine X(exchange_operator_apply_noACE)(this, namespace, der, st_d, psib, hp
 
   type(profile_t), save :: prof, prof2
 
-  PUSH_SUB(X(exchange_operator_apply_noACE))
+  PUSH_SUB(X(exchange_operator_apply_standard))
 
   ASSERT(associated(this%st))
 
@@ -216,8 +216,8 @@ subroutine X(exchange_operator_apply_noACE)(this, namespace, der, st_d, psib, hp
   SAFE_DEALLOCATE_A(pot)
   SAFE_DEALLOCATE_A(psi2)
 
-  POP_SUB(X(exchange_operator_apply_noACE))
-end subroutine X(exchange_operator_apply_noACE)
+  POP_SUB(X(exchange_operator_apply_standard))
+end subroutine X(exchange_operator_apply_standard)
 
 ! ---------------------------------------------------------
 
@@ -255,58 +255,24 @@ subroutine X(exchange_operator_apply_ACE)(this, der, st_d, psib, hpsib)
     ASSERT(psib%is_packed() .eqv. hpsib%is_packed())
   end if
 
-!  select case(batch_status(psib))
-!  case(BATCH_DEVICE_PACKED)
+  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st_d%dim))
+  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
 
-    SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st_d%dim))
-    SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
+  do ibatch = 1, psib%nst
+    call batch_get_state(psib, ibatch, der%mesh%np, psi)
+    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-    do ibatch = 1, psib%nst
-      call batch_get_state(psib, ibatch, der%mesh%np, psi)
-      call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
-
-      do ist = 1, this%ace%nst
-        dot = X(mf_dotp)(der%mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
-        call lalg_axpy(der%mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
-      end do
-
-      call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
+    do ist = 1, this%ace%nst
+      dot = X(mf_dotp)(der%mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
+      call lalg_axpy(der%mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
     end do
 
-    SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(hpsi)
+    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
+  end do
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(hpsi)
  
-!  case(BATCH_PACKED)
-!
-!    SAFE _ALLOCATE(psi(1:der%mesh%np, 1:st_d%dim))
-!    SAFE _ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
-!
-!    do ibatch = 1, psib%nst
-!      call batch_get_state(psib, ibatch, der%mesh%np, psi)
-!      call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
-!
-!      do ist = 1, this%ace%nst
-!        dot = X(mf_dotp)(der%mesh, st_d%dim, this%ace%X(chi)(:,:,ist,ik), psi)
-!        call lalg_axpy(der%mesh%np, st_d%dim, -dot, this%ace%X(chi)(:,:,ist,ik), hpsi)
-!      end do
-!
-!      call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
-!    end do
-!
-!    SAFE _DEALLOCATE_A(psi)
-!    SAFE _DEALLOCATE_A(hpsi)
-
-!  case(BATCH_NOT_PACKED)
-!
-!    do ibatch = 1, psib%nst
-!      do ist = 1, this%ace%nst
-!        dot = X(mf_dotp)(der%mesh, st_d%dim, this%ace%X(chi)(:,:,ist,ik), psib%states(ist)%X(psi)(1:der%mesh%np, 1:st_d%dim))
-!        call lalg_axpy(der%mesh%np, st_d%dim, -dot, this%ace%X(chi)(1:der%mesh%np, 1:st_d%dim,ist,ik), hpsib%states(ist)%X(psi)(1:der%mesh%np, 1:st_d%dim))
-!      end do
-!    end do
-!
-!  end select
-
   call profiling_out(prof)
 
   POP_SUB(X(exchange_operator_apply_ACE))

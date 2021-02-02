@@ -324,7 +324,7 @@ contains
       call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
-    if(associated(st%rho_core)) then
+    if (allocated(st%rho_core)) then
       call forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     else 
       force_nlcc(:, :) = M_ZERO
@@ -402,7 +402,7 @@ contains
       end do
     end if
 
-    if(associated(hm%ep%E_field)) then
+    if (allocated(hm%ep%E_field)) then
       do iatom = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
         geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) &
@@ -412,7 +412,7 @@ contains
       end do
     end if
 
-    if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+    if (allocated(hm%ep%B_field) .or. allocated(hm%ep%A_static)) then
       write(message(1),'(a)') 'The forces are currently not properly calculated if static'
       write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
       call messages_fatal(2, namespace=namespace)

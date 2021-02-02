@@ -42,14 +42,14 @@ module ps_cpi_file_oct_m
     integer            :: nr            !< number of mesh points
     FLOAT              :: a             !< mesh multiplicative increment
     
-    FLOAT, pointer     :: rofi(:)       !< radial mesh
-    FLOAT, pointer     :: vps(:,:)      !< pseudopotential
-    FLOAT, pointer     :: rphi(:,:)     !< r times the pseudowavefunctions
+    FLOAT, allocatable :: rofi(:)       !< radial mesh
+    FLOAT, allocatable :: vps(:,:)      !< pseudopotential
+    FLOAT, allocatable :: rphi(:,:)     !< r times the pseudowavefunctions
     
     logical            :: core_corrections
-    FLOAT, pointer     :: chcore(:)     !< r times the core charge
-    FLOAT, pointer, private :: d1chcore(:)   !< first  derivative of chcore
-    FLOAT, pointer, private :: d2chcore(:)   !< second derivative of chcore
+    FLOAT, allocatable :: chcore(:)     !< r times the core charge
+    FLOAT, allocatable, private :: d1chcore(:)   !< first  derivative of chcore
+    FLOAT, allocatable, private :: d2chcore(:)   !< second derivative of chcore
   end type ps_cpi_file_t
   
 contains
@@ -139,14 +139,14 @@ contains
 
     PUSH_SUB(ps_cpi_file_end)
 
-    SAFE_DEALLOCATE_P(psf%rofi)
-    SAFE_DEALLOCATE_P(psf%vps)
-    SAFE_DEALLOCATE_P(psf%rphi)
+    SAFE_DEALLOCATE_A(psf%rofi)
+    SAFE_DEALLOCATE_A(psf%vps)
+    SAFE_DEALLOCATE_A(psf%rphi)
 
     if(psf%core_corrections) then
-      SAFE_DEALLOCATE_P(psf%chcore)
-      SAFE_DEALLOCATE_P(psf%d1chcore)
-      SAFE_DEALLOCATE_P(psf%d2chcore)
+      SAFE_DEALLOCATE_A(psf%chcore)
+      SAFE_DEALLOCATE_A(psf%d1chcore)
+      SAFE_DEALLOCATE_A(psf%d2chcore)
     end if
 
     POP_SUB(ps_cpi_file_end)

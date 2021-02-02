@@ -233,7 +233,7 @@ contains
 
       if(ps_has_density(ps)) then
 
-        ASSERT(associated(ps%density))
+        ASSERT(allocated(ps%density))
 
         rmax = CNST(0.0)
         do isp = 1, spin_channels
@@ -324,7 +324,7 @@ contains
 
       if(ps_has_density(ps)) then
 
-        ASSERT(associated(ps%density))
+        ASSERT(allocated(ps%density))
 
         rmax = CNST(0.0)
 

@@ -73,49 +73,6 @@ module pes_oct_m
 contains
 
   ! ---------------------------------------------------------
-  !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine pes_spm_nullify(this)
-    type(pes_spm_t), intent(out) :: this
-    !
-    PUSH_SUB(pes_spm_nullify)
-    this%wf            =>null()
-    POP_SUB(pes_spm_nullify)
-    return
-  end subroutine pes_spm_nullify
-
-  ! ---------------------------------------------------------
-  !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine pes_mask_nullify(this)
-    type(pes_mask_t), intent(out) :: this
-    !
-    PUSH_SUB(pes_mask_nullify)
-    this%k=>null()
-    this%mesh=>null()
-    this%vec_pot=>null()
-    this%Mk=>null()
-    this%mask_R=>null()
-    this%Lk=>null()
-    POP_SUB(pes_mask_nullify)
-    return
-  end subroutine pes_mask_nullify
-
-  ! ---------------------------------------------------------
-  !elemental (PUSH/POP)_SUB are not PURE.
-  subroutine pes_nullify(this)
-    type(pes_t), intent(out) :: this
-    !
-    PUSH_SUB(pes_nullify)
-    !this%calc_spm=.false.
-    call pes_spm_nullify(this%spm)
-    !this%calc_mask=.false.
-    call pes_mask_nullify(this%mask)
-    
-    call pes_flux_nullify(this%flux)
-    
-    POP_SUB(pes_nullify)
-  end subroutine pes_nullify
-
-  ! ---------------------------------------------------------
   subroutine pes_init(pes, namespace, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
     type(namespace_t),   intent(in)    :: namespace
@@ -132,8 +89,6 @@ contains
 
     PUSH_SUB(pes_init)
     
-    call pes_nullify(pes)
-
     !%Variable PhotoElectronSpectrum
     !%Type integer
     !%Default none

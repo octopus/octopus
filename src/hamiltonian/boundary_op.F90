@@ -43,11 +43,11 @@ module boundary_op_oct_m
 
   type bc_t
     private
-    integer, public         :: abtype
-    FLOAT, pointer, public  :: mf(:)     !< The mask-function on the mesh
-    type(cube_function_t)   :: cf        !< The mask-function on the cube
-    logical                 :: ab_user_def
-    FLOAT, pointer          :: ab_ufn(:)
+    integer,            public :: abtype
+    FLOAT, allocatable, public :: mf(:)     !< The mask-function on the mesh
+    type(cube_function_t)      :: cf        !< The mask-function on the cube
+    logical                    :: ab_user_def
+    FLOAT, allocatable         :: ab_ufn(:)
   end type bc_t    
 
   integer, public, parameter :: &
@@ -268,7 +268,7 @@ contains
     PUSH_SUB(bc_end)
 
     if(this%abtype /= NOT_ABSORBING) then
-      SAFE_DEALLOCATE_P(this%mf)
+      SAFE_DEALLOCATE_A(this%mf)
     end if
 
     POP_SUB(bc_end)
@@ -400,7 +400,7 @@ contains
     end do
 
     if(this%ab_user_def) then 
-      SAFE_DEALLOCATE_P(this%ab_ufn)
+      SAFE_DEALLOCATE_A(this%ab_ufn)
     end if
 
     POP_SUB(bc_generate_mf)

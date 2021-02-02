@@ -228,7 +228,7 @@
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
-      if (.not. associated(stin%current)) then
+      if (.not. allocated(stin%current)) then
         SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%sb%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
       end if
@@ -324,13 +324,16 @@
   !> 
   subroutine target_end_density(tg)
     type(target_t),   intent(inout) :: tg
+
     PUSH_SUB(target_end_density)
-    SAFE_DEALLOCATE_P(tg%rho)
-    SAFE_DEALLOCATE_P(tg%spatial_curr_wgt)
+
+    SAFE_DEALLOCATE_A(tg%rho)
+    SAFE_DEALLOCATE_A(tg%spatial_curr_wgt)
     select case(tg%curr_functional)
     case(oct_curr_square_td) 
-      SAFE_DEALLOCATE_P(tg%td_fitness)
+      SAFE_DEALLOCATE_A(tg%td_fitness)
     end select
+
     POP_SUB(target_end_density)
   end subroutine target_end_density
 

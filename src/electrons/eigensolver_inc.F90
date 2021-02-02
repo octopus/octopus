@@ -33,7 +33,7 @@
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
-      call X(eigensolver_cg2_new)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+      call X(eigensolver_cg_jiang)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
     case(RS_CG)
       call X(eigensolver_cg2)(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
         eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
@@ -45,9 +45,6 @@
       maxiter = 1
       call X(eigensolver_evolution)(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
         eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
-    case(RS_LOBPCG)
-      call X(eigensolver_lobpcg)(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-        eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
     case(RS_RMMDIIS)
       if(iter <= eigens%rmmdiis_minimization_iter) then
         maxiter = 2
@@ -56,8 +53,6 @@
         call X(eigensolver_rmmdiis)(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
           eigens%converged(ik), ik, eigens%diff(:, ik))
       end if
-    case(RS_PSD)
-      call X(eigensolver_rmmdiis_min)(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
     end select
 
     ! Do subspace diagonalization always after the eigensolver

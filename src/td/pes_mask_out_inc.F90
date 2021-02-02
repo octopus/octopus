@@ -2110,11 +2110,11 @@ end subroutine pes_mask_write_info
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
-  type(pes_mask_t),    intent(in)  :: mask
-  type(namespace_t),   intent(in)  :: namespace
-  type(restart_t),     intent(in)  :: restart
-  type(states_elec_t), intent(in)  :: st
-  integer,             intent(out) :: ierr
+  type(pes_mask_t), target, intent(in)  :: mask
+  type(namespace_t),        intent(in)  :: namespace
+  type(restart_t),          intent(in)  :: restart
+  type(states_elec_t),      intent(in)  :: st
+  integer,                  intent(out) :: ierr
 
   character(len=80) :: filename, path, lines(2)
   integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2

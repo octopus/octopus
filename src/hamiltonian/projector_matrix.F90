@@ -35,16 +35,16 @@ module projector_matrix_oct_m
 
   type projector_matrix_t
     ! Components are public by default
-    integer, pointer :: map(:)
-    FLOAT,   pointer :: dprojectors(:, :)
-    CMPLX,   pointer :: zprojectors(:, :)
-    FLOAT,   pointer :: scal(:)
+    integer, allocatable :: map(:)
+    FLOAT,   allocatable :: dprojectors(:, :)
+    CMPLX,   allocatable :: zprojectors(:, :)
+    FLOAT,   allocatable :: scal(:)
     FLOAT,   allocatable :: position(:, :)
-    integer          :: npoints
-    integer          :: nprojs
+    integer              :: npoints
+    integer              :: nprojs
     FLOAT,   allocatable :: dmix(:, :)
     CMPLX,   allocatable :: zmix(:, :, :)
-    logical          :: is_cmplx
+    logical              :: is_cmplx
   end type projector_matrix_t
 
 contains
@@ -52,10 +52,6 @@ contains
   elemental subroutine projector_matrix_nullify(this)
     type(projector_matrix_t), intent(out) :: this
 
-    nullify(this%map)
-    nullify(this%dprojectors)
-    nullify(this%zprojectors)
-    nullify(this%scal)
     this%is_cmplx = .false.
 
   end subroutine projector_matrix_nullify
@@ -79,10 +75,8 @@ contains
     SAFE_ALLOCATE(this%map(1:npoints))
     if(this%is_cmplx) then
       SAFE_ALLOCATE(this%zprojectors(1:npoints, 1:nprojs))
-      nullify(this%dprojectors)
     else
       SAFE_ALLOCATE(this%dprojectors(1:npoints, 1:nprojs))
-      nullify(this%zprojectors)
     end if
     SAFE_ALLOCATE(this%scal(1:nprojs))
     SAFE_ALLOCATE(this%position(1:3, 1:npoints))
@@ -105,10 +99,10 @@ contains
 
     PUSH_SUB(projector_matrix_deallocate)
 
-    SAFE_DEALLOCATE_P(this%map)
-    SAFE_DEALLOCATE_P(this%dprojectors)
-    SAFE_DEALLOCATE_P(this%zprojectors)
-    SAFE_DEALLOCATE_P(this%scal)
+    SAFE_DEALLOCATE_A(this%map)
+    SAFE_DEALLOCATE_A(this%dprojectors)
+    SAFE_DEALLOCATE_A(this%zprojectors)
+    SAFE_DEALLOCATE_A(this%scal)
     SAFE_DEALLOCATE_A(this%position)
     SAFE_DEALLOCATE_A(this%dmix)
     SAFE_DEALLOCATE_A(this%zmix)

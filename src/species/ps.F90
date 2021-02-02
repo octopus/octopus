@@ -86,8 +86,8 @@ module ps_oct_m
     FLOAT    :: z_val
     type(valconf_t)   :: conf
     type(logrid_t), private :: g
-    type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
-    type(spline_t), pointer, private :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    type(spline_t), allocatable :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
+    type(spline_t), allocatable, private :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
     logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
@@ -106,9 +106,9 @@ module ps_oct_m
     FLOAT :: rc_max !< The radius of the spheres that contain the projector functions.
 
     integer  :: kbc      !< Number of KB components (1 or 2 for TM ps, 3 for HGH)
-    FLOAT, pointer :: h(:,:,:), k(:, :, :)
-    type(spline_t), pointer :: kb(:, :)     !< Kleinman-Bylander projectors
-    type(spline_t), pointer :: dkb(:, :)    !< derivatives of KB projectors
+    FLOAT, allocatable :: h(:,:,:), k(:, :, :)
+    type(spline_t), allocatable :: kb(:, :)     !< Kleinman-Bylander projectors
+    type(spline_t), allocatable :: dkb(:, :)    !< derivatives of KB projectors
 
     logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
@@ -126,9 +126,9 @@ module ps_oct_m
 
     FLOAT :: sigma_erf             !< the a constant in erf(r/(sqrt(2)*sigma))/r
 
-    logical,        private :: has_density     !< does the species have a density?
-    type(spline_t), pointer :: density(:)      !< the atomic density for each spin
-    type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
+    logical,        private     :: has_density     !< does the species have a density?
+    type(spline_t), allocatable :: density(:)      !< the atomic density for each spin
+    type(spline_t), allocatable :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
     logical, private :: is_separated
     logical          :: local
@@ -385,8 +385,6 @@ contains
     SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
-
-    nullify(ps%k)
 
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
@@ -807,7 +805,7 @@ contains
         write(iunit,'(10f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
       end do
     end do
-    if(associated(ps%k)) then
+    if (allocated(ps%k)) then
       write(iunit,'(/,a,/)')    'k matrix:'
       do l = 0, ps%lmax
         do k = 1, ps%kbc
@@ -910,7 +908,7 @@ contains
   subroutine ps_end(ps)
     type(ps_t), intent(inout) :: ps
 
-    if(.not. associated(ps%kb)) return
+    if (.not. allocated(ps%kb)) return
 
     PUSH_SUB(ps_end)
 
@@ -929,20 +927,20 @@ contains
     call spline_end(ps%core)
     call spline_end(ps%core_der)
 
-    if(associated(ps%density)) call spline_end(ps%density)
-    if(associated(ps%density_der)) call spline_end(ps%density_der)
+    if (allocated(ps%density)) call spline_end(ps%density)
+    if (allocated(ps%density_der)) call spline_end(ps%density_der)
 
     call logrid_end(ps%g)
 
-    SAFE_DEALLOCATE_P(ps%kb)
-    SAFE_DEALLOCATE_P(ps%dkb)
-    SAFE_DEALLOCATE_P(ps%ur)
-    SAFE_DEALLOCATE_P(ps%ur_sq)
+    SAFE_DEALLOCATE_A(ps%kb)
+    SAFE_DEALLOCATE_A(ps%dkb)
+    SAFE_DEALLOCATE_A(ps%ur)
+    SAFE_DEALLOCATE_A(ps%ur_sq)
     SAFE_DEALLOCATE_A(ps%bound)
-    SAFE_DEALLOCATE_P(ps%h)
-    SAFE_DEALLOCATE_P(ps%k)
-    SAFE_DEALLOCATE_P(ps%density)
-    SAFE_DEALLOCATE_P(ps%density_der)
+    SAFE_DEALLOCATE_A(ps%h)
+    SAFE_DEALLOCATE_A(ps%k)
+    SAFE_DEALLOCATE_A(ps%density)
+    SAFE_DEALLOCATE_A(ps%density_der)
 
     POP_SUB(ps_end)
   end subroutine ps_end

@@ -158,7 +158,7 @@ contains
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
-    if(associated(hm%vberry)) then
+    if (allocated(hm%vberry)) then
       call berry_init(scf%berry, namespace)
     end if
     
@@ -375,7 +375,7 @@ contains
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
       end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, associated(hm%hm_base%phase))
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, allocated(hm%hm_base%phase))
     end if
 
     ! now the eigensolver stuff
@@ -438,7 +438,7 @@ contains
       call messages_fatal(2, namespace=namespace)
     end if
     if(scf%calc_force) then
-      if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+      if (allocated(hm%ep%B_field) .or. allocated(hm%ep%A_static)) then
         write(message(1),'(a)') 'The forces are currently not properly calculated if static'
         write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
         write(message(3),'(a)') 'Please use SCFCalculateForces = no.'
@@ -482,7 +482,7 @@ contains
     !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
     call parse_variable(namespace, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
-    if(associated(hm%vberry)) scf%calc_dipole = .true.
+    if (allocated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
     !%Type logical
@@ -748,7 +748,7 @@ contains
 
         !We check if the system is coupled with a partner that requires self-consistency
       !  if(hamiltonian_has_scf_partner(hm)) then
-        if(associated(hm%vberry)) then
+        if (allocated(hm%vberry)) then
           !In this case, v_Hxc is frozen and we do an internal SCF loop over the 
           ! partners that require SCF
           ks%frozen_hxc = .true.
@@ -1091,7 +1091,7 @@ contains
           call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
-        if(associated(hm%vberry)) then
+        if (allocated(hm%vberry)) then
           call calc_dipole(dipole, gr, st, geo)
           call write_dipole(stdout, dipole)
         end if

@@ -73,7 +73,7 @@ module system_dftb_oct_m
     type(c_ptr) :: output_handle(2)
     type(ion_dynamics_t) :: ions
     integer                :: n_lasers            !< number of laser pulses used
-    type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    type(laser_t), allocatable :: lasers(:)       !< lasers stuff
     logical :: laser_field
     FLOAT :: field(3)
     FLOAT :: energy

@@ -74,7 +74,7 @@ contains
     logical,           optional, intent(in)    :: is_complex
 
     integer :: kpoints, dim, nst, ierr
-    FLOAT, pointer :: new_occ(:,:)
+    FLOAT, allocatable :: new_occ(:,:)
 
     PUSH_SUB(states_elec_look_and_load)
 
@@ -94,8 +94,8 @@ contains
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
     new_occ(:,:) = M_ZERO
     new_occ(1:min(nst, st%nst),:) = st%occ(1:min(nst, st%nst),:)
-    SAFE_DEALLOCATE_P(st%occ)
-    st%occ => new_occ
+    SAFE_DEALLOCATE_A(st%occ)
+    call move_alloc(new_occ, st%occ)
 
     ! FIXME: This wrong, one cannot just change the number of states
     ! without updating the internal structures, in the case of parallel in states.
@@ -105,11 +105,11 @@ contains
     st%st_end   = nst
     st%lnst     = nst
 
-    SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_A(st%node)
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(:)  = 0
 
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_A(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
     st%eigenval = huge(st%eigenval)
 
@@ -181,8 +181,8 @@ contains
     call profiling_in(prof_write, "RESTART_WRITE")
 
     if (present(lr)) then
-      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
+      lr_wfns_are_associated = (allocated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+                               (allocated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_wfns_are_associated)
     end if
 
@@ -430,8 +430,8 @@ contains
 
     ! sanity check
     if (present(lr)) then
-      lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
+      lr_allocated = (allocated(lr%ddl_psi) .and. states_are_real(st)) .or. &
+                     (allocated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
     end if
 
@@ -934,7 +934,7 @@ contains
 
     ierr = 0
 
-    ASSERT(associated(st%frozen_rho))
+    ASSERT(allocated(st%frozen_rho))
 
     if (restart_skip(restart)) then
       POP_SUB(states_elec_dump_frozen)
@@ -959,7 +959,7 @@ contains
       call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
-      if(associated(st%frozen_tau)) then 
+      if (allocated(st%frozen_tau)) then 
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_tau'
         else
@@ -969,7 +969,7 @@ contains
         if (err /= 0) err2 = err2 + 1
       end if
 
-      if(associated(st%frozen_gdens)) then
+      if (allocated(st%frozen_gdens)) then
         do idir = 1, gr%sb%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
@@ -981,7 +981,7 @@ contains
         end do
       end if
 
-      if(associated(st%frozen_ldens)) then
+      if (allocated(st%frozen_ldens)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_ldens'
         else
@@ -1018,7 +1018,7 @@ contains
 
     PUSH_SUB(states_elec_load_frozen)
 
-    ASSERT(associated(st%frozen_rho))
+    ASSERT(allocated(st%frozen_rho))
 
     ierr = 0
 
@@ -1043,7 +1043,7 @@ contains
       call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
-      if(associated(st%frozen_tau)) then
+      if (allocated(st%frozen_tau)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_tau'
         else
@@ -1053,7 +1053,7 @@ contains
         if (err /= 0) err2 = err2 + 1
       end if
       
-      if(associated(st%frozen_gdens)) then
+      if (allocated(st%frozen_gdens)) then
         do idir = 1, gr%sb%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
@@ -1065,7 +1065,7 @@ contains
         end do
       end if
 
-      if(associated(st%frozen_ldens)) then 
+      if (allocated(st%frozen_ldens)) then 
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_ldens'
         else
@@ -1203,7 +1203,7 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with the expression:'
                 write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
-                call messages_info(3)
+                call messages_info(3, all_nodes=.true.)
 
                 ! convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
@@ -1228,7 +1228,7 @@ contains
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
                 write(message(2), '(2a)') '  with data from file:'
                 write(message(3), '(2a)') '  ',trim(filename)
-                call messages_info(3)
+                call messages_info(3, all_nodes=.true.)
 
                 ! finally read the state
                 call zio_function_input(filename, namespace, mesh, zpsi(:, 1), ierr)
@@ -1244,8 +1244,6 @@ contains
                 call messages_fatal(2, namespace=namespace)
               end select
 
-              call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
-
               ! normalize orbital
               if(parse_block_cols(blk, ib - 1)  ==  6) then
                 call parse_block_integer(blk, ib - 1, 5, normalize)
@@ -1254,8 +1252,9 @@ contains
               end if
               select case(normalize)
               case(NORMALIZE_NO)
+                call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
               case(NORMALIZE_YES)
-                call states_elec_get_state(st, mesh, is, ik, zpsi)
+                ASSERT(st%d%dim == 1)
                 call zmf_normalize(mesh, st%d%dim, zpsi)
                 call states_elec_set_state(st, mesh, is, ik, zpsi)
               case default

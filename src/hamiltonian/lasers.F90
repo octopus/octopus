@@ -79,8 +79,8 @@ module lasers_oct_m
     type(tdf_t) :: phi                    !< The phase
     FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
-    FLOAT, pointer :: v(:)    => NULL()
-    FLOAT, pointer :: a(:, :) => NULL()
+    FLOAT, allocatable :: v(:)
+    FLOAT, allocatable :: a(:, :)
   end type laser_t
 
 contains
@@ -287,7 +287,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_init(lasers, namespace, no_l, mesh)
-    type(laser_t),       pointer     :: lasers(:)
+    type(laser_t),       allocatable :: lasers(:)
     type(namespace_t),   intent(in)  :: namespace
     integer,             intent(out) :: no_l
     type(mesh_t),        intent(in)  :: mesh
@@ -496,8 +496,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine laser_end(no_l, lasers)
-    type(laser_t), pointer :: lasers(:)
-    integer,    intent(in) :: no_l
+    type(laser_t), allocatable :: lasers(:)
+    integer,       intent(in)  :: no_l
 
     integer :: il
 
@@ -509,12 +509,12 @@ contains
         call tdf_end(lasers(il)%phi)
         select case(lasers(il)%field)
         case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_DEALLOCATE_P(lasers(il)%v)
+          SAFE_DEALLOCATE_A(lasers(il)%v)
         case(E_FIELD_MAGNETIC)
-          SAFE_DEALLOCATE_P(lasers(il)%a)
+          SAFE_DEALLOCATE_A(lasers(il)%a)
         end select
       end do
-      SAFE_DEALLOCATE_P(lasers)
+      SAFE_DEALLOCATE_A(lasers)
     end if
 
     POP_SUB(laser_end)

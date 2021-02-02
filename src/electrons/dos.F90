@@ -335,13 +335,12 @@ contains
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                       os, work, os%radius, os%ndim, &
-                                      use_mesh=.not.associated(hm%hm_base%phase) .and. .not. os%submesh, &
+                                      use_mesh=.not.allocated(hm%hm_base%phase) .and. .not. os%submesh, &
                                       normalize = normalize)
             end if
           end do
 
-          nullify(os%phase)
-          if(associated(hm%hm_base%phase)) then
+          if (allocated(hm%hm_base%phase)) then
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
@@ -394,7 +393,7 @@ contains
                 end do
               else
                 call states_elec_get_state(st, mesh, ist, ik, zpsi )
-                if(associated(hm%hm_base%phase)) then
+                if (allocated(hm%hm_base%phase)) then
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                   do idim = 1, st%d%dim
                     !$omp parallel do
@@ -404,7 +403,7 @@ contains
                     !$omp end parallel do
                    end do
                 end if
-                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
+                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, allocated(hm%hm_base%phase), &
                                   zdot(1:st%d%dim,1:os%norbs))
 
                 do iorb = 1, os%norbs

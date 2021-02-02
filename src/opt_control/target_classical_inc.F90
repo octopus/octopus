@@ -121,9 +121,12 @@
   !> 
   subroutine target_end_classical(tg)
     type(target_t),   intent(inout) :: tg
+
     PUSH_SUB(target_end_classical)
-    SAFE_DEALLOCATE_P(tg%pos_der_array)
-    SAFE_DEALLOCATE_P(tg%mom_der_array)
+
+    SAFE_DEALLOCATE_A(tg%pos_der_array)
+    SAFE_DEALLOCATE_A(tg%mom_der_array)
+
     POP_SUB(target_end_classical)
   end subroutine target_end_classical
   ! ----------------------------------------------------------------------

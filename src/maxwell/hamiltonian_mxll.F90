@@ -79,11 +79,11 @@ module hamiltonian_mxll_oct_m
 
     type(nl_operator_t), pointer   :: operators(:)
 
-    FLOAT, pointer                 :: vector_potential(:,:)
+    FLOAT, allocatable             :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
     type(derivatives_t), pointer   :: der !< pointer to derivatives
-    type(states_mxll_t), pointer   ::  st
+    type(states_mxll_t), pointer   :: st
 
     integer                        :: rs_sign
 
@@ -99,8 +99,8 @@ module hamiltonian_mxll_oct_m
     integer                        :: mx_ma_trans_field_calc_method
     logical                        :: mx_ma_trans_field_calc_corr = .false.
     integer                        :: mx_ma_coupling_points_number
-    FLOAT, pointer                 :: mx_ma_coupling_points(:,:)
-    integer, pointer               :: mx_ma_coupling_points_map(:)
+    FLOAT,   allocatable           :: mx_ma_coupling_points(:,:)
+    integer, allocatable           :: mx_ma_coupling_points_map(:)
     integer                        :: mx_ma_coupling_order
     logical                        :: ma_mx_coupling       = .false.
     logical                        :: ma_mx_coupling_apply = .false.
@@ -294,7 +294,7 @@ contains
 
     nullify(hm%operators)
 
-    SAFE_DEALLOCATE_P(hm%vector_potential)
+    SAFE_DEALLOCATE_A(hm%vector_potential)
     call energy_mxll_end(hm%energy)
 
     call bc_mxll_end(hm%bc)

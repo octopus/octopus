@@ -186,7 +186,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       call boundaries_set(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
-      if(associated(hm%hm_base%phase)) then
+      if (allocated(hm%hm_base%phase)) then
         call hamiltonian_elec_base_phase(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., psib)
       end if
 
@@ -315,7 +315,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       !The Hubbard forces
       call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%sb%dim, psib, grad_psib, &
-                            force_u, associated(hm%hm_base%phase))  
+                            force_u, allocated(hm%hm_base%phase))  
 
       call psib%end()
       do idir = 1, gr%sb%dim

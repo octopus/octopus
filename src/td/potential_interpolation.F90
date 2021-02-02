@@ -33,7 +33,6 @@ module potential_interpolation_oct_m
   private
   public ::                                       &
     potential_interpolation_t,                    &
-    potential_interpolation_nullify,              &
     potential_interpolation_copy,                 &
     potential_interpolation_init,                 &
     potential_interpolation_end,                  &
@@ -47,27 +46,14 @@ module potential_interpolation_oct_m
 
   type potential_interpolation_t
     private
-    FLOAT, pointer, public :: v_old(:, :, :) => null()
-    FLOAT, pointer, public :: vtau_old(:, :, :) => null()
-    logical                :: mgga_with_exc
+    FLOAT, allocatable, public :: v_old(:, :, :)
+    FLOAT, allocatable, public :: vtau_old(:, :, :)
+    logical                    :: mgga_with_exc
   end type potential_interpolation_t
 
   integer :: interpolation_steps
 
 contains
-  
-  ! ---------------------------------------------------------
-  subroutine potential_interpolation_nullify(this)
-    type(potential_interpolation_t), intent(out) :: this
-    
-    PUSH_SUB(potential_interpolation_nullify)
-    
-    this%v_old => null()
-    this%vtau_old => null()
-
-    POP_SUB(potential_interpolation_nullify)
-  end subroutine potential_interpolation_nullify
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine potential_interpolation_copy(vkso, vksi)
@@ -76,8 +62,8 @@ contains
     
     PUSH_SUB(potential_interpolation_copy)
 
-    SAFE_ALLOCATE_SOURCE_P(vkso%v_old, vksi%v_old)
-    SAFE_ALLOCATE_SOURCE_P(vkso%vtau_old, vksi%vtau_old)
+    SAFE_ALLOCATE_SOURCE_A(vkso%v_old, vksi%v_old)
+    SAFE_ALLOCATE_SOURCE_A(vkso%vtau_old, vksi%vtau_old)
 
     POP_SUB(potential_interpolation_copy)
   end subroutine potential_interpolation_copy
@@ -116,9 +102,9 @@ contains
     
     PUSH_SUB(potential_interpolation_end)
 
-    ASSERT(associated(potential_interpolation%v_old)) 
-    SAFE_DEALLOCATE_P(potential_interpolation%v_old)
-    SAFE_DEALLOCATE_P(potential_interpolation%vtau_old)
+    ASSERT(allocated(potential_interpolation%v_old)) 
+    SAFE_DEALLOCATE_A(potential_interpolation%v_old)
+    SAFE_DEALLOCATE_A(potential_interpolation%vtau_old)
 
     POP_SUB(potential_interpolation_end)
   end subroutine potential_interpolation_end

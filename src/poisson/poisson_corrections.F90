@@ -53,9 +53,9 @@ module poisson_corrections_oct_m
     private
     integer :: method
     integer :: maxl
-    FLOAT, pointer :: phi(:, :)
-    FLOAT, pointer :: aux(:, :)
-    FLOAT, pointer :: gaussian(:)
+    FLOAT, allocatable :: phi(:, :)
+    FLOAT, allocatable :: aux(:, :)
+    FLOAT, allocatable :: gaussian(:)
   end type poisson_corr_t
 
   type(derivatives_t), pointer :: der_pointer
@@ -176,9 +176,9 @@ contains
 
     select case(this%method)
     case(CORR_MULTIPOLE)
-      SAFE_DEALLOCATE_P(this%phi)
-      SAFE_DEALLOCATE_P(this%aux)
-      SAFE_DEALLOCATE_P(this%gaussian)
+      SAFE_DEALLOCATE_A(this%phi)
+      SAFE_DEALLOCATE_A(this%aux)
+      SAFE_DEALLOCATE_A(this%gaussian)
     case(CORR_EXACT)
     end select
     

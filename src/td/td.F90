@@ -658,15 +658,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_init_wfs(td, namespace, mc, gr, geo, st, ks, hm, from_scratch)
-    type(td_t),               intent(inout) :: td
-    type(namespace_t),        intent(in)    :: namespace
-    type(multicomm_t),        intent(in)    :: mc
-    type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(in)    :: geo
-    type(states_elec_t),      intent(inout) :: st
-    type(v_ks_t),             intent(inout) :: ks
-    type(hamiltonian_elec_t), intent(inout) :: hm
-    logical,                  intent(inout) :: from_scratch
+    type(td_t),                  intent(inout) :: td
+    type(namespace_t),           intent(in)    :: namespace
+    type(multicomm_t),           intent(in)    :: mc
+    type(grid_t),                intent(inout) :: gr
+    type(geometry_t),            intent(in)    :: geo
+    type(states_elec_t), target, intent(inout) :: st
+    type(v_ks_t),                intent(inout) :: ks
+    type(hamiltonian_elec_t),    intent(inout) :: hm
+    logical,                     intent(inout) :: from_scratch
 
     integer :: ierr, freeze_orbitals
     FLOAT :: x
@@ -1033,7 +1033,7 @@ contains
       if(err /= 0) ierr = ierr + 8
     end if
 
-    if(associated(st%frozen_rho)) then
+    if (allocated(st%frozen_rho)) then
       call states_elec_dump_frozen(restart, st, gr, ierr)
     end if
 

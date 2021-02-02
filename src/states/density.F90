@@ -656,7 +656,7 @@ contains
 
     ASSERT(states_are_complex(st))
 
-    if(.not.associated(st%frozen_rho)) then
+    if (.not. allocated(st%frozen_rho)) then
       SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
     end if
 
@@ -697,13 +697,13 @@ contains
     call density_calc_end(dens_calc)
 
     if(family_is_mgga) then
-      if(.not.associated(st%frozen_tau)) then
+      if (.not. allocated(st%frozen_tau)) then
         SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
       end if    
-      if(.not.associated(st%frozen_gdens)) then
+      if (.not. allocated(st%frozen_gdens)) then
         SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
       end if
-      if(.not.associated(st%frozen_ldens)) then
+      if (.not. allocated(st%frozen_ldens)) then
         SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
       end if
 
@@ -809,11 +809,11 @@ contains
     call states_elec_distribute_nodes(st, namespace, mc)
     call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_A(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
     st%eigenval = huge(st%eigenval)
 
-    SAFE_DEALLOCATE_P(st%occ)
+    SAFE_DEALLOCATE_A(st%occ)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
 
@@ -870,7 +870,7 @@ contains
       end do
     end do
 
-    if(associated(st%rho_core)) then
+    if (allocated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
@@ -879,7 +879,7 @@ contains
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
-    if(associated(st%frozen_rho)) then
+    if (allocated(st%frozen_rho)) then
       do is = 1, st%d%nspin
         do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)

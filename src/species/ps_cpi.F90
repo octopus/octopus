@@ -41,10 +41,10 @@ module ps_cpi_oct_m
 
   type ps_cpi_t
     ! Components are public by default
-    type(ps_cpi_file_t), pointer, private :: cpi_file
-    type(ps_in_grid_t),  pointer          :: ps_grid
+    type(ps_cpi_file_t), allocatable, private :: cpi_file
+    type(ps_in_grid_t),  allocatable          :: ps_grid
 
-    type(valconf_t),     pointer, private :: conf    !< what to do with this?
+    type(valconf_t),     allocatable, private :: conf    !< what to do with this?
   end type ps_cpi_t
 
 contains
@@ -91,9 +91,9 @@ contains
     call ps_in_grid_end (ps_cpi%ps_grid)
     call ps_cpi_file_end(ps_cpi%cpi_file)
 
-    SAFE_DEALLOCATE_P(ps_cpi%cpi_file)
-    SAFE_DEALLOCATE_P(ps_cpi%ps_grid)
-    SAFE_DEALLOCATE_P(ps_cpi%conf)
+    SAFE_DEALLOCATE_A(ps_cpi%cpi_file)
+    SAFE_DEALLOCATE_A(ps_cpi%ps_grid)
+    SAFE_DEALLOCATE_A(ps_cpi%conf)
 
   end subroutine ps_cpi_end
 

@@ -80,45 +80,45 @@ module lcao_oct_m
 
   type lcao_t
     private
-    integer           :: mode
-    logical           :: debug !< whether to output extra info to file
-    logical           :: complex_ylms !< whether to use real or complex Ylms
-    logical           :: initialized !< are k, s and v1 matrices filled?
-    integer           :: norbs   !< number of orbitals used
-    integer           :: maxorbs !< largest number of orbitals that could be used
-    integer, pointer  :: atom(:)
-    integer, pointer  :: level(:)
-    integer, pointer  :: ddim(:)
-    logical           :: alternative
-    logical           :: derivative
-    integer, pointer  :: cst(:, :)
-    integer, pointer  :: ck(:, :)
-    real(4), pointer  :: dbuff(:, :, :, :) !< single-precision buffer
-    complex(4), pointer :: zbuff(:, :, :, :) !< single-precision buffer
-    logical           :: initialized_orbitals
-    FLOAT             :: orbital_scale_factor
+    integer                 :: mode
+    logical                 :: debug !< whether to output extra info to file
+    logical                 :: complex_ylms !< whether to use real or complex Ylms
+    logical                 :: initialized !< are k, s and v1 matrices filled?
+    integer                 :: norbs   !< number of orbitals used
+    integer                 :: maxorbs !< largest number of orbitals that could be used
+    integer,    allocatable :: atom(:)
+    integer,    allocatable :: level(:)
+    integer,    allocatable :: ddim(:)
+    logical                 :: alternative
+    logical                 :: derivative
+    integer,    allocatable :: cst(:, :)
+    integer,    allocatable :: ck(:, :)
+    real(4),    allocatable :: dbuff(:, :, :, :) !< single-precision buffer
+    complex(4), allocatable :: zbuff(:, :, :, :) !< single-precision buffer
+    logical                 :: initialized_orbitals
+    FLOAT                   :: orbital_scale_factor
 
     !> For the alternative LCAO
-    logical             :: keep_orb     !< Whether we keep orbitals in memory.
-    FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
-    FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
-    integer             :: mult         !< The number of basis orbitals per atomic function (with derivatives is 2, 1 otherwise).
-    integer             :: maxorb       !< The maximum value of the orbitals over all atoms.
+    logical                 :: keep_orb     !< Whether we keep orbitals in memory.
+    FLOAT,      allocatable :: radius(:)    !< The localization radius of each atom orbitals
+    FLOAT                   :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
+    integer                 :: mult         !< The number of basis orbitals per atomic function (with derivatives is 2, 1 otherwise).
+    integer                 :: maxorb       !< The maximum value of the orbitals over all atoms.
     !> The following functions map between a basis index and atom/orbital index
-    integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
-    integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
-    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that corresponds to a certain atom and orbital
-    integer, pointer    :: norb_atom(:)  !< The number of orbitals per atom including mult.
-    logical             :: parallel      !< Whether the LCAO is done in parallel
-    integer             :: lsize(1:2)
-    integer             :: nproc(1:2)
-    integer             :: myroc(1:2)
-    integer             :: desc(1:BLACS_DLEN)
-    logical, pointer    :: calc_atom(:)
-    FLOAT               :: diag_tol
-    type(submesh_t), pointer :: sphere(:)
-    type(batch_t),   pointer :: orbitals(:)
-    logical, allocatable :: is_orbital_initialized(:) !< array to store which orbitals are already initialized
+    integer, allocatable    :: basis_atom(:) !< The atom that corresponds to a certain basis index
+    integer, allocatable    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
+    integer, allocatable    :: atom_orb_basis(:, :) !< The basis index that corresponds to a certain atom and orbital
+    integer, allocatable    :: norb_atom(:)  !< The number of orbitals per atom including mult.
+    logical                 :: parallel      !< Whether the LCAO is done in parallel
+    integer                 :: lsize(1:2)
+    integer                 :: nproc(1:2)
+    integer                 :: myroc(1:2)
+    integer                 :: desc(1:BLACS_DLEN)
+    logical, allocatable    :: calc_atom(:)
+    FLOAT                   :: diag_tol
+    type(submesh_t), allocatable :: sphere(:)
+    type(batch_t),   allocatable :: orbitals(:)
+    logical,         allocatable :: is_orbital_initialized(:) !< array to store which orbitals are already initialized
   end type lcao_t
   
   type(profile_t), save :: prof_orbitals
@@ -145,24 +145,6 @@ contains
     integer :: iunit_o
 
     PUSH_SUB(lcao_init)
-
-    ! nullify everything so we can check for associated pointers when deallocating
-    nullify(this%atom)
-    nullify(this%level)
-    nullify(this%ddim)
-    nullify(this%cst)
-    nullify(this%ck)
-    nullify(this%dbuff)
-    nullify(this%zbuff)
-
-    nullify(this%radius)
-    nullify(this%basis_atom)
-    nullify(this%basis_orb)
-    nullify(this%atom_orb_basis)
-    nullify(this%norb_atom)
-    nullify(this%calc_atom)
-    nullify(this%sphere)
-    nullify(this%orbitals)
 
     this%initialized = .true.
 
@@ -815,22 +797,22 @@ contains
 
     PUSH_SUB(lcao_end)
 
-    SAFE_DEALLOCATE_P(this%calc_atom)
-    SAFE_DEALLOCATE_P(this%norb_atom)
-    SAFE_DEALLOCATE_P(this%basis_atom)
-    SAFE_DEALLOCATE_P(this%basis_orb)
-    SAFE_DEALLOCATE_P(this%atom_orb_basis)
-    SAFE_DEALLOCATE_P(this%radius)
-    SAFE_DEALLOCATE_P(this%sphere)
-    SAFE_DEALLOCATE_P(this%orbitals)
+    SAFE_DEALLOCATE_A(this%calc_atom)
+    SAFE_DEALLOCATE_A(this%norb_atom)
+    SAFE_DEALLOCATE_A(this%basis_atom)
+    SAFE_DEALLOCATE_A(this%basis_orb)
+    SAFE_DEALLOCATE_A(this%atom_orb_basis)
+    SAFE_DEALLOCATE_A(this%radius)
+    SAFE_DEALLOCATE_A(this%sphere)
+    SAFE_DEALLOCATE_A(this%orbitals)
 
-    SAFE_DEALLOCATE_P(this%atom)
-    SAFE_DEALLOCATE_P(this%level)
-    SAFE_DEALLOCATE_P(this%ddim)
-    SAFE_DEALLOCATE_P(this%cst)
-    SAFE_DEALLOCATE_P(this%ck)
-    SAFE_DEALLOCATE_P(this%dbuff)
-    SAFE_DEALLOCATE_P(this%zbuff)
+    SAFE_DEALLOCATE_A(this%atom)
+    SAFE_DEALLOCATE_A(this%level)
+    SAFE_DEALLOCATE_A(this%ddim)
+    SAFE_DEALLOCATE_A(this%cst)
+    SAFE_DEALLOCATE_A(this%ck)
+    SAFE_DEALLOCATE_A(this%dbuff)
+    SAFE_DEALLOCATE_A(this%zbuff)
 
     this%initialized = .false.
     POP_SUB(lcao_end)

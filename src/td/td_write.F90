@@ -136,13 +136,13 @@ module td_write_oct_m
     OUT_MAXWELL_MAX             = 9
 
   type td_write_prop_t
-    type(c_ptr)          :: handle
-    type(c_ptr), pointer :: mult_handles(:)
-    type(mpi_grp_t)      :: mpi_grp
-    integer              :: hand_start
-    integer              :: hand_end
-    logical              :: write = .false.
-    logical              :: resolve_states = .false.    !< Whether to resolve output by state
+    type(c_ptr)              :: handle
+    type(c_ptr), allocatable :: mult_handles(:)
+    type(mpi_grp_t)          :: mpi_grp
+    integer                  :: hand_start
+    integer                  :: hand_end
+    logical                  :: write = .false.
+    logical                  :: resolve_states = .false.    !< Whether to resolve output by state
   end type td_write_prop_t
 
 
@@ -157,7 +157,7 @@ module td_write_oct_m
     !! calculate the projections(s) onto it.
     type(states_elec_t) :: gs_st    
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
-    type(excited_states_t), pointer :: excited_st(:) !< The excited states.
+    type(excited_states_t), allocatable :: excited_st(:) !< The excited states.
     integer :: compute_interval     !< Compute every compute_interval
   end type td_write_t
 
@@ -431,7 +431,7 @@ contains
       end if
 
       ! clean up all the stuff we have to reallocate
-      SAFE_DEALLOCATE_P(writ%gs_st%node)
+      SAFE_DEALLOCATE_A(writ%gs_st%node)
 
       call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
@@ -480,7 +480,7 @@ contains
         writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
         writ%gs_st%occ      = M_ZERO
         if(writ%gs_st%d%ispin == SPINORS) then
-          SAFE_DEALLOCATE_P(writ%gs_st%spin)
+          SAFE_DEALLOCATE_A(writ%gs_st%spin)
           SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         end if
 
@@ -546,7 +546,6 @@ contains
         end do
       else
         writ%n_excited_states = 0
-        nullify(writ%excited_st)
       end if
     end if
 
@@ -828,7 +827,7 @@ contains
             do ist = writ%out(iout)%hand_start, writ%out(iout)%hand_end
               call write_iter_end(writ%out(iout)%mult_handles(ist))
             end do
-            SAFE_DEALLOCATE_P(writ%out(iout)%mult_handles)
+            SAFE_DEALLOCATE_A(writ%out(iout)%mult_handles)
           else
             call write_iter_end(writ%out(iout)%handle)
           end if
@@ -3016,7 +3015,7 @@ contains
       call td_write_print_header_end(out_total_current)
     end if
     
-    ASSERT(associated(st%current))
+    ASSERT(allocated(st%current))
 
     if(mpi_grp_is_root(mpi_world)) &
       call write_iter_start(out_total_current)

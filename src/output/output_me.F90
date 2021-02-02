@@ -378,7 +378,7 @@ contains
         SAFE_DEALLOCATE_A(dtwoint)
       else
         SAFE_ALLOCATE(ztwoint(1:id))
-        if(associated(hm%hm_base%phase)) then
+        if (allocated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
           call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &

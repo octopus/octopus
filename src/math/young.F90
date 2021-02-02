@@ -34,16 +34,15 @@ module young_oct_m
             young_write_one,      &
             young_copy,           &
             young_ndiagrams,      &
-            young_nullify,        &
             young_end,            &
             young_t
 
   type young_t
     private
-    integer,          public :: nyoung
-    integer                  :: nup, ndown, iyoung
-    integer, pointer, public :: young_up(:,:)
-    integer, pointer, public :: young_down(:,:)
+    integer,              public :: nyoung
+    integer                      :: nup, ndown, iyoung
+    integer, allocatable, public :: young_up(:,:)
+    integer, allocatable, public :: young_down(:,:)
   end type young_t 
 
 contains
@@ -245,7 +244,6 @@ contains
 
     PUSH_SUB(young_write_allspins)
 
-    call young_nullify (this)
     do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
@@ -266,7 +264,6 @@ contains
     PUSH_SUB(young_ndiagrams)
 
     ndiagrams = 0
-    call young_nullify (this)
     do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
@@ -280,19 +277,6 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine young_nullify (this)
-    type(young_t), intent(inout) :: this
-
-    PUSH_SUB(young_nullify)
-
-    nullify(this%young_up)
-    nullify(this%young_down)
-
-    POP_SUB(young_nullify)
-  end subroutine young_nullify
-
-
-  !------------------------------------------------------------
   subroutine young_copy (young_in, young_out)
     type(young_t), intent(inout) :: young_in, young_out
 
@@ -302,8 +286,8 @@ contains
     young_out%ndown = young_in%ndown
     young_out%nyoung = young_in%nyoung
 
-    SAFE_ALLOCATE_SOURCE_P(young_out%young_up,young_in%young_up)
-    SAFE_ALLOCATE_SOURCE_P(young_out%young_down,young_in%young_down)
+    SAFE_ALLOCATE_SOURCE_A(young_out%young_up,young_in%young_up)
+    SAFE_ALLOCATE_SOURCE_A(young_out%young_down,young_in%young_down)
 
     POP_SUB(young_copy)
   end subroutine young_copy
@@ -315,8 +299,8 @@ contains
 
     PUSH_SUB(young_end)
 
-    SAFE_DEALLOCATE_P (this%young_up)
-    SAFE_DEALLOCATE_P (this%young_down)
+    SAFE_DEALLOCATE_A(this%young_up)
+    SAFE_DEALLOCATE_A(this%young_down)
 
     POP_SUB(young_end)
   end subroutine young_end

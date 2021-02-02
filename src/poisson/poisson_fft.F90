@@ -113,7 +113,7 @@ contains
         message(1) = "Hockney's FFT-kernel needs cube of full unit cell "
         call messages_fatal(1)
       else
-        if (.not.associated(fullcube%fft)) then
+        if (.not. allocated(fullcube%fft)) then
           message(1) = "Hockney's FFT-kernel needs PoissonSolver=fft"
           call messages_fatal(1)
         end if

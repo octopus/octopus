@@ -316,7 +316,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         !We need the phase here as the routines for the nonlocal contributions assume that the wavefunctions have a phase.
 #ifdef R_TCOMPLEX
-        if(associated(hm%hm_base%phase)) then
+        if (allocated(hm%hm_base%phase)) then
           call states_elec_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
         end if
 #endif
@@ -347,8 +347,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
-          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, namespace, ik, psii, gpsii, &
-                            associated(hm%hm_base%phase))
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, namespace, ik, psii, gpsii, allocated(hm%hm_base%phase))
         end if
       end if
 
@@ -356,7 +355,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         call states_elec_get_state(st, gr%mesh, jst, ik, psij)
 #ifdef R_TCOMPLEX
-        if(associated(hm%hm_base%phase)) then
+        if (allocated(hm%hm_base%phase)) then
           call states_elec_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
         end if
 #endif

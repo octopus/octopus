@@ -50,11 +50,11 @@ module ps_psf_file_oct_m
     FLOAT              :: a, b
     FLOAT              :: zval          ! valence charge
 
-    FLOAT, pointer, private :: rofi(:)
-    FLOAT, pointer     :: vps(:,:)
-    FLOAT, pointer     :: chcore(:)
-    FLOAT, pointer     :: rho_val(:)
-    FLOAT, pointer     :: vso(:,:)
+    FLOAT, allocatable, private :: rofi(:)
+    FLOAT, allocatable     :: vps(:,:)
+    FLOAT, allocatable     :: chcore(:)
+    FLOAT, allocatable     :: rho_val(:)
+    FLOAT, allocatable     :: vso(:,:)
   end type ps_psf_file_t
   
 contains
@@ -187,13 +187,13 @@ contains
   subroutine ps_psf_file_end(psf)
     type(ps_psf_file_t), intent(inout) :: psf
 
-    SAFE_DEALLOCATE_P(psf%rofi)
-    SAFE_DEALLOCATE_P(psf%vps)
-    SAFE_DEALLOCATE_P(psf%chcore)
-    SAFE_DEALLOCATE_P(psf%rho_val)
-    SAFE_DEALLOCATE_P(psf%vso)
-  end subroutine ps_psf_file_end
+    SAFE_DEALLOCATE_A(psf%rofi)
+    SAFE_DEALLOCATE_A(psf%vps)
+    SAFE_DEALLOCATE_A(psf%chcore)
+    SAFE_DEALLOCATE_A(psf%rho_val)
+    SAFE_DEALLOCATE_A(psf%vso)
 
+  end subroutine ps_psf_file_end
 
 end module ps_psf_file_oct_m
 

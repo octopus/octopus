@@ -17,9 +17,9 @@
 !!
 
  subroutine X(loewdin_orthogonalize)( basis, kpt, namespace )
-   type(orbitalbasis_t),    intent(inout):: basis
-   type(distributed_t),     intent(in)   :: kpt
-   type(namespace_t),       intent(in)   :: namespace
+   type(orbitalbasis_t), target, intent(inout) :: basis
+   type(distributed_t),          intent(in)    :: kpt
+   type(namespace_t),            intent(in)    :: namespace
 
    R_TYPE, allocatable :: overlap(:,:), overlap2(:,:)
    FLOAT,  allocatable :: eigenval(:)
@@ -103,9 +103,9 @@
  end subroutine X(loewdin_orthogonalize)
 
  subroutine X(loewdin_overlap)(basis, overlap, ik)
-  type(orbitalbasis_t),    intent(in)   :: basis
-  R_TYPE,                  intent(inout):: overlap(:,:) !overlap matrix (norb, norb)
-  integer,                 intent(in)   :: ik
+  type(orbitalbasis_t), target, intent(in)   :: basis
+  R_TYPE,                       intent(inout):: overlap(:,:) !overlap matrix (norb, norb)
+  integer,                      intent(in)   :: ik
 
   integer :: ios, ios2, iorb, iorb2
   integer :: ind, ind2

@@ -293,7 +293,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   SAFE_DEALLOCATE_A(lcaopsi)
   SAFE_DEALLOCATE_A(lcaopsi2)
 
-  SAFE_DEALLOCATE_P(this%X(buff))
+  SAFE_DEALLOCATE_A(this%X(buff))
 
   POP_SUB(X(lcao_wf))
 end subroutine X(lcao_wf)

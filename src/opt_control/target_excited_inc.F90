@@ -44,15 +44,15 @@
     tg%st%st_start = 1
     tg%st%st_end   = tg%st%nst
 
-    SAFE_DEALLOCATE_P(tg%st%occ)
-    SAFE_DEALLOCATE_P(tg%st%eigenval)
-    SAFE_DEALLOCATE_P(tg%st%node)
+    SAFE_DEALLOCATE_A(tg%st%occ)
+    SAFE_DEALLOCATE_A(tg%st%eigenval)
+    SAFE_DEALLOCATE_A(tg%st%node)
 
     SAFE_ALLOCATE(     tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
     SAFE_ALLOCATE(tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
     SAFE_ALLOCATE(    tg%st%node(1:tg%st%nst))
     if(tg%st%d%ispin == SPINORS) then
-      SAFE_DEALLOCATE_P(tg%st%spin)
+      SAFE_DEALLOCATE_A(tg%st%spin)
       SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
     end if
     call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)

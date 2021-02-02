@@ -723,7 +723,7 @@ contains
         call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, allocated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
@@ -1207,7 +1207,7 @@ contains
     type(namespace_t),        intent(in)    :: namespace
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
+    type(grid_t), target,     intent(in)    :: gr
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
@@ -1462,7 +1462,12 @@ contains
       character(len=3), intent(inout) :: sheader
       integer,          intent(in)    :: iunit
       
+      FLOAT, pointer :: weight(:), red_point(:,:)
+
       PUSH_SUB(output_berkeleygw.bgw_write_header)
+
+      weight => gr%sb%kpoints%reduced%weight
+      red_point => gr%sb%kpoints%reduced%red_point
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
         symmetries_number(gr%sb%symm), 0, geo%natoms, &
@@ -1470,7 +1475,7 @@ contains
         ecutwfc * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%full%shifts, &
         gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
         M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
-        apos, ngk, gr%sb%kpoints%reduced%weight, gr%sb%kpoints%reduced%red_point, &
+        apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 
       call write_binary_gvectors(iunit, shell_density%ngvectors, shell_density%ngvectors, shell_density%red_gvec)

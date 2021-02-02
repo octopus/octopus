@@ -31,6 +31,7 @@ module derivatives_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
@@ -122,9 +123,9 @@ module derivatives_oct_m
     !! possible filter on the Laplacian.
     FLOAT, private :: lapl_cutoff   
 
-    type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
-                                                    !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
+    type(nl_operator_t), allocatable, private :: op(:)  !< op(1:conf%dim) => gradient
+                                                        !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl                !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
@@ -166,7 +167,7 @@ contains
     this%stencil_type = 0
     this%masses = M_ZERO
     this%lapl_cutoff = M_ZERO
-    nullify(this%op, this%lapl, this%grad)
+    nullify(this%lapl, this%grad)
     this%n_ghost = 0
 #if defined(HAVE_MPI)
     this%comm_method = 0
@@ -320,13 +321,13 @@ contains
 
     PUSH_SUB(derivatives_end)
 
-    ASSERT(associated(der%op))
+    ASSERT(allocated(der%op))
 
     do idim = 1, der%dim+1
       call nl_operator_end(der%op(idim))
     end do
 
-    SAFE_DEALLOCATE_P(der%op)
+    SAFE_DEALLOCATE_A(der%op)
     nullify(der%lapl, der%grad)
 
     nullify(der%coarser)
@@ -443,7 +444,7 @@ contains
 
     call boundaries_init(der%boundaries, namespace, mesh)
 
-    ASSERT(associated(der%op))
+    ASSERT(allocated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvilinear))
 
@@ -564,7 +565,7 @@ contains
     
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
-    if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
+    if(mesh%use_curvilinear .and. (.not. multiresolution_use(der%mesh%hr_area))) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)

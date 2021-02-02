@@ -105,7 +105,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 
-  apply_phase = associated(hm%hm_base%phase)
+  apply_phase = allocated(hm%hm_base%phase)
 
   pack = hamiltonian_elec_apply_packed(hm) &
     .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
@@ -259,7 +259,6 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
   type(wfs_elec_t),            intent(in)    :: psib
   type(wfs_elec_t),            intent(inout) :: vpsib
 
-  FLOAT, dimension(:), pointer :: vpsl
   FLOAT, allocatable :: vpsl_spin(:,:)
   integer :: pnp, offset, ispin
   type(accel_mem_t) :: vpsl_buff
@@ -268,15 +267,11 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
 
   SAFE_ALLOCATE(vpsl_spin(1:mesh%np, 1:this%d%nspin))
 
-  nullify(vpsl)
-  ! Sets the vpsl pointer to the total potential.
-  vpsl => this%ep%vpsl
-
-  vpsl_spin(1:mesh%np, 1) = vpsl(1:mesh%np)
+  vpsl_spin(1:mesh%np, 1) = this%ep%vpsl(1:mesh%np)
   if(this%d%ispin == SPINORS) then
     ! yes this means a little unnecessary computation in the later call,
     ! but with the great benefit of being able to reuse an existing routine
-    vpsl_spin(1:mesh%np, 2) = vpsl(1:mesh%np)
+    vpsl_spin(1:mesh%np, 2) = this%ep%vpsl(1:mesh%np)
     vpsl_spin(1:mesh%np, 3) = M_ZERO
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
@@ -284,7 +279,7 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
   if(psib%status() == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
-    call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
+    call accel_write_buffer(vpsl_buff, mesh%np, this%ep%vpsl)
 
     offset = 0
     do ispin = 1, this%d%nspin

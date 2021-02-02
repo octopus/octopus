@@ -160,7 +160,7 @@ contains
 
       nullify(rho_total)
 
-      if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
+      if (allocated(st%rho_core) .or. hm%d%spin_channels > 1) then
          total_density_alloc = .true.
          
          SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
@@ -170,7 +170,7 @@ contains
          end do
          
          ! remove non-local core corrections
-         if(associated(st%rho_core)) then
+         if (allocated(st%rho_core)) then
             do ip = 1, gr%fine%mesh%np
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
             end do
@@ -212,7 +212,7 @@ contains
          end if
       end if
       
-      ASSERT(associated(cube%fft))
+      ASSERT(allocated(cube%fft))
       ASSERT(cube%fft%library /= FFTLIB_NONE)
       
       SAFE_ALLOCATE(rho_total_fs(1:cube%rs_n_global(1),1:cube%rs_n_global(2),1:cube%rs_n_global(3)))
@@ -228,7 +228,7 @@ contains
          write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
          call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
-         if(associated(cube%Lrs))then
+         if (allocated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
          else
@@ -364,7 +364,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
           
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
@@ -547,7 +547,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           

@@ -30,6 +30,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
@@ -49,8 +50,6 @@ module mesh_oct_m
     mesh_t,                        &
     mesh_plane_t,                  &
     mesh_line_t,                   &
-    mesh_dump,                     &
-    mesh_load,                     &
     mesh_check_dump_compatibility, &
     mesh_end,                      &
     mesh_double_box,               &
@@ -111,9 +110,9 @@ module mesh_oct_m
 
     logical :: masked_periodic_boundaries
     character(len=256) :: periodic_boundary_mask
+
+    type(multiresolution_t) :: hr_area !< high-resolution areas
   contains
-    procedure :: load => mesh_load
-    procedure :: dump => mesh_dump
     procedure :: end => mesh_end
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
@@ -146,8 +145,6 @@ module mesh_oct_m
     FLOAT :: spacing
     integer :: nu, mu
   end type mesh_line_t
-  
-  character(len=17), parameter :: dump_tag = '*** mesh_dump ***'
   
 contains
 
@@ -454,97 +451,6 @@ contains
 
     POP_SUB(mesh_gcutoff)
   end function mesh_gcutoff
-  
-  
-  ! -------------------------------------------------------------- 
-  subroutine mesh_dump(this, dir, filename, mpi_grp, namespace, ierr)
-    class(mesh_t),    intent(in)  :: this
-    character(len=*), intent(in)  :: dir
-    character(len=*), intent(in)  :: filename
-    type(mpi_grp_t),  intent(in)  :: mpi_grp
-    type(namespace_t), intent(in)  :: namespace
-    integer,          intent(out) :: ierr
-    
-    integer :: iunit, err
-
-    PUSH_SUB(mesh_dump)
-
-    ierr = 0
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
-      position="append", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file:"
-      message(2) = io_workpath(trim(dir)//"/"//trim(filename), namespace)
-      call messages_warning(2)
-    else
-      if (mpi_grp_is_root(mpi_grp)) then
-        write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,1i10)')  'np_global=          ', this%np_global
-        write(iunit, '(a20,1i10)')  'np_part_global=     ', this%np_part_global
-      end if
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    call index_dump(this%idx, dir, filename, mpi_grp, namespace, err)
-    if (err /= 0) ierr = ierr + 2
-
-    POP_SUB(mesh_dump)
-  end subroutine mesh_dump
-  
-  
-  ! -------------------------------------------------------------- 
-  !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(this, dir, filename, mpi_grp, namespace, ierr)
-    class(mesh_t),     intent(inout) :: this
-    character(len=*),  intent(in)    :: dir
-    character(len=*),  intent(in)    :: filename
-    type(mpi_grp_t),   intent(in)    :: mpi_grp
-    type(namespace_t), intent(in)    :: namespace
-    integer,           intent(out)   :: ierr
-
-    integer :: iunit, err
-    character(len=20)  :: str
-    character(len=100) :: lines(4)
-
-    PUSH_SUB(mesh_load)
-
-    ASSERT(this%sb%dim > 0 .and. this%sb%dim <= MAX_DIM)
-
-    ierr = 0
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
-      status="old", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
-    else
-      ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
-      if (err /= 0) ierr = ierr + 2
-
-      if (ierr == 0) then
-        call iopar_read(mpi_grp, iunit, lines, 2, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-        else
-          read(lines(3), '(a20,1i10)') str, this%np_global
-          read(lines(4), '(a20,1i10)') str, this%np_part_global
-          this%parallel_in_domains = .false.
-        end if
-      end if
-
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    call index_load(this%idx, dir, filename, mpi_grp, namespace, err)
-    if (err /= 0) ierr = ierr + 8
-
-    POP_SUB(mesh_load)
-  end subroutine mesh_load
-
 
   ! --------------------------------------------------------------
   subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, namespace, ierr)
@@ -763,6 +669,10 @@ contains
       call partition_end(this%inner_partition)
       call partition_end(this%bndry_partition)
     end if
+
+    if (multiresolution_use(this%hr_area)) then
+      call multiresolution_end(this%hr_area)
+    end if
     
     POP_SUB(mesh_end)
   end subroutine mesh_end
@@ -812,7 +722,7 @@ contains
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
-    if(mesh%sb%mr_flag) then
+    if (multiresolution_use(mesh%hr_area)) then
       memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! lxyz

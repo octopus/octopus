@@ -78,8 +78,6 @@ contains
 
     !this%method
     !call exponential_nullify(this%te)
-    call potential_interpolation_nullify(this%vksold)
-    this%vmagnus => null() 
     !this%scf_propagation_steps 
     !this%first
 
@@ -101,7 +99,7 @@ contains
 
     select case(tro%method)
     case(PROP_MAGNUS)
-      SAFE_ALLOCATE_SOURCE_P(tro%vmagnus, tri%vmagnus)
+      SAFE_ALLOCATE_SOURCE_A(tro%vmagnus, tri%vmagnus)
 
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
@@ -447,8 +445,8 @@ contains
 
     select case(tr%method)
     case(PROP_MAGNUS)
-      ASSERT(associated(tr%vmagnus))
-      SAFE_DEALLOCATE_P(tr%vmagnus)
+      ASSERT(allocated(tr%vmagnus))
+      SAFE_DEALLOCATE_A(tr%vmagnus)
 
     case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
       call sparskit_solver_end(tr%tdsk)

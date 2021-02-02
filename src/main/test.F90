@@ -472,7 +472,7 @@ contains
     call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
 
     !We set the phase of the batch if needed
-    if(.not.associated(sys%hm%hm_base%phase)) then
+    if (.not. allocated(sys%hm%hm_base%phase)) then
       call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
     else
       call sys%st%group%psib(1, 1)%copy_to(epsib)
@@ -494,7 +494,7 @@ contains
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
 
       !We set the phase of the orbitals if needed
-      if(associated(sys%hm%hm_base%phase)) then
+      if (allocated(sys%hm%hm_base%phase)) then
         call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
                    (sys%st%d%ispin==SPIN_POLARIZED))
       end if

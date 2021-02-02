@@ -468,18 +468,18 @@ end subroutine X(states_elec_trsm)
 ! ---------------------------------------------------------
 subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, &
   against_all)
-  type(states_elec_t), intent(in)    :: st
-  type(mesh_t),        intent(in)    :: mesh
-  integer,             intent(in)    :: nst
-  integer,             intent(in)    :: iqn
-  R_TYPE,              intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
-  logical, optional,   intent(in)    :: normalize
-  logical, optional,   intent(inout) :: mask(:)      !< mask(nst)
-  R_TYPE,  optional,   intent(out)   :: overlap(:) 
-  FLOAT,   optional,   intent(out)   :: norm
-  FLOAT,   optional,   intent(in)    :: theta_fi
-  R_TYPE,  optional,   intent(in)    :: beta_ij(:)   !< beta_ij(nst)
-  logical, optional,   intent(in)    :: against_all
+  type(states_elec_t), target, intent(in)    :: st
+  type(mesh_t),                intent(in)    :: mesh
+  integer,                     intent(in)    :: nst
+  integer,                     intent(in)    :: iqn
+  R_TYPE,                      intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
+  logical,           optional, intent(in)    :: normalize
+  logical,           optional, intent(inout) :: mask(:)      !< mask(nst)
+  R_TYPE,            optional, intent(out)   :: overlap(:) 
+  FLOAT,             optional, intent(out)   :: norm
+  FLOAT,             optional, intent(in)    :: theta_fi
+  R_TYPE,            optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical,           optional, intent(in)    :: against_all
 
   integer :: ist, idim, length_ss, ibind
   FLOAT   :: nrm2
@@ -1842,19 +1842,19 @@ end subroutine X(states_elec_me_one_body)
 ! ---------------------------------------------------------
 subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
                                          jindex, kindex, lindex, twoint, phase, singularity, exc_k)
-  type(states_elec_t), intent(inout)           :: st
-  type(namespace_t),   intent(in)              :: namespace
-  type(grid_t),        intent(in)              :: gr
-  type(poisson_t),     intent(inout)           :: psolver
-  integer,             intent(in)              :: st_min, st_max
-  integer,             intent(out)             :: iindex(:,:)
-  integer,             intent(out)             :: jindex(:,:)
-  integer,             intent(out)             :: kindex(:,:)
-  integer,             intent(out)             :: lindex(:,:)
-  R_TYPE,              intent(out)             :: twoint(:)  !
-  CMPLX,     optional, intent(in)              :: phase(:,st%d%kpt%start:)
-  type(singularity_t), optional,intent(in)  :: singularity
-  logical, optional, intent(in)             :: exc_k
+  type(states_elec_t), target,   intent(inout) :: st
+  type(namespace_t),             intent(in)    :: namespace
+  type(grid_t),                  intent(in)    :: gr
+  type(poisson_t),               intent(inout) :: psolver
+  integer,                       intent(in)    :: st_min, st_max
+  integer,                       intent(out)   :: iindex(:,:)
+  integer,                       intent(out)   :: jindex(:,:)
+  integer,                       intent(out)   :: kindex(:,:)
+  integer,                       intent(out)   :: lindex(:,:)
+  R_TYPE,                        intent(out)   :: twoint(:)  !
+  CMPLX,               optional, intent(in)    :: phase(:,st%d%kpt%start:)
+  type(singularity_t), optional, intent(in)    :: singularity
+  logical,             optional, intent(in)    :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot

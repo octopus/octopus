@@ -80,7 +80,7 @@ module xc_ks_inversion_oct_m
      integer,             public :: method
      integer                     :: level
      integer,             public :: asymp
-     FLOAT, pointer              :: vhxc_previous_step(:,:)
+     FLOAT, allocatable          :: vhxc_previous_step(:,:)
      type(states_elec_t), public :: aux_st
      type(hamiltonian_elec_t)         :: aux_hm
      type(eigensolver_t), public :: eigensolver

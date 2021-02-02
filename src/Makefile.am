@@ -298,6 +298,7 @@ grid_f_srcs =                                 \
 	grid/mesh_partition.F90               \
 	grid/modelmb_1part.F90                \
 	grid/multigrid.F90                    \
+	grid/multiresolution.F90              \
 	grid/nl_operator.F90                  \
 	grid/operate_f.F90                    \
 	grid/partition.F90                    \
@@ -387,7 +388,6 @@ states_f_srcs =                                 \
 	states/opt_control_state.F90            \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_elec_block.F90            \
 	states/states_elec_calc.F90             \
 	states/states_elec_dim.F90              \
 	states/states_abst.F90                  \
@@ -409,7 +409,6 @@ noinst_HEADERS +=                               \
 	states/modelmb_density_matrix_inc.F90   \
 	states/modelmb_exchange_syms_inc.F90    \
 	states/physics_op_inc.F90               \
-	states/states_elec_block_inc.F90        \
 	states/states_elec_calc_inc.F90         \
 	states/states_elec_inc.F90              \
 	states/states_elec_parallel_inc.F90     \
@@ -536,7 +535,6 @@ electrons_f_srcs =                                 \
 	electrons/current.F90                      \
 	electrons/dos.F90                          \
 	electrons/eigen_cg.F90                     \
-	electrons/eigen_lobpcg.F90                 \
 	electrons/eigen_rmmdiis.F90                \
 	electrons/eigensolver.F90                  \
 	electrons/elf.F90                          \
@@ -561,7 +559,6 @@ noinst_HEADERS +=                                  \
         electrons/eigensolver_inc.F90              \
 	electrons/eigen_cg_inc.F90                 \
 	electrons/eigen_evolution_inc.F90          \
-	electrons/eigen_lobpcg_inc.F90             \
 	electrons/eigen_plan_inc.F90               \
 	electrons/eigen_rmmdiis_inc.F90            \
 	electrons/energy_calc_inc.F90              \
@@ -576,7 +573,8 @@ noinst_HEADERS +=                                  \
 	electrons/xc_oep_qed_inc.F90               \
 	electrons/xc_oep_sic_inc.F90               \
 	electrons/xc_oep_x_inc.F90                 \
-        electrons/xc_slater_inc.F90
+        electrons/xc_slater_inc.F90                \
+        electrons/x_fbe_inc.F90
 
 # Sources in maxwell
 maxwell_f_srcs =                                 \

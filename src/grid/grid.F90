@@ -211,11 +211,10 @@ contains
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_1(gr%mesh, namespace, gr%sb, gr%cv, grid_spacing, enlarge)
     call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
-
   end subroutine grid_init_stage_1
 
 
@@ -299,12 +298,12 @@ contains
       call mesh_end(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_coarse)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine1)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine2)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine4)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine8)
-      SAFE_DEALLOCATE_P(gr%fine%tt%fine_i)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_coarse)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine1)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine2)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine4)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine8)
+      SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)

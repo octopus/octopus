@@ -502,7 +502,7 @@ end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_cg_jiang) (namespace, gr, st, hm, tol, niter, converged, ik, diff)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
@@ -518,9 +518,8 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
     gamma, sol(2), alpha, beta, theta, theta2, res, norm
   R_TYPE :: dot
-  logical, allocatable :: orthogonal(:)
 
-  PUSH_SUB(X(eigensolver_cg2_new))
+  PUSH_SUB(X(eigensolver_cg_jiang))
 
   dim = st%d%dim
   nst = st%nst
@@ -534,7 +533,6 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
   SAFE_ALLOCATE(hcgp(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE(  sd(1:gr%mesh%np     , 1:dim))
   SAFE_ALLOCATE( cgp(1:gr%mesh%np_part, 1:dim))
-  SAFE_ALLOCATE(orthogonal(1:nst))
 
   phi(1:gr%mesh%np, 1:dim) = R_TOTYPE(M_ZERO)
   psi(1:gr%mesh%np, 1:dim) = R_TOTYPE(M_ZERO)
@@ -564,11 +562,8 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
     hcgp = R_TOTYPE(M_ZERO)
     cg   = R_TOTYPE(M_ZERO)
 
-    orthogonal = .false.
 
     band: do i = 1, maxter - 1 ! One operation has already been made.
-
-      if(mod(i, 5) == 0) orthogonal = .false.
 
       if( i >1 ) then ! Get H|psi> (through the linear formula)
         do idim = 1, st%d%dim
@@ -604,7 +599,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
         end do
       end do
 
-      if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
+      if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false.)
 
       ! Get conjugate-gradient vector
       dump = X(mf_nrm2)(gr%mesh, dim, sd)**2
@@ -677,10 +672,9 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
   SAFE_DEALLOCATE_A(hcgp)
   SAFE_DEALLOCATE_A(sd)
   SAFE_DEALLOCATE_A(cgp)
-  SAFE_DEALLOCATE_A(orthogonal)
 
-  POP_SUB(X(eigensolver_cg2_new))
-end subroutine X(eigensolver_cg2_new)
+  POP_SUB(X(eigensolver_cg_jiang))
+end subroutine X(eigensolver_cg_jiang)
 
 !! Local Variables:
 !! mode: f90

@@ -99,7 +99,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
   end if
 
-  if(.not.associated(os%X(orb))) then
+  if(.not. allocated(os%X(orb))) then
     if(use_mesh) then
       SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
     else

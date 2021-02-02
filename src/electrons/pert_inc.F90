@@ -128,7 +128,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION__KDOTPVELMETHOD__HCOM_VEL) &
     apply_kpoint = .false.
@@ -430,7 +430,7 @@ subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, ik, f_in, f_out)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
     .and. this%pert_type /= PERTURBATION_KDOTP
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   ! kdotp has the perturbation written in terms of the periodic part with the phase
@@ -884,8 +884,8 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, st, psia, 
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   R_TYPE,                   intent(out)   :: density(:)
   integer, optional,        intent(in)    :: pert_order
 
@@ -935,8 +935,8 @@ R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, st, psi
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: density(:)

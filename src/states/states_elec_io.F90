@@ -644,7 +644,7 @@ contains
     type(simul_box_t),        intent(in)      :: sb
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
-    CMPLX, pointer                            :: phase(:, :)
+    CMPLX,           allocatable, intent(in)  :: phase(:, :)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -768,13 +768,12 @@ contains
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim, &
-                                                use_mesh =.not.associated(phase) .and. .not.os%submesh, &
+                                                use_mesh =.not.allocated(phase) .and. .not.os%submesh, &
                                                 normalize = .true.)
             end if
           end do !iorb
 
-          nullify(os%phase)
-          if(associated(phase)) then
+          if (allocated(phase)) then
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
@@ -808,11 +807,11 @@ contains
               end do
             else
               call states_elec_get_state(st, mesh, ist, ik, zpsi )
-              if(associated(phase)) then
+              if (allocated(phase)) then
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                 call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, allocated(phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
