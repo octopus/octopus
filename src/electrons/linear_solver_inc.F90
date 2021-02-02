@@ -200,7 +200,6 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
   p(1:gr%mesh%np, 1:st%d%dim) = z(1:gr%mesh%np, 1:st%d%dim)
   
   conv_last = .false.
-  gamma     = M_ONE
   do iter = 1, ls%max_iter
     gamma = R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, r, z))
 
@@ -215,8 +214,8 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
       call lalg_axpy(gr%mesh%np,  alpha,  p(:, idim), x(:, idim))
     end do
 
-    res = R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, r, r))
-    conv = (res < tol**2)
+    res = X(mf_nrm2)(gr%mesh, st%d%dim, r)
+    conv = (res < tol)
     if(conv.and.conv_last) exit
     conv_last = conv
 
