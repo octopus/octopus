@@ -94,7 +94,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if(space_is_periodic(sys%space)) then
+    if(sys%space%is_periodic()) then
       call messages_not_implemented('Van der Waals calculation for periodic system')
     end if
 

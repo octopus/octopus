@@ -122,7 +122,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if(space_is_periodic(sys%space)) then
+    if(sys%space%is_periodic()) then
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     end if
 
@@ -178,7 +178,7 @@ contains
     end if
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
-    if (space_is_periodic(sys%space) .and. do_infrared) then
+    if (sys%space%is_periodic() .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
@@ -347,7 +347,7 @@ contains
     call axsf_mode_output(vib, geo, gr%mesh, sys%namespace)
 
     if(do_infrared) then
-      if(space_is_periodic(sys%space) .and. .not. smear_is_semiconducting(st%smear)) then
+      if(sys%space%is_periodic() .and. .not. smear_is_semiconducting(st%smear)) then
         message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
         call messages_info(1)
       else
@@ -376,7 +376,7 @@ contains
     call vibrations_end(vib)
     call sternheimer_end(sh)
     call states_elec_deallocate_wfns(st)
-    if (space_is_periodic(sys%space) .and. do_infrared) then
+    if (sys%space%is_periodic() .and. do_infrared) then
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
       end do

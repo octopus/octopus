@@ -115,7 +115,7 @@ contains
     end if
     call restart_end(gs_restart)
 
-    if(space_is_periodic(sys%space)) then
+    if(sys%space%is_periodic()) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
       call messages_fatal(1)
     end if

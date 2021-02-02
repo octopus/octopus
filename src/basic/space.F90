@@ -30,13 +30,15 @@ module space_oct_m
 
   public ::                   &
     space_t,                  &
-    space_init,               &
-    space_is_periodic
+    space_init
 
   type space_t
     ! Components are public by default
     integer :: dim
     integer :: periodic_dim
+
+  contains
+    procedure :: is_periodic => space_is_periodic
   end type space_t
 
 contains
@@ -96,7 +98,7 @@ contains
 
   !--------------------------------------------------------------
   logical pure function space_is_periodic(this)
-    type(space_t), intent(in) :: this
+    class(space_t), intent(in) :: this
 
     space_is_periodic = this%periodic_dim > 0
 

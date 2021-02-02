@@ -243,7 +243,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (space_is_periodic(sys%space)) then
+    if (sys%space%is_periodic()) then
       message(1) = "Casida oscillator strengths will be incorrecspaceperiodic systems."
       call messages_warning(1)
     end if

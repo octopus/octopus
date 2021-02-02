@@ -154,7 +154,7 @@ contains
       !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
-      if(space_is_periodic(space)) default_alpha = CNST(0.6)
+      if(space%is_periodic()) default_alpha = CNST(0.6)
 
       call parse_variable(namespace, 'PreconditionerFilterFactor', default_alpha, alpha)
 
