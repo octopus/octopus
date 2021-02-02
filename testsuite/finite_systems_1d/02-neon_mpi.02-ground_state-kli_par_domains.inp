@@ -29,4 +29,3 @@ Eigensolver = cg_new
 ConvEigenError = true
 Preconditioner = no
 ConvRelDens = 1e-7
-StatesPack = yes

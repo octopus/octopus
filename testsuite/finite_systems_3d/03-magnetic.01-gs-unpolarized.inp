@@ -24,6 +24,5 @@ LCAOStart = no
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes
 
 SCFCalculateForces = no

@@ -31,6 +31,5 @@ GuessMagnetDensity = user_defined
  0.0 | 0.0 | 1.0 
  0.0 | 0.0 | 1.0
 %
-StatesPack = yes
 LCAOStart = lcao_full
 

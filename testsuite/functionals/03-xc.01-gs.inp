@@ -20,5 +20,3 @@ TheoryLevel = hartree_fock
 %
 
 FilterPotentials = filter_none
-
-StatesPack = yes

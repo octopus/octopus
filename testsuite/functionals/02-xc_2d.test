@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes
 
-Input: 02-xc_2d.00-hartree.inp
+Input: 02-xc_2d.01-hartree.inp
 match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
 match ; Hartree energy                           ; GREPFIELD(static/info, 'Total       =', 3) ; 1.11161424
 match ; Hartree eigenvalues sum                  ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.42868005
@@ -34,7 +34,7 @@ match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2  
 # lower in energy and closer to the Quantum Monte Carlo numbers, which
 # could be due to the use of an underconverged basis set in the paper.
 
-Input: 02-xc_2d.01-hf.inp
+Input: 02-xc_2d.02-hf.inp
 match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Hartree-Fock energy                      ; GREPFIELD(static/info, 'Total       =', 3) ; 1.04191861
 match ; Hartree-Fock eigenvalues sum             ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.31401934

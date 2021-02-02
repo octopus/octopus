@@ -37,7 +37,3 @@ XCFunctional = lda_x + lda_c_pw
 
 ConvRelDens = 1e-6
 EigensolverTolerance = 1e-7
-
-
-
-StatesPack = yes

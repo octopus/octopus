@@ -53,4 +53,3 @@ DoubleGrid=yes
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes

@@ -28,6 +28,5 @@ FilterPotentials = filter_none
 MixField = density
 
 ParKpoints = no
-StatesPack = yes
 
 SCFCalculateForces = no

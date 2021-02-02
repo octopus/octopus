@@ -25,5 +25,4 @@ SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 MixField = density
-StatesPack = yes
 LCAOStart = lcao_full

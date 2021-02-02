@@ -27,8 +27,8 @@ dist_share_DATA =                                  \
 	01-xc_1d.oep_kli.inp                       \
 	01-xc_1d.lda_csc.inp                       \
 	02-xc_2d.test                              \
-	02-xc_2d.00-hartree.inp                    \
-	02-xc_2d.01-hf.inp                         \
+	02-xc_2d.01-hartree.inp                    \
+	02-xc_2d.02-hf.inp                         \
 	02-xc_2d.gga_b86.inp                       \
 	02-xc_2d.lda_prm.inp                       \
 	02-xc_2d.gga_b88.inp                       \

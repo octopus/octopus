@@ -25,5 +25,3 @@ OEPLevel = oep_kli
 
 ConvRelDens = 1e-6
 EigenSolverTolerance = 1e-7
-
-StatesPack = yes

@@ -40,4 +40,3 @@ EigenSolverTolerance = 5e-8
 LRTolFinalTol = 5e-7
 LRConvAbsDens = 5e-7
 CGEnergyChangeThreshold = 1e-4
-StatesPack = yes

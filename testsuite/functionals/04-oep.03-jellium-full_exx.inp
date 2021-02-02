@@ -46,4 +46,3 @@ LRMaximumIter = 20
 MixingScheme = linear
 
 ExperimentalFeatures = yes
-StatesPack = yes

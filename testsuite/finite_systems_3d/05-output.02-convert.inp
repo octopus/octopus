@@ -18,4 +18,3 @@ ConvertIterateFolder = no
 
 ConvertStart = 1
 ConvertEnd   = 1
-StatesPack = yes

@@ -84,6 +84,5 @@ FilterPotentials = filter_none
 MixField = density
 
 ExperimentalFeatures = yes
-StatesPack = yes
 
 LCAOStart = lcao_full

@@ -12,6 +12,3 @@ FromScratch = yes
 Radius = 6.5
 Spacing = 0.55
 Extrastates = 4
-
-
-StatesPack = yes

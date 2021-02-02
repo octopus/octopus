@@ -20,7 +20,3 @@ TheoryLevel = independent_particles
 %
 
 ExtraStates = 9
-
-
-
-StatesPack = yes

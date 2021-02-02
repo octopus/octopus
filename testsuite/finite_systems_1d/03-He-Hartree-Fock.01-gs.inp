@@ -26,5 +26,3 @@ TheoryLevel = hartree_fock
 ExperimentalFeatures = yes
 
 PoissonSolver = direct_sum
-
-StatesPack = yes

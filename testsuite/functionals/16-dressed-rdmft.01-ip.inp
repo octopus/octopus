@@ -40,4 +40,3 @@ EigensolverTolerance = 1e-14
 EigensolverMaxIter = 300
 
 ConvRelDens = 1e-13
-StatesPack = yes

@@ -21,4 +21,3 @@ VDWCorrection = vdw_d3
 ExperimentalFeatures = yes
 
 ConvAbsEv = 1e-5
-StatesPack = yes

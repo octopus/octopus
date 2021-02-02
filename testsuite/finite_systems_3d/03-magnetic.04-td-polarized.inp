@@ -32,4 +32,3 @@ TDEnergyUpdateIter = 5
 FilterPotentials = filter_none
 
 ParKpoints = no
-StatesPack = yes

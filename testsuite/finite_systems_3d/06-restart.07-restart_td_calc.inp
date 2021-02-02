@@ -16,4 +16,3 @@ TDMaxSteps = 10
 FilterPotentials = filter_none
 
 WorkDir = "./workdir"
-StatesPack = yes

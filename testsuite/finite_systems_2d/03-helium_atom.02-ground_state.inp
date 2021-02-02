@@ -23,8 +23,3 @@ Spacing = 0.14
 TheoryLevel = independent_particles
 
 EigenSolverTolerance = 1.0e-4
-
-
-
-
-StatesPack = yes

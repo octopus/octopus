@@ -14,5 +14,3 @@ Spacing = 0.4
 fromScratch = yes
 
 TheoryLevel = independent_particles
-
-StatesPack = yes

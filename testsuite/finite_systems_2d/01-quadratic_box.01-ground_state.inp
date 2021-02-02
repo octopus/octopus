@@ -33,8 +33,3 @@ DerivativesOrder = 1
 TheoryLevel = independent_particles
 
 EigenSolverMaxIter = 250
-
-
-
-
-StatesPack = yes

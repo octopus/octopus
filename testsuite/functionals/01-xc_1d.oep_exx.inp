@@ -30,4 +30,3 @@ OEPMixing = 0.001
 ParKpoints = no
 
 EigenSolver = cg_new
-StatesPack = yes

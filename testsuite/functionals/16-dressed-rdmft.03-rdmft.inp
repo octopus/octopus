@@ -38,4 +38,3 @@ Extrastates = 5
 RDMToleranceFO = 1e-4
 RDMConvEner = 5e-9
 RDMTolerance = 1e-8
-StatesPack = yes

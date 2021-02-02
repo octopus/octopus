@@ -16,4 +16,3 @@ CH = 1.2*angstrom
 %
 
 Preconditioner = pre_filter
-StatesPack = yes

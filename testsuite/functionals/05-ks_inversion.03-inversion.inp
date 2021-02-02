@@ -34,4 +34,3 @@ InvertKSConvAbsDens = 1e-7
 InvertKSVerbosity = 1
 
 FilterPotentials = filter_none
-StatesPack = yes

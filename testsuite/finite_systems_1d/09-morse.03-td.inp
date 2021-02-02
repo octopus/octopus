@@ -107,4 +107,3 @@ scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | 0.0 | "envelope_function"
 ExperimentalFeatures = yes
 
 TDOutputComputeInterval = 1
-StatesPack = yes

@@ -21,5 +21,3 @@ Spacing = 0.5
 XCFunctional = gga_xc_edf1
 
 FilterPotentials = filter_none
-
-StatesPack = yes

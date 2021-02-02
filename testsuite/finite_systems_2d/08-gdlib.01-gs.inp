@@ -23,7 +23,3 @@ ff = 20
 
 TheoryLevel = independent_particles
 ConvEigenError = yes
-
-
-
-StatesPack = yes

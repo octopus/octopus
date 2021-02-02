@@ -27,4 +27,3 @@ OEPLevel = oep_kli
 ParKpoints = no
 
 EigenSolver = cg_new
-StatesPack = yes

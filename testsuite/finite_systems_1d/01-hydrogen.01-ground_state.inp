@@ -32,7 +32,3 @@ TheoryLevel = independent_particles
 %
 
 EigenSolverTolerance = 1e-5
-
-
-
-StatesPack = yes

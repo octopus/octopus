@@ -23,4 +23,3 @@ EigenSolverTolerance = 1e-4
 EigenSolverMaxIter = 20
 
 MixField = density
-StatesPack = yes

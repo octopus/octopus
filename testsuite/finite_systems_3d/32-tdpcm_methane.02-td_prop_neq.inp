@@ -27,4 +27,3 @@ TDMaxSteps = 25
 
 FromScratch = yes
 ExperimentalFeatures = yes
-StatesPack = yes

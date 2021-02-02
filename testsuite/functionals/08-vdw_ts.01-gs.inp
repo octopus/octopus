@@ -21,4 +21,3 @@ VDWSelfConsistent = no
 ExperimentalFeatures = yes
 
 MixField = density
-StatesPack = yes

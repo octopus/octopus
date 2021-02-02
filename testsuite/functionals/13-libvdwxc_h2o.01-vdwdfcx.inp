@@ -6,4 +6,3 @@ ExperimentalFeatures = yes
  'H' | 0.0 |  0.763 * angstrom | -0.477 * angstrom
  'H' | 0.0 | -0.763 * angstrom | -0.477 * angstrom
 %
-StatesPack = yes

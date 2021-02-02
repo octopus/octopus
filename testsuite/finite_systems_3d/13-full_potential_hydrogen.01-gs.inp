@@ -45,4 +45,3 @@ FilterPotentials = filter_none
 SCFCalculateForces = no
 
 Debug = trace
-StatesPack = yes

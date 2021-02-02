@@ -29,4 +29,3 @@ PCMStaticEpsilon = 78.39
 TDDeltaStrength = 0.0
 TDTimeStep = 0.0015/eV
 TDMaxSteps = 5
-StatesPack = yes

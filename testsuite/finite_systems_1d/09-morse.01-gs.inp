@@ -61,6 +61,3 @@ TheoryLevel = independent_particles
 ConvAbsDens = 1e-12
 
 EigenSolver = cg_new
-
-
-StatesPack = yes

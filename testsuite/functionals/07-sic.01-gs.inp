@@ -26,4 +26,3 @@ EigensolverTolerance = 1e-7
 MaximumIter = 300
 
 MeshPartitionPackage = metis
-StatesPack = yes

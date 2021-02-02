@@ -16,4 +16,3 @@ GOMaxIter = 4
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes

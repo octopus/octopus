@@ -49,4 +49,3 @@ k=1.0
 
 Output = mmb_den + mmb_wfs + density
 OutputFormat = plane_z + axis_x
-StatesPack = yes

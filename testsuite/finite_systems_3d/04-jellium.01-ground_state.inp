@@ -37,4 +37,3 @@ EigenSolverTolerance = 1e-5
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes

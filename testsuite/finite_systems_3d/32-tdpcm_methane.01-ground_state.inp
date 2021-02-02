@@ -18,4 +18,3 @@ PCMStaticEpsilon = 78.39
 
 FromScratch = yes
 ExperimentalFeatures = yes
-StatesPack = yes

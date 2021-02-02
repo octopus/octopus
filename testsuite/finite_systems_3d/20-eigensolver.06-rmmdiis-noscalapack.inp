@@ -34,5 +34,4 @@ ParDomains = no
 StatesOrthogonalization = cholesky_serial
 SubspaceDiagonalization = standard
 
-StatesPack = yes
 LCAOStart = lcao_full

@@ -25,7 +25,3 @@ OEPLevel = oep_kli
 ParKPoints = no
 ConvAbsEv = 5e-7
 ConvAbsDens = 5e-7
-
-
-
-StatesPack = yes

@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
-# This test checks the preconditioners filter, jacobi, poisson, and multigrid with CH4.
+# This test checks the preconditioners filter, jacobi, and multigrid with CH4.
 
 Input: 22-preconditioner.01-none.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
@@ -28,7 +28,7 @@ match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -0.332800
 match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -0.332800
 match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -0.332800
 
-Input: 22-preconditioner.05-multigrid.inp
+Input: 22-preconditioner.04-multigrid.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -0.593833
 match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -0.332801

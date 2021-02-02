@@ -1,3 +1,4 @@
+
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
@@ -24,9 +25,7 @@ BoxShape = sphere
 Radius = 10.0
 Spacing = 0.2
 
-DerivativesOrder = 4
-
-TheoryLevel = hartree_fock
+TheoryLevel = hartree
 
 SpinComponents = spin_polarized
 
@@ -36,6 +35,5 @@ LCAOStart = lcao_none
 MixingScheme = linear
 Mixing = 1.0
 
+ExperimentalFeatures = yes
 
-
-StatesPack = yes

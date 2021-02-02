@@ -19,4 +19,3 @@ VDWCorrection = vdw_ts
 ExperimentalFeatures = yes
 
 MixField = density
-StatesPack = yes

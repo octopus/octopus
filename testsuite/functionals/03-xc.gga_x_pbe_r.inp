@@ -21,5 +21,3 @@ Spacing = 0.5
 XCFunctional = gga_x_pbe_r
 
 FilterPotentials = filter_none
-
-StatesPack = yes
