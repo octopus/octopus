@@ -94,6 +94,7 @@ dist_share_DATA =                                \
         17-aluminium.03-conductivity.inp                  \
 	17-aluminium.test                                 \
 	18-TiO2.01-gs.inp                        \
+	18-TiO2.02-gs_kerker.inp                 \
 	18-TiO2.test                             \
 	19-unfolding.01-gs.inp                   \
 	19-unfolding.02-setup.inp                \

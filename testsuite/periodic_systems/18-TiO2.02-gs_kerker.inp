@@ -38,13 +38,13 @@ EigenSolver = rmmdiis
 #ConvRelDens = 1e-7
 ParKPoints = no
 
+MixField = density
+MixingPreconditioner = yes
+MixingKerker = yes
+Mixing = 0.8
+
 %KPointsGrid
  2 | 2 | 2
 %
-
-Output = matrix_elements
-OutputMatrixElements  = two_body
-OutputMEStart = 24
-OutputMEEnd = 25
 
 StatesPack = yes
