@@ -38,7 +38,7 @@ module preconditioners_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use stencil_star_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m
 
@@ -79,11 +79,12 @@ module preconditioners_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, namespace, gr, mc)
+  subroutine preconditioner_init(this, namespace, gr, mc, space)
     type(preconditioner_t), target, intent(out)    :: this
     type(namespace_t),              intent(in)     :: namespace
     type(grid_t),                   intent(in)     :: gr
     type(multicomm_t),              intent(in)     :: mc
+    type(space_t),                  intent(in)     :: space
 
     FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
@@ -153,7 +154,7 @@ contains
       !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
-      if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
+      if(space_is_periodic(space)) default_alpha = CNST(0.6)
 
       call parse_variable(namespace, 'PreconditionerFilterFactor', default_alpha, alpha)
 

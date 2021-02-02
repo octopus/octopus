@@ -133,8 +133,16 @@ contains
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
     sb%geo => geo
+    sb%dim = space%dim
+    sb%periodic_dim = space%periodic_dim
 
-    call read_misc()                       ! Miscellaneous stuff.
+    if(space%periodic_dim == 1) then
+      call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
+      call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
+      call messages_write('of total energy and forces.')
+      call messages_warning(namespace=namespace)
+    end if
+
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
@@ -142,7 +150,7 @@ contains
 
     call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
-    call symmetries_init(sb%symm, namespace, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
+    call symmetries_init(sb%symm, namespace, geo, sb%dim, space%periodic_dim, sb%rlattice, sb%klattice)
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
@@ -153,56 +161,6 @@ contains
     POP_SUB(simul_box_init)
 
   contains
-
-
-    !--------------------------------------------------------------
-    subroutine read_misc()
-      PUSH_SUB(simul_box_init.read_misc)
-
-      sb%dim = space%dim
-
-      !%Variable PeriodicDimensions
-      !%Type integer
-      !%Default 0
-      !%Section System
-      !%Description
-      !% Define how many directions are to be considered periodic. It has to be a number
-      !% between zero and <tt>Dimensions</tt>.
-      !% (WARNING: For systems that are periodic in 1D and  2D, interaction between ions is assumed to be periodic in 3D.
-      !% This affects the calculation of total energy and forces.)
-      !%Option 0
-      !% No direction is periodic (molecule).
-      !%Option 1
-      !% The <i>x</i> direction is periodic (wire, polymer).
-      !%Option 2
-      !% The <i>x</i> and <i>y</i> directions are periodic (slab).
-      !%Option 3
-      !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
-      !%End
-
-      if(geo%periodic_dim == -1) then
-        call parse_variable(namespace, 'PeriodicDimensions', 0, sb%periodic_dim)
-      else
-        sb%periodic_dim = geo%periodic_dim
-      end if
-      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) then
-        call messages_input_error(namespace, 'PeriodicDimensions')
-      end if
-
-      if(sb%periodic_dim > 0 .and. sb%periodic_dim < sb%dim) then
-        call messages_experimental('Support for mixed periodicity systems')
-      end if
-
-      if(sb%periodic_dim == 1) then
-        call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
-        call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
-        call messages_write('of total energy and forces.')
-        call messages_warning(namespace=namespace)
-      end if
-
-      POP_SUB(simul_box_init.read_misc)
-    end subroutine read_misc
-
 
     !--------------------------------------------------------------
     subroutine read_box()
@@ -270,7 +228,7 @@ contains
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
           call messages_fatal(1, namespace=namespace)
         end if
-        if(sb%periodic_dim > 1) call messages_input_error(namespace, 'BoxShape')
+        if(space%periodic_dim > 1) call messages_input_error(namespace, 'BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -345,7 +303,7 @@ contains
         end if
 
         call parse_variable(namespace, 'Xlength', default, sb%xsize, units_inp%length)
-        if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
+        if(def_rsize > M_ZERO .and. space%periodic_dim == 0) &
           call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
       end if
 
@@ -380,7 +338,7 @@ contains
               call messages_input_error(namespace, 'Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
-            if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
+            if(def_rsize > M_ZERO .and. space%periodic_dim < idir) &
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
@@ -389,7 +347,7 @@ contains
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error(namespace, 'Lsize')
           end if
-          if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
+          if(def_rsize > M_ZERO .and. space%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
         else
@@ -444,8 +402,8 @@ contains
         ! adjust Lsize if necessary to ensure that one grid point = one pixel
         do idir = 1, 2
           box_npts = sb%image_size(idir)
-          if((idir >  sb%periodic_dim .and. even(sb%image_size(idir))) .or. &
-             (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
+          if((idir >  space%periodic_dim .and. even(sb%image_size(idir))) .or. &
+             (idir <= space%periodic_dim .and.  odd(sb%image_size(idir)))) then
             box_npts = box_npts + 1
             sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
           end if

@@ -35,6 +35,7 @@ module phonons_fd_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use electrons_oct_m
@@ -121,7 +122,8 @@ contains
     call parse_variable(sys%namespace, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib, &
+                        sys%space)
 
     call vibrations_output(vib)
     
@@ -154,7 +156,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib, space)
     type(grid_t),     target, intent(inout) :: gr
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -164,6 +166,7 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
     type(vibrations_t),       intent(inout) :: vib
+    type(space_t),            intent(in)    :: space
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: mesh
@@ -174,7 +177,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
+    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks, space)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO

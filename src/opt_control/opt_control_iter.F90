@@ -403,7 +403,7 @@ contains
     PUSH_SUB(velocities_write)
 
     n_atoms = sys%geo%natoms
-    dim = sys%gr%sb%dim
+    dim = sys%space%dim
 
     ! write header of the velocities output file
     if(iterator%ctr_iter == 0) then

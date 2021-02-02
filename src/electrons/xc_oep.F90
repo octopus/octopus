@@ -40,6 +40,7 @@ module xc_oep_oct_m
   use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -105,13 +106,14 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st, mc)
+  subroutine xc_oep_init(oep, namespace, family, gr, st, mc, space)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
+    type(space_t),       intent(in)    :: space
 
     PUSH_SUB(xc_oep_init)
 
@@ -242,7 +244,7 @@ contains
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc, space)
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)

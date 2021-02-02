@@ -289,7 +289,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   if(kpt_output) zpol_k(:, :, :) = M_ZERO
 
   do dir1 = 1, ndir_
-    do dir2 = 1, sys%gr%sb%dim
+    do dir2 = 1, sys%space%dim
 
       zpol(dir1, dir2) = M_ZERO
 
@@ -335,7 +335,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
         call MPI_Allreduce(zpol_k(1:MAX_DIM, 1:MAX_DIM, ik), zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, &
           sys%st%mpi_grp%comm, mpi_err)
         do dir1 = 1, ndir_
-          do dir2 = 1, sys%gr%sb%dim
+          do dir2 = 1, sys%space%dim
             zpol_k(dir1, dir2, ik) = zpol_temp(dir1, dir2)
           end do
         end do
@@ -347,7 +347,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
         call MPI_Allreduce(zpol_k(1:MAX_DIM, 1:MAX_DIM, ik), zpol_temp, MAX_DIM**2, MPI_CMPLX, MPI_SUM, &
           sys%st%d%kpt%mpi_grp%comm, mpi_err)
         do dir1 = 1, ndir_
-          do dir2 = 1, sys%gr%sb%dim
+          do dir2 = 1, sys%space%dim
             zpol_k(dir1, dir2, ik) = zpol_temp(dir1, dir2)
           end do
         end do
@@ -384,10 +384,10 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
   st => sys%st
   np = sys%gr%mesh%np
   
-  ndir_ = sys%gr%sb%dim
+  ndir_ = sys%space%dim
   if(present(ndir)) ndir_ = ndir
 
-  startdir = sys%gr%sb%periodic_dim + 1
+  startdir = sys%space%periodic_dim + 1
   if(present(doalldirs)) then
     if(doalldirs) startdir = 1
   end if
@@ -397,7 +397,7 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
   call states_elec_get_state(sys%st, sys%gr%mesh, psi)
   
   do dir1 = startdir, ndir_
-    do dir2 = 1, sys%gr%sb%dim
+    do dir2 = 1, sys%space%dim
       call pert_setup_dir(perturbation, dir1)
       zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%namespace, sys%gr, sys%geo, &
         sys%hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
@@ -442,8 +442,8 @@ subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, ch
 
   call states_elec_get_state(sys%st, sys%gr%mesh, psi)
 
-  do dir1 = 1, sys%gr%sb%dim
-    do dir2 = 1, sys%gr%sb%dim
+  do dir1 = 1, sys%space%dim
+    do dir2 = 1, sys%space%dim
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
@@ -524,7 +524,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
   st   => sys%st
   mesh => sys%gr%mesh
   np   =  mesh%np
-  ndir =  sys%gr%sb%dim
+  ndir =  sys%space%dim
 
   occ_response_ = .false.
   if(present(occ_response)) occ_response_ = occ_response
@@ -588,7 +588,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
 
                   ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
 
-                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
+                  if (present(kdotp_em_lr) .and. u(2) <= sys%space%periodic_dim) then
                     tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
                   else
                     call pert_setup_dir(dipole, u(2))
@@ -723,7 +723,7 @@ contains
             do ifreq = 1, 3
 
               ! ist = ist2 term cannot be captured by k.p perturbation
-              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim) then
+              if (present(kdotp_lr) .and. ii <= sys%space%periodic_dim) then
                 if(ist == ist2) then
                   ppsi = M_ZERO ! will put in eigenvalue directly later
                 else
@@ -746,7 +746,7 @@ contains
 
               me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, psi2, ppsi)
 
-              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist == ist2) then
+              if (present(kdotp_lr) .and. ii <= sys%space%periodic_dim .and. ist == ist2) then
                 me010(ist, ist, ii, ifreq, ik) = me010(ist, ist, ii, ifreq, ik) + dl_eig(ist, ik, ii)
               end if
 
@@ -830,10 +830,10 @@ subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, eta, 
       frequency = R_TOPREC(omega * freq_factor(ifactor) + M_zI * eta)
       if(isigma == 2) frequency = -R_CONJ(frequency)
       
-      do em_dir = 1, sys%gr%sb%dim
+      do em_dir = 1, sys%space%dim
         call X(lr_orth_response)(sys%gr%mesh, sys%st, em_lr(em_dir, isigma, ifactor), frequency)
         
-        do kdotp_dir = 1, sys%gr%sb%periodic_dim
+        do kdotp_dir = 1, sys%space%periodic_dim
           call X(lr_orth_response)(sys%gr%mesh, sys%st, kdotp_em_lr(kdotp_dir, em_dir, isigma, ifactor), frequency)
         end do
       end do
@@ -871,7 +871,7 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-      do idir = 1, sys%gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         do idim = 1, sys%st%d%dim
           do ip = 1, sys%gr%mesh%np
             integrand(ip) = exp(M_zI*(M_PI/sys%gr%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
@@ -888,9 +888,9 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
-    SAFE_ALLOCATE(dl_eig_temp(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
+    SAFE_ALLOCATE(dl_eig_temp(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%space%periodic_dim))
 
-    call MPI_Allreduce(dl_eig, dl_eig_temp, sys%st%nst * sys%st%d%nik * sys%gr%sb%periodic_dim, &
+    call MPI_Allreduce(dl_eig, dl_eig_temp, sys%st%nst * sys%st%d%nik * sys%space%periodic_dim, &
       MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
 
     dl_eig(:,:,:) = dl_eig_temp(:,:,:)
@@ -941,10 +941,10 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
   end do
   SAFE_ALLOCATE(prod_ee%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   if(calc_var) then
-    SAFE_ALLOCATE(hvar_e(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma, 1:nfactor))
+    SAFE_ALLOCATE(hvar_e(1:sys%space%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma, 1:nfactor))
   end if
   if(calc_var_mo) then
-    SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+    SAFE_ALLOCATE(hvar_b(1:sys%space%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   end if
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -972,7 +972,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
   
   if(calc_var) then
     hvar_e(:,:,:,:,:) = M_ZERO
-    do dir1 = 1, sys%gr%sb%dim
+    do dir1 = 1, sys%space%dim
       do ii = 1, nfactor
         call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1, :, ii), nsigma, hvar_e(dir1, :, :, :, ii))
       end do
@@ -980,14 +980,14 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
   end if
   if(calc_var_mo) then
     hvar_b(:,:,:,:) = M_ZERO
-    do dir1 = 1, sys%gr%sb%dim
+    do dir1 = 1, sys%space%dim
       call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
     end do
   end if
   
-  do dir1 = 1, sys%gr%sb%dim
-    do dir2 = 1, sys%gr%sb%dim
-      do dir3 = 1, sys%gr%sb%dim
+  do dir1 = 1, sys%space%dim
+    do dir2 = 1, sys%space%dim
+      do dir3 = 1, sys%space%dim
         dir(1) = dir2
         dir(nfactor) = dir1
         call pert_setup_dir(pert_m, dir3)
@@ -1089,11 +1089,11 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
     end do
   end do
   
-  do dir1 = 1, sys%gr%sb%dim
-    do dir2 = 1, sys%gr%sb%dim
+  do dir1 = 1, sys%space%dim
+    do dir2 = 1, sys%space%dim
       dir(1) = dir2
       dir(nfactor) = dir1
-      do dir3 = 1, sys%gr%sb%dim
+      do dir3 = 1, sys%space%dim
         if(sternheimer_add_fxc(sh_mo) .and. sternheimer_add_fxc(sh)) then 
           hpol_density(:) = M_ZERO
           do ii = 1, nfactor
@@ -1216,7 +1216,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfa
   ASSERT(nfactor == 2)
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%sb%dim
+  ndir = sys%space%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(gpsi(1:np, 1:ndim, 1:sys%st%nst, 1:nsigma))
@@ -1647,7 +1647,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%sb%dim
+  ndir = sys%space%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(Hdl_psi(1:np, 1:ndim, 1:ndir))
@@ -1732,7 +1732,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, lr_k, lr_b, lr_kk, lr_kb, mag
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%sb%dim
+  ndir = sys%space%dim
   ndim = sys%st%d%dim
   
   PUSH_SUB(X(lr_calc_susceptibility_periodic))
@@ -2549,7 +2549,7 @@ subroutine X(inhomog_kb)(sys, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi
 
   PUSH_SUB(X(inhomog_kb))
   
-  ASSERT(sys%gr%sb%dim .ne. -1)
+  ASSERT(sys%space%dim .ne. -1)
   ASSERT(idir .ne. -1)
   
   SAFE_ALLOCATE(f_out1(1:sys%gr%mesh%np,1:sys%hm%d%dim, 1:sys%st%nst))

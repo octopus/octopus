@@ -183,7 +183,7 @@ contains
     call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 
-    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc)
+    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc, this%space)
 
     call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, this%ks%theory_level, &
       this%ks%xc, this%mc, need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)

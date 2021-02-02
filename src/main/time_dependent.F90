@@ -120,7 +120,7 @@ contains
     call td_init(electrons%td, electrons%namespace, electrons%gr, electrons%geo, electrons%st, electrons%ks, electrons%hm, &
       electrons%outp)
     call td_run(electrons%td, electrons%namespace, electrons%mc, electrons%gr, electrons%geo, electrons%st, electrons%ks, &
-      electrons%hm, electrons%outp, from_scratch)
+      electrons%hm, electrons%outp, electrons%space, from_scratch)
     call td_end(electrons%td)
 
     POP_SUB(time_dependent_run_legacy)

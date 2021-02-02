@@ -80,7 +80,7 @@ contains
     PUSH_SUB(ground_state_run_legacy)
 
     call electrons_ground_state_run(electrons%namespace, electrons%mc, electrons%gr, electrons%geo, electrons%st, electrons%ks, &
-      electrons%hm, electrons%outp, from_scratch)
+      electrons%hm, electrons%outp, electrons%space, from_scratch)
 
     POP_SUB(ground_state_run_legacy)
   end subroutine ground_state_run_legacy

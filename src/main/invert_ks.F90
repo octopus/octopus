@@ -88,7 +88,7 @@ contains
 
     !abbreviations
     np      = sys%gr%mesh%np
-    ndim    = sys%gr%sb%dim
+    ndim    = sys%space%dim
     nspin   = sys%st%d%nspin
 
     ! read target density

@@ -171,7 +171,7 @@ contains
     end if
 
     gr => sys%gr
-    ndim = sys%gr%sb%dim
+    ndim = sys%space%dim
 
     if (gr%sb%kpoints%use_symmetries) then
       call messages_experimental("em_resp with k-points symmetries")
@@ -296,7 +296,7 @@ contains
       call sternheimer_init(sh_kdotp, sys, complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
-      SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
+      SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%space%periodic_dim))
 
       call lr_init(kdotp_lr2)
       call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh, allocate_rho = .false.)
@@ -397,7 +397,7 @@ contains
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
     do ifactor = 1, em_vars%nfactor
-      do idir = 1, sys%gr%sb%dim
+      do idir = 1, sys%space%dim
         do sigma = 1, em_vars%nsigma
           call lr_init(em_vars%lr(idir, sigma, ifactor))
           call lr_allocate(em_vars%lr(idir, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_em)
@@ -482,7 +482,7 @@ contains
           if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             - frequency) < M_EPSILON ) then
 
-            do idir = 1, sys%gr%sb%dim
+            do idir = 1, sys%space%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
 
@@ -504,7 +504,7 @@ contains
           if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             + frequency) < M_EPSILON ) then 
 
-            do idir = 1, sys%gr%sb%dim
+            do idir = 1, sys%space%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 2, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
 
@@ -529,7 +529,7 @@ contains
           ! if this frequency is the same as the previous one, just copy it
           if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
 
-            do idir = 1, sys%gr%sb%dim
+            do idir = 1, sys%space%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 1, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 2, 1))
 
@@ -550,7 +550,7 @@ contains
           ! if this frequency is minus the previous one, copy it inverted
           if( have_to_calculate .and. abs(frequency + last_omega) < M_EPSILON ) then
 
-            do idir = 1, sys%gr%sb%dim
+            do idir = 1, sys%space%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 2, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 1, 1))
 

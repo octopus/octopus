@@ -42,7 +42,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
   PUSH_SUB(X(calc_eff_mass_inv))
 
   mesh => sys%gr%mesh
-  pdim = sys%gr%sb%periodic_dim
+  pdim = sys%space%periodic_dim
 
   SAFE_ALLOCATE(psi(1:mesh%np_part, 1:sys%hm%d%dim))
   SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:sys%hm%d%dim, 1:pdim))
@@ -211,7 +211,7 @@ subroutine X(kdotp_add_diagonal)(sys, em_pert, kdotp_lr)
   SAFE_ALLOCATE(ppsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
 
-  do idir = 1, sys%gr%sb%periodic_dim
+  do idir = 1, sys%space%periodic_dim
     call pert_setup_dir(em_pert, idir)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       do ist = 1, sys%st%nst

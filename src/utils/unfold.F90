@@ -112,7 +112,7 @@ program oct_unfold
   call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
-  if(sb%periodic_dim == 0) then
+  if(sys%space%periodic_dim == 0) then
     message(1) = "oct-unfold can only be used for periodic ystems."
     call messages_fatal(1)
   end if
@@ -413,15 +413,15 @@ contains
       eigs(ie) = eigmin - nextend * de + (ie - 1) * de
     end do        
 
-    SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
+    SAFE_ALLOCATE(gvec_abs(1:sys%space%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
     file_gvec = io_open('./unfold_gvec.dat', global_namespace, action='read')
     read(file_gvec,*)
     read(file_gvec,*)
     do ik = 1, st%d%nik
       read(file_gvec,*) vec_sc(1:3)
-      call kpoints_to_absolute(sb%klattice, vec_sc(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim, ik), &
-                 sb%periodic_dim)
+      call kpoints_to_absolute(sb%klattice, vec_sc(1:sys%space%periodic_dim), gvec_abs(1:sys%space%periodic_dim, ik), &
+                 sys%space%periodic_dim)
     end do 
     call io_close(file_gvec)
 
@@ -443,7 +443,7 @@ contains
       SAFE_ALLOCATE(g_select(1:shell%ngvectors))
       g_select(:) = .false.
 
-      select case(sb%periodic_dim)
+      select case(sys%space%periodic_dim)
       case(3)
         do ig = 1, shell%ngvectors
           call kpoints_to_absolute(sb%klattice, TOFLOAT(shell%red_gvec(1:3,ig)), vec_sc(1:3), 3)

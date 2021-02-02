@@ -58,8 +58,8 @@ module casida_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scalapack_oct_m
-  use simul_box_oct_m
   use sort_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -243,8 +243,8 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (simul_box_is_periodic(sys%gr%sb)) then
-      message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
+    if (space_is_periodic(sys%space)) then
+      message(1) = "Casida oscillator strengths will be incorrecspaceperiodic systems."
       call messages_warning(1)
     end if
 
@@ -277,7 +277,7 @@ contains
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
     cas%nik = sys%st%d%nik
-    cas%sb_dim = sys%gr%sb%dim
+    cas%sb_dim = sys%space%dim
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
@@ -363,7 +363,7 @@ contains
     cas%pt_nmodes = 0
     if (cas%has_photons) then
       if(cas%has_photons) call messages_experimental('EnablePhotons = yes')
-      call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%gr%sb%dim, sys%st%qtot)
+      call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%space%dim, sys%st%qtot)
       write(message(1), '(a,i7,a)') 'INFO: Solving Casida equation with ', &
         cas%pt%nmodes, ' photon modes.'
       write(message(2), '(a)') 'as described in ACS Photonics 2019, 6, 11, 2757-2778.'

@@ -39,6 +39,7 @@ module linear_solver_oct_m
   use preconditioners_oct_m
   use smear_oct_m
   use solvers_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use wfs_elec_oct_m
 
@@ -85,12 +86,13 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc, space)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     type(multicomm_t),      intent(in)    :: mc
+    type(space_t),          intent(in)    :: space
 
     integer :: fsolver
     integer :: defsolver
@@ -159,7 +161,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, namespace, gr, mc)
+    call preconditioner_init(this%pre, namespace, gr, mc, space)
 
     !%Variable LinearSolverMaxIter
     !%Type integer

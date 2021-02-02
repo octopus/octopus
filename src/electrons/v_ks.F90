@@ -53,6 +53,7 @@ module v_ks_oct_m
   use pcm_oct_m
   use simul_box_oct_m
   use sort_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -160,13 +161,14 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, namespace, gr, st, geo, mc)
+  subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space)
     type(v_ks_t),            intent(inout) :: ks
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
     type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(inout) :: geo
     type(multicomm_t),       intent(in)    :: mc
+    type(space_t),           intent(in)    :: space
 
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
@@ -235,7 +237,7 @@ contains
       if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
         default = pseudo_x_functional
       else
-        select case(gr%sb%dim)
+        select case(space%dim)
         case(3); default = XC_LDA_X   
         case(2); default = XC_LDA_X_2D
         case(1); default = XC_LDA_X_1D
@@ -249,7 +251,7 @@ contains
       if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
         default = default + 1000*pseudo_c_functional
       else
-        select case(gr%sb%dim)
+        select case(space%dim)
         case(3); default = default + 1000*XC_LDA_C_PZ_MOD
         case(2); default = default + 1000*XC_LDA_C_2D_AMGB
         case(1); default = default + 1000*XC_LDA_C_1D_CSC
@@ -317,7 +319,7 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, namespace, gr%sb%dim, gr%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, namespace, space%dim, space%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
@@ -360,7 +362,7 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
-      if(gr%sb%periodic_dim == gr%sb%dim) &
+      if(space%periodic_dim == space%dim) &
         call messages_experimental("Hartree in fully periodic system")
       if(gr%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
@@ -406,7 +408,7 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
         if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER) then 
-          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc)
+          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc, space)
         else
           ks%oep%level = XC_OEP_NONE
         end if
@@ -415,7 +417,7 @@ contains
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc, space)
       end if
 
     end select
@@ -477,7 +479,7 @@ contains
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
 
-        if(ks%gr%sb%dim /= 3) then
+        if(space%dim /= 3) then
           call messages_write('vdw_d3 can only be used in 3-dimensional systems')
           call messages_fatal(namespace=namespace)
         end if

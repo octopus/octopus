@@ -123,8 +123,8 @@ program photoelectron_spectrum
   llpp(:) = 1
 
   need_pmesh = .false. 
-  dim    = sb%dim   ! The dimensionality dim = [1,2,3]
-  pdim   = sb%periodic_dim
+  dim    = space%dim   ! The dimensionality dim = [1,2,3]
+  pdim   = space%periodic_dim
 
   call messages_print_stress(stdout,"Postprocessing")  
   
@@ -144,7 +144,7 @@ program photoelectron_spectrum
     call messages_write('Read PES_MASK info file.')
     call messages_info()
     
-    need_pmesh = simul_box_is_periodic(sb) 
+    need_pmesh = space_is_periodic(space) 
     
     
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
@@ -154,7 +154,7 @@ program photoelectron_spectrum
     
     option = OPTION__PES_FLUX_SHAPE__SPH
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
-    if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
+    if (space_is_periodic(space)) option = OPTION__PES_FLUX_SHAPE__PLN
     
     call parse_variable(global_namespace, 'PES_Flux_Shape', option, pflux%surf_shape)
     call pes_flux_reciprocal_mesh_gen(pflux, global_namespace, sb, st, 0, post = .true.)
@@ -198,7 +198,7 @@ program photoelectron_spectrum
   if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/) 
 
   ! more defaults
-  if(simul_box_is_periodic(sb)) then
+  if(space_is_periodic(space)) then
     
     if (dim == 2) then
       ! write the velocity map on plane pz=0 as it contains all the informations

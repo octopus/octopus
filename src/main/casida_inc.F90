@@ -293,7 +293,7 @@ subroutine X(get_transition_densities) (cas, sys)
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
-  fn_unit = units_out%length**(-sys%gr%sb%dim)
+  fn_unit = units_out%length**(-sys%space%dim)
 
   do ia = 1, cas%n_pairs
     if(loct_isinstringlist(ia, cas%trandens)) then
@@ -1044,7 +1044,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
-        do idir = 1, sys%gr%sb%dim
+        do idir = 1, sys%space%dim
           cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
         end do
       end do

@@ -29,7 +29,7 @@ subroutine X(run_sternheimer)()
 
     call restart_init(restart_load, sys%namespace, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
-    do idir = 1, sys%gr%sb%dim
+    do idir = 1, sys%space%dim
 
       ! try to load wavefunctions, if first frequency; otherwise will already be initialized
       if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
@@ -80,7 +80,7 @@ subroutine X(run_sternheimer)()
             if((pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .or. em_vars%calc_magnetooptics) .and. use_kdotp) then
               if (sigma == 1 .and. ifactor == 1) then 
                 do ipert = PK2, PKB
-                  do idir2 = 1, sys%gr%sb%dim 
+                  do idir2 = 1, sys%space%dim 
                     if((ipert == PKB) .or. (idir2 <= idir)) then
                       str_tmp = em_wfs_tag(idir, ifactor, idir2, ipert)              
                       call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
@@ -126,7 +126,7 @@ subroutine X(run_sternheimer)()
               end if
               if(use_kdotp) then
                 if(nfactor_ke > 1 .or. ifactor == 1) then
-                do idir2 = 1, sys%gr%sb%dim 
+                do idir2 = 1, sys%space%dim 
                   str_tmp = em_wfs_tag(idir, ifactor, idir2, ipert = PKE)              
                   call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                   if (ierr == 0) then
@@ -233,7 +233,7 @@ subroutine X(run_sternheimer)()
   SAFE_ALLOCATE(inhomog(1:gr%mesh%np,1:sys%hm%d%dim,1:sys%st%nst,1:sys%st%d%kpt%nlocal,1:nsigma_eff))
 
   if((pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) .and. use_kdotp) then
-    do idir = 1, sys%gr%sb%dim 
+    do idir = 1, sys%space%dim 
       message(1)="Info: Calculating response for B-perturbation"
       call messages_info(1)
       call X(inhomog_B)(sh, sys, magn_dir(idir,1), magn_dir(idir,2), &
@@ -247,7 +247,7 @@ subroutine X(run_sternheimer)()
       em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
     end do
 
-    do idir = 1, sys%gr%sb%dim
+    do idir = 1, sys%space%dim
       do idir2 = 1, idir
         message(1)="Info: Calculating response for K2-perturbation"
         call messages_info(1)
@@ -261,8 +261,8 @@ subroutine X(run_sternheimer)()
       end do
     end do
 
-    do idir = 1, sys%gr%sb%dim
-      do idir2 = 1, sys%gr%sb%dim    
+    do idir = 1, sys%space%dim
+      do idir2 = 1, sys%space%dim    
         message(1)="Info: Calculating response for KB-perturbation"
         call messages_info(1)
         call X(inhomog_kB_tot)(sh, sys, idir, magn_dir(idir2, 1), magn_dir(idir2, 2), & 
@@ -279,7 +279,7 @@ subroutine X(run_sternheimer)()
       end do
     end do
   else 
-    do idir = 1, sys%gr%sb%dim
+    do idir = 1, sys%space%dim
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1 .or. complex_wfs) then
         call pert_setup_dir(em_vars%perturbation, idir)
   
@@ -445,7 +445,7 @@ subroutine X(run_sternheimer)()
       end do
     else
       if(iomega == 1 .and. ifactor == 1) then
-        do idir = 1, sys%gr%sb%dim
+        do idir = 1, sys%space%dim
           message(1)="Info: Calculating response for B-perturbation"
           call messages_info(1)  
           call pert_setup_dir(pert_b, idir)
