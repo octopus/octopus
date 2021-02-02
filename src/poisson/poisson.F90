@@ -149,16 +149,16 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_init(this, namespace, der, mc, qtot, label, solver, verbose, force_serial, force_cmplx)
-    type(poisson_t),             intent(out) :: this
-    type(namespace_t),           intent(in)  :: namespace
-    type(derivatives_t), target, intent(in)  :: der
-    type(multicomm_t),           intent(in)  :: mc
-    FLOAT,                       intent(in)  :: qtot !< total charge
-    character(len=*),  optional, intent(in)  :: label
-    integer,           optional, intent(in)  :: solver
-    logical,           optional, intent(in)  :: verbose
-    logical,           optional, intent(in)  :: force_serial
-    logical,           optional, intent(in)  :: force_cmplx
+    type(poisson_t),             intent(inout) :: this
+    type(namespace_t),           intent(in)    :: namespace
+    type(derivatives_t), target, intent(in)    :: der
+    type(multicomm_t),           intent(in)    :: mc
+    FLOAT,                       intent(in)    :: qtot !< total charge
+    character(len=*),  optional, intent(in)    :: label
+    integer,           optional, intent(in)    :: solver
+    logical,           optional, intent(in)    :: verbose
+    logical,           optional, intent(in)    :: force_serial
+    logical,           optional, intent(in)    :: force_cmplx
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -950,7 +950,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_init_sm(this, namespace, main, der, sm, method, force_cmplx)
-    type(poisson_t),             intent(out)   :: this
+    type(poisson_t),             intent(inout) :: this
     type(namespace_t),           intent(in)    :: namespace
     type(poisson_t),             intent(in)    :: main
     type(derivatives_t), target, intent(in)    :: der

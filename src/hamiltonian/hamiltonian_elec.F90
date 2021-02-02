@@ -205,7 +205,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
-    type(hamiltonian_elec_t),                   intent(out)   :: hm
+    type(hamiltonian_elec_t),                   intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
