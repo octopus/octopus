@@ -165,7 +165,8 @@ contains
     FLOAT :: fft_alpha
     character(len=60) :: str
 
-    if(this%method /= POISSON_NULL) return ! already initialized
+    ! Make sure we do not try to initialize an already initialized solver
+    ASSERT(this%method == POISSON_NULL)
 
     PUSH_SUB(poisson_init)
 
