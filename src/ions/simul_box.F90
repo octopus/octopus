@@ -136,13 +136,6 @@ contains
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
-    if(space%periodic_dim == 1) then
-      call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
-      call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
-      call messages_write('of total energy and forces.')
-      call messages_warning(namespace=namespace)
-    end if
-
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.

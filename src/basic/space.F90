@@ -74,11 +74,11 @@ contains
     !%Option 0
     !% No direction is periodic (molecule).
     !%Option 1
-    !% The <i>x</i> direction is periodic (wire, polymer).
+    !% The <i>x</i> direction is periodic.
     !%Option 2
-    !% The <i>x</i> and <i>y</i> directions are periodic (slab).
+    !% The <i>x</i> and <i>y</i> directions are periodic.
     !%Option 3
-    !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic (bulk).
+    !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic.
     !%End
     call parse_variable(namespace, 'PeriodicDimensions', 0, this%periodic_dim)
 
