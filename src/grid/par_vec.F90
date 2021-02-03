@@ -532,6 +532,8 @@ contains
     SAFE_ALLOCATE(init_recv(1:npart))
     SAFE_ALLOCATE(size_v(1:npart))
     do inode = 1, npart
+       if (inode == vp%partno) cycle ! No ghost points from self.
+
        init = xghost_neigh_back(inode)
        size = vp%ghost_rcounts(inode)
 
