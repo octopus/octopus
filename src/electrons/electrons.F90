@@ -116,6 +116,8 @@ contains
 
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
+    !% WARNING: For systems that are periodic in 1D and  2D, interaction between ions is assumed to be periodic in 3D.
+    !% This affects the calculation of total energy and forces.
     call space_init(sys%space, sys%namespace)
     
     call geometry_init(sys%geo, sys%namespace, sys%space)

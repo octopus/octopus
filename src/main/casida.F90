@@ -101,7 +101,7 @@ module casida_oct_m
     integer, allocatable :: n_unocc(:)     !< number of unoccupied states
     integer              :: nst            !< total number of states
     integer              :: nik
-    integer              :: sb_dim         !< number of spatial dimensions
+    integer              :: space_dim         !< number of spatial dimensions
     integer              :: el_per_state
     character(len=80)    :: trandens
     character(len=80)    :: print_exst     !< excited states for which Casida coefficients will be printed
@@ -244,7 +244,7 @@ contains
     end if
 
     if (sys%space%is_periodic()) then
-      message(1) = "Casida oscillator strengths will be incorrecspaceperiodic systems."
+      message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
       call messages_warning(1)
     end if
 
@@ -277,7 +277,7 @@ contains
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nst = sys%st%nst
     cas%nik = sys%st%d%nik
-    cas%sb_dim = sys%space%dim
+    cas%space_dim = sys%space%dim
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
@@ -398,7 +398,7 @@ contains
     !%End
 
     if(parse_block(sys%namespace, 'CasidaMomentumTransfer', blk)==0) then
-      do idir = 1, cas%sb_dim
+      do idir = 1, cas%space_dim
         call parse_block_float(blk, 0, idir - 1, cas%qvector(idir))
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
       end do
@@ -612,7 +612,7 @@ contains
 
       if(cas%calc_forces) then
         do iatom = 1, sys%geo%natoms
-          do idir = 1, cas%sb_dim
+          do idir = 1, cas%space_dim
             write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
             call restart_rm(cas%restart_dump, restart_filename)
@@ -771,11 +771,11 @@ contains
     SAFE_ALLOCATE(cas%pair(1:cas%n))
     if(cas%states_are_real) then
       SAFE_ALLOCATE( cas%dmat(1:cas%nb_rows, 1:cas%nb_cols))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n, 1:cas%sb_dim))
+      SAFE_ALLOCATE(  cas%dtm(1:cas%n, 1:cas%space_dim))
     else
       ! caution: ScaLAPACK layout not yet tested for complex wavefunctions!
       SAFE_ALLOCATE( cas%zmat(1:cas%nb_rows, 1:cas%nb_cols))
-      SAFE_ALLOCATE(  cas%ztm(1:cas%n, 1:cas%sb_dim))
+      SAFE_ALLOCATE(  cas%ztm(1:cas%n, 1:cas%space_dim))
     end if
     SAFE_ALLOCATE(   cas%f(1:cas%n))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
@@ -789,7 +789,7 @@ contains
       else
         SAFE_ALLOCATE(cas%zmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       end if
-      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%sb_dim, 1:cas%n_pairs))
+      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%space_dim, 1:cas%n_pairs))
     end if
 
     if(cas%qcalc) then
@@ -1113,7 +1113,7 @@ contains
     call io_mkdir(CASIDA_DIR, namespace)
     iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), namespace, action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
-                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
+                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%space_dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
                                                                   trim('-'), &
                                                                   trim('-'), &

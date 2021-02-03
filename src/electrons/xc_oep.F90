@@ -159,7 +159,7 @@ contains
       call parse_variable(namespace, 'EnablePhotons', .false., oep%has_photons)
       if (oep%has_photons) then
         call messages_experimental("EnablePhotons = yes")
-        call photon_mode_init(oep%pt, namespace, gr%mesh, gr%sb%dim, st%qtot)
+        call photon_mode_init(oep%pt, namespace, gr%mesh, space%dim, st%qtot)
         if (oep%pt%nmodes > 1) then
           call messages_not_implemented('Photon OEP for more than one photon mode.')
         end if

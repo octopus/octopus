@@ -35,7 +35,7 @@ module space_oct_m
   type space_t
     ! Components are public by default
     integer :: dim
-    integer :: periodic_dim
+    integer :: periodic_dim = 0
 
   contains
     procedure :: is_periodic => space_is_periodic
@@ -71,8 +71,6 @@ contains
     !%Description
     !% Define how many directions are to be considered periodic. It has to be a number
     !% between zero and <tt>Dimensions</tt>.
-    !% (WARNING: For systems that are periodic in 1D and  2D, interaction between ions is assumed to be periodic in 3D.
-    !% This affects the calculation of total energy and forces.)
     !%Option 0
     !% No direction is periodic (molecule).
     !%Option 1

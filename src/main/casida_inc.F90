@@ -1475,7 +1475,7 @@ subroutine X(casida_write)(cas, sys)
     end if
     
     write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
-    do idim = 1, cas%sb_dim
+    do idim = 1, cas%space_dim
       write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
 #ifdef R_TCOMPLEX
       write(iunit, '(16x)', advance='no')
@@ -1493,7 +1493,7 @@ subroutine X(casida_write)(cas, sys)
         write(iunit, '(i6)', advance='no') cas%ind(ia)
       end if
       write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
-        (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
+        (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%space_dim), cas%f(cas%ind(ia))
     end do
     call io_close(iunit)
   
@@ -1515,7 +1515,7 @@ subroutine X(casida_write)(cas, sys)
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-            do idim = 1, cas%sb_dim
+            do idim = 1, cas%space_dim
               write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
                 units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
             end do
