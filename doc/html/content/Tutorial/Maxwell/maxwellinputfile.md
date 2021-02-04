@@ -3,13 +3,13 @@ Title: "Maxwell input file"
 weight: 4
 ---
 
-# Maxwell Input File
+### Maxwell Input File
 
-## Input file variable description
+#### Input file variable description
 
-### Calculation mode and parallelization strategy  
+##### Calculation mode and parallelization strategy  
 
-At the beginning of the input file, the basic option variable "CalculationMode" selects the run mode of Octopus and has always to be set.  
+At the beginning of the input file, the basic option variable {{< variable "CalculationMode" >}} selects the run mode of Octopus and has always to be set.  
 In case of a parallel run, there are some variables to set the proper parallelization options.  
 Additionally, some relevant physical constants or parameters can be defined.
 
@@ -18,7 +18,7 @@ Additionally, some relevant physical constants or parameters can be defined.
 {{< /code-block >}}
 
 
-### Multisystem setup
+##### Multisystem setup
 
 The Maxwell system is now implemented in Octopus' multisystem framework, which allows to calculate several different systems, which can interact with each other.
 
@@ -31,57 +31,55 @@ Currently implemented system types are:
 *  multisystem: A system containing other systems.
 
 
-### Definition of the systems
+##### Definition of the systems
 
 In this tutorial, we will use a pure Maxwell system:
 
-```sh
-%Systems
+{{< code-block >}}
+%{{< variable "Systems" >}}
   'Maxwell' | maxwell
 %
-```
+{{< /code-block >}}
 
 Subsequently, variables relating to a named system are prefixed by the system name.
 
-### Maxwell box variables and parameters
+##### Maxwell box variables and parameters
 
 Similar to the usual matter box, the Maxwell box can be determined equivalently only using the prefix Maxwell. We note, that both system boxes can be selected completely independently, but they have the same center. The Maxwell box is only defined as a parallelepiped box.
 
-!!! Example
-    ```
-    # ----- Maxwell box variables ----------------------------------------------
+{{< expand "Example" >}} 
+
+{{< code-block >}}
+# ----- Maxwell box variables ----------------------------------------------
     
-    # Variable of the Maxwell grid size
-    lsize_mx = 12.0
+# Variable of the Maxwell grid size
+lsize_mx = 12.0
     
-    # Variable of the Maxwell grid spacing
-    dx_mx = 9.5
+# Variable of the Maxwell grid spacing
+dx_mx = 9.5
     
-    # Number of dimensions of the Maxwell grid
-    Maxwell.Dimensions = 3
+# Number of dimensions of the Maxwell grid
+Maxwell.Dimensions = 3
     
-    # Box shape of the Maxwell simulation box
-    Maxwell.BoxShape = parallelepiped
+# Box shape of the Maxwell simulation box
+Maxwell.BoxShape = parallelepiped
     
-    # Box size of the Maxwell simulation box in each dimension
+# Box size of the Maxwell simulation box in each dimension
     
-    %Maxwell.[Lsize]
-    #
+%Maxwell.[Lsize]
+lsize_mx | lsize_mx | lsize_mx
+%
     
+# Grid spacing of the Maxwell simulation box in each dimension
     
-    
-    lsize_mx | lsize_mx | lsize_mx
-    %
-    
-    # Grid spacing of the Maxwell simulation box in each dimension
-    
-    %Maxwell.Spacing
-    dx_mx | dx_mx | dx_mx
-    %
-    ```
+%Maxwell.Spacing
+dx_mx | dx_mx | dx_mx
+%
+{{< /code-block >}}
+{{< /expand >}}
 
 
-### Maxwell options
+##### Maxwell options
 
 The Maxwell options determines the Maxwell propagation scheme. First, the Maxwell propagation operator options consist of the type of "MaxwellHamiltonianOperator", which can be set as a vacuum Maxwell-Hamiltonian (faraday_ampere) or a Maxwell-Hamiltonian in linear medium (faraday_ampere_medium). The Maxwell-Hamiltonian Operator himself can be applied as a finite difference operator (fd) or as a phase factor in momentum space with a fast Fourier transform (fft). 
 
@@ -89,6 +87,7 @@ Currently, the Maxwell system does not define its own propagator, but uses the s
 
 The Maxwell Boundary conditions can be chosen for each direction differently with "MaxwellBoundaryConditions". It can be simulated zero and absorbing boundary conditions, as well as plane waves and constant fields boundary conditions. Additionally to the boundary condition, the code can include absorbing boundaries. This means that all outgoing waves are absorbed while all incoming signals still arises at the boundaries and propagate into the simulation box. The absorbing boundaries can be achieved by a mask function of by a perfectly matchen layer calculation with additional parameters.
 
+{{< code-block >}}
 	# ----- Maxwell calculation variables -----------------------
 
 	# Type of Maxwell Hamiltonian operator
@@ -147,16 +146,18 @@ The Maxwell Boundary conditions can be chosen for each direction differently wit
 
 	MaxwellABPMLPower = 2.0
 	MaxwellABPMLReflectionError = 1e-16
+{{< /code-block >}}
 
 
 *[PML]: Perfectly Matched Layer
 *[fft]: Fast Fourtier Transform
 
 
-### Output options
+##### Output options
 
 The output option "OutputFormat" is valid for both systems and choses the type of output format. It is possible to chose multiple formats.
 
+{{< code-block >}}
 	# ----- General output variables ----------------------------------------------------------------
 
 	# Output format
@@ -165,14 +166,16 @@ The output option "OutputFormat" is valid for both systems and choses the type o
 	# - Output format = xyz (output format for coordinates of ions)
 	# - Output format = axis_x (1D plot along x axix with y=O and z=O)
 	OutputFormat= plane_ x + plane_ y + plane_ 2 + vtk + xyz + axis_x
+{{< /code-block >}}
 
 
 
 
-### Maxwell output options
+##### Maxwell output options
 
 The Maxwell output options for the Maxwell field variables are equivalent to those of the matter output only with the prefix Maxell. The interval option is independent on the matter one.
 
+{{< code-block >}}
 	# ----- Maxwell output variables ----------------------------------------------------------------
 
 	# Maxwell output variables are written every MaxwellOutputInterval time steps into the output_ iter folder
@@ -217,15 +220,17 @@ The Maxwell output options for the Maxwell field variables are equivalent to tho
 	%MaxwellFieldsCoordinate
 	0.00 | 0.00 | 0.00
 	%
+{{< /code-block >}}
 
 
-#### Time step variables  
+###### Time step variables  
 
 The "TDTimeStep" option defines the timestep for one Maxwell propagation step in case of only a free Maxwell propagation with one Maxwell system or it describes the time step for one propagation step of the Matter system.  
 In general, the matter system is more stable for larger time steps, whereas the Maxwell system has always to fulfill the Courant condition. To handle both in a feasible way, the Maxwell system can apply several time steps between one matter time step. The "MaxwellTDIntervalSteps" gives the number of Maxwell intermediate steps between two matter steps.  
 To speed up the code it is useful to add another approximation that the current density assumes to be constant as the arithmetic mean between two matter time steps. This approximation can be applied with the "MaxwellTDETRSApprox" option.  
 The two remaining options "TDMaxwellTDRelaxationSteps" and "TDMaxwellKSRelaxationSteps" can be used if the starting groundstate is not stable enough, e.g. in case of absorbing boundaries for the matter wavefunction. Since the groundstate cacluations are always done with zero boundary condition, switching to absorbing boundaries in a time-depending mode leads to small dynamics until the system relaxes to its groundstate with absorbing boundaries. Sometimes this relaxation causes strong currents that lead to instable runs. Using "TDMaxwellTDRelaxationSteps" the simulation avoids that the relaxation dynamics effects the Maxwell fields. After that number of time steps, the matter to Maxwell coupling is switched on. The second number "TDMaxwellKSRelaxationSteps" describes the number when the external fields like laser pulse or external current are switched on. In other words the full requested simulation starts after TDMaxwellKSRelaxationSteps effectrive zero time step.
 
+{{< code-block >}}
 	# ----- Time step variables ---------------------------------------------------------------------
 
 	# Time step of the propagation
@@ -265,9 +270,10 @@ The two remaining options "TDMaxwellTDRelaxationSteps" and "TDMaxwellKSRelaxatio
 
 	# Internal current test run, the test function is hard coded in current.F90
 	CurrentPropagationTest = no
+{{< /code-block >}}
 
 
-#### Maxwell field variables  
+###### Maxwell field variables  
 
 The initial Maxwell field can be manually defined using the "UserDefinedInitialMaxwellStates" block.
 The first column represents the input type, here a predefined function instead of parsing a function. The second to the fourth column define the maximum electric field amplitude vector of the plane wave. The fifth column names the following defined Maxwell envelope function, and the last code denotes that the incident wave is a plane wave. Multiple different plane waves can be defined, and their superposition gives the final incident wave result at the boundary.  
@@ -275,6 +281,7 @@ The MaxwellFunctions block reads the additional required informations for the pl
 Inside the simulation box, the initial electromagnetic field is set up by the "UserDefinedInitialMaxwellStates" block. The first column denotes the vector component of the field, and the second column is the input type. The third column choses the Maxwell field and the last one reads the spatial dependent formula.  
 In case of "MaxwellIncidentWavesInBox = yes", the code uses the initial analytical plane wave values also inside the simulation box. Hence, there is no Maxwell field propagation with the algorithm, the corresponding values are set analytically.
 
+{{< code-block >}}
 	# ----- Maxwell field variables -----------------------------------------------------------------
 
 	# Plane waves input block
@@ -331,12 +338,14 @@ In case of "MaxwellIncidentWavesInBox = yes", the code uses the initial analytic
 	# If incident plane waves should be used to calculate the analytical Maxwell field inside the simulation box (no propagation, just evaluation of the plane waves inside the simulation box) 
 
 	MaxwellIncidentWavesInBox = no
+{{< /code-block >}}
 
-#### External current  
+###### External current  
 
 A external current can be switched that adds an external current contribution to the internal current. Such external current is calculated analytically by the "UserDefinedMaxwellExternalCurrent" block. The first column represents the input type. The next three columns describe the spatial distribution of the external current density. The fifth column reads the temporal frequency of the current pulse, and the last column names the envelope of the current pulse.  
 The "TDFunctions" block defines the time-depending function for the current pulse. The first column corresponds to the name of the envelope function in the previous block. The second column reads the function type, the third the amplitude factor, the fourth the pulse width and the last column the time shift.
 
+{{< code-block >}}
 	# ----- External current options ------------------------
 
 	# Switch on external current density
@@ -370,13 +379,15 @@ The "TDFunctions" block defines the time-depending function for the current puls
 	%TDFunctions
 	"env_func” | tdf_gaussian | 1.0 | tw | to
 	%
+{{< /code-block >}}
 
 
-#### Instantaneous field increasing  
+###### Instantaneous field increasing  
 
-The instantaneous field increasing modus adds a certain field value, which is constant in space to the current propagated field value. Such added constant field value is calculated by a time-depending function. The first six columns in "UserDefinedConstantSpatialMaxwellField" read the constant electromagnetic field amplitude. The last column refers to the time-depending function.  
+The instantaneous field increasing modus adds a certain field value, which is constant in space to the current propagated field value. Such added constant field value is calculated by a time-depending function. The first six columns in {{< variable "UserDefinedConstantSpatialMaxwellField" >}} read the constant electromagnetic field amplitude. The last column refers to the time-depending function.  
 The "TDFunctions" block defines the time-depending function.  
 
+{{< code-block >}}
 	# ----- Spatial constant field propagation ------------------------------------------------------
 
 	Ez           = 0.000010000000
@@ -407,16 +418,18 @@ The "TDFunctions" block defines the time-depending function.
 	%TDFunctions
 	"time_function" | tdf_logistic | 1.0 | pulse_slope | pulse_width | pulse_shift
 	%
+{{< /code-block >}}
 
 
-### Linear Medium
+##### Linear Medium
 
 Linear Media can be included in the calculation either through a simple box, or through a file describing more complex geometries.
 
-#### Linear Medium Boxes
+###### Linear Medium Boxes
 
 Linear medium boxes can be placed inside the Maxwell simulation box. They are defined by their centers, their sizes in each dimension, and their electromagnetic medium parameters. The first three columns read the center coordinate of the corresponding box, the following three columns define the box length in each direction. Columns seven and eight read the electric permittivity and magnetic permeability factors. Columns nine and ten give the electric and magnetic loss, and the last column choses the type of box edges. They can be hard edged or smoothed by a continuous function.
 
+{{< code-block >}}
 	# ----- Medium Box ------------------------------------------------------------------------------
 
 	# Medium box parameters like size, epsilon, mu, electric loss and magnetic loss
@@ -439,26 +452,29 @@ Linear medium boxes can be placed inside the Maxwell simulation box. They are de
 	# Maxwell operation calculated via Riemann-Silberstein vector or separately by
 	# the electric and magnetic field with standard Maxwell's equations to avoid errors
 	# by calculating descrete gradients for sharped edged boxes
+{{< /code-block >}}
 
 
-#### Complex geometries:
+###### Complex geometries:
 
 Medium surface file, followed by permittivity factor, electric conductivity
 and magnetic conductivity, and finally type of numerical approximation used
 for the derivatives at the edges.
 
-
+{{< code-block >}}
 	# ---- Linear Medium from file -----------------------------------------
 
 	%LinearMediumFromFile
        medium_surface_file | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
     %
+{{< /code-block >}}
  
 
 For  linear  media the calculation of the Maxwell Operator acting on the RS
 state  can be done directly using the Riemann-Silberstein representation or
 by calculating the curl of the electric and magnetic fields.
 
+{{< code-block >}}
 	# ---- Medium Calculation options -------------------------------------
 	
 	# MaxwellMediumCalculation: Options
@@ -466,9 +482,6 @@ by calculating the curl of the electric and magnetic fields.
 	# - MaxwellMediumCalculation = EM (Medium calculation via curl of electric field and magnetic field)
 	
 	MaxwellMediumCalculation = {{mymacro('RS')}}
+{{< /code-block >}}
 
 
-
-Test for {{mymacro('test')}}.
-
---8<-- "includes/abberviations.md"
