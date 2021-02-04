@@ -247,7 +247,8 @@ contains
     end if
 
     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
+      call io_mkdir('debug/lcao', namespace)
+      iunit_o = io_open('debug/lcao/orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
 

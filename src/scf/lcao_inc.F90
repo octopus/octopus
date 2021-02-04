@@ -150,9 +150,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxmtxel)
 
   if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
+    iunit_h = io_open('debug/lcao/hamiltonian', namespace, action='write')
+    iunit_s = io_open('debug/lcao/overlap', namespace, action='write')
+    iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
@@ -165,7 +165,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
+        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
           gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
           ierr, geo = geo)
       end if
@@ -503,7 +503,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   if (debug%info) then
     if (this%parallel .or. mpi_grp_is_root(mpi_world)) then
       ! Hamiltonian matrix
-      filename = trim(STATIC_DIR)//'lcao_hamiltonian'
+      filename = 'debug/lcao/hamiltonian'
       if (this%parallel) then
         write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
       end if
@@ -511,7 +511,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
       write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
 
       ! Overlap matrix
-      filename = trim(STATIC_DIR)//'lcao_overlap'
+      filename = 'debug/lcao/overlap'
       if (this%parallel) then
         write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
       end if
@@ -521,7 +521,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
     if (.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
       ! Eigenvectors
-      iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
+      iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
       write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
     end if
   end if
@@ -636,7 +636,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
                 if(debug%info .and. mpi_grp_is_root(mpi_world)) then
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
+                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
                     gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
                     ierr, geo = geo)
                 end if
