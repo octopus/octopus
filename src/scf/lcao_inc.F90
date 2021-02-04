@@ -558,7 +558,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
       call profiling_in(prof_matrix, TOSTRING(X(LCAO_MATRIX)))
 
-      if(.not. this%parallel .and. mpi_grp_is_root(gr%mesh%mpi_grp)) then
+      if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then
         hamiltonian = R_TOTYPE(M_ZERO)
         overlap = R_TOTYPE(M_ZERO)
       end if
@@ -882,6 +882,8 @@ contains
 
       SAFE_ALLOCATE(work(1:lwork))
       SAFE_ALLOCATE(iwork(1:liwork))
+      work = M_ZERO
+      iwork = 0
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
