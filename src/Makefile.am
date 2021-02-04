@@ -252,6 +252,7 @@ ions_f_srcs =                                 \
 	ions/box_shape.F90                    \
 	ions/box_sphere.F90                   \
 	ions/box_union.F90                    \
+	ions/box_user_defined.F90             \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/kpoints.F90                      \

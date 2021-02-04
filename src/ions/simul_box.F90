@@ -27,6 +27,7 @@ module simul_box_oct_m
   use box_minimum_oct_m
   use box_parallelepiped_oct_m
   use box_sphere_oct_m
+  use box_user_defined_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
@@ -41,7 +42,6 @@ module simul_box_oct_m
   use profiling_oct_m
   use space_oct_m
   use species_oct_m
-  use string_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
@@ -91,8 +91,6 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    character(len=1024), private :: user_def !< for the user-defined box
-
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
@@ -123,6 +121,7 @@ contains
     FLOAT,   allocatable :: site_type_radius(:), site_position(:,:)
     character(len=LABEL_LEN), allocatable :: site_type_label(:)
     character(len=200) :: filename
+    character(len=1024) :: user_def
 
     PUSH_SUB(simul_box_init)
 
@@ -144,6 +143,8 @@ contains
         periodic_boundaries=(sb%periodic_dim > 0))
     case (PARALLELEPIPED)
       sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+    case (BOX_USDEF)
+      sb%box => box_user_defined_t(space%dim, center, user_def, M_TWO*sb%lsize(1:space%dim))
 
     case (MINIMUM)
       sb%box => box_minimum_t(space%dim, n_site_types, site_type_label, site_type_radius, n_sites, site_type, site_position)
@@ -417,8 +418,7 @@ contains
         !% with axis parallel to the <i>z</i>-axis.
         !%End
 
-        call parse_variable(namespace, 'BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
-        call conv_to_C_string(sb%user_def)
+        call parse_variable(namespace, 'BoxShapeUsDef', 'x^2+y^2+z^2 < 4', user_def)
       end if
 
       ! fill in lsize structure
@@ -726,12 +726,8 @@ contains
     write(iunit,'(a)') 'Simulation Box:'
 
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE)
+    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
       call this%box%write_info(iunit)
-
-    case (BOX_USDEF)
-      write(iunit,'(2x,a)') 'Type = user-defined'
-
     end select
 
     write(message(1), '(a,i1,a)') '  Octopus will run in ', this%dim, ' dimension(s).'
@@ -783,7 +779,7 @@ contains
     write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
     write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE)
+    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE, BOX_USDEF)
       call this%box%write_short_info(iunit)
 
     case(PARALLELEPIPED)
@@ -807,9 +803,6 @@ contains
     case(HYPERCUBE)
       write(iunit, '(a)') 'BoxShape = hypercube'  ! add parameters?
 
-    case(BOX_USDEF)
-      write(iunit, '(a)') 'BoxShape = user_defined; BoxShapeUsDef = "'//trim(this%user_def)//'"'
-
     end select
 
     POP_SUB(simul_box_write_short_info)
@@ -824,10 +817,9 @@ contains
     logical :: contained(1:nn)
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
-    FLOAT :: rr, re, im
     FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx_red(:, :)
-    integer :: ip, idir
+    integer :: ip
 
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx_red(1:nn, 1:this%dim))
@@ -841,7 +833,7 @@ contains
     end if
 
     select case(this%box_shape)
-    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE)
+    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
       contained = this%box%contains_points(nn, xx_red)
 
     case (HYPERCUBE) 
@@ -853,20 +845,6 @@ contains
         contained(ip) = all(xx_red(ip, 1:this%dim) >= llimit(1:this%dim) .and. xx_red(ip, 1:this%dim) <= ulimit(1:this%dim))
       end do
 
-    case(BOX_USDEF)
-      ! is it inside the user-given boundaries?
-      do ip = 1, nn
-        contained(ip) =  all(xx_red(ip, 1:this%dim) >= -this%lsize(1:this%dim) - DELTA) &
-          .and. all(xx(ip, 1:this%dim) <= this%lsize(1:this%dim) + DELTA)
-
-        ! and inside the simulation box?
-        do idir = 1, this%dim
-          xx_red(ip, idir) = units_from_atomic(units_inp%length, xx_red(ip, idir))
-        end do
-        rr = sqrt(sum(xx_red(ip, 1:this%dim)**2))
-        call parse_expression(re, im, this%dim, xx_red(ip, :), rr, M_ZERO, this%user_def)
-        contained(ip) = contained(ip) .and. (re /= M_ZERO)
-      end do
     end select
 
     SAFE_DEALLOCATE_A(xx_red)
@@ -902,7 +880,6 @@ contains
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize
     sbout%lsize                   = sbin%lsize
-    sbout%user_def                = sbin%user_def
     sbout%latt%rlattice           = sbin%latt%rlattice
     sbout%latt%rlattice_primitive = sbin%latt%rlattice_primitive
     sbout%latt%klattice           = sbin%latt%klattice
