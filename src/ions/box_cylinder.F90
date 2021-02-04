@@ -38,6 +38,8 @@ module box_cylinder_oct_m
                            !! be generalized)
     FLOAT   :: radius      !< the radius of the cylinder
     FLOAT   :: half_length !< half the length of the cylinder
+
+    logical :: periodic_boundaries = .false. !< are the bases of the cylinder to be treated as periodic?
   contains
     procedure :: contains_points => box_cylinder_contains_points
     final     :: box_cylinder_finalize
@@ -50,13 +52,14 @@ module box_cylinder_oct_m
 contains
 
   !--------------------------------------------------------------
-  function box_cylinder_constructor(dim, center, radius, dir, length, namespace) result(box)
+  function box_cylinder_constructor(dim, center, radius, dir, length, namespace, periodic_boundaries) result(box)
     integer,            intent(in) :: dim
     FLOAT,              intent(in) :: center(dim)
-    FLOAT,              intent(in) :: radius !< cylinder radius
-    integer,            intent(in) :: dir    !< cartesian direction along which the cylinder lies
-    FLOAT,              intent(in) :: length !< lenght of the cylinder along the axis
+    FLOAT,              intent(in) :: radius              !< cylinder radius
+    integer,            intent(in) :: dir                 !< cartesian direction along which the cylinder lies
+    FLOAT,              intent(in) :: length              !< lenght of the cylinder along the axis
     type(namespace_t),  intent(in) :: namespace
+    logical, optional,  intent(in) :: periodic_boundaries !< are the bases of the cylinder to be treated as periodic?
     class(box_cylinder_t), pointer :: box
 
     PUSH_SUB(box_cylinder_constructor)
@@ -79,6 +82,17 @@ contains
     box%radius = radius
     box%dir = dir
     box%half_length = M_HALF*length
+
+    if (present(periodic_boundaries)) then
+      box%periodic_boundaries = periodic_boundaries
+    end if
+    if (box%periodic_boundaries .and. dir /= 1) then
+      ! Currently the rest of the code expects the first periodic dimension to
+      ! be always x and cylinders can only be periodic along the axis. Therefore
+      ! we can only have periodic cylinders along the x axis.
+      message(1) = "Cylinder can only have periodic boundaries if the axis is along the x direction."
+      call messages_fatal(1, namespace=namespace)
+    end if
 
     POP_SUB(box_cylinder_constructor)
   end function box_cylinder_constructor
@@ -108,7 +122,13 @@ contains
       vv = xx(ip, 1:this%dim) - this%center(1:this%dim)
 
       ! First check if we are "inside" along the axis direction. If not, do not bother checking the other directions.
-      contained(ip) = abs(vv(this%dir)) <= this%half_length + BOX_BOUNDARY_DELTA .neqv. this%is_inside_out()
+      if (.not. this%periodic_boundaries) then
+        contained(ip) = abs(vv(this%dir)) <= this%half_length + BOX_BOUNDARY_DELTA .neqv. this%is_inside_out()
+      else
+        ! When periodic, we exclude one of the faces from the box. Also, we
+        ! never consider the box to be inside out along the periodic dimension.
+        contained(ip) = abs(vv(this%dir) + BOX_BOUNDARY_DELTA)  <= this%half_length
+      end if
       if (.not. contained(ip)) cycle
 
       ! Check if we are inside along the directions perpendicular to the axis
