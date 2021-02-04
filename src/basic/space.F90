@@ -86,11 +86,6 @@ contains
       call messages_input_error(namespace, 'PeriodicDimensions')
     end if
 
-    if(this%periodic_dim > 0 .and. this%periodic_dim < this%dim) then
-      call messages_experimental('Support for mixed periodicity systems')
-    end if
-
-
     POP_SUB(space_init_simple)
   end subroutine space_init
 

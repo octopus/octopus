@@ -126,6 +126,10 @@ contains
     call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
 
     call space_init(this%space, namespace)
+    if(this%space%periodic_dim > 0) then
+      call messages_not_implemented('Classical particle for periodic systems')
+    end if
+
 
     !%Variable ParticleMass
     !%Type float
