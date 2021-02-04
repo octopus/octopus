@@ -81,7 +81,6 @@ module lcao_oct_m
   type lcao_t
     private
     integer                 :: mode
-    logical                 :: debug !< whether to output extra info to file
     logical                 :: complex_ylms !< whether to use real or complex Ylms
     logical                 :: initialized !< are k, s and v1 matrices filled?
     integer                 :: norbs   !< number of orbitals used
@@ -247,20 +246,7 @@ contains
       this%complex_ylms = .false.
     end if
 
-    !%Variable LCAODebug
-    !%Type logical
-    !%Default false
-    !%Section SCF::LCAO
-    !%Description
-    !% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
-    !% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
-    !% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
-    !%End
-    call parse_variable(namespace, 'LCAODebug', .false., this%debug)
-! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
-! mysterious problems with optimization on PGI 12.4.0.
-
-    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+    if(debug%info .and. mpi_grp_is_root(mpi_world)) then
       iunit_o = io_open(trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
@@ -351,7 +337,7 @@ contains
             this%level(iorb) = jj
             this%ddim(iorb) = idim
 
-            if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+            if(debug%info .and. mpi_grp_is_root(mpi_world)) then
               write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
             end if
 
@@ -360,7 +346,7 @@ contains
         end do
       end do
 
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
       end if
 
@@ -561,14 +547,14 @@ contains
           this%basis_orb(ibasis) = iorb
 
           ! no stored spin index in alternative mode
-          if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+          if(debug%info .and. mpi_grp_is_root(mpi_world)) then
             call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
           end if
         end do
       end do
 
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
       end if
 
