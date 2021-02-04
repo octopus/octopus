@@ -500,13 +500,30 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
   ASSERT(start == 1)
 
-  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
-    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+  if (this%debug) then
+    if (this%parallel .or. mpi_grp_is_root(mpi_world)) then
+      ! Hamiltonian matrix
+      filename = trim(STATIC_DIR)//'lcao_hamiltonian'
+      if (this%parallel) then
+        write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
+      end if
+      iunit_h = io_open(filename, namespace, action='write')
+      write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+
+      ! Overlap matrix
+      filename = trim(STATIC_DIR)//'lcao_overlap'
+      if (this%parallel) then
+        write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
+      end if
+      iunit_s = io_open(filename, namespace, action='write')
+      write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    end if
+
+    if (.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
+      ! Eigenvectors
+      iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
+      write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+    end if
   end if
 
   if(.not. this%parallel) then
@@ -653,6 +670,13 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
                 if(all((/prow, pcol/) == this%myroc)) then
                   hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
                   overlap(ilbasis, jlbasis) = bb(iorb, jorb)
+
+                  if(this%debug) then
+                    write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, &
+                      units_from_atomic(units_out%energy, hamiltonian(ilbasis, jlbasis))
+                    write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(ilbasis, jlbasis)
+                  end if
+
                 end if
               end do
             end do
@@ -668,7 +692,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do ! iatom
 
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      if(this%debug .and. (this%parallel .or. mpi_grp_is_root(mpi_world))) then
         call io_close(iunit_h)
         call io_close(iunit_s)
       end if
@@ -1099,7 +1123,7 @@ contains
 #endif
     end if
 
-    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+    if(this%debug .and. .not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, evec(n1, n2)
