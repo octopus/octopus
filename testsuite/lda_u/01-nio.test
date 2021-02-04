@@ -12,7 +12,7 @@ else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4.0
 
-  Precision: 2.97e-05
+  Precision: 4.e-05
   match ;  Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -246.88939736999998
   Precision: 1.77e-13
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
@@ -20,11 +20,11 @@ else
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -33.201233779999995
   Precision: 1.53e-05
   match ;  Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 46.46823441
-  Precision: 3.36e-06
+  Precision: 6.e-06
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -27.714387125000002
-  Precision: 1.26e-07
+  Precision: 3.e-07
   match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.036993905
-  Precision: 1.80e-05
+  Precision: 4.e-05
   match ;  Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 123.31366579499999
   Precision: 2.85e-05
   match ;  External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -210.12057776
