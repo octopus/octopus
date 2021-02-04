@@ -641,7 +641,12 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
             end if
           else
             do iorb = 1, norbs
+              n1 = ibasis - 1 + iorb
               do jorb = 1, this%norb_atom(jatom)
+                n2 = jbasis - 1 + jorb
+
+                if(n2 < n1) cycle ! only upper triangle
+
                 call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
                   ilbasis, jlbasis, prow, pcol)
                 ! FIXME: debug needed here too
