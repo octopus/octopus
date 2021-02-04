@@ -34,5 +34,3 @@ TheoryLevel = independent_particles
 ProfilingMode = prof_time
 
 DisableAccel = yes
-
-StatesPack = yes

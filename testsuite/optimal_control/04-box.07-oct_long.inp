@@ -2,7 +2,6 @@
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
-StatesPack = yes
 
 # ------------------
 # TD RUN Parameters

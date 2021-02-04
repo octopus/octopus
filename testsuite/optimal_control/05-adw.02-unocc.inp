@@ -33,5 +33,3 @@ ConvRelDens = 1.0e-7
 ExtraStates = 1
 
 DisableAccel = yes
-
-StatesPack = yes

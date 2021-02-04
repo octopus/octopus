@@ -20,11 +20,5 @@ Spacing = 0.65
 EMPerturbationType = magnetic
 
 LinearSolverMaxIter = 100
-#LinearSolver        = qmr
-
-#LinearSolverInitTol = 1e-6
-#HamiltonianVariation = no
-#This is now the default for a magnetic perturbation, via LRTolScheme
 
 FilterPotentials = filter_none
-StatesPack = yes

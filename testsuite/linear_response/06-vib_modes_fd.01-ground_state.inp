@@ -15,4 +15,3 @@ Radius = 6
 MixField = density
 
 Debug = trace
-StatesPack = yes

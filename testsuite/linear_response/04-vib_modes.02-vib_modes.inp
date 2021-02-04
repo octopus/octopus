@@ -14,5 +14,3 @@ Radius = 6
 
 LRConvAbsDens = 1e-6
 LRTolFinalTol = 1e-7
-
-StatesPack = yes

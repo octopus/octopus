@@ -12,8 +12,6 @@ FromScratch = yes
 ExtraStates = 1
 SpinComponents = polarized
 
-StatesPack = yes
-
 DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 SkipSOrbitals = no

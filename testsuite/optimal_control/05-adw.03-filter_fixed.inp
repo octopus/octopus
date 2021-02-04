@@ -1,8 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 CalculationMode = opt_control
-StatesPack = yes
-
 ExperimentalFeatures = yes
 
 Dimensions = 1

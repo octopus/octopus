@@ -35,5 +35,4 @@ ExtraStates = 3
 
 MeshBlockSize = 16
 ConvRelDens = 1e-6
-StatesPack = yes
 

@@ -19,4 +19,3 @@ ExtraStates = 3
 %
 
 ConvRelDens=1e-8
-StatesPack = yes

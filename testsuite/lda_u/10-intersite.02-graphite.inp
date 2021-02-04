@@ -50,5 +50,3 @@ ACBN0IntersiteCutoff = 7
 DFTUPoissonSolver = dft_u_poisson_fft
 
 UnitsOutput = ev_angstrom
-StatesPack = yes
-

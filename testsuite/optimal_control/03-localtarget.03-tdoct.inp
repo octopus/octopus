@@ -3,7 +3,6 @@
 
 Dimensions = 1
 fromScratch = yes
-StatesPack = yes
 
 CalculationMode = opt_control
 

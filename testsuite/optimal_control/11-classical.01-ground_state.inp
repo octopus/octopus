@@ -42,4 +42,3 @@ electric_field | 1.0/sqrt(2.0) | 1.0/sqrt(2.0) | 0.0 | freq | "envelope_function
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
 %
-StatesPack = yes

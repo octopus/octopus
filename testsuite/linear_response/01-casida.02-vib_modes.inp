@@ -33,4 +33,3 @@ PoissonFFTKernel = multipole_correction
 
 LRConvAbsDens = 1e-6
 MixField = density
-StatesPack = yes

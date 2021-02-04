@@ -23,4 +23,3 @@ LinearSolverTol = 1.0e-4
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes

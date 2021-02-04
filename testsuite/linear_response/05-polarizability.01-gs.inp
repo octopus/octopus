@@ -10,5 +10,3 @@ ExtraStates = 3
   "Na" | -1.54*angstrom | 0 | 0
   "Na" |  1.54*angstrom | 0 | 0
 %
-
-StatesPack = yes

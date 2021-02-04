@@ -31,6 +31,3 @@ TheoryLevel = independent_particles
 ConvRelDens = 1.0e-7
 
 DisableAccel = yes
-
-
-StatesPack = yes

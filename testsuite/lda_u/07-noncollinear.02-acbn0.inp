@@ -54,6 +54,3 @@ KPointsUseTimeReversal = no
 
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices
-
-StatesPack = yes
-

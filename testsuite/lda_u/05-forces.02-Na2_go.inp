@@ -27,5 +27,3 @@ MixField = density
 DFTULevel = dft_u_empirical
 AOThreshold = 0.05
 AONormalize = no
-
-StatesPack = yes

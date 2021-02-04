@@ -16,4 +16,3 @@ ConvRelDens = 8.0e-8
 FilterPotentials = filter_none
 
 MixField = density
-StatesPack = yes

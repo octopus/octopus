@@ -2,7 +2,6 @@
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
-StatesPack = yes
 
 # ------------------
 # TD RUN Parameters
@@ -11,9 +10,6 @@ StatesPack = yes
 stime  = 100.0
 dt = 0.02
 TDPropagator = exp_mid
-#TDExponentialMethod = lanczos
-#TDExpOrder = 30
-#TDLanczosTol = 1.0e-4
 TDPropagationTime = stime
 TDTimeStep = dt
 

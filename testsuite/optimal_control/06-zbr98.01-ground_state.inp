@@ -67,7 +67,3 @@ EigenSolverTolerance = 1.0e-8
 ExtraStates = 1
 
 ConvRelDens = 1.0e-7
-
-
-
-StatesPack = yes

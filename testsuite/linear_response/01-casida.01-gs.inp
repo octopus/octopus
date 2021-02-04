@@ -34,5 +34,4 @@ EigenSolverMaxIter = 20
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
 MixField = density
-StatesPack = yes
 LCAOStart = lcao_full

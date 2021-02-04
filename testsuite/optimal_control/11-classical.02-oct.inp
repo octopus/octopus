@@ -1,9 +1,6 @@
-#CalculationMode = gs
-#CalculationMode = td
 CalculationMode = opt_control
 
 ExperimentalFeatures = yes
-StatesPack = yes
 
 Dimensions = 2
 fromScratch = yes

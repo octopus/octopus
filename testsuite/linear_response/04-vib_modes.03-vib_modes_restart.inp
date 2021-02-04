@@ -13,4 +13,3 @@ Radius = 6
 %
 
 LinearSolverMaxIter = 1
-StatesPack = yes

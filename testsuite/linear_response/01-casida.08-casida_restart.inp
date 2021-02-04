@@ -34,5 +34,3 @@ ParOther = 2
 MixField = density
 
 Debug = trace
-
-StatesPack = yes

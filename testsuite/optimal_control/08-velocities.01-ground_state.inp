@@ -101,12 +101,3 @@ amplitude = 0.2
 %TDFunctions
 "envelope_function" | tdf_from_expr | "amplitude*(2/sqrt(stime))*sin((2*pi/stime)*2*t)*Step(stime-t)"
 %
-
-#%TDFunctions
-#"envelope_function" | tdf_from_file | "./opt-control/laser.238/cp"
-#%
-
-
-
-
-StatesPack = yes

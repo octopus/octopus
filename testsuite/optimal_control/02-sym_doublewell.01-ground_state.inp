@@ -32,5 +32,3 @@ TheoryLevel = independent_particles
 Output = potential + wfs
 OutputFormat = axis_x
 
-
-StatesPack = yes

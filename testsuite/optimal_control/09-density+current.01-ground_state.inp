@@ -36,5 +36,3 @@ Output= density + wfs
 OutputFormat= axis_x
 
 DisableAccel = yes
-
-StatesPack = yes

@@ -35,4 +35,3 @@ ConvRelDens = 1.0e-7
 
 # test code path without CUDA-aware MPI for this test
 CudaAwareMPI = no
-StatesPack = yes

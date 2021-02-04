@@ -32,6 +32,5 @@ SCFCalculateForces = no
 AOLoewdin = yes
 UseAllAtomicOrbitals = yes
 OutputLDA_U = occ_matrices + effectiveU
-StatesPack = yes
 
 LCAOStart = lcao_full

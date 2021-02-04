@@ -34,7 +34,3 @@ ExtraStates= 1
 # Output
 Output= density + wfs
 OutputFormat= axis_x
-
-
-
-StatesPack = yes

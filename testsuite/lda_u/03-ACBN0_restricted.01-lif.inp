@@ -36,8 +36,6 @@ KPointsUseSymmetries = no
 
 ExtraStates = 1
 
-StatesPack = yes
-
 DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 AOTruncation = ao_full

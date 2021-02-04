@@ -3,7 +3,6 @@ CalculationMode = opt_control
 FromScratch = yes
 Dimensions = 2
 ExperimentalFeatures = yes
-StatesPack = yes
 
 omega = 0.25
 
