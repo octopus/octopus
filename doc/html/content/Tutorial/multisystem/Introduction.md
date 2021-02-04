@@ -57,5 +57,16 @@ Many possible systems share the same variables. In the following examples of cel
 In our example, that would be:
 
 {{< code-block >}}
-Earth.ParticleMass = 5.97237e24
+%{{< variable "Systems">}}
+"Earth" | classical_particle
+...
+%
+
+Earth.{{< variable "ParticleMass" >}} = 5.97237e24
+%Earth.{{< variable "ParticleInitialPosition" >}}
+ -147364661998.16476 | -24608859261.610123 | 1665165.2801353487
+%
+%Earth.{{< variable "ParticleInitialVelocity" >}}
+ 4431.136612956525 | -29497.611635546345 | 0.343475566161544
+%
 {{< /code-block >}}
