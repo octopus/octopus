@@ -74,6 +74,10 @@ typedef int CUstream;
       cuGetErrorName(result, &msg);                               \
       std::cerr << "\nerror: " #x " failed with error "           \
                 << msg << '\n';                                   \
+      if (result == CUDA_ERROR_OUT_OF_MEMORY) {                   \
+        std::cerr << "Octopus could not allocate enough memory on the GPU.\n" \
+        std::cerr << "Please use either more GPUs to distribute the memory or try StatesPack = no to keep the states mostly on the CPU.\n" \
+      }                                                           \
       exit(1);                                                    \
     }                                                             \
   } while(0)
