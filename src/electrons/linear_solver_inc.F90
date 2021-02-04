@@ -136,13 +136,16 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, y
 
     call profiling_in(prof_batch, TOSTRING(X(LINEAR_SOLVER_BATCH)))
 
-    if (hamiltonian_elec_apply_packed(hm)) then
+    !See linear_solver_operator_batch to understand the condition
+    if((st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) .and. &
+        hamiltonian_elec_apply_packed(hm)) then
       call xb%do_pack()
       call yb%do_pack()
     end if
     call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, yb, shift, iter_used, &
              residue, tol, use_initial_guess)
-    if (hamiltonian_elec_apply_packed(hm)) then
+    if((st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) .and. &
+        hamiltonian_elec_apply_packed(hm)) then
       call yb%do_unpack()
       call xb%do_unpack()
     end if
@@ -636,6 +639,7 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, shift, xb, hx
     SAFE_DEALLOCATE_A(shift_ist_indexed)
 
   else
+    ASSERT(xb%status() == BATCH_NOT_PACKED)
 
     do ii = 1, xb%nst
       call X(linear_solver_operator)(hm, namespace, gr, st, xb%ist(ii), xb%ik, shift(ii), xb%X(ff)(:,:,ii), &
