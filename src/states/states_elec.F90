@@ -1209,20 +1209,17 @@ contains
     !% this, but should nevertheless work regardless of how the states are
     !% stored.
     !%
-    !% If OpenCL is used and this variable is set to yes, Octopus
+    !% If GPUs are used and this variable is set to yes, Octopus
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
     !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%
-    !% The default is yes except when using OpenCL.
+    !% The default is yes.
     !%End
 
     defaultl = .true.
-    if(accel_is_enabled()) then
-      defaultl = .false.
-    end if
     call parse_variable(namespace, 'StatesPack', defaultl, st%d%pack_states)
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)

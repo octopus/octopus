@@ -247,9 +247,6 @@ contains
     st%packed = .false.
 
     defaultl = .true.
-    if(accel_is_enabled()) then
-      defaultl = .false.
-    end if
     call parse_variable(namespace, 'StatesPack', defaultl, st%pack_states)
 
     call messages_print_var_value(stdout, 'StatesPack', st%pack_states)
