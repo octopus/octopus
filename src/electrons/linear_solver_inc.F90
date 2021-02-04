@@ -207,12 +207,10 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
 
     alpha = gamma/R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, p, Hp))
 
-    do idim = 1, st%d%dim
-      !r = r - alpha*Hp
-      call lalg_axpy(gr%mesh%np, -alpha, Hp(:, idim), r(:, idim))
-      !x = x + alpha*p
-      call lalg_axpy(gr%mesh%np,  alpha,  p(:, idim), x(:, idim))
-    end do
+    !r = r - alpha*Hp
+    call lalg_axpy(gr%mesh%np, st%d%dim, -alpha, Hp, r)
+    !x = x + alpha*p
+    call lalg_axpy(gr%mesh%np, st%d%dim,  alpha,  p, x)
 
     residue = X(mf_nrm2)(gr%mesh, st%d%dim, r)
     conv = (residue < tol)
@@ -352,9 +350,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
     
     alpha = X(mf_dotp)(gr%mesh, st%d%dim, psi, r)
-    do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, -alpha, psi(:, idim), r(:, idim))
-    end do
+    call lalg_axpy(gr%mesh%np, st%d%dim,-alpha, psi, r)
 
     SAFE_DEALLOCATE_A(psi)
   else
@@ -362,9 +358,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     call X(lr_orth_vector)(gr%mesh, st, r, ist, ik, shift + st%eigenval(ist, ik))
   end if
           
-  do idim = 1, st%d%dim
-    call lalg_copy(gr%mesh%np, r(:, idim), rs(:, idim))
-  end do
+  call lalg_copy(gr%mesh%np, st%d%dim, r, rs)
 
   gamma = X(mf_nrm2)(gr%mesh, st%d%dim, r)
 
@@ -376,9 +370,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     if( abs(rho_1) < M_EPSILON ) exit
 
     if( iter == 1 ) then
-      do idim = 1, st%d%dim
-        call lalg_copy(gr%mesh%np, r(:, idim), p(:, idim))
-      end do
+      call lalg_copy(gr%mesh%np, st%d%dim, r, p)
     else
       beta = rho_1/rho_2*alpha/w
       do idim = 1, st%d%dim
@@ -404,9 +396,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
 
     conv = (gamma < tol)
     if( conv ) then
-      do idim = 1, st%d%dim 
-        call lalg_axpy(gr%mesh%np, alpha, phat(:, idim), x(:, idim))
-      end do
+      call lalg_axpy(gr%mesh%np, st%d%dim, alpha, phat, x)
       exit
     end if
 
@@ -574,9 +564,7 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
   call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
-  do idim = 1, st%d%dim
-    call lalg_axpy(gr%mesh%np, shift, x(:, idim), Hx(:, idim))
-  end do
+  call lalg_axpy(gr%mesh%np, st%d%dim, shift, x, Hx)
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
     POP_SUB(X(linear_solver_operator))
@@ -594,9 +582,7 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
     call states_elec_get_state(st, gr%mesh, jst, ik, psi)
     
     proj = X(mf_dotp)(gr%mesh, st%d%dim, psi, x)
-    do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, alpha_j*proj, psi(:, idim), Hx(:, idim))
-    end do
+    call lalg_axpy(gr%mesh%np, st%d%dim, alpha_j*proj, psi, Hx)
 
     SAFE_DEALLOCATE_A(psi)
     
@@ -777,9 +763,7 @@ subroutine X(linear_solver_sos) (hm, namespace, gr, st, ist, ik, x, y, shift, re
     ! denominator = st%eigenval(jst, ik) - st%eigenval(ist, ik)
     ! For solving this type of problem, -st%eigenval(ist, ik) is included in shift
 
-    do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, aa, psi(:, idim), x(:, idim))
-    end do
+    call lalg_axpy(gr%mesh%np, st%d%dim, aa, psi, x)
   end do
 
   SAFE_DEALLOCATE_A(psi)
@@ -788,9 +772,7 @@ subroutine X(linear_solver_sos) (hm, namespace, gr, st, ist, ik, x, y, shift, re
   SAFE_ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim))
   call X(linear_solver_operator)(hm, namespace, gr, st, ist, ik, shift, x, rr)
 
-  do idim = 1, st%d%dim
-    call lalg_axpy(gr%mesh%np, -M_ONE, y(:, idim), rr(:, idim))
-  end do
+  call lalg_axpy(gr%mesh%np, st%d%dim, -M_ONE, y, rr)
   
   residue = X(mf_nrm2)(gr%mesh, st%d%dim, rr)
   iter_used = 1

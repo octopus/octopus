@@ -1222,9 +1222,7 @@ contains
         end if
 
         if (family_is_mgga_with_exc(hm%xc)) then
-          do ispin = 1, hm%d%nspin
-            call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
-          end do
+          call lalg_copy(ks%gr%fine%mesh%np, hm%d%nspin, ks%calc%vtau, hm%vtau)
           SAFE_DEALLOCATE_A(ks%calc%vtau)
         end if
 

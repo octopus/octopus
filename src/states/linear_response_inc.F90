@@ -268,30 +268,18 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
   type(lr_t),          intent(inout) :: plus
   type(lr_t),          intent(inout) :: minus
 
-  integer :: ik, idim, ist
-  R_TYPE, allocatable :: tmp(:)
+  integer :: ik, ist
 
   PUSH_SUB(X(lr_swap_sigma))
 
-  SAFE_ALLOCATE(tmp(1:mesh%np))
-
-  do ik = 1, st%d%nspin
-    call lalg_copy(mesh%np, plus%X(dl_rho)(:, ik), tmp(:))
-    call lalg_copy(mesh%np, minus%X(dl_rho)(:, ik), plus%X(dl_rho)(:, ik))
-    call lalg_copy(mesh%np, tmp(:), minus%X(dl_rho)(:, ik))
-  end do
+  call lalg_swap(mesh%np, st%d%nspin, plus%X(dl_rho), minus%X(dl_rho))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = 1, st%nst
-      do idim = 1, st%d%dim
-        call lalg_copy(mesh%np_part, plus%X(dl_psi)(:, idim, ist, ik), tmp(:))
-        call lalg_copy(mesh%np_part, minus%X(dl_psi)(:, idim, ist, ik), plus%X(dl_psi)(:, idim, ist, ik))
-        call lalg_copy(mesh%np_part, tmp(:), minus%X(dl_psi)(:, idim, ist, ik))
-      end do
+      call lalg_swap(mesh%np, st%d%dim, plus%X(dl_psi)(:, :, ist, ik), minus%X(dl_psi)(:, :, ist, ik))
     end do
   end do
 
-  SAFE_DEALLOCATE_A(tmp)
   POP_SUB(X(lr_swap_sigma))
 
 end subroutine X(lr_swap_sigma)

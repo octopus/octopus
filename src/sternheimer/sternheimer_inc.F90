@@ -200,10 +200,8 @@ subroutine X(sternheimer_solve)(                           &
             end if
 
             if(sternheimer_have_inhomog(this)) then
-              do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, R_TOTYPE(M_ONE), this%X(inhomog)(:, idim, ist, ik-st%d%kpt%start + 1, sigma), &
-                                   rhs(:, idim, ii))
-              end do
+              call lalg_axpy(mesh%np, st%d%dim, M_ONE, this%X(inhomog)(:, :, ist, ik-st%d%kpt%start + 1, sigma), &
+                                   rhs(:, :, ii))
             end if
 
             if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
@@ -242,9 +240,7 @@ subroutine X(sternheimer_solve)(                           &
               if (this%occ_response) then
                 call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
                 proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
-                do idim = 1, st%d%dim
-                  call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
-                end do
+                call lalg_axpy(mesh%np, st%d%dim,-proj, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
               else
                 call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
               end if

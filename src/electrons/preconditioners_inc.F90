@@ -43,9 +43,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
 
   select case(pre%which)
   case(PRE_NONE)
-    do idim = 1, hm%d%dim
-      call lalg_copy(gr%mesh%np, a(:,idim), b(:,idim))
-    end do
+    call lalg_copy(gr%mesh%np, hm%d%dim, a, b)
 
   case(PRE_FILTER)
     call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
@@ -77,8 +75,8 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   case(PRE_POISSON)
     do idim = 1, hm%d%dim
       call X(poisson_solve)(hm%psolver, b(:, idim), a(:, idim), all_nodes=.false.)
-      call lalg_scal(gr%mesh%np, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b(:,idim))
     end do
+    call lalg_scal(gr%mesh%np, hm%d%dim, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b)
 
   case(PRE_MULTIGRID)
     call multigrid()

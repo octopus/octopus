@@ -185,13 +185,11 @@ contains
     PUSH_SUB(lr_copy)
 
     if(src%is_allocated_rho .and. dest%is_allocated_rho) then
-      do ik = 1, st%d%nspin
-        if(states_are_complex(st)) then
-          call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
-        else
-          call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
-        end if
-      end do
+      if(states_are_complex(st)) then
+        call lalg_copy(mesh%np, st%d%nspin, src%zdl_rho, dest%zdl_rho)
+      else
+        call lalg_copy(mesh%np, st%d%nspin, src%ddl_rho, dest%ddl_rho)
+      end if
     else
       if(dest%is_allocated_rho) then
         if(states_are_complex(st)) then
@@ -204,13 +202,11 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        do idim = 1, st%d%dim
-          if(states_are_complex(st)) then
-            call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
-          else 
-            call lalg_copy(mesh%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
-          end if
-        end do
+        if(states_are_complex(st)) then
+          call lalg_copy(mesh%np_part, st%d%dim, src%zdl_psi(:, :, ist, ik), dest%zdl_psi(:, :, ist, ik))
+        else 
+          call lalg_copy(mesh%np_part, st%d%dim, src%ddl_psi(:, :, ist, ik), dest%ddl_psi(:, :, ist, ik))
+        end if
       end do
     end do
 
