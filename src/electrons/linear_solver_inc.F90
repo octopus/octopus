@@ -177,37 +177,35 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
   FLOAT,                    intent(out)   :: residue
   integer,                  intent(out)   :: iter_used
 
-  R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
-  R_TYPE  :: alpha, beta, gamma
+  R_TYPE, allocatable :: r(:,:), p(:,:), z(:,:), Hp(:,:)
+  FLOAT  :: alpha, beta, gamma
   integer :: iter, idim
   logical :: conv_last, conv
 
   PUSH_SUB(X(linear_solver_cg))
 
-  SAFE_ALLOCATE( r(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( r(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE( p(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE( z(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(Hp(1:gr%mesh%np, 1:st%d%dim))
 
   ! Initial residue
   call X(linear_solver_operator)(hm, namespace, gr, st, ist, ik, shift, x, Hp)
+  
   r(1:gr%mesh%np, 1:st%d%dim) = y(1:gr%mesh%np, 1:st%d%dim) - Hp(1:gr%mesh%np, 1:st%d%dim)
+
+  call X(preconditioner_apply)(ls%pre, namespace, gr, hm, r, z, 1, shift)
   
   ! Initial search direction
-  p(1:gr%mesh%np, 1:st%d%dim) = r(1:gr%mesh%np, 1:st%d%dim)
-  p((gr%mesh%np+1):gr%mesh%np_part,1:st%d%dim) = M_ZERO
+  p(1:gr%mesh%np, 1:st%d%dim) = z(1:gr%mesh%np, 1:st%d%dim)
   
   conv_last = .false.
-  gamma     = M_ONE
   do iter = 1, ls%max_iter
-    gamma = X(mf_dotp)(gr%mesh, st%d%dim, r, r)
+    gamma = R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, r, z))
 
-    conv = ( abs(gamma) < tol**2)
-    if(conv.and.conv_last) exit
-    conv_last = conv
-    
     call X(linear_solver_operator)(hm, namespace, gr, st, ist, ik, shift, p, Hp)
 
-    alpha = gamma/X(mf_dotp) (gr%mesh, st%d%dim, p, Hp)
+    alpha = gamma/R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, p, Hp))
 
     do idim = 1, st%d%dim
       !r = r - alpha*Hp
@@ -216,23 +214,34 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
       call lalg_axpy(gr%mesh%np,  alpha,  p(:, idim), x(:, idim))
     end do
 
+    residue = X(mf_nrm2)(gr%mesh, st%d%dim, r)
+    conv = (residue < tol)
+    if(conv.and.conv_last) exit
+    conv_last = conv
 
-    beta = X(mf_dotp)(gr%mesh, st%d%dim, r, r)/gamma
+    call X(preconditioner_apply)(ls%pre, namespace, gr, hm, r, z, 1, shift)
 
-    p(1:gr%mesh%np, 1:st%d%dim) = r(1:gr%mesh%np, 1:st%d%dim) + beta*p(1:gr%mesh%np, 1:st%d%dim)
+    beta = R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, r, z)) / gamma
+
+    p(1:gr%mesh%np, 1:st%d%dim) = z(1:gr%mesh%np, 1:st%d%dim) + beta*p(1:gr%mesh%np, 1:st%d%dim)
 
   end do
     
   iter_used = iter
-  residue = sqrt(abs(gamma))
 
   if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
     call messages_warning(1, namespace=namespace)
+  else
+    if(debug%info) then
+      write(message(1), '(a,i4,a)') 'Debug: CG solver converged in ', iter, ' iterations.'
+      call messages_info(1)
+    end if
   end if
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(p)
+  SAFE_DEALLOCATE_A(z)
   SAFE_DEALLOCATE_A(Hp)
 
   POP_SUB(X(linear_solver_cg))
