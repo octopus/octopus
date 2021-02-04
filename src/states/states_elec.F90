@@ -371,7 +371,7 @@ contains
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
+    call states_elec_choose_kpoints(st%d, gr%sb%kpoints, namespace)
 
     st%val_charge = geometry_val_charge(geo)
 

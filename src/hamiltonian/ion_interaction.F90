@@ -84,7 +84,7 @@ contains
     !we can safely parallelize it over atoms
     call distributed_init(this%dist, geo%natoms, mc%master_comm, "Ions")
 
-    if(geo%periodic_dim == 1) then
+    if(geo%space%periodic_dim == 1) then
       call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
       call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
       call messages_write('of total energy and forces.')
@@ -133,8 +133,8 @@ contains
     PUSH_SUB(ion_interaction_calculate)
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
 
-    SAFE_ALLOCATE(r(1:sb%dim))
-    SAFE_ALLOCATE(f(1:sb%dim))
+    SAFE_ALLOCATE(r(1:geo%space%dim))
+    SAFE_ALLOCATE(f(1:geo%space%dim))
 
     if(present(energy_components)) then
       ASSERT(ubound(energy_components, dim = 1) == ION_NUM_COMPONENTS)
@@ -142,12 +142,12 @@ contains
     end if      
 
     if(present(force_components)) then
-      ASSERT(all(ubound(force_components) == (/sb%dim, geo%natoms, ION_NUM_COMPONENTS/)))
+      ASSERT(all(ubound(force_components) == (/geo%space%dim, geo%natoms, ION_NUM_COMPONENTS/)))
       force_components = CNST(0.0)
     end if 
 
     energy = M_ZERO
-    force(1:sb%dim, 1:geo%natoms) = M_ZERO
+    force(1:geo%space%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
 
@@ -203,7 +203,7 @@ contains
           
           spcj => geo%atom(jatom)%species
 
-          r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim)
+          r(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim)
 
           rr = sqrt(sum(r**2))
           iindex = species_index(spci)
@@ -212,9 +212,9 @@ contains
           zj = species_zval(spcj)
           !the force
           dd = zi*zj/rr
-          f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
-          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-          force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
+          f(1:geo%space%dim) = (dd/rr**2)*r(1:geo%space%dim)
+          force(1:geo%space%dim,iatom) = force(1:geo%space%dim,iatom) + f(1:geo%space%dim)
+          force(1:geo%space%dim,jatom) = force(1:geo%space%dim,jatom) - f(1:geo%space%dim)
           !energy
           energy=energy + dd
           
@@ -230,14 +230,14 @@ contains
         do jatom = 1, geo%ncatoms
           if(ignore_external_ions .and. .not. in_box(geo%natoms + jatom)) cycle
           
-          r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%catom(jatom)%x(1:sb%dim)
+          r(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) - geo%catom(jatom)%x(1:geo%space%dim)
           rr = sqrt(sum(r**2))
 
           zi = species_zval(geo%atom(iatom)%species)
           zj = geo%catom(jatom)%charge
           !the force
           dd = zi*zj/rr
-          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + (dd/rr*2)*r(1:sb%dim)
+          force(1:geo%space%dim,iatom) = force(1:geo%space%dim,iatom) + (dd/rr*2)*r(1:geo%space%dim)
           !energy
           energy = energy + dd
           
@@ -265,7 +265,7 @@ contains
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :) !< (sb%dim, geo%natoms)
+    FLOAT,                     intent(out)   :: force(:, :) !< (geo%space%dim, geo%natoms)
     FLOAT, optional,           intent(out)   :: energy_components(:)
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
@@ -280,7 +280,7 @@ contains
 
     ereal = M_ZERO
 
-    force(1:sb%dim, 1:geo%natoms) = M_ZERO
+    force(1:geo%space%dim, 1:geo%natoms) = M_ZERO
 
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
@@ -297,11 +297,11 @@ contains
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
       
       do icopy = 1, periodic_copy_num(pc)
-        xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
+        xi(1:geo%space%dim) = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1,  geo%natoms
           zj = species_zval(geo%atom(jatom)%species)
-          rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+          rr = sqrt( sum( (xi(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))**2 ) )
           
           if(rr < CNST(1e-5)) cycle
           
@@ -311,8 +311,8 @@ contains
           ereal = ereal + M_HALF*zj*zi*erfc/rr
           
           ! force
-          force(1:sb%dim, jatom) = force(1:sb%dim, jatom) - &
-            zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
+          force(1:geo%space%dim, jatom) = force(1:geo%space%dim, jatom) - &
+            zj*zi*(xi(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))*&
             (erfc/rr + M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*rr)**2))/rr**2
         end do
 
@@ -325,7 +325,7 @@ contains
     call comm_allreduce(this%dist%mpi_grp%comm, force)
 
     if(present(force_components)) then
-      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
+      force_components(1:geo%space%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:geo%space%dim, 1:geo%natoms)
     end if
 
     call profiling_out(prof_short)
@@ -344,7 +344,7 @@ contains
     call comm_allreduce(this%dist%mpi_grp%comm, charge)
 
 ! Long range part of Ewald sum
-    select case(sb%periodic_dim)
+    select case(geo%space%periodic_dim)
     case(1)
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
@@ -362,8 +362,8 @@ contains
     end if
 
     if(present(force_components)) then
-      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_FOURIER) = &
-        force(1:sb%dim, 1:geo%natoms) - force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL)
+      force_components(1:geo%space%dim, 1:geo%natoms, ION_COMPONENT_FOURIER) = &
+        force(1:geo%space%dim, 1:geo%natoms) - force_components(1:geo%space%dim, 1:geo%natoms, ION_COMPONENT_REAL)
     end if
 
     energy = ereal + efourier + eself
@@ -371,7 +371,7 @@ contains
 
     epseudo = M_ZERO
     !Temporary adding the pseudo contribution for 1D systems, as Ewald_long_1D is not yet implemented
-    if(sb%periodic_dim == 3 .or. sb%periodic_dim == 1)then
+    if(geo%space%periodic_dim == 3 .or. geo%space%periodic_dim == 1)then
        ! Previously unaccounted G = 0 term from pseudopotentials. 
        ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
 
@@ -396,11 +396,11 @@ contains
   ! ---------------------------------------------------------
 
   subroutine Ewald_long_3D(this, geo, sb, efourier, force, charge)
-    type(ion_interaction_t),   intent(in)    :: this
-    type(geometry_t),          intent(in)    :: geo
-    type(simul_box_t),         intent(in)    :: sb
-    FLOAT,                     intent(inout)   :: efourier
-    FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
+    type(ion_interaction_t),   intent(in)   :: this
+    type(geometry_t),          intent(in)   :: geo
+    type(simul_box_t),         intent(in)   :: sb
+    FLOAT,                  intent(inout)   :: efourier
+    FLOAT,                  intent(inout)   :: force(:, :) !< (geo%space%dim, geo%natoms)
     FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
@@ -420,8 +420,8 @@ contains
 
     ! get a converged value for the cutoff in g
     rcut = huge(rcut)
-    do idim = 1, sb%dim
-      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim)**2))
+    do idim = 1, geo%space%dim
+      rcut = min(rcut, sum(sb%klattice(1:geo%space%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -439,8 +439,10 @@ contains
           
           if(ss == 0 .or. ss > isph**2) cycle
 
-          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
-          gg2 = sum(gg(1:sb%dim)**2)
+          gg(1:geo%space%dim) = ix*sb%klattice(1:geo%space%dim, 1) &
+                              + iy*sb%klattice(1:geo%space%dim, 2) &
+                              + iz*sb%klattice(1:geo%space%dim, 3)
+          gg2 = sum(gg(1:geo%space%dim)**2)
 
           ! g=0 must be removed from the sum
           if(gg2 < M_EPSILON) cycle
@@ -456,7 +458,7 @@ contains
           sumatoms = M_Z0
           !$omp parallel do private(iatom, gx, aa) reduction(+:sumatoms)
           do iatom = 1, geo%natoms
-            gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
+            gx = sum(gg(1:geo%space%dim)*geo%atom(iatom)%x(1:geo%space%dim))
             aa = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
             phase(iatom) = aa 
             sumatoms = sumatoms + aa
@@ -465,9 +467,9 @@ contains
           efourier = efourier + TOFLOAT(factor*sumatoms*conjg(sumatoms))
           
           do iatom = 1, geo%natoms
-            tmp(1:sb%dim) = M_ZI*gg(1:sb%dim)*phase(iatom)
-            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
-              - factor*TOFLOAT(conjg(tmp(1:sb%dim))*sumatoms + tmp(1:sb%dim)*conjg(sumatoms))
+            tmp(1:geo%space%dim) = M_ZI*gg(1:geo%space%dim)*phase(iatom)
+            force(1:geo%space%dim, iatom) = force(1:geo%space%dim, iatom) &
+              - factor*TOFLOAT(conjg(tmp(1:geo%space%dim))*sumatoms + tmp(1:geo%space%dim)*conjg(sumatoms))
           end do
           
         end do
@@ -488,7 +490,7 @@ contains
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(inout)   :: efourier
-    FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
+    FLOAT,                     intent(inout)   :: force(:, :) !< (geo%space%dim, geo%natoms)
 
     FLOAT :: rcut
     integer :: iatom, jatom
@@ -522,12 +524,12 @@ contains
       rcut = rcut * CNST(1.414)
     end do
 
-    ix_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 1)**2)))
-    iy_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 2)**2)))
+    ix_max = ceiling(rcut/sqrt(sum(sb%klattice(1:geo%space%dim, 1)**2)))
+    iy_max = ceiling(rcut/sqrt(sum(sb%klattice(1:geo%space%dim, 2)**2)))
 
     area_cell = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
 
-    SAFE_ALLOCATE(force_tmp(1:sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_tmp(1:geo%space%dim, 1:geo%natoms))
     force_tmp = M_ZERO
 
     ! First the G = 0 term (charge was calculated previously)
@@ -563,8 +565,8 @@ contains
         ss = ix**2 + iy**2
         if(ss == 0) cycle
           
-        gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2)
-        gg2 = sum(gg(1:sb%dim)**2)
+        gg(1:geo%space%dim) = ix*sb%klattice(1:geo%space%dim, 1) + iy*sb%klattice(1:geo%space%dim, 2)
+        gg2 = sum(gg(1:geo%space%dim)**2)
 
         ! g=0 must be removed from the sum
         if(gg2 < M_EPSILON) cycle
@@ -679,8 +681,8 @@ contains
 
     call ion_interaction_init(ion_interaction, namespace, geo, mc)
 
-    SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
-    SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
+    SAFE_ALLOCATE(force(1:geo%space%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_components(1:geo%space%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
     call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
       energy_components = energy_components, force_components = force_components)
@@ -707,7 +709,7 @@ contains
       call messages_write('Ionic force         atom')
       call messages_write(iatom)
       call messages_write(' =')
-      do idir = 1, sb%dim
+      do idir = 1, geo%space%dim
         call messages_write(force(idir, iatom), fmt = '(f20.10)')
       end do
       call messages_info()
@@ -715,7 +717,7 @@ contains
       call messages_write('Real space force    atom')
       call messages_write(iatom)
       call messages_write(' =')
-      do idir = 1, sb%dim
+      do idir = 1, geo%space%dim
         call messages_write(force_components(idir, iatom, ION_COMPONENT_REAL), fmt = '(f20.10)')
       end do
       call messages_info()
@@ -723,7 +725,7 @@ contains
       call messages_write('Fourier space force atom')
       call messages_write(iatom)
       call messages_write(' =')
-      do idir = 1, sb%dim
+      do idir = 1, geo%space%dim
         call messages_write(force_components(idir, iatom, ION_COMPONENT_FOURIER), fmt = '(f20.10)')
       end do
       call messages_info()

@@ -26,7 +26,6 @@ program centergeom
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -40,7 +39,6 @@ program centergeom
     LARGE   = 3
 
   integer :: ierr
-  type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
   FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
@@ -62,7 +60,6 @@ program centergeom
 
   call space_init(space, global_namespace)
   call geometry_init(geo, global_namespace, space)
-  call simul_box_init(sb, global_namespace, geo, space)
 
   ! is there something to do
   if (geo%natoms > 1) then
@@ -161,7 +158,6 @@ program centergeom
   ! write adjusted geometry
   call geometry_write_xyz(geo, './adjusted', global_namespace)
 
-  call simul_box_end(sb)
   call geometry_end(geo)
 
   call io_end()

@@ -107,7 +107,7 @@ contains
     call messages_info(1)
     call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
-    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
+    call vibrations_init(vib, sys%geo, "fd", sys%namespace)
 
     !%Variable Displacement
     !%Type float

@@ -38,7 +38,6 @@ module density_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use smear_oct_m
   use states_abst_oct_m
   use states_elec_oct_m

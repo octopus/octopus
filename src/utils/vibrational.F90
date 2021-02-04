@@ -28,7 +28,6 @@
     use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
-    use simul_box_oct_m
     use space_oct_m
     use spectrum_oct_m
     use unit_oct_m
@@ -40,7 +39,6 @@
     FLOAT, allocatable :: vaf(:), time(:), velocities(:, :), ftvaf(:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
-    type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
     FLOAT :: ww, curtime, vaftime, deltat
@@ -86,7 +84,6 @@
 
     call space_init(space, global_namespace)
     call geometry_init(geo, global_namespace, space)
-    call simul_box_init(sb, global_namespace, geo, space)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', global_namespace, action='read')
@@ -254,7 +251,6 @@
 
     SAFE_DEALLOCATE_A(ftvaf)
 
-    call simul_box_end(sb)
     call geometry_end(geo)
 
     SAFE_DEALLOCATE_A(time)
