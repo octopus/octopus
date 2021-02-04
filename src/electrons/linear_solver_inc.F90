@@ -178,7 +178,7 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
   integer,                  intent(out)   :: iter_used
 
   R_TYPE, allocatable :: r(:,:), p(:,:), z(:,:), Hp(:,:)
-  FLOAT  :: alpha, beta, gamma, res
+  FLOAT  :: alpha, beta, gamma
   integer :: iter, idim
   logical :: conv_last, conv
 
@@ -214,8 +214,8 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
       call lalg_axpy(gr%mesh%np,  alpha,  p(:, idim), x(:, idim))
     end do
 
-    res = X(mf_nrm2)(gr%mesh, st%d%dim, r)
-    conv = (res < tol)
+    residue = X(mf_nrm2)(gr%mesh, st%d%dim, r)
+    conv = (residue < tol)
     if(conv.and.conv_last) exit
     conv_last = conv
 
@@ -228,7 +228,6 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
   end do
     
   iter_used = iter
-  residue = sqrt(abs(res))
 
   if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
