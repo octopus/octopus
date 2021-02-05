@@ -281,7 +281,6 @@ grid_f_srcs =                                 \
 	grid/curvilinear.F90                  \
 	grid/curv_modine.F90                  \
 	grid/derivatives.F90                  \
-	grid/double_grid.F90                  \
 	grid/fourier_shell.F90                \
 	grid/fourier_space.F90                \
 	grid/grid.F90                         \
@@ -331,7 +330,6 @@ noinst_HEADERS +=                             \
 	grid/boundaries_inc.F90               \
 	grid/cube_function_inc.F90            \
 	grid/derivatives_inc.F90              \
-	grid/double_grid_apply_inc.F90        \
 	grid/fourier_space_inc.F90            \
 	grid/io_function_inc.F90              \
 	grid/mesh_batch_inc.F90               \
