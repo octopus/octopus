@@ -629,55 +629,45 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
           
           !now, store the result in the matrix
 
-          if (.not. this%parallel) then
-            if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
-              do iorb = 1, norbs
-                n1 = ibasis - 1 + iorb
-
-                if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-                  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
-                    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
-                    ierr, geo = geo)
-                end if
-
-                do jorb = 1, this%norb_atom(jatom)
-                  n2 = jbasis - 1 + jorb
-
-                  if(n2 < n1) cycle ! only upper triangle
-                  hamiltonian(n1, n2) = aa(iorb, jorb)
-                  overlap(n1, n2) = bb(iorb, jorb)
-
-                  if(debug%info) then
-                    write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
-                    write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
-                  end if
-
-                end do
-              end do
-            end if
-          else
+          if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then
             do iorb = 1, norbs
               n1 = ibasis - 1 + iorb
+
+              if (debug%info .and. mpi_grp_is_root(mpi_world)) then
+                write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
+                call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
+                  gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
+                  ierr, geo = geo)
+              end if
+
               do jorb = 1, this%norb_atom(jatom)
                 n2 = jbasis - 1 + jorb
 
                 if(n2 < n1) cycle ! only upper triangle
 
-                call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
-                  ilbasis, jlbasis, prow, pcol)
-                ! FIXME: debug needed here too
-                if(all((/prow, pcol/) == this%myroc)) then
-                  hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
-                  overlap(ilbasis, jlbasis) = bb(iorb, jorb)
+                if (this%parallel) then
+                  call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, ilbasis, jlbasis, prow, pcol)
+                  if (all((/prow, pcol/) == this%myroc)) then
+                    hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
+                    overlap(ilbasis, jlbasis) = bb(iorb, jorb)
 
-                  if(debug%info) then
-                    write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, &
-                      units_from_atomic(units_out%energy, hamiltonian(ilbasis, jlbasis))
-                    write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(ilbasis, jlbasis)
+                    if(debug%info) then
+                      write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, &
+                        units_from_atomic(units_out%energy, hamiltonian(ilbasis, jlbasis))
+                      write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(ilbasis, jlbasis)
+                    end if
                   end if
 
+                else
+                  hamiltonian(n1, n2) = aa(iorb, jorb)
+                  overlap(n1, n2) = bb(iorb, jorb)
+
+                  if (debug%info) then
+                    write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
+                    write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
+                  end if
                 end if
+
               end do
             end do
           end if
