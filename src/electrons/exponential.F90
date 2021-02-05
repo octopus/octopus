@@ -323,7 +323,7 @@ contains
     subroutine taylor_series()
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
-      integer :: i, idim
+      integer :: i
       logical :: zfact_is_real
 
       PUSH_SUB(exponential_apply.taylor_series)
@@ -383,7 +383,7 @@ contains
     !!  ChebySum := 0.5*(u0 - u2);
     !! \endverbatim
     subroutine cheby()
-      integer :: j, idim
+      integer :: j
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 

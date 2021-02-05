@@ -179,7 +179,7 @@ subroutine X(linear_solver_cg) (ls, namespace, hm, gr, st, ist, ik, x, y, shift,
 
   R_TYPE, allocatable :: r(:,:), p(:,:), z(:,:), Hp(:,:)
   FLOAT  :: alpha, beta, gamma
-  integer :: iter, idim
+  integer :: iter
   logical :: conv_last, conv
 
   PUSH_SUB(X(linear_solver_cg))
@@ -554,7 +554,7 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
   R_TYPE,                   intent(out)   :: Hx(:,:)  !< Hx(gr%mesh%np, st%d%dim)
   R_TYPE,                   intent(in)    :: shift
 
-  integer :: idim, jst
+  integer :: jst
   FLOAT   :: alpha_j
   R_TYPE  :: proj
   R_TYPE, allocatable :: psi(:, :)
@@ -741,7 +741,7 @@ subroutine X(linear_solver_sos) (hm, namespace, gr, st, ist, ik, x, y, shift, re
   FLOAT,                          intent(out)   :: residue
   integer,                        intent(out)   :: iter_used
 
-  integer :: jst, idim
+  integer :: jst
   R_TYPE  :: aa
   R_TYPE, allocatable  :: rr(:, :)
   R_TYPE, allocatable :: psi(:, :)

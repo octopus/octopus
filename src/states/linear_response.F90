@@ -180,7 +180,7 @@ contains
     type(lr_t),          intent(in) :: src
     type(lr_t),       intent(inout) :: dest
 
-    integer :: ik, idim, ist
+    integer :: ik, ist
 
     PUSH_SUB(lr_copy)
 

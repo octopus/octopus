@@ -55,7 +55,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
   R_TYPE, allocatable :: hevec(:,:)
   R_TYPE, allocatable :: aux(:,:)
   type(wfs_elec_t) :: vvb, avb
-  integer  :: blk, ist, ii, idim, dim, jst, d1, d2, matvec, nconv
+  integer  :: blk, ist, ii, dim, jst, d1, d2, matvec, nconv
   FLOAT :: xx
 
   ! Some hard-coded parameters.
