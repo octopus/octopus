@@ -21,12 +21,14 @@
 
 module hamiltonian_elec_oct_m
   use accel_oct_m
+  use atom_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use double_grid_oct_m
   use energy_oct_m
   use exchange_operator_oct_m
   use external_potential_oct_m
@@ -1328,11 +1330,12 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_elec_apply_atom (hm, namespace, geo, gr, ia, psi, vpsi)
+  subroutine zhamiltonian_elec_apply_atom (hm, namespace, atom, mesh, dgrid, ia, psi, vpsi)
     type(hamiltonian_elec_t), intent(in)  :: hm
     type(namespace_t),        intent(in)  :: namespace
-    type(geometry_t),         intent(in)  :: geo
-    type(grid_t),             intent(in)  :: gr
+    type(atom_t),             intent(in)  :: atom
+    type(mesh_t),             intent(in)  :: mesh
+    type(double_grid_t),      intent(in)  :: dgrid
     integer,                  intent(in)  :: ia
     CMPLX,                    intent(in)  :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
     CMPLX,                    intent(out) :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
@@ -1341,14 +1344,13 @@ contains
     FLOAT, allocatable :: vlocal(:)
     PUSH_SUB(zhamiltonian_elec_apply_atom)
 
-    SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(vlocal(1:mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, hm%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, mesh, dgrid, atom, ia, vlocal)
 
     do idim = 1, hm%d%dim
-      vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)
+      vpsi(1:mesh%np, idim) = vlocal(1:mesh%np) * psi(1:mesh%np, idim)
     end do
-
 
     SAFE_DEALLOCATE_A(vlocal)
     POP_SUB(zhamiltonian_elec_apply_atom)

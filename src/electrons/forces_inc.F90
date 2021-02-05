@@ -79,7 +79,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
 
-  SAFE_ALLOCATE(force_tmp(1:gr%sb%dim, 1:geo%natoms))
+  SAFE_ALLOCATE(force_tmp(1:geo%space%dim, 1:geo%natoms))
   force_tmp = M_ZERO
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
@@ -89,13 +89,13 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
     end if
     
     vloc(1:gr%mesh%np) = M_ZERO
-    call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
+    call epot_local_potential(ep, namespace, gr%der%mesh, gr%dgrid, geo%atom(iatom), iatom, vloc)
 
     do ip = 1, gr%mesh%np
       zvloc(ip) = vloc(ip)
     end do
 
-    do idir = 1, gr%sb%dim
+    do idir = 1, geo%space%dim
       force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
     end do
 
@@ -106,7 +106,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
 
   if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, force_tmp) 
 
-  force(1:gr%sb%dim, 1:geo%natoms) = force(1:gr%sb%dim, 1:geo%natoms) + force_tmp(1:gr%sb%dim, 1:geo%natoms)
+  force(1:geo%space%dim, 1:geo%natoms) = force(1:geo%space%dim, 1:geo%natoms) + force_tmp(1:geo%space%dim, 1:geo%natoms)
 
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_A(zvloc)

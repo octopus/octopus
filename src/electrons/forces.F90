@@ -232,7 +232,7 @@ contains
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
       call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-      call zhamiltonian_elec_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
+      call zhamiltonian_elec_apply_atom (hm, namespace, geo%atom(iatom), gr%mesh, gr%dgrid, iatom, zpsi, viapsi)
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)

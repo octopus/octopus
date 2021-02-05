@@ -548,7 +548,7 @@ contains
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
-    SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(forces(1:geo%natoms, 1:geo%space%dim))
     do imat = 1, this%num_modes
       do jmat = 1, this%num_modes
         iatom = vibrations_get_atom(this, jmat)

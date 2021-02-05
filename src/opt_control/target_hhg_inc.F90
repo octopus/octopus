@@ -139,7 +139,7 @@
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, 1, vl)
+    call epot_local_potential(ep, namespace, gr%der%mesh, gr%dgrid, geo%atom(1), 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
     do jst=1, gr%sb%dim
       do ist = 1, gr%mesh%np

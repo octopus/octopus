@@ -483,7 +483,7 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
 
-      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
+      call epot_local_potential(ep, namespace, mesh, gr%dgrid, geo%atom(ia), ia, ep%vpsl, density = density)
 
       if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
         call species_get_nlcc(geo%atom(ia)%species, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
@@ -570,12 +570,12 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, density)
+  subroutine epot_local_potential(ep, namespace, mesh, dgrid, atom, iatom, vpsl, density)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
-    type(derivatives_t),      intent(in)    :: der
+    type(mesh_t),             intent(in)    :: mesh
     type(double_grid_t),      intent(in)    :: dgrid
-    type(geometry_t),         intent(in)    :: geo
+    type(atom_t),             intent(in)    :: atom
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
@@ -591,7 +591,7 @@ contains
 
     if(ep%local_potential_precalculated) then
 
-      do ip = 1, der%mesh%np
+      do ip = 1, mesh%np
         vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
       end do
     else
@@ -600,23 +600,23 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
-        SAFE_ALLOCATE(rho(1:der%mesh%np))
+      if(local_potential_has_density(mesh%sb, atom)) then
+        SAFE_ALLOCATE(rho(1:mesh%np))
 
-        call species_get_long_range_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
+        call species_get_long_range_density(atom%species, namespace, atom%x, mesh, rho)
 
         !In this case, we want to treat this outside of this routine to 
         !avoid multiple calls to poisson_solve
         if(present(density)) then
-          call lalg_axpy(der%mesh%np, M_ONE, rho, density)
+          call lalg_axpy(mesh%np, M_ONE, rho, density)
         else
 
-          SAFE_ALLOCATE(vl(1:der%mesh%np))
+          SAFE_ALLOCATE(vl(1:mesh%np))
           
           if(poisson_solver_is_iterative(ep%poisson_solver)) then
             ! vl has to be initialized before entering routine
             ! and our best guess for the potential is zero
-            vl(1:der%mesh%np) = M_ZERO
+            vl(1:mesh%np) = M_ZERO
           end if
 
           call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
@@ -626,26 +626,25 @@ contains
 
       else
 
-        SAFE_ALLOCATE(vl(1:der%mesh%np))
-        call species_get_local(geo%atom(iatom)%species, der%mesh, namespace, &
-          geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
+        SAFE_ALLOCATE(vl(1:mesh%np))
+        call species_get_local(atom%species, mesh, namespace, atom%x(1:mesh%sb%dim), vl)
 
       end if
 
       if(allocated(vl)) then
-        call lalg_axpy(der%mesh%np, M_ONE, vl, vpsl)
+        call lalg_axpy(mesh%np, M_ONE, vl, vpsl)
         SAFE_DEALLOCATE_A(vl)
       end if
 
       !the localized part
-      if(species_is_ps(geo%atom(iatom)%species)) then
+      if(species_is_ps(atom%species)) then
 
-        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
+        radius = double_grid_get_rmax(dgrid, atom%species, mesh) + mesh%spacing(1)
 
-        call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
+        call submesh_init(sphere, mesh%sb, mesh, atom%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
-        call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
+        call double_grid_apply_local(dgrid, atom%species, mesh, sphere, atom%x, vl)
         call submesh_add_to_mesh(sphere, vl, vpsl)
 
         SAFE_DEALLOCATE_A(vl)
@@ -719,7 +718,8 @@ contains
 
     do iatom = 1, geo%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
+      call epot_local_potential(ep, namespace, gr%der%mesh, gr%dgrid, geo%atom(iatom),&
+                                   iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 
