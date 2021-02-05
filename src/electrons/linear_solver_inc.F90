@@ -372,7 +372,10 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
 
     rho_1 = X(mf_dotp) (gr%mesh, st%d%dim, rs, r)
 
-    if( abs(rho_1) < M_EPSILON ) exit
+    ! Here we want an exact comparison to zero,
+    ! as rho_1 enters only as the ratio of quantities
+    ! This fails only is rho_1 is exactly zero.
+    if( rho_1 == M_ZERO ) exit
 
     if( iter == 1 ) then
       do idim = 1, st%d%dim
@@ -430,7 +433,8 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     end if
     conv_last = conv
 
-    if( abs(w) < M_EPSILON ) exit
+    !This fails only if w is exactly zero
+    if( w == M_ZERO ) exit
 
   end do
 
