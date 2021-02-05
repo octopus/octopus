@@ -110,11 +110,13 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
   integer :: kstart, kend, ispin
   integer :: spin_channels
-  integer :: iunit_h, iunit_s, iunit_e, ierr
-  character(len=256) :: filename
+  integer :: iunit_h, iunit_s, iunit_e
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
 #endif
+  ! Variables used for some commented debug statements
+  !character(len=256) :: filename
+  !integer :: ierr
 
   PUSH_SUB(X(lcao_wf))
   
@@ -163,12 +165,13 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
-      if (debug%info) then
-        write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
-          gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
-          ierr, geo = geo)
-      end if
+      ! Uncomment to output all the atomic orbitals used in the LCAO calculation
+      !if (debug%info) then
+      !  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
+      !  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
+      !    gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
+      !    ierr, geo = geo)
+      !end if
     end do
 
     do ik = kstart, kend
@@ -493,8 +496,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
-  integer :: iunit_h, iunit_s, iunit_e, ierr
+  integer :: iunit_h, iunit_s, iunit_e
   character(len=256) :: filename
+  ! Variables used for some commented debug statements
+  !integer :: ierr  
 
   PUSH_SUB(X(lcao_alt_wf))
 
@@ -633,12 +638,13 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
             do iorb = 1, norbs
               n1 = ibasis - 1 + iorb
 
-              if (debug%info) then
-                write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
-                  gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
-                  ierr, geo = geo)
-              end if
+              ! Uncomment to output all the atomic orbitals used in the LCAO calculation
+              !if (debug%info) then
+              !  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
+              !  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
+              !    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
+              !    ierr, geo = geo)
+              !end if
 
               do jorb = 1, this%norb_atom(jatom)
                 n2 = jbasis - 1 + jorb
