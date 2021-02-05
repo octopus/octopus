@@ -33,7 +33,6 @@ module cube_function_oct_m
   use partition_transfer_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use submesh_oct_m
   use types_oct_m
 

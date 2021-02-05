@@ -40,7 +40,7 @@ module unocc_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_io_oct_m
@@ -122,7 +122,7 @@ contains
     call parse_variable(sys%namespace, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
-    if(simul_box_is_periodic(sys%gr%sb) .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
+    if(sys%space%is_periodic() .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
       bandstructure_mode = .true.
     end if
 
@@ -353,7 +353,7 @@ contains
       call messages_warning(1)
     end if
 
-    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
+    if(sys%space%is_periodic().and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
         call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, &
               sys%gr%sb, sys%geo, sys%gr%mesh, &

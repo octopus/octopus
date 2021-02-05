@@ -32,7 +32,6 @@ module orbitalbasis_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
  
@@ -93,10 +92,10 @@ subroutine orbitalbasis_nullify(this)
 
 end subroutine orbitalbasis_nullify
 
-subroutine orbitalbasis_init(this, namespace, sb)
+subroutine orbitalbasis_init(this, namespace, periodic_dim)
   type(orbitalbasis_t),    intent(inout) :: this
   type(namespace_t),       intent(in)    :: namespace
-  type(simul_box_t),       intent(in)    :: sb
+  integer,                 intent(in)    :: periodic_dim
 
   PUSH_SUB(orbitalbasis_init)
 
@@ -159,7 +158,7 @@ subroutine orbitalbasis_init(this, namespace, sb)
   !% Submeshes are not compatible with Loewdin orthogonalization.
   !% For periodic systems, the default is set to ye, whereas it is set to no for isolated systems.
   !%End
-  if(sb%periodic_dim > 0) then
+  if(periodic_dim > 0) then
     call parse_variable(namespace, 'AOSubmesh', .false., this%submesh)
   else
     call parse_variable(namespace, 'AOSubmesh', .true., this%submesh)

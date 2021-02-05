@@ -45,10 +45,10 @@ program oct_local_multipoles
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use simul_box_oct_m
   use space_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use simul_box_oct_m
   use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m

@@ -213,7 +213,7 @@ contains
 
     call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
-    call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
+    call vibrations_init(vib, geo, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 

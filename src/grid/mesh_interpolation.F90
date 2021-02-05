@@ -29,7 +29,6 @@ module mesh_interpolation_oct_m
   use mpi_oct_m
   use profiling_oct_m
   use par_vec_oct_m
-  use simul_box_oct_m
   
   implicit none
   private

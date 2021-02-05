@@ -26,7 +26,6 @@ program xyzanim
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -37,7 +36,6 @@ program xyzanim
   integer :: ierr, sampling, i, coords_unit, iter, j, record_length
   logical :: multifiles
   FLOAT :: time
-  type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
   
@@ -82,7 +80,6 @@ program xyzanim
 
   call space_init(space, global_namespace)
   call geometry_init(geo, global_namespace, space)
-  call simul_box_init(sb, global_namespace, geo, space)
 
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
@@ -114,7 +111,6 @@ program xyzanim
     end if
   end do
 
-  call simul_box_end(sb)
   call geometry_end(geo)
 
   call io_close(coords_unit)

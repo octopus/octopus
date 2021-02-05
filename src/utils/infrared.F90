@@ -20,14 +20,12 @@
 
   program infrared
     use command_line_oct_m
-    use geometry_oct_m
     use global_oct_m
     use io_oct_m
     use messages_oct_m
     use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
-    use simul_box_oct_m
     use space_oct_m
     use unit_oct_m
     use unit_system_oct_m
@@ -38,9 +36,7 @@
     FLOAT :: start_time, end_time
     FLOAT, allocatable :: time(:), dipole(:,:)
     CMPLX, allocatable :: ftdipole(:,:)
-    type(geometry_t)  :: geo 
     type(space_t)     :: space
-    type(simul_box_t) :: sb
     FLOAT :: ww, irtotal
     FLOAT :: dw, max_energy
     integer :: ifreq, idir
@@ -73,8 +69,6 @@
     if (end_time < M_ZERO) end_time = huge(end_time)
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
-    call simul_box_init(sb, global_namespace, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
@@ -110,9 +104,6 @@
       end do
       call io_close(iunit)
 
-
-    call simul_box_end(sb)
-    call geometry_end(geo)
 
     call io_end()
     call messages_end()

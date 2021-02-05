@@ -28,7 +28,6 @@ module states_elec_dim_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
 
   implicit none
 
@@ -185,16 +184,16 @@ contains
   end subroutine kpoints_distribute
   
   ! ---------------------------------------------------------
-  subroutine states_elec_choose_kpoints(dd, sb, namespace)
+  subroutine states_elec_choose_kpoints(dd, kpoints, namespace)
     type(states_elec_dim_t), intent(inout) :: dd
-    type(simul_box_t),       intent(in)    :: sb
+    type(kpoints_t),         intent(in)    :: kpoints
     type(namespace_t),       intent(in)    :: namespace
 
     integer :: ik, iq
 
     PUSH_SUB(states_elec_choose_kpoints)
 
-    dd%nik = kpoints_number(sb%kpoints)
+    dd%nik = kpoints_number(kpoints)
 
     if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
 
@@ -202,7 +201,7 @@ contains
 
     do iq = 1, dd%nik
       ik = states_elec_dim_get_kpoint_index(dd, iq)
-      dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
+      dd%kweights(iq) = kpoints_get_weight(kpoints, ik)
     end do
 
     if(debug%info) call print_kpoints_debug
@@ -216,7 +215,7 @@ contains
       
       call io_mkdir('debug/', namespace)
       iunit = io_open('debug/kpoints', namespace, action = 'write')
-      call kpoints_write_info(sb%kpoints, namespace, iunit, absolute_coordinates = .true.)      
+      call kpoints_write_info(kpoints, namespace, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)
 
       POP_SUB(states_elec_choose_kpoints.print_kpoints_debug)
