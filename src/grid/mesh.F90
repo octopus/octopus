@@ -66,7 +66,11 @@ module mesh_oct_m
     mesh_write_fingerprint,        &
     mesh_read_fingerprint,         &
     mesh_compact_boundaries,       &
-    mesh_check_symmetries
+    mesh_check_symmetries,         &
+    mesh_global_index_to_coords,   &
+    mesh_global_index_from_coords, &
+    mesh_local_index_to_coords,    &
+    mesh_local_index_from_coords
 
   !> Describes mesh distribution to nodes.
   !!
@@ -629,7 +633,7 @@ contains
               map(ip) = 0
               grid_reordered = .false.
             else
-              map(ip) = index_from_coords(mesh%idx, [xx(1), xx(2), xx(3)])
+              map(ip) = mesh_global_index_from_coords(mesh, [xx(1), xx(2), xx(3)])
               if(map(ip) > mesh%np_global) map(ip) = 0
             end if
           end do
@@ -702,7 +706,7 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = index_from_coords(mesh%idx, [ix(1), ix(2), ix(3)])
+    ipp = mesh_global_index_from_coords(mesh, [ix(1), ix(2), ix(3)])
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip_local, rr, coords = xx)
@@ -866,6 +870,49 @@ contains
 
     POP_SUB(mesh_check_symmetries)
   end subroutine
+
+  !> This function returns the true _global_ index of the point for a given
+  !! vector of integer coordinates.
+  integer function mesh_global_index_from_coords(mesh, ix) result(index)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ix(:)
+
+    index = index_from_coords(mesh%idx, ix)
+  end function mesh_global_index_from_coords
+
+  !> Given a _global_ point index, this function returns the set of
+  !! integer coordinates of the point.
+  pure subroutine mesh_global_index_to_coords(mesh, ip, ix)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ip
+    integer,       intent(out)   :: ix(:)
+
+    call index_to_coords(mesh%idx, ip, ix)
+  end subroutine mesh_global_index_to_coords
+
+  !> This function returns the _local_ index of the point for a given
+  !! vector of integer coordinates.
+  integer function mesh_local_index_from_coords(mesh, ix) result(index)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ix(:)
+
+    index = index_from_coords(mesh%idx, ix)
+    if(mesh%parallel_in_domains) index = vec_global2local(mesh%vp, index, mesh%vp%partno)
+  end function mesh_local_index_from_coords
+
+  !> Given a _local_ point index, this function returns the set of
+  !! integer coordinates of the point.
+  pure subroutine mesh_local_index_to_coords(mesh, ip, ix)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ip
+    integer,       intent(out)   :: ix(:)
+
+    if(.not. mesh%parallel_in_domains) then
+      call index_to_coords(mesh%idx, ip, ix)
+    else
+      call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), ix)
+    end if
+  end subroutine mesh_local_index_to_coords
 
 end module mesh_oct_m
 
