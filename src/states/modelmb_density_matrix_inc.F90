@@ -68,7 +68,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
     if (mesh%parallel_in_domains) ip_global = mesh%vp%local(ip + mesh%vp%xlocal - 1)
 
     ! find coordinates of present point in full MAX_DIM space
-    call index_to_coords(mesh%idx, ip_global, ix)
+    call mesh_global_index_to_coords(mesh, ip_global, ix)
     
     ! find index of present coordinates for particle ikeeppart
     ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
@@ -88,7 +88,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
     do ip_global = 1, mesh%np_global
 
       ! find coordinates of present point in full MAX_DIM space
-      call index_to_coords(mesh%idx, ip_global, ix)
+      call mesh_global_index_to_coords(mesh, ip_global, ix)
       
       ! prime position will be identical to ix, apart from the ikeeppart particle
       ixp = ix

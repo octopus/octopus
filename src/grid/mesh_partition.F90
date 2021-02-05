@@ -209,7 +209,7 @@ contains
     ! Iterate over number of vertices.
     do iv = 1, lsize(ipart)
       ! Get coordinates of point iv (vertex iv).
-      call index_to_coords(mesh%idx, istart(ipart)-1 + iv, ix)
+      call mesh_global_index_to_coords(mesh, istart(ipart)-1 + iv, ix)
 
       ! Set entry in index table.
       xadj(iv) = ne
@@ -469,7 +469,7 @@ contains
       ii = mesh%np_global + istart - 1 + is
 
       !get the coordinates of the point
-      call index_to_coords(mesh%idx, ii, ix)
+      call mesh_global_index_to_coords(mesh, ii, ix)
 
       do jj = 1, stencil%size
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
@@ -573,7 +573,7 @@ contains
     SAFE_ALLOCATE(part(1:np))
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
-      call index_to_coords(mesh%idx, ip_global, idx)
+      call mesh_global_index_to_coords(mesh, ip_global, idx)
       points(ip_local) = index_from_coords(parent%idx, 2*idx)
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)
@@ -765,7 +765,7 @@ contains
       if(ipart /= point_to_part(ip)) cycle
       
       INCR(nlocal(ipart), 1)
-      call index_to_coords(mesh%idx, ip, ipcoords)
+      call mesh_global_index_to_coords(mesh, ip, ipcoords)
       
       do istencil = 1, stencil%size
         jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)

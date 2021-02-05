@@ -83,9 +83,9 @@ contains
     do ip = 1, mesh%np
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), idx)
+        call mesh_global_index_to_coords(mesh, mesh%vp%local(mesh%vp%xlocal + ip - 1), idx)
       else
-        call index_to_coords(mesh%idx, ip, idx)
+        call mesh_global_index_to_coords(mesh, ip, idx)
       end if
       destpoint(1:3) = TOFLOAT(idx(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates

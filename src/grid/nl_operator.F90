@@ -401,10 +401,10 @@ contains
         if(mesh%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          call index_to_coords(mesh%idx, &
+          call mesh_global_index_to_coords(mesh, &
             mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
         else
-          call index_to_coords(mesh%idx, ii, p1)
+          call mesh_global_index_to_coords(mesh, ii, p1)
         end if
 
         do jj = 1, op%stencil%size
@@ -663,7 +663,7 @@ contains
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
         do ip = 1, mesh%np_part
-          call index_to_coords(op%mesh%idx, ip, idx)
+          call mesh_global_index_to_coords(op%mesh, ip, idx)
           do jj = 1, op%mesh%sb%dim
             stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
           end do

@@ -20,7 +20,6 @@
 
 module basins_oct_m
   use global_oct_m
-  use index_oct_m
   use mesh_oct_m
   use messages_oct_m
   use par_vec_oct_m
@@ -164,9 +163,9 @@ contains
       point = 0
       if(mesh%parallel_in_domains) then
         ! When running in parallel, get global number of point i.
-        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
+        call mesh_global_index_to_coords(mesh, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
       else
-        call index_to_coords(mesh%idx, ii, point)
+        call mesh_global_index_to_coords(mesh, ii, point)
       end if
 
       f_max   = f(ii)

@@ -334,7 +334,7 @@ contains
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
       
       do ip = bndry_start, bndry_end
-        call index_to_coords(boundaries%mesh%idx, ip, idx)
+        call mesh_global_index_to_coords(boundaries%mesh, ip, idx)
         ix = idx(1)
         iy = idx(2)
         iz = idx(3)

@@ -906,7 +906,7 @@ contains
 
       do ip = 1, mesh%np_global
         ipart = mesh%vp%part_vec(ip)
-        call index_to_coords(mesh%idx, ip, idx)
+        call mesh_global_index_to_coords(mesh, ip, idx)
         do jj = 1, stencil%size
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
@@ -1036,7 +1036,7 @@ contains
       ! Do the inner points.
       do ip = 1, min(np, mesh%np)
         kk = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        call index_to_coords(mesh%idx, kk, jj)
+        call mesh_global_index_to_coords(mesh, kk, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
         mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
@@ -1045,7 +1045,7 @@ contains
         ! Do the ghost points.
         do ip = 1, mesh%vp%np_ghost
           kk = mesh%vp%ghost(mesh%vp%xghost + ip - 1)
-          call index_to_coords(mesh%idx, kk, jj)
+          call mesh_global_index_to_coords(mesh, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip + mesh%np) = &
             mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
@@ -1053,7 +1053,7 @@ contains
         ! Do the boundary points.
         do ip = 1, mesh%vp%np_bndry
           kk = mesh%vp%bndry(mesh%vp%xbndry + ip - 1)
-          call index_to_coords(mesh%idx, kk, jj)
+          call mesh_global_index_to_coords(mesh, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &
             mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) &
@@ -1067,7 +1067,7 @@ contains
         call multiresolution_vol_pp(sb)
       else
         do ip = 1, np
-          call index_to_coords(mesh%idx, ip, jj)
+          call mesh_global_index_to_coords(mesh, ip, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
         end do

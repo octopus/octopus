@@ -410,7 +410,7 @@ contains
       do ipart=1, mesh%vp%npart
         do ip = 1, mesh%vp%np_local_vec(ipart)
           ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
-          call index_to_coords(mesh%idx, ip_global, idx)
+          call mesh_global_index_to_coords(mesh, ip_global, idx)
           do idim = 1, mesh%sb%dim
             xx(idim) = idx(idim) * mesh%spacing(idim)
           end do
@@ -425,7 +425,7 @@ contains
       end do
     else
       do ip = 1, mesh%np
-        call index_to_coords(mesh%idx, ip, idx)
+        call mesh_global_index_to_coords(mesh, ip, idx)
         do idim = 1, mesh%sb%dim
           xx(idim) = idx(idim) * mesh%spacing(idim)
         end do
@@ -763,7 +763,7 @@ contains
     if (present(force)) force_ = force
       
     if(mesh%parallel_in_domains .or. force_) then
-      call index_to_coords(mesh%idx, ip, ix)
+      call mesh_global_index_to_coords(mesh, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs

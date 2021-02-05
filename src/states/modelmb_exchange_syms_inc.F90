@@ -306,7 +306,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     ! each processor needs the full map of points for send and recv
     do ip = 1, gr%mesh%np_global
       ! get present position
-      call index_to_coords(gr%mesh%idx, ip, ix)
+      call mesh_global_index_to_coords(gr%mesh, ip, ix)
   
       ! invert coordinates of ipart1 and ipart2
       ixp = ix
@@ -390,7 +390,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
 
     do ip = 1, gr%mesh%np_global
       ! get present position
-      call index_to_coords(gr%mesh%idx, ip, ix)
+      call mesh_global_index_to_coords(gr%mesh, ip, ix)
       ! initialize coordinates for all particles
       ixp = ix
       ! permute the particles labeled spin up 

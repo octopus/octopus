@@ -226,7 +226,7 @@ contains
       ! translate to a global index of the coarse grid
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
       ! locate the equivalent global fine grid point
-      call index_to_coords(coarse%idx, ig, idx)
+      call mesh_global_index_to_coords(coarse, ig, idx)
       ig = mesh_global_index_from_coords(fine, 2*idx)
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
@@ -245,7 +245,7 @@ contains
       ig = i
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      call index_to_coords(fine%idx, ig, idx)
+      call mesh_global_index_to_coords(fine, ig, idx)
       mod2 = mod(idx, 2)
       
       pt = sum(abs(mod2(1:3)))
@@ -279,7 +279,7 @@ contains
       ig = i
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      call index_to_coords(fine%idx, ig, idx)
+      call mesh_global_index_to_coords(fine, ig, idx)
       x(1:3)    = idx(1:3)/2
       mod2(1:3) = mod(idx(1:3), 2)
 

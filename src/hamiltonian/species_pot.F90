@@ -882,7 +882,7 @@ contains
       if(mesh_p%parallel_in_domains) &
         jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
 
-      call index_to_coords(mesh_p%idx, jp, idx)
+      call mesh_global_index_to_coords(mesh_p, jp, idx)
       chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
