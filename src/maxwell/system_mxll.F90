@@ -150,6 +150,9 @@ contains
 
     call messages_obsolete_variable(this%namespace, 'SystemName')
     call space_init(this%space, this%namespace)
+    if(this%space%periodic_dim > 0) then
+      call messages_not_implemented('Maxwell for periodic systems')
+    end if
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
 

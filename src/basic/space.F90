@@ -35,6 +35,10 @@ module space_oct_m
   type space_t
     ! Components are public by default
     integer :: dim
+    integer :: periodic_dim = 0
+
+  contains
+    procedure :: is_periodic => space_is_periodic
   end type space_t
 
 contains
@@ -60,8 +64,39 @@ contains
     call parse_variable(namespace, 'Dimensions', default_ndim, this%dim)
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error(namespace, 'Dimensions')
 
+    !%Variable PeriodicDimensions
+    !%Type integer
+    !%Default 0
+    !%Section System
+    !%Description
+    !% Define how many directions are to be considered periodic. It has to be a number
+    !% between zero and <tt>Dimensions</tt>.
+    !%Option 0
+    !% No direction is periodic (molecule).
+    !%Option 1
+    !% The <i>x</i> direction is periodic.
+    !%Option 2
+    !% The <i>x</i> and <i>y</i> directions are periodic.
+    !%Option 3
+    !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic.
+    !%End
+    call parse_variable(namespace, 'PeriodicDimensions', 0, this%periodic_dim)
+
+    if ((this%periodic_dim < 0) .or. (this%periodic_dim > MAX_DIM) .or. (this%periodic_dim > this%dim)) then
+      call messages_input_error(namespace, 'PeriodicDimensions')
+    end if
+
     POP_SUB(space_init_simple)
   end subroutine space_init
+
+  !--------------------------------------------------------------
+  logical pure function space_is_periodic(this)
+    class(space_t), intent(in) :: this
+
+    space_is_periodic = this%periodic_dim > 0
+
+  end function space_is_periodic
+
 
 end module space_oct_m
 

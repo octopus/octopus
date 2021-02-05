@@ -62,6 +62,7 @@ module td_oct_m
   use scf_oct_m
   use scissor_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
@@ -392,7 +393,7 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(inout) :: mc
@@ -402,6 +403,7 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(inout) :: outp
+    type(space_t),            intent(in)    :: space
     logical,                  intent(inout) :: fromScratch
 
     logical                      :: stopping
@@ -428,7 +430,7 @@ contains
       end if
     else
       call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks)
+      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks, space)
     end if
 
     if (hm%scdm_EXX) then
@@ -553,7 +555,7 @@ contains
       call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
       ! write down data
-      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, fromScratch)
+      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, fromScratch)
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly(namespace)
@@ -589,7 +591,7 @@ contains
   end subroutine td_print_header
 
   ! ---------------------------------------------------------
-  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, from_scratch)
+  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, from_scratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -599,6 +601,7 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
+    type(space_t),            intent(in)    :: space
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: scsteps
     FLOAT,                    intent(inout) :: etime
@@ -638,7 +641,7 @@ contains
         call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
         from_scratch = .false.
         call states_elec_deallocate_wfns(st)
-        call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, from_scratch)
+        call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, space, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
         call td_load(td%restart_load, namespace, gr, st, hm, td, ierr)
         if (ierr /= 0) then

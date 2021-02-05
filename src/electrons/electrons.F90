@@ -117,6 +117,9 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
+    if(sys%space%periodic_dim > 0 .and. sys%space%periodic_dim < sys%space%dim) then
+      call messages_experimental('Support for mixed periodicity systems')
+    end if
     
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
@@ -183,7 +186,7 @@ contains
     call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 
-    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc)
+    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc, this%space)
 
     call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, this%ks%theory_level, &
       this%ks%xc, this%mc, need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)

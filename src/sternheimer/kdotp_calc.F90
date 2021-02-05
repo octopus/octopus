@@ -89,7 +89,7 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
 
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-      do idir = 1, sys%gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call pert_setup_dir(pert, idir)
         call zpert_apply(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
         velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))

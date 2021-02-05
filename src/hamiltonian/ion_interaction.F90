@@ -80,9 +80,17 @@ contains
     !%End
     call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
 
-    !As the code below is not parallelized with any of k-point, states not domain
+    !As the code below is not parallelized with any of k-point, states nor domain
     !we can safely parallelize it over atoms
     call distributed_init(this%dist, geo%natoms, mc%master_comm, "Ions")
+
+    if(geo%periodic_dim == 1) then
+      call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
+      call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
+      call messages_write('of total energy and forces.')
+      call messages_warning(namespace=namespace)
+    end if
+
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init

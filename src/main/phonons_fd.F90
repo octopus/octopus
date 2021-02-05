@@ -35,6 +35,7 @@ module phonons_fd_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use electrons_oct_m
@@ -121,7 +122,8 @@ contains
     call parse_variable(sys%namespace, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib, &
+                        sys%space)
 
     call vibrations_output(vib)
     
@@ -154,7 +156,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib, space)
     type(grid_t),     target, intent(inout) :: gr
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -164,6 +166,7 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
     type(vibrations_t),       intent(inout) :: vib
+    type(space_t),            intent(in)    :: space
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: mesh
@@ -174,16 +177,16 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
-    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
-    SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
+    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks, space)
+    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:space%dim))
+    SAFE_ALLOCATE(forces (1:geo%natoms, 1:space%dim))
     forces = M_ZERO
     forces0 = M_ZERO
 
     ! FIXME: why displace in + and -? Could just do + and take difference from undisplaced.
     
     do iatom = 1, geo%natoms
-      do alpha = 1, mesh%sb%dim
+      do alpha = 1, space%dim
         imat = vibrations_get_index(vib, iatom, alpha)
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the +', index2axis(alpha), '-direction.'
@@ -200,7 +203,7 @@ contains
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
+          forces0(jatom, 1:space%dim) = geo%atom(jatom)%f(1:space%dim)
         end do
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
@@ -216,13 +219,13 @@ contains
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
+          forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:space%dim)
         end do
 
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         do jatom = 1, geo%natoms
-          do beta = 1, gr%sb%dim
+          do beta = 1, space%dim
             jmat = vibrations_get_index(vib, jatom, beta)
             vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &

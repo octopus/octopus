@@ -292,14 +292,14 @@ contains
     ! Shift of the linear equation
     shift_aux = CNST(0.25)
     ! Preconditioner used for the QMR algorithm
-    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc)
+    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc, sys%space)
     ! Derivative object needed 
     call set_der_aux(sys%gr%der)
 
     ! Here we put a Gaussian as the right-hand side of the linear solver
     ! Values are taken from the poisson_test routine
     alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
-    beta = M_ONE / ( alpha**sys%gr%sb%dim * sqrt(M_PI)**sys%gr%sb%dim )
+    beta = M_ONE / ( alpha**sys%space%dim * sqrt(M_PI)**sys%space%dim )
     ! The Gaussian is centered around the origin
     center = M_ZERO
 

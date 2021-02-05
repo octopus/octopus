@@ -69,12 +69,12 @@ module kdotp_oct_m
                                                  !! (idir1, idir2, ist, ik)
     FLOAT, allocatable :: velocity(:,:,:) !< group velocity vector (idir, ist, ik)
 
-    type(lr_t), allocatable :: lr(:,:) !< linear response for (sys%gr%sb%periodic_dim,1)
+    type(lr_t), allocatable :: lr(:,:) !< linear response for (periodic_dim,1)
                                        !! second index is dummy; should only be 1
                                        !! for compatibility with em_resp routines
 
     type(lr_t), allocatable :: lr2(:,:,:) !< second-order response for 
-                                          !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
+                                          !! (periodic_dim,periodic_dim,1)
 
     logical :: ok                   !< is converged?
     integer :: occ_solution_method  !< how to get occupied components of response
@@ -137,7 +137,7 @@ contains
       call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
     end if
 
-    pdim = sys%gr%sb%periodic_dim
+    pdim = sys%space%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then
        message(1) = "k.p perturbation cannot be used for a finite system."
@@ -349,7 +349,7 @@ contains
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
-      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
+      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace, sys%space%periodic_dim)
 
       SAFE_DEALLOCATE_A(kdotp_vars%eff_mass_inv)
     end if
@@ -534,11 +534,12 @@ contains
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars, namespace)
+  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars, namespace, periodic_dim)
     type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(kdotp_t),        intent(inout) :: kdotp_vars
     type(namespace_t),    intent(in)    :: namespace
+    integer,              intent(in)    :: periodic_dim
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin
@@ -565,7 +566,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), periodic_dim, unit_one)
       end do
       
       write(iunit,'(a)')
@@ -575,8 +576,8 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik))
-        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
+        call lalg_inverter(periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik))
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), periodic_dim, unit_one)
       end do
 
       call io_close(iunit)

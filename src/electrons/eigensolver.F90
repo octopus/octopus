@@ -45,6 +45,7 @@ module eigensolver_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -109,12 +110,13 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, namespace, gr, st, mc)
+  subroutine eigensolver_init(eigens, namespace, gr, st, mc, space)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
+    type(space_t),       intent(in)    :: space
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -334,7 +336,7 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_RMMDIIS/))) then
-      call preconditioner_init(eigens%pre, namespace, gr, mc)
+      call preconditioner_init(eigens%pre, namespace, gr, mc, space)
     else
       call preconditioner_null(eigens%pre)
     end if

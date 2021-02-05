@@ -163,6 +163,13 @@ contains
     call messages_print_stress(stdout, "DFTB+ System", namespace=namespace)
 
     call space_init(this%space, namespace)
+    if(this%space%periodic_dim > 0) then
+      call messages_not_implemented('DFTB+ for periodic systems')
+    end if
+    if(this%space%dim /= 3) then
+      call messages_not_implemented('DFTB+ for Dimensions /= 3')
+    end if
+
     call geometry_init(this%geo, namespace, this%space)
     this%n_atom = this%geo%natoms
     SAFE_ALLOCATE(this%coords(3, this%n_atom))

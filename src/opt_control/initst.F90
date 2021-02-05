@@ -63,7 +63,7 @@ contains
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals
     type(block_t)     :: blk
-    FLOAT             :: xx(1:sys%gr%sb%dim), rr, psi_re, psi_im
+    FLOAT             :: xx(1:sys%space%dim), rr, psi_re, psi_im
     type(restart_t) :: restart
     CMPLX, allocatable :: zpsi(:, :)
 
@@ -193,7 +193,7 @@ contains
                   
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
-                    sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
+                    sys%space%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
                   zpsi(ip, id) = TOCMPLX(psi_re, psi_im)
                 end do

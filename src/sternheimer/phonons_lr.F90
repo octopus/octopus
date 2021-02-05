@@ -43,8 +43,8 @@ module phonons_lr_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -122,7 +122,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if(simul_box_is_periodic(gr%sb)) then
+    if(sys%space%is_periodic()) then
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     end if
 
@@ -166,7 +166,7 @@ contains
     call messages_obsolete_variable(sys%namespace, 'UseRestartDontSolve')
 
     natoms = geo%natoms
-    ndim = gr%sb%dim
+    ndim = sys%space%dim
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
@@ -178,7 +178,7 @@ contains
     end if
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
-    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
+    if (sys%space%is_periodic() .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
@@ -189,7 +189,7 @@ contains
         call messages_fatal(2)
       end if
 
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
 
@@ -347,7 +347,7 @@ contains
     call axsf_mode_output(vib, geo, gr%mesh, sys%namespace)
 
     if(do_infrared) then
-      if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
+      if(sys%space%is_periodic() .and. .not. smear_is_semiconducting(st%smear)) then
         message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
         call messages_info(1)
       else
@@ -376,7 +376,7 @@ contains
     call vibrations_end(vib)
     call sternheimer_end(sh)
     call states_elec_deallocate_wfns(st)
-    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
+    if (sys%space%is_periodic() .and. do_infrared) then
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
       end do

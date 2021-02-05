@@ -144,7 +144,7 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
 
     if(fromScratch) then
       call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
@@ -231,7 +231,7 @@ contains
 
       PUSH_SUB(geom_opt_run_legacy.init_)
 
-      if (sys%gr%sb%periodic_dim > 0) then
+      if (sys%space%periodic_dim > 0) then
         call messages_experimental('Geometry optimization for periodic systems')
 
         message(1) = "Optimization of cell parameters during geometry optimization"
@@ -247,7 +247,7 @@ contains
       g_opt%st     => sys%st
       g_opt%hm     => sys%hm
       g_opt%syst   => sys
-      g_opt%dim    =  sys%gr%sb%dim
+      g_opt%dim    =  sys%space%dim
 
       g_opt%size = g_opt%dim*g_opt%geo%natoms
 

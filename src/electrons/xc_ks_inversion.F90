@@ -34,6 +34,7 @@ module xc_ks_inversion_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use unit_oct_m
@@ -90,7 +91,7 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc)
+  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc, space)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),            intent(inout) :: gr
@@ -98,6 +99,7 @@ contains
     type(states_elec_t),     intent(in)    :: st
     type(xc_t),              intent(in)    :: xc
     type(multicomm_t),       intent(in)    :: mc
+    type(space_t),           intent(in)    :: space
 
     PUSH_SUB(xc_ks_inversion_init)
 
@@ -168,7 +170,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_elec_densities_init(ks_inv%aux_st, gr)
       call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
-      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, mc)
+      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, mc, space)
     end if
 
     POP_SUB(xc_ks_inversion_init)

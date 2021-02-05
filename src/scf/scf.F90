@@ -55,6 +55,7 @@ module scf_oct_m
   use scdm_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -127,7 +128,7 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, space)
     type(scf_t),              intent(inout) :: scf
     type(grid_t),             intent(in)    :: gr
     type(namespace_t),        intent(in)    :: namespace
@@ -136,6 +137,7 @@ contains
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(v_ks_t),             intent(in)    :: ks
+    type(space_t),            intent(in)    :: space
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -379,7 +381,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st, mc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, mc, space)
 
     !The evolution operator is a very specific propagation that requires a specific 
     !setting to work in the current framework

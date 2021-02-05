@@ -35,6 +35,7 @@ module electrons_ground_state_oct_m
   use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
@@ -49,7 +50,7 @@ module electrons_ground_state_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+  subroutine electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
     type(grid_t),             intent(inout) :: gr
@@ -58,6 +59,7 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
+    type(space_t),            intent(in)    :: space
     logical,                  intent(inout) :: fromScratch
 
     type(scf_t)     :: scfv
@@ -115,7 +117,7 @@ contains
     call write_canonicalized_xyz_file("exec", "initial_coordinates", geo, gr%mesh, namespace)
 
     if (ks%theory_level /= RDMFT) then
-      call scf_init(scfv, namespace, gr, geo, st, mc, hm, ks)
+      call scf_init(scfv, namespace, gr, geo, st, mc, hm, ks, space)
     end if
 
     if (fromScratch .and. ks%theory_level /= RDMFT) then
@@ -138,7 +140,7 @@ contains
 
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if (ks%theory_level == RDMFT) then
-      call rdmft_init(rdm, namespace, gr, st, mc, fromScratch)
+      call rdmft_init(rdm, namespace, gr, st, mc, space, fromScratch)
       call scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
       call rdmft_end(rdm)
     else

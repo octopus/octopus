@@ -293,7 +293,7 @@ subroutine X(get_transition_densities) (cas, sys)
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
   n0I = M_ZERO
-  fn_unit = units_out%length**(-sys%gr%sb%dim)
+  fn_unit = units_out%length**(-sys%space%dim)
 
   do ia = 1, cas%n_pairs
     if(loct_isinstringlist(ia, cas%trandens)) then
@@ -1044,7 +1044,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
-        do idir = 1, sys%gr%sb%dim
+        do idir = 1, sys%space%dim
           cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
         end do
       end do
@@ -1475,7 +1475,7 @@ subroutine X(casida_write)(cas, sys)
     end if
     
     write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
-    do idim = 1, cas%sb_dim
+    do idim = 1, cas%space_dim
       write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
 #ifdef R_TCOMPLEX
       write(iunit, '(16x)', advance='no')
@@ -1493,7 +1493,7 @@ subroutine X(casida_write)(cas, sys)
         write(iunit, '(i6)', advance='no') cas%ind(ia)
       end if
       write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
-        (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
+        (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%space_dim), cas%f(cas%ind(ia))
     end do
     call io_close(iunit)
   
@@ -1515,7 +1515,7 @@ subroutine X(casida_write)(cas, sys)
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-            do idim = 1, cas%sb_dim
+            do idim = 1, cas%space_dim
               write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
                 units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
             end do

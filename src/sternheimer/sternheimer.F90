@@ -235,7 +235,7 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%mc)
+    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%mc, sys%space)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then

@@ -49,6 +49,7 @@ module rdmft_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -107,12 +108,13 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, mc, fromScratch)
+  subroutine rdmft_init(rdm, namespace, gr, st, mc, space, fromScratch)
     type(rdm_t),         intent(out)   :: rdm
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(inout) :: gr  !< grid
     type(states_elec_t), intent(in)    :: st  !< States
     type(multicomm_t),   intent(in)    :: mc
+    type(space_t),       intent(in)    :: space
     logical,             intent(in)    :: fromScratch
 
     integer :: ist
@@ -220,7 +222,7 @@ contains
       end do
     else
       ! initialize eigensolver. 
-      call eigensolver_init(rdm%eigens, namespace, gr, st, mc)
+      call eigensolver_init(rdm%eigens, namespace, gr, st, mc, space)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
