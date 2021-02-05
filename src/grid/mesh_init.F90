@@ -910,7 +910,7 @@ contains
         do jj = 1, stencil%size
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-            jpart = mesh%vp%part_vec(index_from_coords(mesh%idx, jx))
+            jpart = mesh%vp%part_vec(mesh_global_index_from_coords(mesh, jx))
             if(ipart /= jpart ) nb(ipart, jpart) = .true.
           end if
         end do

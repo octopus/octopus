@@ -317,7 +317,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
           ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
       
       ! get position of exchanged point
-      ipp = index_from_coords(gr%mesh%idx, ixp)
+      ipp = mesh_global_index_from_coords(gr%mesh, ixp)
       ASSERT (ipp <= gr%mesh%np_global)
       forward_map_exchange(ip) = ipp
     end do ! ip
@@ -401,7 +401,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
         ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb) ! part1 to 2
       end do
       ! get position of exchanged point
-      forward_map_exchange(ip) = index_from_coords(gr%mesh%idx, ixp)
+      forward_map_exchange(ip) = mesh_global_index_from_coords(gr%mesh, ixp)
     end do ! ip
   
     if (gr%mesh%parallel_in_domains) then

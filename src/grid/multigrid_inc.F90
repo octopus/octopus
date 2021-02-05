@@ -75,7 +75,7 @@
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = index_from_coords(coarse_der%mesh%idx, [xc(1), xc(2), xc(3)])
+          ipc = mesh_global_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
 #ifdef HAVE_MPI
             ! translate to a local index
           if(coarse_der%mesh%parallel_in_domains) ipc = vec_global2local(coarse_der%mesh%vp, ipc, coarse_der%mesh%vp%partno)
@@ -188,7 +188,7 @@
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = index_from_coords(fine_der%mesh%idx, [fi(1) + di, fi(2) + dj, fi(3) + dk])
+            fn = mesh_global_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
 
 #ifdef HAVE_MPI
             ! translate to a local index

@@ -1593,7 +1593,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
+            pt = mesh_global_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
 
             if (pt <= 0 .or. pt > mesh%np_part_global) then 
               in_mesh = .false.
@@ -1676,7 +1676,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt(ipt) = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
+            pt(ipt) = mesh_global_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
           end do
         end do
       end do

@@ -134,9 +134,9 @@ contains
         ASSERT(all(srcpoint_inv < lsize))
         srcpoint_inv(1:3) = srcpoint_inv(1:3) + offset(1:3)
 
-        this%map(ip, iop) = index_from_coords(this%mesh%idx, &
+        this%map(ip, iop) = mesh_global_index_from_coords(this%mesh, &
           [nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3))])
-        this%map_inv(ip, iop) = index_from_coords(this%mesh%idx, &
+        this%map_inv(ip, iop) = mesh_global_index_from_coords(this%mesh, &
           [nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3))])
       end do
     end do

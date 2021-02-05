@@ -195,7 +195,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = index_from_coords(mesh%idx, [ix, iy, iz])
+            ip = mesh_global_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             if(ip == 0) cycle
@@ -223,7 +223,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = index_from_coords(mesh%idx, [ix, iy, iz])
+            ip = mesh_global_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             is = map_inv(ip)

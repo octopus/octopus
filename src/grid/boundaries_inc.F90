@@ -354,7 +354,7 @@ contains
                   boundaries%mesh%hr_area%interp%ww(jj) *        &
                   boundaries%mesh%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(index_from_coords(boundaries%mesh%idx, [ &
+                ff(ip) = ff(ip) + weight * ff(mesh_global_index_from_coords(boundaries%mesh, [ &
                   ix + boundaries%mesh%hr_area%interp%posi(ii) * dx,   &
                   iy + boundaries%mesh%hr_area%interp%posi(jj) * dy,   &
                   iz + boundaries%mesh%hr_area%interp%posi(kk) * dz]))

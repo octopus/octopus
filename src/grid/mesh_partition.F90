@@ -224,7 +224,7 @@ contains
         if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          inb = index_from_coords(mesh%idx, jx)
+          inb = mesh_global_index_from_coords(mesh, jx)
           if(inb /= 0 .and. inb <= nv_global) then
             ! Store a new edge and increment edge counter.
             adjncy(ne) = inb
@@ -474,7 +474,7 @@ contains
       do jj = 1, stencil%size
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
         if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
-        ip = index_from_coords(mesh%idx, jx)
+        ip = mesh_global_index_from_coords(mesh, jx)
         if (ip > 0 .and. ip <= mesh%np_global) neighbours_index((is-1)*stencil%size + jj) = ip
       end do
 

@@ -181,7 +181,7 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = index_from_coords(mesh%idx, point2)
+            index = mesh_global_index_from_coords(mesh, point2)
             !From global to local
 #ifdef HAVE_MPI
             if(mesh%parallel_in_domains) index = vec_global2local(mesh%vp, index, mesh%vp%partno)

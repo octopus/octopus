@@ -109,7 +109,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
         
       ! find new index for general point prime
-      ipp_global = index_from_coords(mesh%idx, ixp)
+      ipp_global = mesh_global_index_from_coords(mesh, ixp)
       forward_map_gamma(ipp_global) = ip_global
     end do
 
