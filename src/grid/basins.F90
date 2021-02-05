@@ -161,12 +161,7 @@ contains
       PUSH_SUB(basins_analyze.get_max)
 
       point = 0
-      if(mesh%parallel_in_domains) then
-        ! When running in parallel, get global number of point i.
-        call mesh_global_index_to_coords(mesh, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
-      else
-        call mesh_global_index_to_coords(mesh, ii, point)
-      end if
+      call mesh_local_index_to_coords(mesh, ii, point)
 
       f_max   = f(ii)
       get_max = -1
@@ -180,11 +175,8 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = mesh_global_index_from_coords(mesh, point2)
-            !From global to local
-#ifdef HAVE_MPI
-            if(mesh%parallel_in_domains) index = vec_global2local(mesh%vp, index, mesh%vp%partno)
-#endif
+            index = mesh_local_index_from_coords(mesh, point2)
+
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle
 

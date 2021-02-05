@@ -277,9 +277,7 @@ contains
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
     do i = 1, fine%np
       ig = i
-      ! translate to a global index
-      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      call mesh_global_index_to_coords(fine, ig, idx)
+      call mesh_local_index_to_coords(fine, ig, idx)
       x(1:3)    = idx(1:3)/2
       mod2(1:3) = mod(idx(1:3), 2)
 
@@ -288,30 +286,30 @@ contains
       select case(pt)
       case(0)
         i1 = i1 + 1
-        tt%to_fine1(1, i1) = mesh_global_index_from_coords(coarse, [x(1), x(2), x(3)])
+        tt%to_fine1(1, i1) = mesh_local_index_from_coords(coarse, [x(1), x(2), x(3)])
         
       case(1)
         i2 = i2 + 1
-        tt%to_fine2(1, i2) = mesh_global_index_from_coords(coarse, [x(1)          , x(2)          , x(3)          ])
-        tt%to_fine2(2, i2) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine2(1, i2) = mesh_local_index_from_coords(coarse, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine2(2, i2) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(2)
         i4 = i4 + 1
-        tt%to_fine4(1, i4) = mesh_global_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
-        tt%to_fine4(2, i4) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
-        tt%to_fine4(3, i4) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
-        tt%to_fine4(4, i4) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine4(1, i4) = mesh_local_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine4(2, i4) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine4(3, i4) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine4(4, i4) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(3)
         i8 = i8 + 1
-        tt%to_fine8(1, i8) = mesh_global_index_from_coords(coarse, [x(1)          , x(2)          , x(3)          ])
-        tt%to_fine8(2, i8) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3)          ])
-        tt%to_fine8(3, i8) = mesh_global_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3)          ])
-        tt%to_fine8(4, i8) = mesh_global_index_from_coords(coarse, [x(1)          , x(2)          , x(3) + mod2(3)])
-        tt%to_fine8(5, i8) = mesh_global_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
-        tt%to_fine8(6, i8) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
-        tt%to_fine8(7, i8) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
-        tt%to_fine8(8, i8) = mesh_global_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine8(1, i8) = mesh_local_index_from_coords(coarse, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine8(2, i8) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3)          ])
+        tt%to_fine8(3, i8) = mesh_local_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(4, i8) = mesh_local_index_from_coords(coarse, [x(1)          , x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(5, i8) = mesh_local_index_from_coords(coarse, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine8(6, i8) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(7, i8) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(8, i8) = mesh_local_index_from_coords(coarse, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       end select
       
@@ -319,32 +317,6 @@ contains
 
     ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
 
-    ! translate to local points.
-    if (coarse%parallel_in_domains) then
-
-      do ii = 1, tt%n_fine1
-        tt%to_fine1(1, ii) = vec_global2local(coarse%vp, tt%to_fine1(1, ii), coarse%vp%partno)
-      end do
-
-      do ii = 1, tt%n_fine2
-        do jj = 1, 2
-          tt%to_fine2(jj, ii) = vec_global2local(coarse%vp, tt%to_fine2(jj, ii), coarse%vp%partno)
-        end do
-      end do
-
-      do ii = 1, tt%n_fine4
-        do jj = 1, 4
-          tt%to_fine4(jj, ii) = vec_global2local(coarse%vp, tt%to_fine4(jj, ii), coarse%vp%partno)
-        end do
-      end do
-
-      do ii = 1, tt%n_fine8
-        do jj = 1, 8
-          tt%to_fine8(jj, ii) = vec_global2local(coarse%vp, tt%to_fine8(jj, ii), coarse%vp%partno)
-        end do
-      end do
-
-    end if
 
     POP_SUB(multigrid_get_transfer_tables)
   end subroutine multigrid_get_transfer_tables
