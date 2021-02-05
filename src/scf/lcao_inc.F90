@@ -163,7 +163,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
-      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+      if (debug%info) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
         call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
           gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
@@ -633,7 +633,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
             do iorb = 1, norbs
               n1 = ibasis - 1 + iorb
 
-              if (debug%info .and. mpi_grp_is_root(mpi_world)) then
+              if (debug%info) then
                 write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
                 call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
                   gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
