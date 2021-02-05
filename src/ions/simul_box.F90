@@ -983,7 +983,7 @@ contains
     FLOAT, allocatable :: xx_red(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
-    integer, pointer :: list(:, :)
+    integer, allocatable :: list(:, :)
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
@@ -1034,7 +1034,6 @@ contains
       SAFE_ALLOCATE(nlist(1:nn))
 
       if(this%rsize > M_ZERO) then
-        nullify(list)
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist)
       else
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist, list = list)
@@ -1059,7 +1058,7 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(nlist)
-      SAFE_DEALLOCATE_P(list)
+      SAFE_DEALLOCATE_A(list)
 
     case(PARALLELEPIPED, HYPERCUBE) 
       llimit(1:this%dim) = -this%lsize(1:this%dim) - DELTA

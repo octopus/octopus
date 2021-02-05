@@ -64,9 +64,9 @@ module stress_oct_m
     CMD_POISSON_SOLVE = 2
 
 
-  FLOAT,                pointer :: rho(:, :)
-  logical                       :: total_density_alloc
-  FLOAT,                pointer :: rho_total(:)
+  FLOAT, allocatable, target :: rho(:, :)
+  logical            :: total_density_alloc
+  FLOAT, pointer     :: rho_total(:)
   CMPLX, allocatable :: rho_total_fs(:,:,:)
   FLOAT, allocatable :: FourPi_G2(:,:,:), Gvec(:,:,:,:), Gvec_G(:,:,:,:)
 
@@ -139,7 +139,7 @@ contains
     SAFE_DEALLOCATE_A(FourPi_G2)
     SAFE_DEALLOCATE_A(Gvec)
     SAFE_DEALLOCATE_A(Gvec_G)
-    SAFE_DEALLOCATE_P(rho)
+    SAFE_DEALLOCATE_A(rho)
     if (total_density_alloc) then
       SAFE_DEALLOCATE_P(rho_total)
     end if

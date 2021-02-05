@@ -1415,7 +1415,7 @@ contains
       integer :: idir
       FLOAT :: ff
       CMPLX :: dic
-      R_TYPE, pointer :: psi(:, :, :, :)
+      R_TYPE, allocatable :: psi(:, :, :, :)
   
       PUSH_SUB(em_resp_output.out_circular_dichroism)
 
@@ -1440,7 +1440,7 @@ contains
             em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
-        SAFE_DEALLOCATE_P(psi)
+        SAFE_DEALLOCATE_A(psi)
         
         call pert_end(angular_momentum)
         

@@ -65,8 +65,8 @@ module electrons_oct_m
   type, extends(system_t) :: electrons_t
     ! Components are public by default
     type(geometry_t)             :: geo
-    type(grid_t),        pointer :: gr    !< the mesh
-    type(states_elec_t), pointer :: st    !< the states
+    type(grid_t)                 :: gr    !< the mesh
+    type(states_elec_t)          :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
@@ -108,9 +108,6 @@ contains
     call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
 
     SAFE_ALLOCATE(sys)
-
-    SAFE_ALLOCATE(sys%gr)
-    SAFE_ALLOCATE(sys%st)
 
     sys%namespace = namespace
 
@@ -399,16 +396,11 @@ contains
 
     call v_ks_end(sys%ks)
     
-    if(associated(sys%st)) then
-      call states_elec_end(sys%st)
-      SAFE_DEALLOCATE_P(sys%st)
-    end if
+    call states_elec_end(sys%st)
 
     call geometry_end(sys%geo)
     call simul_box_end(sys%gr%sb)
     call grid_end(sys%gr)
-
-    SAFE_DEALLOCATE_P(sys%gr)
 
     call system_end(sys)
 
