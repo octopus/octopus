@@ -241,9 +241,7 @@ contains
 
           ! renormalize
           cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
-          do idim = 1, st%d%dim
-            call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-          end do
+          call lalg_scal(mesh%np, st%d%dim, M_ONE/sqrt(cc), psii)
           call states_elec_set_state(st, mesh, ist, ik, psii)
         end if
 
@@ -330,9 +328,7 @@ contains
         ! renormalize
         cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
-        do idim = 1, st%d%dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-        end do
+        call lalg_scal(mesh%np, st%d%dim, M_ONE/sqrt(cc), psii)
 
         call states_elec_set_state(st, mesh, ist, ik, psii)
       end if

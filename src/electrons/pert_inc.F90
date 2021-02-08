@@ -121,9 +121,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
         call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
       end do
     else
-      do idim = 1, hm%d%dim
-        call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
-      end do 
+      call lalg_copy(gr%mesh%np_part, hm%d%dim, f_in, f_in_copy)
     end if
   end if
   ! no derivatives in electric, so ghost points not needed
@@ -372,7 +370,7 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
-  call epot_local_potential(hm%ep, namespace, gr%mesh, gr%dgrid, geo%atom(iatom), iatom, vloc)
+  call epot_local_potential(hm%ep, namespace, gr%mesh, geo%atom(iatom), iatom, vloc)
 
   SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
@@ -742,7 +740,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   do ip = 1, gr%mesh%np
     vloc(ip) = M_ZERO
   end do
-  call epot_local_potential(hm%ep, namespace, gr%mesh, gr%dgrid, geo%atom(iatom), iatom, vloc)
+  call epot_local_potential(hm%ep, namespace, gr%mesh, geo%atom(iatom), iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
@@ -836,7 +834,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
       do ip = 1, gr%mesh%np
         vloc(ip) = M_ZERO
       end do
-      call epot_local_potential(hm%ep, namespace, gr%mesh, gr%dgrid, geo%atom(iatom), iatom, vloc)
+      call epot_local_potential(hm%ep, namespace, gr%mesh, geo%atom(iatom), iatom, vloc)
 
       do jdir = 1, gr%sb%dim
         jmat = vibrations_get_index(vib, iatom, jdir)

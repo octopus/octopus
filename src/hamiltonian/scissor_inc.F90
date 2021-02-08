@@ -23,7 +23,7 @@ subroutine X(scissor_apply)(this, mesh, psib, hpsib)
   type(wfs_elec_t), intent(in)    :: psib
   type(wfs_elec_t), intent(inout) :: hpsib
 
-  integer             :: ibatch, ist, idim
+  integer             :: ibatch, ist
   R_TYPE              :: dot
   R_TYPE, allocatable :: psi(:,:)
   R_TYPE, allocatable :: hpsi(:,:)
@@ -47,9 +47,7 @@ subroutine X(scissor_apply)(this, mesh, psib, hpsib)
 
       dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi(:,:), psi) &
          * this%gs_st%occ(ist, psib%ik) / this%gs_st%smear%el_per_state
-      do idim = 1, this%gs_st%d%dim
-        call lalg_axpy(mesh%np, -this%gap*dot,  gspsi(:, idim), hpsi(:, idim))
-      end do !idim
+      call lalg_axpy(mesh%np, this%gs_st%d%dim, -this%gap*dot,  gspsi, hpsi)
    end do !ist 
 
    call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
@@ -85,9 +83,7 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
      !<gpsi|psi>
      dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi) &
            * this%gs_st%occ(ist, ik)/ this%gs_st%smear%el_per_state
-     do idim = 1, this%gs_st%d%dim
-      call lalg_axpy(mesh%np, dot,  gspsi(1:mesh%np, idim), tmpstate(1:mesh%np, idim)) 
-     enddo
+      call lalg_axpy(mesh%np, this%gs_st%d%dim, dot,  gspsi, tmpstate) 
    enddo
    ! |gpsi> -= S x|gspsi><gspsi|psi>
    do idim = 1, this%gs_st%d%dim
@@ -107,9 +103,7 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
        ! <gspsi|r|psi>
        dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi_r) &
          * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state
-       do idim = 1, this%gs_st%d%dim
-         call lalg_axpy(mesh%np, dot,  gspsi(1:mesh%np, idim), tmpstate(1:mesh%np, idim))
-       end do
+       call lalg_axpy(mesh%np, this%gs_st%d%dim, dot,  gspsi, tmpstate)
      enddo
      do idim = 1, this%gs_st%d%dim
        ! |gpsi> += S |gspsi><gspsi|x|psi>

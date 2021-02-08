@@ -192,7 +192,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   call op(x, ax)
   ! r <- b - ax, rr <- r
   call lalg_copy(np, b, r)
-  call lalg_axpy(np, -R_TOTYPE(M_ONE), ax, r)
+  call lalg_axpy(np, -M_ONE, ax, r)
   call lalg_copy(np, r, rr)
 
   ! Initial search direction.
@@ -213,9 +213,9 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     call lalg_axpy(np, alpha, p, x)           ! x  <- x + alpha*p
     beta = R_REAL(dotp(rr, r))/gamma
     call lalg_scal(np, beta, p)               ! p  <- r + beta*p
-    call lalg_axpy(np, R_TOTYPE(M_ONE), r, p)
+    call lalg_axpy(np, M_ONE, r, p)
     call lalg_scal(np, beta, pp)              ! pp <- rr + beta*pp
-    call lalg_axpy(np, R_TOTYPE(M_ONE), rr, pp)
+    call lalg_axpy(np, M_ONE, rr, pp)
     iter = iter + 1
   end do
   if(present(residue)) residue = sqrt(abs(err))

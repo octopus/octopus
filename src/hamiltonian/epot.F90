@@ -22,7 +22,6 @@ module epot_oct_m
   use atom_oct_m
   use comm_oct_m
   use derivatives_oct_m
-  use double_grid_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -44,6 +43,7 @@ module epot_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
+  use splines_oct_m
   use spline_filter_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -483,7 +483,7 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
 
-      call epot_local_potential(ep, namespace, mesh, gr%dgrid, geo%atom(ia), ia, ep%vpsl, density = density)
+      call epot_local_potential(ep, namespace, gr%mesh, geo%atom(ia), ia, ep%vpsl, density = density)
 
       if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
         call species_get_nlcc(geo%atom(ia)%species, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
@@ -570,21 +570,21 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, mesh, dgrid, atom, iatom, vpsl, density)
+  subroutine epot_local_potential(ep, namespace, mesh, atom, iatom, vpsl, density)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
-    type(double_grid_t),      intent(in)    :: dgrid
     type(atom_t),             intent(in)    :: atom
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
     integer :: ip
-    FLOAT :: radius
+    FLOAT :: radius, r
     FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
+    type(ps_t), pointer :: ps
 
     PUSH_SUB(epot_local_potential)
     call profiling_in(prof, "EPOT_LOCAL")
@@ -639,16 +639,23 @@ contains
       !the localized part
       if(species_is_ps(atom%species)) then
 
-        radius = double_grid_get_rmax(dgrid, atom%species, mesh) + mesh%spacing(1)
+        ps => species_ps(atom%species)
+
+        radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
         call submesh_init(sphere, mesh%sb, mesh, atom%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
-        call double_grid_apply_local(dgrid, atom%species, mesh, sphere, atom%x, vl)
+        do ip = 1, sphere%np
+          r = sphere%x(ip, 0)
+          vl(ip) = spline_eval(ps%vl, r)
+        end do
+
         call submesh_add_to_mesh(sphere, vl, vpsl)
 
         SAFE_DEALLOCATE_A(vl)
         call submesh_end(sphere)
+        nullify(ps)
 
       end if
 
@@ -718,8 +725,8 @@ contains
 
     do iatom = 1, geo%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, gr%mesh, gr%dgrid, geo%atom(iatom),&
-                                   iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
+      call epot_local_potential(ep, namespace, gr%mesh, geo%atom(iatom), iatom, &
+                ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 

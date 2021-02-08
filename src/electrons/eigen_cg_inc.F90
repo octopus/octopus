@@ -212,9 +212,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
             lam_conj = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
             lam_sym(jst) = lam + lam_conj
 
-            do idim = 1, st%d%dim
-              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), g(:, idim))
-            end do
+            call lalg_axpy(gr%mesh%np, st%d%dim, -lam_conj, psi_j, g)
           end if
         end do
       end if
@@ -232,9 +230,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       !This needs to be done before the orthogonalization_single call, as psi is not guaranted 
       !to be orthogonal to the other bands here
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
-      end do
+      call lalg_axpy(gr%mesh%np, st%d%dim, -dot, psi, g0)
 
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
@@ -271,9 +267,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! Starting or following iterations...
       if(iter  ==  1) then
         gg0 = gg
-        do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
-        end do
+        call lalg_copy(gr%mesh%np, st%d%dim, g0, cg)
       else
         select case (conjugate_direction)
         case (OPTION__CGDIRECTION__FLETCHER)
@@ -299,10 +293,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! cg is not normalized here, but cg0 is computed further down and
         ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
-        end do
-        
+        call lalg_axpy(gr%mesh%np, st%d%dim, -norma, psi, cg)
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if

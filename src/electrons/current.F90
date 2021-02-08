@@ -509,9 +509,7 @@ contains
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_elec_dim_get_spin_index(st%d, ik)
-        do idir = 1, der%mesh%sb%dim
-          call lalg_axpy(der%mesh%np, M_ONE, st%current_kpt(:, idir, ik), st%current(1:der%mesh%np, idir, ispin))
-        end do
+        call lalg_axpy(der%mesh%np, der%mesh%sb%dim, M_ONE, st%current_kpt(:, :, ik), st%current(:, :, ispin))
       end do
     end if
 
