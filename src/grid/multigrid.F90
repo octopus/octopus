@@ -212,7 +212,6 @@ contains
     type(mesh_t),           intent(in)    :: fine, coarse
 
     integer :: i, i1, i2, i4, i8, pt, ig
-    integer :: ii, jj
     integer :: x(MAX_DIM), mod2(MAX_DIM), idx(MAX_DIM)
 
     PUSH_SUB(multigrid_get_transfer_tables)
