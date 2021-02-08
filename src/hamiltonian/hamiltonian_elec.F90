@@ -1343,7 +1343,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, hm%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, hm%der, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)

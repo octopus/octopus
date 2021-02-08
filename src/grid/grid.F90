@@ -22,7 +22,6 @@ module grid_oct_m
   use cube_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
-  use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use mesh_oct_m
@@ -59,7 +58,6 @@ module grid_oct_m
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
-    type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
   end type grid_t
@@ -203,12 +201,8 @@ contains
     call stencil_union(space%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-
-    call double_grid_init(gr%dgrid, namespace, gr%sb)
-
     enlarge = 0
     enlarge(1:space%dim) = 2
-    enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
     call mesh_init_stage_1(gr%mesh, namespace, gr%sb, gr%cv, grid_spacing, enlarge)
@@ -305,8 +299,6 @@ contains
       SAFE_DEALLOCATE_A(gr%fine%tt%to_fine8)
       SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
     end if
-
-    call double_grid_end(gr%dgrid)
 
     call derivatives_end(gr%der)
     call curvilinear_end(gr%cv)

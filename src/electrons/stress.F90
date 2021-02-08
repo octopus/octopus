@@ -25,7 +25,6 @@ module stress_oct_m
   use cube_function_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use double_grid_oct_m
   use epot_oct_m
   use fft_oct_m
   use fourier_space_oct_m
@@ -45,8 +44,10 @@ module stress_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
+  use splines_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
@@ -603,7 +604,7 @@ contains
     vloc = M_ZERO
     rvloc = M_ZERO    
     do iatom = 1, geo%natoms
-       call epot_local_pseudopotential_SR(gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
+       call epot_local_pseudopotential_SR(gr%der, hm%geo, iatom, vloc, rvloc)
     end do
 
     energy_ps_SR = dmf_dotp(gr%mesh, vloc, rho_total(:))
@@ -689,19 +690,19 @@ contains
   end subroutine stress_from_pseudo
       
   ! -------------------------------------------------------
-  subroutine epot_local_pseudopotential_SR(der, dgrid, geo, iatom, vpsl, rvpsl)
+  subroutine epot_local_pseudopotential_SR(der, geo, iatom, vpsl, rvpsl)
     type(derivatives_t),      intent(in)    :: der
-    type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(inout) :: rvpsl(:,:)
       
     integer :: ip
-    FLOAT :: radius
+    FLOAT :: radius, r
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
+    type(ps_t), pointer :: ps
     
     PUSH_SUB(epot_local_pseudopotential_sr)
     call profiling_in(prof, "EPOT_LOCAL_PSEUDOPOTENTIAL_SR")
@@ -709,13 +710,20 @@ contains
     !the localized part
       
     if(species_is_ps(geo%atom(iatom)%species)) then
-         
-       radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
-         
+        
+       ps => species_ps(geo%atom(iatom)%species)
+
+       radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + der%mesh%spacing(1)
+
        call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
-       
-       call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
+
+       do ip = 1, sphere%np
+         r = sphere%x(ip, 0)
+         vl(ip) = spline_eval(ps%vl, r)
+       end do
+
+       nullify(ps) 
          
        ! Cannot be written (correctly) as a vector expression since for periodic systems,
        ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
