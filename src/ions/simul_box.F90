@@ -91,7 +91,6 @@ module simul_box_oct_m
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
-    FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
@@ -468,7 +467,7 @@ contains
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(3)
+    FLOAT :: norm, lparams(3), volume_element
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
@@ -631,7 +630,7 @@ contains
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim, namespace)
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, volume_element, sb%dim, namespace)
 
     if(sb%dim == 3) then
       sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
@@ -1127,7 +1126,6 @@ contains
     sbout%rlattice_primitive      = sbin%rlattice_primitive
     sbout%klattice                = sbin%klattice
     sbout%klattice_primitive      = sbin%klattice_primitive
-    sbout%volume_element          = sbin%volume_element
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
 
