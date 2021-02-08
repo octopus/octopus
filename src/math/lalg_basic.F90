@@ -67,6 +67,7 @@ module lalg_basic_oct_m
     module procedure scal_3_4
     module procedure scal_4_4
     module procedure scal_5_4
+    module procedure scal_6_4
   end interface lalg_scal
 
   !> constant times a vector plus a vector
@@ -81,6 +82,7 @@ module lalg_basic_oct_m
     module procedure axpy_4_4
     module procedure axpy_5_4
     module procedure axpy_6_4
+    module procedure axpy_7_4
   end interface lalg_axpy
   
   !> Copies a vector x, to a vector y

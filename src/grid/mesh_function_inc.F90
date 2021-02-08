@@ -73,7 +73,6 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   FLOAT, optional, intent(out)   :: norm
 
   FLOAT   :: norm_
-  integer :: idim
 
   PUSH_SUB(X(mf_normalize))
 
@@ -83,9 +82,7 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
     call messages_fatal(1)
   end if
 
-  do idim = 1, dim
-    call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
-  end do
+  call lalg_scal(mesh%np, dim, R_TOTYPE(M_ONE / norm_), psi)
 
   if(present(norm)) then
     norm = norm_

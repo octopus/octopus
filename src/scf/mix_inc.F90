@@ -103,8 +103,8 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
  
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
   end if
@@ -271,8 +271,8 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
 
    call lalg_copy(d1, d2, d3, f(:, :, :), mf%X(df)(:, :, :, ipos))
    call lalg_copy(d1, d2, d3, mf%X(vin)(:, :, :), mf%X(dv)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), mf%X(f_old)(:, :, :), mf%X(df)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), mf%X(vin_old)(:, :, :), mf%X(dv)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, -M_ONE, mf%X(f_old)(:, :, :), mf%X(df)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, -M_ONE, mf%X(vin_old)(:, :, :), mf%X(dv)(:, :, :, ipos))
   end if
 
   ! Store residual and vin for next iteration
@@ -433,8 +433,8 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter)
       ipos = smix%last_ipos
       call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
       call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
-      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     end if
     
     ! Store residual and vin for next extrapolation
@@ -449,8 +449,8 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter)
     ipos = mod(smix%last_ipos, smix%ns + 1) + 1
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
 

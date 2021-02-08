@@ -258,9 +258,7 @@ contains
 
        ! fill state
        call build_rs_state(total_efield, total_bfield, st%rs_sign, rs_state, mesh, st%ep, st%mu)
-       do idim = 1, 3
-          call lalg_axpy(mesh%np, M_ONE, rs_state(:, idim), user_def_rs_state(:,idim))
-        end do
+       call lalg_axpy(mesh%np, 3, M_ONE, rs_state, user_def_rs_state)
       end if
 
       

@@ -61,18 +61,25 @@ end subroutine FNAME(swap_1)
 subroutine FNAME(swap_2)(n1, n2, dx, dy)
   integer, intent(in)    :: n1, n2
   TYPE1,   intent(inout) :: dx(:,:), dy(:,:)
+ 
+  integer :: ii
 
   if (n1*n2 < 1) return
 
   PUSH_SUB(FNAME(swap_2))
 
-  ASSERT(ubound(dx, dim = 1) == n1)
-  ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dy, dim = 1) == ubound(dx, dim = 1))
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
   ASSERT(not_in_openmp())
 
-  call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
+  if(ubound(dx, dim = 1)  == n1) then
+    call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
+  else
+    do ii = 1, n2
+      call blas_swap(n1, dx(1, ii), 1, dy(1, ii), 1)
+    end do
+  end if
 
   POP_SUB(FNAME(swap_2))
 end subroutine FNAME(swap_2)
@@ -147,15 +154,22 @@ subroutine FNAME(scal_2)(n1, n2, da, dx)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:, :)
 
+  integer :: ii
+
   if (n1*n2 < 1) return
 
   PUSH_SUB(FNAME(scal_2))
 
-  ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(not_in_openmp())
 
-  call blas_scal(n1*n2, da, dx(1,1), 1)
+  if(ubound(dx, dim = 1) == n1) then
+    call blas_scal(n1*n2, da, dx(1,1), 1)
+  else
+    do ii = 1, n2
+      call blas_scal(n1, da, dx(1, ii), 1)
+    end do
+  end if
 
   POP_SUB(FNAME(scal_2))
 end subroutine FNAME(scal_2)
@@ -216,6 +230,32 @@ subroutine FNAME(scal_5)(n1, da, dx)
 
   POP_SUB(FNAME(scal_5))
 end subroutine FNAME(scal_5)
+
+subroutine FNAME(scal_6)(n1, n2, da, dx)
+  integer, intent(in)    :: n1, n2
+  TYPE2,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:, :)
+
+  integer :: ii
+
+  if (n1*n2 < 1) return
+
+  PUSH_SUB(FNAME(scal_6))
+  
+  ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
+
+  if(ubound(dx, dim = 1) == n1) then
+    call blas_scal(n1*n2, da, dx(1,1))
+  else
+    do ii = 1, n2
+      call blas_scal(n1, da, dx(1, ii))
+    end do
+  end if
+  
+  POP_SUB(FNAME(scal_6))
+end subroutine FNAME(scal_6)
+
 #endif
 
 !> ------------------------------------------------------------------
@@ -257,19 +297,28 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   TYPE1,   intent(in)    :: dx(:, :)
   TYPE1,   intent(inout) :: dy(:, :)
 
+  integer :: ii
+
   if (n1*n2 < 1) return
 
   PUSH_SUB(FNAME(axpy_2))
 
   call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
-  ASSERT(ubound(dx, dim = 1) == n1)
-  ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
   ASSERT(not_in_openmp())
 
-  call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
+  if(ubound(dx, dim = 1) == n1 .and. ubound(dy, dim = 1) == n1) then
+    ASSERT(ubound(dy, dim = 1) == n1)
+    call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
+  else
+    do ii = 1, n2
+      call blas_axpy(n1, da, dx(1, ii), 1, dy(1, ii), 1)
+    end do
+  end if
 
 #if TYPE == 2
   call profiling_count_operations(n1*n2*2)
@@ -380,19 +429,27 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
   TYPE1,   intent(in)    :: dx(:, :)
   TYPE1,   intent(inout) :: dy(:, :)
 
+  integer :: ii
+
   if (n1 < 1) return
   
   PUSH_SUB(FNAME(axpy_6))
 
   call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
-  ASSERT(ubound(dx, dim = 1) == n1)
-  ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
   ASSERT(not_in_openmp())
 
-  call blas_axpy(n1*n2, da, dx(1, 1), dy(1, 1))
+  if(ubound(dx, dim = 1) == n1 .and. ubound(dy, dim = 1) == n1) then
+    call blas_axpy(n1*n2, da, dx(1, 1), dy(1, 1))
+  else
+    do ii = 1, n2
+      call blas_axpy(n1, da, dx(1, ii), dy(1, ii))
+    end do
+  end if
 
   call profiling_count_operations(n1*n2*4)
 
@@ -400,6 +457,34 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
 
   POP_SUB(FNAME(axpy_6))
 end subroutine FNAME(axpy_6)
+
+subroutine FNAME(axpy_7)(n1, n2, n3, da, dx, dy)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE2,   intent(in)    :: da
+  TYPE1,   intent(in)    :: dx(:, :, :)
+  TYPE1,   intent(inout) :: dy(:, :, :)
+
+  if (n1*n2*n3 < 1) return
+
+  PUSH_SUB(FNAME(axpy_7))
+
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
+
+  ASSERT(ubound(dx, dim = 1) == n1)
+  ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) == n2)
+  ASSERT(ubound(dy, dim = 2) == n2)
+  ASSERT(ubound(dx, dim = 3) >= n3)
+  ASSERT(ubound(dy, dim = 3) >= n3)
+  ASSERT(not_in_openmp())
+
+  call blas_axpy(n1*n2*n3, da, dx(1,1,1), dy(1,1,1))
+
+  call profiling_count_operations(n1*n2*n3*4)
+
+  call profiling_out(FNAME(axpy_profile))
+  POP_SUB(FNAME(axpy_7))
+end subroutine FNAME(axpy_7)
 #endif
 
 !> ------------------------------------------------------------------
@@ -434,19 +519,27 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
   TYPE1,   intent(in)    :: dx(:,:)
   TYPE1,   intent(inout) :: dy(:,:)
 
+  integer :: ii
+
   if (n1*n2 < 1) return
 
   PUSH_SUB(FNAME(copy_2))
 
   call profiling_in(FNAME(copy_profile), TOSTRING(FNAME(BLAS_COPY)))
 
-  ASSERT(ubound(dx, dim = 1) == n1)
-  ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
   ASSERT(not_in_openmp())
 
-  call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
+  if(ubound(dx, dim = 1) == n1 .and. ubound(dy, dim = 1) == n1) then
+    call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
+  else
+    do ii = 1, n2
+      call blas_copy(n1, dx(1, ii), 1, dy(1, ii), 1)
+    end do
+  end if
 
   call profiling_out(FNAME(copy_profile))
   POP_SUB(FNAME(copy_2))

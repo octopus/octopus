@@ -121,9 +121,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
         call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
       end do
     else
-      do idim = 1, hm%d%dim
-        call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
-      end do 
+      call lalg_copy(gr%mesh%np_part, hm%d%dim, f_in, f_in_copy)
     end if
   end if
   ! no derivatives in electric, so ghost points not needed

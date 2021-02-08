@@ -531,7 +531,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
               !TODO: Create a routine batch_add_to_state taking ist and ik as arguments
               call batch_get_state(this%xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
                                         (/istloc, idim/), der%mesh%np, xpsi(:,idim))
-              call lalg_axpy(der%mesh%np, R_TOTYPE(M_ONE), xpsi_rec(:,idim, istloc), xpsi(:,idim))
+              call lalg_axpy(der%mesh%np, M_ONE, xpsi_rec(:,idim, istloc), xpsi(:,idim))
               call batch_set_state(this%xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
                                         (/istloc, idim/), der%mesh%np, xpsi(:,idim))
             end do
