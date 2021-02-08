@@ -50,7 +50,6 @@ module simul_box_oct_m
   public ::                     &
     simul_box_t,                &
     simul_box_init,             &
-    simul_box_lookup_init,      &
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_write_short_info, &
