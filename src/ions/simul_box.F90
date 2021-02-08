@@ -83,7 +83,12 @@ module simul_box_oct_m
 
     type(lookup_t), private :: atom_lookup
 
-    type(geometry_t), pointer, private :: geo
+    integer, private :: n_site_types
+    character(len=LABEL_LEN), allocatable, private :: site_type_label(:)
+    FLOAT,   allocatable, private :: site_type_radius(:)
+    integer, private :: n_sites
+    integer, allocatable, private :: site_type(:)
+    FLOAT,   allocatable, private :: site_position(:,:)
 
     character(len=1024), private :: user_def !< for the user-defined box
 
@@ -115,7 +120,7 @@ contains
   subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t), target,            intent(inout) :: geo
+    type(geometry_t),                    intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -125,12 +130,10 @@ contains
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
-    sb%geo => geo
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
     call read_box()                        ! Parameters defining the simulation box.
-    call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
@@ -149,7 +152,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape, idir, iatom
+      integer :: default_boxshape, idir, iatom, ispec
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -257,17 +260,41 @@ contains
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
 
-        if (sb%rsize <= M_ZERO) then
-          do iatom = 1, sb%geo%natoms
-            if (species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
+
+        sb%n_site_types = geo%nspecies
+        SAFE_ALLOCATE(sb%site_type_label(1:sb%n_site_types))
+        SAFE_ALLOCATE(sb%site_type_radius(1:sb%n_site_types))
+
+        do ispec = 1, geo%nspecies
+          sb%site_type_label(ispec) = species_label(geo%species(ispec))
+          if (sb%rsize > M_ZERO) then
+            sb%site_type_radius(ispec) = sb%rsize
+          else
+            if (species_def_rsize(geo%species(ispec)) < -M_EPSILON) then
               write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-                trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
+                trim(species_label(geo%species(ispec))), ' is negative or undefined.'
               message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
               call messages_fatal(2, namespace=namespace)
+            else
+              sb%site_type_radius(ispec) = species_def_rsize(geo%species(ispec))
+            end if
+          end if
+        end do
+
+        sb%n_sites = geo%natoms
+        SAFE_ALLOCATE(sb%site_position(1:sb%dim, 1:sb%n_sites))
+        SAFE_ALLOCATE(sb%site_type(1:sb%n_sites))
+        do iatom = 1, geo%natoms
+          sb%site_position(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
+          do ispec = 1, sb%n_site_types
+            if (geo%atom(iatom)%label == sb%site_type_label(ispec)) then
+              sb%site_type(iatom) = ispec
             end if
           end do
-        end if
+        end do
 
+        call lookup_init(sb%atom_lookup, sb%dim, sb%n_sites, sb%site_position)
+        
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -436,29 +463,6 @@ contains
     end subroutine read_box
 
   end subroutine simul_box_init
-
-  ! ------------------------------------------------------------
-  subroutine simul_box_lookup_init(this, geo)
-    type(simul_box_t), intent(inout) :: this
-    type(geometry_t),  intent(in)    :: geo
-    !
-    FLOAT, allocatable :: pos(:, :)
-    integer            :: iatom
-    !
-    PUSH_SUB(simul_box_lookup_init)
-
-    SAFE_ALLOCATE(pos(1:this%dim,1:geo%natoms))
-
-    do iatom = 1, geo%natoms
-      pos(:,iatom) = geo%atom(iatom)%x(1:this%dim)
-    end do
-
-    call lookup_init(this%atom_lookup, this%dim, geo%natoms, pos)
-
-    SAFE_DEALLOCATE_A(pos)
-    POP_SUB(simul_box_lookup_init)
-    return
-  end subroutine simul_box_lookup_init
 
   !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, namespace, rlattice_primitive)
@@ -853,9 +857,9 @@ contains
     end if
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      do ispec = 1, sb%geo%nspecies
-        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(sb%geo%species(ispec))), 'Radius = ', &
-          units_from_atomic(units_out%length, species_def_rsize(sb%geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
+      do ispec = 1, sb%n_site_types
+        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(sb%site_type_label(ispec)), 'Radius = ', &
+          units_from_atomic(units_out%length, sb%site_type_radius(ispec)), ' ', trim(units_abbrev(units_out%length))
         call messages_info(1, iunit)
       end do
     end if
@@ -969,7 +973,7 @@ contains
     FLOAT :: rr, re, im, dist2, radius
     FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx_red(:, :)
-    integer :: ip, idir, iatom, ilist
+    integer :: ip, idir, site, ilist
     integer, allocatable :: nlist(:)
     integer, allocatable :: list(:, :)
 
@@ -1008,20 +1012,11 @@ contains
 
     case(MINIMUM)
 
-      if(this%rsize > M_ZERO) then
-        radius = this%rsize
-      else
-        radius = M_ZERO
-        do iatom = 1, this%geo%natoms
-          radius = max(radius, species_def_rsize(this%geo%atom(iatom)%species))
-        end do
-      end if
-
-      radius = radius + DELTA
+      radius = maxval(this%site_type_radius) + DELTA
 
       SAFE_ALLOCATE(nlist(1:nn))
 
-      if(this%rsize > M_ZERO) then
+      if (this%rsize > M_ZERO) then
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist)
       else
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist, list = list)
@@ -1035,9 +1030,9 @@ contains
         do ip = 1, nn
           contained(ip) = .false.
           do ilist = 1, nlist(ip)
-            iatom = list(ilist, ip)
-            dist2 = sum((xx_red(ip, 1:this%dim) - this%geo%atom(iatom)%x(1:this%dim))**2)
-            if(dist2 < species_def_rsize(this%geo%atom(iatom)%species)**2) then
+            site = list(ilist, ip)
+            dist2 = sum((xx_red(ip, 1:this%dim) - this%site_position(1:this%dim, site))**2)
+            if(dist2 < this%site_type_radius(this%site_type(site))**2) then
               contained(ip) = .true.
               exit
             end if
