@@ -1134,7 +1134,7 @@ contains
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
             factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
-        if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
+        if(ks%gr%mesh%parallel_in_domains) call comm_allreduce(ks%gr%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         ! MGGA vtau contribution
         if (states_are_real(st)) then

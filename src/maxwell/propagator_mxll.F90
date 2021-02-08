@@ -1320,7 +1320,7 @@ contains
 
     ASSERT(hm%dim == 3 .or. hm%dim == 6)
 
-    np_part = gr%der%mesh%np_part
+    np_part = gr%mesh%np_part
     rs_sign = hm%rs_sign
 
     SAFE_ALLOCATE(gradb(1:hm%der%dim))
@@ -1406,7 +1406,7 @@ contains
 
     call profiling_in(prof, 'CPML_CONV_FUNC_UPD_VIA_E_B')
 
-    np_part = gr%der%mesh%np_part
+    np_part = gr%mesh%np_part
     SAFE_ALLOCATE(tmp_e(np_part,3))
     SAFE_ALLOCATE(tmp_partial_e(np_part))
     SAFE_ALLOCATE(tmp_b(np_part,3))

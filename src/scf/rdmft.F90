@@ -1274,7 +1274,7 @@ contains
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
-      SAFE_ALLOCATE(v_ij(1:gr%der%mesh%np, 1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(v_ij(1:gr%mesh%np, 1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(lxc(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
 
       lxc = M_ZERO

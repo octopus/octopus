@@ -225,13 +225,13 @@ program wannier90_interface
     call read_wannier90_files()
 
    ! normal interface run
-    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, global_namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     else
       call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     end if
 
     if(ierr == 0) then
@@ -354,13 +354,13 @@ contains
     call read_wannier90_files()
 
     ! normal interface run
-    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, global_namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     else
       call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     end if
 
     if(ierr == 0) then
@@ -402,7 +402,7 @@ contains
       call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
 
       nik = w90_num_kpts
-      SAFE_ALLOCATE(jpvt(1:sys%gr%der%mesh%np_global))
+      SAFE_ALLOCATE(jpvt(1:sys%gr%mesh%np_global))
       SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
       SAFE_ALLOCATE(occ_temp(1:w90_num_bands))
 
@@ -412,7 +412,7 @@ contains
          sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
+      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands
@@ -432,12 +432,12 @@ contains
       do ik = 1, nik
         kvec(:) = sys%gr%sb%kpoints%reduced%point(:, ik)
         do ist = 1, w90_num_bands
-          call states_elec_get_state(sys%st, sys%gr%der%mesh, ist, ik, psi)
+          call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
           smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
           do jst = 1, w90_num_bands
              chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) &
-                 * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
+                 * exp(M_zI * dot_product(sys%gr%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
           end do
         end do
 

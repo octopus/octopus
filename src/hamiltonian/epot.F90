@@ -718,7 +718,7 @@ contains
 
     do iatom = 1, geo%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, gr%der%mesh, gr%dgrid, geo%atom(iatom),&
+      call epot_local_potential(ep, namespace, gr%mesh, gr%dgrid, geo%atom(iatom),&
                                    iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.

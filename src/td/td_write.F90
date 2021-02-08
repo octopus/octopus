@@ -2621,7 +2621,7 @@ contains
        return
     end if
 
-    mesh = gr%der%mesh
+    mesh = gr%mesh
 
     write(filename1,'(I10)') iter
     filename1 = 'td.general/projections_iter_'//trim(adjustl(filename1))
@@ -2729,7 +2729,7 @@ contains
        return
     end if
 
-    mesh = gr%der%mesh
+    mesh = gr%mesh
     nst = st%nst
 
     !for now no domain distributionallowed

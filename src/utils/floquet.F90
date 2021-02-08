@@ -152,7 +152,7 @@ contains
       PUSH_SUB(floquet_init)
 
       !for now no domain distribution allowed
-      ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
+      ASSERT(gr%mesh%np == gr%mesh%np_global)
 
       ! variables documented in td/td_write.F90
       call parse_variable(global_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
@@ -194,7 +194,7 @@ contains
 
     PUSH_SUB(floquet_solve_non_interacting)
 
-    mesh = gr%der%mesh
+    mesh = gr%mesh
     nst = st%nst
     
     SAFE_ALLOCATE(hmss(1:nst,1:nst))
