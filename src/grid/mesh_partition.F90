@@ -574,7 +574,7 @@ contains
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
       call mesh_global_index_to_coords(mesh, ip_global, idx)
-      points(ip_local) = index_from_coords(parent%idx, 2*idx)
+      points(ip_local) = mesh_global_index_from_coords(parent, 2*idx)
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)
 
