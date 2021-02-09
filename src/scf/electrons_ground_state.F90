@@ -114,7 +114,7 @@ contains
       end if
     end if
 
-    call write_canonicalized_xyz_file("exec", "initial_coordinates", geo, gr%mesh%sb, namespace)
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", geo, gr%sb, namespace)
 
     if (ks%theory_level /= RDMFT) then
       call scf_init(scfv, namespace, gr, geo, st, mc, hm, ks, space)
