@@ -1080,7 +1080,7 @@ contains
 
     kpoint = M_ZERO
     if(mesh%sb%periodic_dim > 0) then
-      kpoint(1:mesh%sb%dim) = kpoints_get_point(kpoints, ikpoint)
+      kpoint(1:mesh%sb%dim) = kpoints%get_point(ikpoint)
     end if
   
     do ix = 1, mask%ll(1)

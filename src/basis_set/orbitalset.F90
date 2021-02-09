@@ -199,7 +199,7 @@ contains
       ASSERT(ikpoint <= kpoints_number(kpoints))
 
       kpoint = M_ZERO
-      kpoint(1:dim) = kpoints_get_point(kpoints, ikpoint)
+      kpoint(1:dim) = kpoints%get_point(ikpoint)
 
       do is = 1, ns
         ! this is only the correction to the global phase, that can

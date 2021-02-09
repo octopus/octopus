@@ -440,7 +440,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, kpoints, x, lda_u_leve
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(kpoints, ikpoint)) then
 
           kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, ikpoint)
+          kpoint(1:gr%sb%dim) = kpoints%get_point(ikpoint)
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
@@ -572,7 +572,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, kpoints, lr, lr2, fo
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(kpoints, ikpoint)) then
 
           kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, ikpoint)
+          kpoint(1:gr%sb%dim) = kpoints%get_point(ikpoint)
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing

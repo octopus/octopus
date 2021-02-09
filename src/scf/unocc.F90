@@ -122,7 +122,7 @@ contains
     call parse_variable(sys%namespace, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
-    if(sys%space%is_periodic() .and. kpoints_get_kpoint_method(sys%kpoints) == KPOINTS_PATH) then
+    if(sys%space%is_periodic() .and. sys%kpoints%get_kpoint_method() == KPOINTS_PATH) then
       bandstructure_mode = .true.
     end if
 

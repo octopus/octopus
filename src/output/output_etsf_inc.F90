@@ -378,7 +378,7 @@ subroutine output_etsf_kpoints_write(kpoints, dim, ncid, namespace)
   do ikpoint = 1, nkpoints
     etsf_kpts%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
     etsf_kpts%reduced_coordinates_of_kpoints(1:dim, ikpoint) = kpoints%reduced%red_point(1:dim, ikpoint)
-    etsf_kpts%kpoint_weights(ikpoint) = kpoints_get_weight(kpoints, ikpoint)
+    etsf_kpts%kpoint_weights(ikpoint) = kpoints%get_weight(ikpoint)
   end do
   
   call etsf_io_kpoints_put(ncid, etsf_kpts, lstat, error_data = error_data)

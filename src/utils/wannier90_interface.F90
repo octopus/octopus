@@ -1065,7 +1065,7 @@ contains
       
       do ik = 1, w90_num_kpts
         !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(kpoints, ik)
+        kpoint(1:sb%dim) = kpoints%get_point(ik)
       
         do ip = 1, mesh%np
           phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
@@ -1218,7 +1218,7 @@ contains
 
       do ik = 1, w90_num_kpts
         !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates=.true.)
+        kpoint(1:sb%dim) = kpoints%get_point(ik, absolute_coordinates=.true.)
 
         do iw2 = 1, st%nst
           if(exclude_list(iw2)) cycle

@@ -118,7 +118,7 @@ contains
       do ik = 1, st%d%nik, ns
         if(simul_box_is_periodic(sb)) then
           ikk = states_elec_dim_get_kpoint_index(st%d, ik)
-          kpoint(1:sb%dim) = kpoints_get_point(kpoints, ikk, absolute_coordinates = .false.)
+          kpoint(1:sb%dim) = kpoints%get_point(ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
           do idir = 1, sb%dim
             write(tmp_str(1), '(f10.6)') kpoint(idir)
@@ -845,7 +845,7 @@ contains
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
+        red_kpoint(1:sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik + is), &
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         if(st%d%nik > npath) then

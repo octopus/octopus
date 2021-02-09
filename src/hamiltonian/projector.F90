@@ -223,7 +223,7 @@ contains
       ASSERT(ikpoint <= kpoints_number(kpoints))
       
       kpoint = M_ZERO
-      kpoint(1:dim) = kpoints_get_point(kpoints, ikpoint)
+      kpoint(1:dim) = kpoints%get_point(ikpoint)
         
       do iphase = 1, nphase
         do is = 1, ns

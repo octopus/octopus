@@ -456,7 +456,7 @@ contains
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
-    if (.not. kpoints_gamma_only(kpoints)) then
+    if (.not. kpoints%gamma_only()) then
       call states_set_complex(st)
     end if
 
@@ -1845,7 +1845,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
       is = states_elec_dim_get_spin_index(st%d, ik)
 
       do ist = st%st_start, st_end_
