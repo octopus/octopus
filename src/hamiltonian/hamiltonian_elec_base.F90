@@ -915,25 +915,23 @@ contains
 
       if(conjugate) then
 
-        !$omp parallel do private(ip, ii, phase)
+        !$omp parallel do simd private(ii, phase)
         do ip = 1, np
           phase = conjg(this%phase(ip, psib%ik))
           do ii = 1, psib%nst_linear
             psib%zff_pack(ii, ip) = phase*src_%zff_pack(ii, ip)
           end do
         end do
-        !$omp end parallel do
 
       else
 
-        !$omp parallel do private(ip, ii, phase)
+        !$omp parallel do simd private(ii, phase)
         do ip = 1, np
           phase = this%phase(ip, psib%ik)
           do ii = 1, psib%nst_linear
             psib%zff_pack(ii, ip) = phase*src_%zff_pack(ii, ip)
           end do
         end do
-        !$omp end parallel do
 
       end if
 
@@ -943,22 +941,22 @@ contains
 
         !$omp parallel private(ii, ip)
         do ii = 1, psib%nst_linear
-          !$omp do
+          !$omp do simd
           do ip = 1, np
             psib%zff_linear(ip, ii) = conjg(this%phase(ip, psib%ik))*src_%zff_linear(ip, ii)
           end do
-          !$omp end do nowait
+          !$omp end do simd nowait
         end do
         !$omp end parallel
 
       else
         !$omp parallel private(ii, ip)
         do ii = 1, psib%nst_linear
-          !$omp do
+          !$omp do simd
           do ip = 1, np
             psib%zff_linear(ip, ii) = this%phase(ip, psib%ik)*src_%zff_linear(ip, ii)
           end do
-          !$omp end do nowait
+          !$omp end do simd nowait
         end do
         !$omp end parallel
 

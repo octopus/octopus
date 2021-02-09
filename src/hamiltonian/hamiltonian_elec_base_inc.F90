@@ -136,14 +136,13 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         ASSERT(.false.)
 #endif
       else
-        !$omp parallel do private(vv, ist)
+        !$omp parallel do simd private(vv, ist)
         do ip = 1, mesh%np
           vv = potential(ip, ispin)
           do ist = 1, psib%nst_linear
             vpsib%X(ff_pack)(ist, ip) = vpsib%X(ff_pack)(ist, ip) + vv*psib%X(ff_pack)(ist, ip)
           end do
         end do
-        !$omp end parallel do
         call profiling_count_operations(((R_ADD+R_MUL)*psib%nst_linear)*mesh%np)
       end if
       call profiling_count_transfers(mesh%np, M_ONE)
@@ -207,14 +206,13 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         ASSERT(.false.)
 #endif
       else
-        !$omp parallel do private(ip)
+        !$omp parallel do simd private(ip)
         do ist = 1, psib%nst
           do ip = 1, mesh%np
             vpsib%X(ff)(ip, 1, ist) = vpsib%X(ff)(ip, 1, ist) + &
               potential(ip, ispin) * psib%X(ff)(ip, 1, ist)
           end do
         end do
-        !$omp end parallel do
 
         call profiling_count_operations(((R_ADD+R_MUL)*psib%nst)*mesh%np)
       end if

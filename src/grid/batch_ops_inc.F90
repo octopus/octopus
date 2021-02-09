@@ -454,7 +454,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     
   case (BATCH_PACKED)
     if (xx%type() == TYPE_CMPLX) then
-      !$omp parallel do
+      !$omp parallel do simd
       do ip = 1, np
         do ist = 1, xx%pack_size(1)
           xx%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip)
@@ -462,7 +462,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
       end do
     else
 #ifdef R_TREAL
-     !$omp parallel do
+     !$omp parallel do simd
      do ip = 1, np
         do ist = 1, xx%pack_size(1)
           xx%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip)
