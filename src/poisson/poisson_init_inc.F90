@@ -109,9 +109,9 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !!End
   
   if(this%is_dressed) then
-    dim_electronic = this%der%mesh%sb%dim -1
+    dim_electronic = this%der%dim -1
   else
-    dim_electronic = this%der%mesh%sb%dim
+    dim_electronic = this%der%dim
   end if
   
   if(dim_electronic == 1) then

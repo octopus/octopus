@@ -352,7 +352,7 @@ contains
     stress_l(:,:) = M_ZERO    
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
     
 
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -374,8 +374,8 @@ contains
           end do
           
           
-          do idir = 1, der%mesh%sb%dim
-             do jdir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
+             do jdir = 1, der%dim
                 
                 do idim = 1, st%d%dim
                    stress_l(idir,jdir) = stress_l(idir,jdir) + &
@@ -390,7 +390,7 @@ contains
     
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
+       ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
        call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l) 
     end if
 
@@ -528,12 +528,12 @@ contains
 
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(rppsi(1:der%mesh%np, 1:der%mesh%sb%dim+1, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(rppsi(1:der%mesh%np, 1:der%dim+1, 1:st%d%dim))
     SAFE_ALLOCATE(vloc(1:gr%mesh%np))
-    SAFE_ALLOCATE(rvloc(1:gr%mesh%np, 1:der%mesh%sb%dim))
+    SAFE_ALLOCATE(rvloc(1:gr%mesh%np, 1:der%dim))
     SAFE_ALLOCATE(rho_t(1:der%mesh%np_part))
-    SAFE_ALLOCATE(grho_t(1:der%mesh%np,1:der%mesh%sb%dim))
+    SAFE_ALLOCATE(grho_t(1:der%mesh%np,1:der%dim))
 
 
 ! calculate stress from non-local pseudopotentials
@@ -587,7 +587,7 @@ contains
 
     
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
+      ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
        call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
     end if
 

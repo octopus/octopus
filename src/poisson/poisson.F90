@@ -199,7 +199,7 @@ contains
     if (this%is_dressed) then
       call messages_experimental('Dressed Orbitals')
       ASSERT(qtot > M_ZERO)
-      call photon_mode_init(this%photons, namespace, der%mesh, der%mesh%sb%dim-1, qtot)
+      call photon_mode_init(this%photons, namespace, der%mesh, der%dim-1, qtot)
       if (this%photons%nmodes > 1) then
         call messages_not_implemented('DressedOrbitals for more than one photon mode.')
       end if
@@ -266,9 +266,9 @@ contains
 
     default_solver = POISSON_FFT
 
-    if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
+    if(der%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
 
-    if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
+    if(der%dim > 3) default_solver = POISSON_CG_CORRECTED
 
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
@@ -277,7 +277,7 @@ contains
 #endif
 
     if(der%mesh%use_curvilinear) then
-      select case(der%mesh%sb%dim)
+      select case(der%dim)
       case(1)
         default_solver = POISSON_DIRECT_SUM
       case(2)
@@ -356,7 +356,7 @@ contains
       !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
       !%End
 
-      select case(der%mesh%sb%dim)
+      select case(der%dim)
       case(1)
         if(der%mesh%sb%periodic_dim == 0) then
           default_kernel = POISSON_FFT_KERNEL_SPH
@@ -405,7 +405,7 @@ contains
         call messages_fatal(1)
       end if
 
-      select case(der%mesh%sb%dim)
+      select case(der%dim)
       case(1)
 
         select case(der%mesh%sb%periodic_dim)
@@ -548,11 +548,11 @@ contains
         call messages_fatal(2)
       end if
 
-      if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
+      if (der%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
         call messages_not_implemented('PFFT support for dimensionality other than 3')
       end if
 
-      select case (der%mesh%sb%dim)
+      select case (der%dim)
 
       case (1)
         select case(this%kernel)
@@ -600,8 +600,8 @@ contains
 #endif
 
       call messages_experimental('Poke library')
-      ASSERT(der%mesh%sb%dim == 3)
-      box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
+      ASSERT(der%dim == 3)
+      box(1:der%dim) = der%mesh%idx%ll(1:der%dim)
       need_cube = .true.
       fft_type = FFTLIB_NONE
     end if
@@ -866,7 +866,7 @@ contains
 
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      if ( (this%is_dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
+      if ( (this%is_dressed .and. this%der%dim - 1 > 3) .or. this%der%dim > 3) then
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end if

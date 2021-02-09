@@ -534,7 +534,7 @@ contains
           call messages_fatal(namespace=namespace)
         end if
 
-        if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
+        if(space%periodic_dim /= 0 .and. space%periodic_dim /= 3) then
           call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
           call messages_new_line()
           call messages_write('to be periodic in three dimensions.')

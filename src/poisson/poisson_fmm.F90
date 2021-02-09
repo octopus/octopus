@@ -248,12 +248,12 @@ contains
     ret = fcs_fmm_set_tolerance_energy( this%handle, this%delta_E_fmm );
 
     call nl_operator_init(this%corrector, "FMM Correction")
-    call stencil_star_get_lapl(this%corrector%stencil, der%mesh%sb%dim, 2)
+    call stencil_star_get_lapl(this%corrector%stencil, der%dim, 2)
     call nl_operator_build(this%der%mesh, this%corrector, der%mesh%np, const_w = .not. this%der%mesh%use_curvilinear)
 
     do is = 1, this%corrector%stencil%size
 
-      select case(sum(abs(this%corrector%stencil%points(1:der%mesh%sb%dim, is))))
+      select case(sum(abs(this%corrector%stencil%points(1:der%dim, is))))
       case(0)
         this%corrector%w_re(is, 1) = CNST(27.0)/CNST(32.0) + &
           (M_ONE - this%alpha_fmm)*M_TWO*M_PI*(CNST(3.0)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0))
@@ -348,7 +348,7 @@ contains
     ! invert the indices
     index = 0
     do ii = this%sp, this%ep
-      do jj = 1, der%mesh%sb%dim
+      do jj = 1, der%dim
          index = index + 1 
          xyz(index) = mesh%x(ii, jj)
       end do

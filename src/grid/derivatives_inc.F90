@@ -188,7 +188,7 @@ end subroutine X(derivatives_lapl)
 subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: ff(:)        !< ff(der%mesh%np_part)
-  R_TYPE,              intent(out)   :: op_ff(:, :)  !< op_ff(der%mesh%np, der%mesh%sb%dim)
+  R_TYPE,              intent(out)   :: op_ff(:, :)  !< op_ff(der%mesh%np, der%dim)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -226,7 +226,7 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,  target,     intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%mesh%sb%dim)
+  R_TYPE,  target,     intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%dim)
   R_TYPE,              intent(out)   :: op_ff(:)  !< op_ff(der%mesh%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
@@ -669,9 +669,9 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
   set_bc_ = optional_default(set_bc, .true.)
   ghost_update_ = optional_default(ghost_update, .true.)
 
-  ASSERT(size(opffb) == der%mesh%sb%dim)
+  ASSERT(size(opffb) == der%dim)
 
-  do idir = 1, der%mesh%sb%dim
+  do idir = 1, der%dim
     call X(derivatives_batch_perform)(der%grad(idir), der, ffb, opffb(idir), &
       ghost_update=ghost_update_, set_bc=set_bc_)
     set_bc_       = .false. ! there is no need to update again
