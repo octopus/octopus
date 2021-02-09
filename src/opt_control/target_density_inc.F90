@@ -585,7 +585,7 @@
 
     PUSH_SUB(chi_current)
 
-    SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
+    SAFE_ALLOCATE(grad_psi_in(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1))
 
     if(target_mode(tg) == oct_targetmode_td ) then 
       call states_elec_calc_quantities(gr%der, psi_in, .false., paramagnetic_current=psi_in%current) 
@@ -606,20 +606,20 @@
         end do
       end if
       
-      SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part, 1))
-      SAFE_ALLOCATE(zpsi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
-      SAFE_ALLOCATE(zchi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(div_curr_psi_in(1:gr%mesh%np_part, 1))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(zchi(1:gr%mesh%np_part, 1:psi_in%d%dim))
       
-      call dderivatives_div(gr%der, psi_in%current(1:gr%der%mesh%np_part, 1:gr%sb%dim, 1), &
-                                    div_curr_psi_in(1:gr%der%mesh%np_part,1)) 
+      call dderivatives_div(gr%der, psi_in%current(1:gr%mesh%np_part, 1:gr%sb%dim, 1), &
+                                    div_curr_psi_in(1:gr%mesh%np_part,1)) 
       
       ! the boundary condition  
       do ist = psi_in%st_start, psi_in%st_end
 
-        call states_elec_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
-        call states_elec_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_get_state(psi_in, gr%mesh, ist, 1, zpsi)
+        call states_elec_get_state(chi, gr%mesh, ist, 1, zchi)
         
-        call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
+        call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(1:gr%mesh%np_part, 1:gr%mesh%sb%dim,1))
 
         do idim = 1, psi_in%d%dim
           do ip = 1, gr%mesh%np
@@ -629,7 +629,7 @@
           end do
         end do
 
-        call states_elec_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_set_state(chi, gr%mesh, ist, 1, zchi)
         
       end do
       
@@ -639,13 +639,13 @@
       
     case(oct_max_curr_ring)
 
-      SAFE_ALLOCATE(zpsi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
-      SAFE_ALLOCATE(zchi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(zchi(1:gr%mesh%np_part, 1:psi_in%d%dim))
       
       do ist = psi_in%st_start, psi_in%st_end
         
-        call states_elec_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
-        call states_elec_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_get_state(psi_in, gr%mesh, ist, 1, zpsi)
+        call states_elec_get_state(chi, gr%mesh, ist, 1, zchi)
         
         call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(:, :, 1))
         
@@ -665,7 +665,7 @@
           
         end if
         
-        call states_elec_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_set_state(chi, gr%mesh, ist, 1, zchi)
         
       end do
       

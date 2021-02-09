@@ -229,9 +229,9 @@ contains
     
     np = gr%mesh%np
     
-    SAFE_ALLOCATE(sqrtrho(1:gr%der%mesh%np_part, 1:nspin))
+    SAFE_ALLOCATE(sqrtrho(1:gr%mesh%np_part, 1:nspin))
     SAFE_ALLOCATE(vks(1:np, 1:nspin))
-    SAFE_ALLOCATE(laplace(1:gr%der%mesh%np, 1:nspin))
+    SAFE_ALLOCATE(laplace(1:gr%mesh%np, 1:nspin))
     
     sqrtrho = M_ZERO
     smalldensity = 5d-6
@@ -242,7 +242,7 @@ contains
     end if
     
     do jj = 1, nspin
-      do ii = 1, gr%der%mesh%np
+      do ii = 1, gr%mesh%np
         sqrtrho(ii, jj) = sqrt(target_rho(ii, jj))
         !if (sqrtrho(ii, jj) < CNST(2.5e-6)) sqrtrho(ii, jj) = CNST(2.5e-6)
       end do

@@ -692,7 +692,7 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
+        call write_bild_forces_file(dir, "forces", geo, namespace)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
       end if

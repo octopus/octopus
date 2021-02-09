@@ -305,7 +305,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       SAFE_DEALLOCATE_A(evec)
 
       if(debug%info) then
-        call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(iter)%batch, resb(iter)%batch, eigen)
+        call X(mesh_batch_dotp_vector)(gr%mesh, resb(iter)%batch, resb(iter)%batch, eigen)
 
         do ist = minst, maxst
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
@@ -377,8 +377,8 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     call st%group%psib(ib, ik)%copy_to(resb(1)%batch)
     
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
+    call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
+    call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
     !This is the Rayleigh quotient
@@ -388,7 +388,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
 
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen_full(minst:maxst), reduce = .false.)
+    call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, eigen_full(minst:maxst), reduce = .false.)
 
     call resb(1)%batch%end()
 
@@ -497,7 +497,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
 
       if(debug%info) then
-        call X(mesh_batch_dotp_vector)(gr%der%mesh, resb, resb, diff)
+        call X(mesh_batch_dotp_vector)(gr%mesh, resb, resb, diff)
 
         do ist = minst, maxst
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
