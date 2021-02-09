@@ -89,7 +89,6 @@ module geometry_oct_m
     logical,         private     :: species_time_dependent !< For time-dependent user defined species
 
     !> variables for passing info from XSF input to simul_box_init
-    integer :: periodic_dim
     FLOAT :: lsize(MAX_DIM)
   end type geometry_t
 
@@ -150,8 +149,12 @@ contains
     end if
 
     geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
-    geo%periodic_dim = xyz%periodic_dim
     geo%lsize(:) = xyz%lsize(:)
+    if (xyz%periodic_dim > -1 .and. xyz%periodic_dim /= geo%space%periodic_dim) then
+      message(1) = "Periodicity in XSF input is incompatible with the value of PeriodicDimensions."
+      call messages_fatal(1, namespace=namespace)
+    end if
+
 
     call read_coords_end(xyz)
 
