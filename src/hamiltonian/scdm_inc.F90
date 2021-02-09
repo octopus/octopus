@@ -200,7 +200,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
       icenter(ii) = int(scdm%center(ii,vv)/mesh%spacing(ii))
     end do
     ! find index of center in the mesh
-    ind_center = index_from_coords(mesh%idx, [icenter(1),icenter(2),icenter(3)])
+    ind_center = mesh_global_index_from_coords(mesh, [icenter(1),icenter(2),icenter(3)])
 
     ! make sure that box does not fall out of range of the index structure
     call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
@@ -218,7 +218,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
       do  i1 = icenter(1)-scdm%box_size, icenter(1)+scdm%box_size
         do  i2 = icenter(2)-scdm%box_size, icenter(2)+scdm%box_size
           do  i3 = icenter(3)-scdm%box_size, icenter(3)+scdm%box_size
-            temp_box(i1,i2,i3) = index_from_coords(mesh%idx, [i1, i2, i3])
+            temp_box(i1,i2,i3) = mesh_global_index_from_coords(mesh, [i1, i2, i3])
           end do
         end do
       end do
@@ -278,7 +278,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
             j1 = i1 + scdm%box_size + 1
             j2 = i2 + scdm%box_size + 1
             j3 = i3 + scdm%box_size + 1
-            temp_box(j1,j2,j3) = index_from_coords(mesh%idx, [ix(1),ix(2),ix(3)])
+            temp_box(j1,j2,j3) = mesh_global_index_from_coords(mesh, [ix(1),ix(2),ix(3)])
 
             !if(temp_box(j1,j2,j3) < 1 .or. temp_box(j1,j2,j3) > mesh%np_global) then
             !  print *, 'fail'

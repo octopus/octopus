@@ -152,7 +152,7 @@ contains
     type(lr_t), allocatable :: ke_lr(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
-    integer :: sigma, sigma_alt, ndim, idir, idir1, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
+    integer :: sigma, sigma_alt, idir, idir1, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
     integer :: ierr_e(3), ierr_e2(3), nfactor_ke
     character(len=100) :: dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
@@ -171,7 +171,6 @@ contains
     end if
 
     gr => sys%gr
-    ndim = sys%space%dim
 
     if (sys%kpoints%use_symmetries) then
       call messages_experimental("em_resp with k-points symmetries")
@@ -191,7 +190,7 @@ contains
     em_vars%lrc_kernel = .false.
     if(abs(sys%ks%xc%kernel_lrc_alpha) > M_EPSILON) em_vars%lrc_kernel = .true.
 
-    if(em_vars%lrc_kernel .and. gr%sb%periodic_dim < gr%sb%dim) then
+    if(em_vars%lrc_kernel .and. sys%space%periodic_dim < gr%sb%dim) then
       message(1) = 'The use of the LRC kernel for non-periodic dimensions makes no sense.'
       call messages_warning(1)
     end if
@@ -244,7 +243,7 @@ contains
         call messages_fatal(2)
       end if
       
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call lr_init(kdotp_lr(idir, 1))
         call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh, allocate_rho = .false.)
 
@@ -284,10 +283,10 @@ contains
       call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
-      SAFE_ALLOCATE(kdotp_em_lr2(1:gr%sb%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
+      SAFE_ALLOCATE(kdotp_em_lr2(1:sys%space%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
       do ifactor = 1, em_vars%nfactor
         do sigma = 1, em_vars%nsigma
-          do idir = 1, gr%sb%periodic_dim
+          do idir = 1, sys%space%periodic_dim
             do idir2 = 1, gr%sb%dim
               call lr_init(kdotp_em_lr2(idir, idir2, sigma, ifactor))
               call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = .false.)
@@ -348,7 +347,7 @@ contains
           end do
         end do
 
-        if(gr%sb%periodic_dim < gr%sb%dim) then
+        if(sys%space%periodic_dim < sys%space%dim) then
           if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
             message(1) = "All directions should be periodic for magnetic perturbations with kdotp."
           else
@@ -490,7 +489,7 @@ contains
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
 
               if(em_vars%calc_hyperpol .and. use_kdotp) then
-                do idir2 = 1, gr%sb%periodic_dim
+                do idir2 = 1, sys%space%periodic_dim
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 1, ifactor))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
@@ -512,7 +511,7 @@ contains
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
 
               if(em_vars%calc_hyperpol .and. use_kdotp) then
-                do idir2 = 1, gr%sb%periodic_dim
+                do idir2 = 1, sys%space%periodic_dim
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, ifactor - 1), &
                     kdotp_em_lr2(idir, idir2, 2, ifactor))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
@@ -537,7 +536,7 @@ contains
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 2, 1))
 
               if(em_vars%calc_hyperpol .and. use_kdotp) then
-                do idir2 = 1, gr%sb%periodic_dim
+                do idir2 = 1, sys%space%periodic_dim
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 1, 1))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
@@ -558,7 +557,7 @@ contains
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 1, 1))
 
               if(em_vars%calc_hyperpol .and. use_kdotp) then
-                do idir2 = 1, gr%sb%periodic_dim
+                do idir2 = 1, sys%space%periodic_dim
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, em_vars%nfactor), &
                     kdotp_em_lr2(idir, idir2, 2, 1))
                   call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
@@ -605,7 +604,7 @@ contains
 
     end do ! iomega
 
-    do idir = 1, ndim
+    do idir = 1, sys%space%dim
       do sigma = 1, em_vars%nsigma
         do ifactor = 1, em_vars%nfactor
           call lr_dealloc(em_vars%lr(idir, sigma, ifactor))
@@ -617,7 +616,7 @@ contains
     call pert_end(em_vars%perturbation)
 
     if(use_kdotp) then
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call lr_dealloc(kdotp_lr(idir, 1))
       end do
     end if
@@ -628,8 +627,8 @@ contains
       call pert_end(pert_kdotp)
       call pert_end(pert2_none)
       call lr_dealloc(kdotp_lr2)
-      do idir = 1, gr%sb%periodic_dim
-        do idir2 = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
+        do idir2 = 1, sys%space%periodic_dim
           do sigma = 1, em_vars%nsigma
             do ifactor = 1, em_vars%nfactor
               call lr_dealloc(kdotp_em_lr2(idir, idir2, sigma, ifactor))

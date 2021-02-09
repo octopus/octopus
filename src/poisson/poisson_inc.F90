@@ -100,7 +100,7 @@ subroutine X(poisson_solve_sm)(this, sm, pot, rho, all_nodes)
   end if
 
   ASSERT(this%method /= POISSON_NULL)
-  ASSERT(this%der%mesh%sb%dim /= 1)
+  ASSERT(this%der%dim /= 1)
 
   select case(this%method)
   case(POISSON_DIRECT_SUM)

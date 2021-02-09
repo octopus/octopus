@@ -476,7 +476,7 @@ contains
     end if
 
     ! Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%namespace, sys%gr%sb%periodic_dim)
+    call orbitalbasis_init(basis, sys%namespace, sys%space%periodic_dim)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))

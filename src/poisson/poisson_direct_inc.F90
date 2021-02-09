@@ -35,7 +35,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   logical              :: include_diag
 
-  FLOAT                :: xg(this%der%mesh%sb%dim)
+  FLOAT                :: xg(this%der%dim)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
 
@@ -49,9 +49,9 @@ subroutine poisson_solve_direct(this, pot, rho)
   yy  = M_ZERO
 
   if (.not. this%is_dressed) then
-    dim_ele = this%der%mesh%sb%dim
+    dim_ele = this%der%dim
   else
-    dim_ele = this%der%mesh%sb%dim - 1
+    dim_ele = this%der%dim - 1
   end if
 
   if (this%poisson_soft_coulomb_param**2 > M_ZERO) then

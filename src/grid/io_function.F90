@@ -485,13 +485,13 @@ contains
     ! Offset in periodic directions:
     offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
     ! Offset in aperiodic directions:
-    do idir = mesh%sb%periodic_dim + 1, 3
+    do idir = geo%space%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
     end do
 
-    if(simul_box_is_periodic(mesh%sb)) then
+    if(geo%space%is_periodic()) then
       if(index_ == 1) then
-        select case(mesh%sb%periodic_dim)
+        select case(geo%space%periodic_dim)
           case(3)
             write(iunit, '(a)') 'CRYSTAL'
           case(2)
@@ -503,9 +503,9 @@ contains
 
       write(iunit, '(a)') 'PRIMVEC'//trim(index_str)
 
-      do idir = 1, mesh%sb%dim
+      do idir = 1, geo%space%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-          mesh%sb%rlattice(idir2, idir)), idir2 = 1, mesh%sb%dim)
+          mesh%sb%rlattice(idir2, idir)), idir2 = 1, geo%space%dim)
       end do
 
       write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)

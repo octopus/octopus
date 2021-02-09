@@ -401,19 +401,19 @@ contains
         if(mesh%parallel_in_domains) then
           ! When running in parallel, get global number of
           ! point ii.
-          call index_to_coords(mesh%idx, &
+          call mesh_global_index_to_coords(mesh, &
             mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
         else
-          call index_to_coords(mesh%idx, ii, p1)
+          call mesh_global_index_to_coords(mesh, ii, p1)
         end if
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
           if (multiresolution_use(mesh%hr_area)) then
-            st1(jj) = index_from_coords(mesh%idx, &
+            st1(jj) = mesh_global_index_from_coords(mesh, &
                  p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else
-            st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+            st1(jj) = mesh_global_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
           
           if(mesh%parallel_in_domains) then
@@ -663,7 +663,7 @@ contains
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
         do ip = 1, mesh%np_part
-          call index_to_coords(op%mesh%idx, ip, idx)
+          call mesh_global_index_to_coords(op%mesh, ip, idx)
           do jj = 1, op%mesh%sb%dim
             stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
           end do

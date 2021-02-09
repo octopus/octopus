@@ -357,7 +357,7 @@ subroutine xc_get_vxc(der, xcs, st, kpoints, psolver, namespace, rho, ispin, vxc
       end if
       
       if(gga .or. mgga) then
-        do idir = 1, der%mesh%sb%dim
+        do idir = 1, der%dim
           do isp = 1, spin_channels
             call distributed_allgather(distribution, dedgd(:, idir, isp))
           end do
@@ -400,7 +400,7 @@ subroutine xc_get_vxc(der, xcs, st, kpoints, psolver, namespace, rho, ispin, vxc
       ! contains the correction applied to the xc potential.
       do is = 1, spin_channels
         do ip = 1, der%mesh%np
-          ex_per_vol(ip) = vx(ip)*(CNST(3.0)*rho(ip, is) + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
+          ex_per_vol(ip) = vx(ip)*(CNST(3.0)*rho(ip, is) + sum(der%mesh%x(ip, 1:der%dim)*gdens(ip, 1:der%dim, is)))
         end do
       end do
     end if
@@ -485,11 +485,11 @@ contains
 
     if(gga) then
       do ib = 1, nblock
-        l_sigma(1, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)**2)
+        l_sigma(1, ib) = sum(gdens(ib + ip - 1, 1:der%dim, 1)**2)
         if(ispin /= UNPOLARIZED) then
           ! memo: please check the following indices
-          l_sigma(2, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)*gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)) 
-          l_sigma(3, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)**2)
+          l_sigma(2, ib) = sum(gdens(ib + ip - 1, 1:der%dim, 1)*gdens(ib + ip - 1, 1:der%dim, 2)) 
+          l_sigma(3, ib) = sum(gdens(ib + ip - 1, 1:der%dim, 2)**2)
         end if
       end do
     end if
@@ -630,10 +630,10 @@ contains
     PUSH_SUB(xc_get_vxc.gga_init)
 
     ! allocate variables
-    SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels))
+    SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:der%dim, 1:spin_channels))
     gdens = M_ZERO
 
-    SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
+    SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:der%dim, 1:spin_channels))
     dedgd = M_ZERO
 
     POP_SUB(xc_get_vxc.gga_init)
@@ -705,16 +705,16 @@ contains
      do ii = 1, der%mesh%np
       if(ispin == UNPOLARIZED) then
         n = dens(ii, 1)
-        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1)
+        gn(1:der%dim) = gdens(ii, 1:der%dim, 1)
       else
         n = dens(ii, 1) + dens(ii, 2)
-        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1) + gdens(ii, 1:der%mesh%sb%dim, 2)
+        gn(1:der%dim) = gdens(ii, 1:der%dim, 1) + gdens(ii, 1:der%dim, 2)
       end if
 
       if (n <= CNST(1e-7)) then
         gnon(ii) = M_ZERO
       else
-        gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
+        gnon(ii) = sqrt(sum((gn(1:der%dim)/n)**2))
         gnon(ii) = sqrt(gnon(ii))
       end if
     end do
@@ -785,16 +785,16 @@ contains
     do ii = 1, der%mesh%np
       if(ispin == UNPOLARIZED) then
         n = dens(ii, 1)
-        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1)
+        gn(1:der%dim) = gdens(ii, 1:der%dim, 1)
       else
         n = dens(ii, 1) + dens(ii, 2)
-        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1) + gdens(ii, 1:der%mesh%sb%dim, 2)
+        gn(1:der%dim) = gdens(ii, 1:der%dim, 1) + gdens(ii, 1:der%dim, 2)
       end if
 
       if (n <= CNST(1e-7)) then 
         gnon(ii) = M_ZERO
       else
-        gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
+        gnon(ii) = sqrt(sum((gn(1:der%dim)/n)**2))
       end if
     end do
 

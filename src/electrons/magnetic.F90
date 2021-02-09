@@ -301,10 +301,10 @@ contains
     type(states_elec_t),  intent(inout) :: st
     type(poisson_t),      intent(in)    :: psolver
     type(kpoints_t),      intent(in)    :: kpoints
-    FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
+    FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
-    !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
-    !< if der%mesh%sb%dim=2, b_ind(der%mesh%np_part, 1)
+    !< if der%dim=3, b_ind(der%mesh%np_part, der%dim)
+    !< if der%dim=2, b_ind(der%mesh%np_part, 1)
 
     integer :: idir
     FLOAT, allocatable :: jj(:, :, :)
@@ -320,24 +320,24 @@ contains
       return
     end if
 
-    SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+    SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%dim, 1:st%d%nspin))
     call states_elec_calc_quantities(der, st, kpoints, .false., paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         jj(:, idir, 1) = jj(:, idir, 1) + jj(:, idir, 2)
       end do 
     end if
 
     a_ind = M_ZERO
-    do idir = 1, der%mesh%sb%dim
+    do idir = 1, der%dim
       call dpoisson_solve(psolver, a_ind(:, idir), jj(:, idir, 1))
     end do
     ! This minus sign is introduced here because the current that has been used
     ! before is the "number-current density", and not the "charge-current density",
     ! and therefore there is a minus sign missing (electrons are negative charges...)
-    a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) = - a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) / P_C
+    a_ind(1:der%mesh%np, 1:der%dim) = - a_ind(1:der%mesh%np, 1:der%dim) / P_C
 
     call dderivatives_curl(der, a_ind, b_ind)
 

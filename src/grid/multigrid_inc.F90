@@ -48,7 +48,7 @@
 
     call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
 
-    factor = factor/coarse_der%mesh%sb%dim
+    factor = factor/coarse_der%dim
 
     call boundaries_set(coarse_der%boundaries, f_coarse)
 
@@ -63,19 +63,19 @@
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal)
 #endif 
-      call index_to_coords(fine_mesh%idx, ipfg, xf)
+      call mesh_global_index_to_coords(fine_mesh, ipfg, xf)
 
       dd = mod(xf, 2)
       
       f_fine(ipf) = M_ZERO
       
-      do idir = 1, coarse_der%mesh%sb%dim
+      do idir = 1, coarse_der%dim
         ifactor = 1
         do ii = -order_, order_
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = index_from_coords(coarse_der%mesh%idx, [xc(1), xc(2), xc(3)])
+          ipc = mesh_global_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
 #ifdef HAVE_MPI
             ! translate to a local index
           if(coarse_der%mesh%parallel_in_domains) ipc = vec_global2local(coarse_der%mesh%vp, ipc, coarse_der%mesh%vp%partno)
@@ -181,14 +181,14 @@
         fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal)
       end if
 #endif
-      call index_to_coords(fine_der%mesh%idx, fn, fi)
+      call mesh_global_index_to_coords(fine_der%mesh, fn, fi)
 
       f_coarse(nn) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = index_from_coords(fine_der%mesh%idx, [fi(1) + di, fi(2) + dj, fi(3) + dk])
+            fn = mesh_global_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
 
 #ifdef HAVE_MPI
             ! translate to a local index

@@ -61,18 +61,18 @@
           der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
         if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
           SAFE_ALLOCATE(vh(1:der%mesh%np_part))
-          SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%dim))
           vh(1:der%mesh%np) = hm%vhartree(1:der%mesh%np)
-          call dderivatives_grad(der, vh, gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call dderivatives_grad(der, vh, gradvh(1:der%mesh%np, 1:der%dim))
           call io_function_output_vector(outp%how, dir, 'grad_vh', namespace, &
-            der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+            der%mesh, gradvh(:, :), der%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
           SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
           v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%dim))
           call io_function_output_vector(outp%how, dir, 'grad_v0', namespace, &
-            der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+            der%mesh, gradvh(:, :), der%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
           SAFE_DEALLOCATE_A(v0)
           SAFE_DEALLOCATE_A(vh)
@@ -144,9 +144,9 @@
 
       if(hm%self_induced_magnetic) then
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
-        select case(der%mesh%sb%dim)
+        select case(der%dim)
         case(3)
-          do idir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
             call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), namespace, &
               der%mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo, grp = grp)
@@ -197,7 +197,7 @@
           end if
           
           call io_function_output_vector(outp%how, dir, fname, namespace, der%mesh, &
-            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            st%current(:, :, is), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
         end do
@@ -211,19 +211,19 @@
 
       if(states_are_complex(st)) then
       
-        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:der%mesh%sb%dim)) 
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:der%dim)) 
         do ik = st%d%kpt%start,st%d%kpt%end
-          do idir = 1,der%mesh%sb%dim
+          do idir = 1,der%dim
             current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik), reduce = .false.)
           end do
         end do
         if(der%mesh%parallel_in_domains) then
-          call comm_allreduce(der%mesh%mpi_grp%comm, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%mesh%sb%dim/))
+          call comm_allreduce(der%mesh%mpi_grp%comm, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%dim/))
         end if
 
         write(fname, '(2a)') 'current_kpt'
         call io_function_output_vector_BZ(outp%how, dir, fname, namespace, der%mesh, st%d%kpt, hm%kpoints, &
-            current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            current_kpt(:, :), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
             grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         SAFE_DEALLOCATE_A(current_kpt)
       else
@@ -236,7 +236,7 @@
       
       if(states_are_complex(st)) then
 
-        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%dim, 1:st%d%nspin))
       
         call current_heat_calculate(der, hm, st, heat_current)
       
@@ -248,7 +248,7 @@
           end if
         
           call io_function_output_vector(outp%how, dir, fname, namespace, der%mesh, &
-            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            st%current(:, :, is), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         
           SAFE_DEALLOCATE_A(heat_current)

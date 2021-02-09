@@ -23,6 +23,7 @@ module modelmb_exchange_syms_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
+  use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m

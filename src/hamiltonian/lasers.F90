@@ -793,21 +793,21 @@ contains
     case (E_FIELD_ELECTRIC) ! do nothing
     case (E_FIELD_MAGNETIC)
       if (.not. allocated(aa)) then 
-        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%dim))
         aa = M_ZERO
-        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%dim))
         a_prime = M_ZERO
       end if
       a_prime = M_ZERO
       call laser_vector_potential(laser, der%mesh, a_prime)
       aa = aa + a_prime
       b_prime = M_ZERO
-      call laser_field(laser, b_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, b_prime(1:der%dim))
       bb = bb + b_prime
       magnetic_field = .true.
     case (E_FIELD_VECTOR_POTENTIAL)
       a_field_prime = M_ZERO
-      call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, a_field_prime(1:der%dim))
       a_field = a_field + a_field_prime
       vector_potential = .true.
     end select
@@ -815,7 +815,7 @@ contains
     if (magnetic_field) then
       do ip = 1, der%mesh%np
         hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
-          dot_product(aa(ip, 1:der%mesh%sb%dim), aa(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c**2
+          dot_product(aa(ip, 1:der%dim), aa(ip, 1:der%dim)) * psi(ip, :) / P_c**2
       end do
       SAFE_DEALLOCATE_A(aa)
       SAFE_DEALLOCATE_A(a_prime)
@@ -823,7 +823,7 @@ contains
     if (vector_potential) then
       do ip = 1, der%mesh%np
         hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
-          dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(ip, :) / P_c**2
+          dot_product(a_field(1:der%dim), a_field(1:der%dim))*psi(ip, :) / P_c**2
       end do
     end if
 
@@ -880,21 +880,21 @@ contains
 
     case (E_FIELD_MAGNETIC)
       if (.not. allocated(aa)) then 
-        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%dim))
         aa = M_ZERO
-        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%dim))
         a_prime = M_ZERO
       end if
       a_prime = M_ZERO
       call laser_vector_potential(laser, der%mesh, a_prime)
       aa = aa + a_prime
       b_prime = M_ZERO
-      call laser_field(laser, b_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, b_prime(1:der%dim))
       bb = bb + b_prime
       magnetic_field = .true.
     case (E_FIELD_VECTOR_POTENTIAL)
       a_field_prime = M_ZERO
-      call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, a_field_prime(1:der%dim))
       a_field = a_field + a_field_prime
       vector_potential = .true.
     end select
@@ -907,7 +907,7 @@ contains
     end if
 
     if (magnetic_field) then
-      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:std%dim))
+      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%dim, 1:std%dim))
  
       do idim = 1, std%dim
         call zderivatives_grad(der, psi(:, idim), grad(:, :, idim))
@@ -923,20 +923,20 @@ contains
       ! convetion.
       if (present(a_static)) then
         do ip = 1, der%mesh%np
-          hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%mesh%sb%dim), a_static(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c
+          hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%dim), a_static(ip, 1:der%dim)) * psi(ip, :) / P_c
         end do
       end if
 
       select case (std%ispin)
       case (UNPOLARIZED, SPIN_POLARIZED)
         do ip = 1, der%mesh%np
-          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
+          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%dim), grad(ip, 1:der%dim, 1)) / P_c
         end do
       case (SPINORS)
         do ip = 1, der%mesh%np
           do idim = 1, std%dim
             hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
-              dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
+              dot_product(aa(ip, 1:der%dim), grad(ip, 1:der%dim, idim)) / P_c
           end do
         end do
       end select
@@ -969,7 +969,7 @@ contains
     end if
 
     if (vector_potential) then
-      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:std%dim))
+      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%dim, 1:std%dim))
 
       do idim = 1, std%dim
         call zderivatives_grad(der, psi(:, idim), grad(:, :, idim))
@@ -978,13 +978,13 @@ contains
       select case(std%ispin)
       case (UNPOLARIZED, SPIN_POLARIZED)
         do ip = 1, der%mesh%np
-          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
+          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%dim), grad(ip, 1:der%dim, 1)) / P_c
         end do
       case (SPINORS)
         do ip = 1, der%mesh%np
           do idim = 1, std%dim
             hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
-              dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
+              dot_product(a_field(1:der%dim), grad(ip, 1:der%dim, idim)) / P_c
           end do
         end do
       end select
