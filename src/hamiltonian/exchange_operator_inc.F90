@@ -368,7 +368,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
 
   !We do the symmetrization on the received states, to reduce the amount of Poisson equation solved
   if(kpoints%use_symmetries) then
-    call symmetrizer_init(symmetrizer, der%mesh)
+    call symmetrizer_init(symmetrizer, der%mesh, kpoints%symm)
   end if
 
   !We start by the contribution from states all present in memory
@@ -617,7 +617,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
       if(kpoints%use_symmetries) then
         !We apply the symmetry
         kpt2(1:der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.)
-        call symmetries_apply_kpoint_red(sb%symm, iop, kpt2, kpt1)
+        call symmetries_apply_kpoint_red(kpoints%symm, iop, kpt2, kpt1)
       else
         kpt1(1:der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.)
       end if
@@ -654,7 +654,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
             SAFE_ALLOCATE(psi_sym(1:der%mesh%np, 1:st%d%dim))
             ff = ff/kpoints_get_num_symmetry_ops(kpoints, ikpoint)
             do idim = 1, st%d%dim
-              call X(symmetrizer_apply_single)(symmetrizer, der%mesh%np, iop, rec_buffer(:,idim,ist), psi_sym(:,idim))
+              call X(symmetrizer_apply_single)(symmetrizer, der%mesh, der%mesh%np, iop, &
+                                                   rec_buffer(:,idim,ist), psi_sym(:,idim))
             end do
           else
             psi_sym => rec_buffer(:,:,ist)

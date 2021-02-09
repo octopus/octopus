@@ -247,9 +247,9 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
                 !We find the atom that correspond to this one, once symmetry is applied
                 ratom = M_ZERO
                 if(geo%reduced_coordinates) then
-                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%symm%ops(iop), geo%atom(iatom)%x)
                 else
-                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), geo%atom(iatom)%x)
                 end if
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
@@ -280,7 +280,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
                 !Let us now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
                 force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%sb%dim, iatom) + &
-                  symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
+                  symm_op_apply_cart(gr%symm%ops(iop), force_psi)
 
               end do
 
@@ -361,10 +361,11 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   end if
 
   if(st%symmetrize_density) then
-    call symmetrizer_init(symmetrizer, gr%mesh)
+    call symmetrizer_init(symmetrizer, gr%mesh, gr%symm)
     SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%sb%dim))
 
-    call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field_vector = grad_rho, symmfield_vector = symmtmp, suppress_warning = .true.)
+    call dsymmetrizer_apply(symmetrizer, gr%mesh, gr%mesh%np, field_vector = grad_rho, &
+              symmfield_vector = symmtmp, suppress_warning = .true.)
     grad_rho(1:gr%mesh%np, 1:gr%sb%dim) = symmtmp(1:gr%mesh%np, 1:gr%sb%dim)
 
     SAFE_DEALLOCATE_A(symmtmp)
@@ -679,7 +680,7 @@ subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, kpoints, lr, lr2, 
   SAFE_DEALLOCATE_A(force_deriv)
 
   do iatom = 1, geo%natoms
-    call zsymmetrize_tensor_cart(gr%sb%symm, born_charges%charge(:, :, iatom))
+    call zsymmetrize_tensor_cart(gr%symm, born_charges%charge(:, :, iatom))
   end do
 
   POP_SUB(X(forces_born_charges))

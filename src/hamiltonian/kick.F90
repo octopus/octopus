@@ -465,9 +465,9 @@ contains
       call parse_block_end(blk)
 
       if(kpoints%use_symmetries) then
-        do iop = 1, symmetries_number(sb%symm)
-          if(iop == symmetries_identity_index(sb%symm)) cycle
-          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
+        do iop = 1, symmetries_number(kpoints%symm)
+          if(iop == symmetries_identity_index(kpoints%symm)) cycle
+          if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
             message(1) = "The TDMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to TDMomemtumTransfer."
             call messages_fatal(2, namespace=namespace)
@@ -586,9 +586,9 @@ contains
 
               !Checking symmetries for all G vectors
               if(kpoints%use_symmetries) then
-                do iop = 1, symmetries_number(sb%symm)
-                  if(iop == symmetries_identity_index(sb%symm)) cycle
-                  if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
+                do iop = 1, symmetries_number(kpoints%symm)
+                  if(iop == symmetries_identity_index(kpoints%symm)) cycle
+                  if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
                     message(1) = "The TDMultipleMomentumTransfer breaks (at least) one " &
                                       // "of the symmetries used to reduce the k-points."
                     message(2) = "Set SymmetryBreakDir accordingly."

@@ -1146,7 +1146,7 @@ contains
 
         call grid_write_info(gr, iunit)
  
-        call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
           call hm%kpoints%write_info(namespace, iunit)

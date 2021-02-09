@@ -127,7 +127,7 @@ contains
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
 
     ! we need k-points for periodic systems
-    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%sb%symm, sys%space%dim, &
+    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
              sys%space%periodic_dim, sys%gr%sb%rlattice, sys%gr%sb%klattice)
 
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo, sys%kpoints)
@@ -187,7 +187,7 @@ contains
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
     call grid_init_stage_2(this%gr, this%namespace, this%mc)
-    if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%sb)
+    if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%symm, this%geo%periodic_dim)
 
     call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)
     call states_elec_densities_init(this%st, this%gr)

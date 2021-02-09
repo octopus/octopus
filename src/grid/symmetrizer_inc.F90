@@ -17,9 +17,10 @@
 !!
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfield_vector, &
+subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, symmfield_vector, &
           suppress_warning, reduced_quantity)
   type(symmetrizer_t),         intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
   integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
@@ -50,13 +51,13 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     ASSERT(ubound(symmfield_vector, dim = 1) >= np)
   end if
 
-  ASSERT(associated(this%mesh))
+  ASSERT(associated(this%symm))
 
   ! If the quantity to be symmetrized is uniformly zero, we don`t symmetrize
   if(present(field)) then
     maxabs = maxval(abs(field(1:np)))
-    if(this%mesh%parallel_in_domains) then
-      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, maxabs)
     end if
     if(maxabs < M_EPSILON) then
       symmfield(1:np) = field(1:np)
@@ -66,8 +67,8 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   end if
   if(present(field_vector)) then
     maxabs = maxval(abs(field_vector(1:np, 1:3)))
-    if(this%mesh%parallel_in_domains) then
-      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, maxabs)
     end if
     if(maxabs < M_EPSILON) then
       symmfield_vector(1:np, 1:3) = field_vector(1:np, 1:3)
@@ -83,9 +84,9 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   ! The symmfield array is kept locally.
 
   if(present(field)) then
-    if(this%mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-      call vec_allgather(this%mesh%vp, field_global, field)
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(field_global(1:mesh%np_global))
+      call vec_allgather(mesh%vp, field_global, field)
     else
       field_global => field
     end if
@@ -93,17 +94,17 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
   if(present(field_vector)) then
     ASSERT(ubound(field_vector, dim=2) == 3)
-    if(this%mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(field_global_vector(1:mesh%np_global, 1:3))
       do idir = 1, 3
-        call vec_allgather(this%mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
+        call vec_allgather(mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
       end do
     else
       field_global_vector => field_vector
     end if
   end if
 
-  nops = symmetries_number(this%mesh%sb%symm)
+  nops = symmetries_number(this%symm)
   weight = M_ONE/nops
 
   do ip = 1, np
@@ -119,9 +120,9 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
       end if
       if(present(field_vector)) then
         if(.not.optional_default(reduced_quantity, .false.)) then
-          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%symm%ops(iop), field_global_vector(ipsrc, 1:3))
         else
-          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_red(this%symm%ops(iop), field_global_vector(ipsrc, 1:3))
         end if
       end if
     end do
@@ -150,7 +151,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     end if
   end if
 
-  if(this%mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains) then
     if(present(field)) then
       SAFE_DEALLOCATE_P(field_global)
     end if
@@ -164,8 +165,9 @@ end subroutine X(symmetrizer_apply)
 
 !The same as for symmetrizer_apply, but a single symmetry operation
 !Here iop can be negative, indicating the spatial symmetry plus time reversal symmetry
-subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
+subroutine X(symmetrizer_apply_single)(this, mesh, np, iop, field, symmfield)
   type(symmetrizer_t),         intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
   integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   integer,                     intent(in)    :: iop
   R_TYPE,              target, intent(in)    :: field(:) !< (np)
@@ -181,7 +183,6 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
 
   ASSERT(ubound(field, dim = 1) >= np)
   ASSERT(ubound(symmfield, dim = 1) >= np)
-  ASSERT(associated(this%mesh))
 
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
@@ -189,9 +190,9 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
   !
   ! The symmfield array is kept locally.
 
-  if(this%mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-    call vec_allgather(this%mesh%vp, field_global, field)
+  if(mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(field_global(1:mesh%np_global))
+    call vec_allgather(mesh%vp, field_global, field)
   else
     field_global => field
   end if
@@ -206,7 +207,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
     end do
   end if
 
-  if(this%mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains) then
     SAFE_DEALLOCATE_P(field_global)
   end if
 

@@ -49,7 +49,7 @@ module symmetrizer_oct_m
 
   type symmetrizer_t
     private
-    type(mesh_t), pointer :: mesh
+    type(symmetries_t), pointer :: symm
     integer, allocatable :: map(:,:)
     integer, allocatable :: map_inv(:,:)
   end type symmetrizer_t
@@ -57,9 +57,10 @@ module symmetrizer_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine symmetrizer_init(this, mesh)
+  subroutine symmetrizer_init(this, mesh, symm)
     type(symmetrizer_t),         intent(out) :: this
-    type(mesh_t),        target, intent(in)  :: mesh
+    type(mesh_t),                intent(in)  :: mesh
+    type(symmetries_t),  target, intent(in)  :: symm
 
     integer :: nops, ip, iop, idir, idx(MAX_DIM)
     FLOAT :: destpoint(1:3), srcpoint(1:3), srcpoint_inv(1:3), lsize(1:3), offset(1:3)
@@ -67,10 +68,10 @@ contains
 
     PUSH_SUB(symmetrizer_init)
     
-    this%mesh => mesh
+    this%symm => symm
 
     !For each operation, we create a mapping between the grid point and the symmetric point
-    nops = symmetries_number(mesh%sb%symm)
+    nops = symmetries_number(symm)
 
     SAFE_ALLOCATE(this%map(1:mesh%np, 1:nops))
     SAFE_ALLOCATE(this%map_inv(1:mesh%np, 1:nops))
@@ -98,8 +99,8 @@ contains
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint)
-        srcpoint_inv = symm_op_apply_inv_red(mesh%sb%symm%ops(iop), destpoint)
+        srcpoint = symm_op_apply_red(symm%ops(iop), destpoint)
+        srcpoint_inv = symm_op_apply_inv_red(symm%ops(iop), destpoint)
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         !At this point, this is already checked
@@ -129,9 +130,9 @@ contains
         ASSERT(all(srcpoint_inv < lsize))
         srcpoint_inv(1:3) = srcpoint_inv(1:3) + offset(1:3)
 
-        this%map(ip, iop) = mesh_global_index_from_coords(this%mesh, &
+        this%map(ip, iop) = mesh_global_index_from_coords(mesh, &
           [nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3))])
-        this%map_inv(ip, iop) = mesh_global_index_from_coords(this%mesh, &
+        this%map_inv(ip, iop) = mesh_global_index_from_coords(mesh, &
           [nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3))])
       end do
     end do
@@ -147,7 +148,7 @@ contains
     type(symmetrizer_t), intent(inout) :: this
 
     PUSH_SUB(symmetrizer_end)
-    nullify(this%mesh)
+    nullify(this%symm)
 
     SAFE_DEALLOCATE_A(this%map)
     SAFE_DEALLOCATE_A(this%map_inv)

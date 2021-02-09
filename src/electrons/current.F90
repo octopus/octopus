@@ -46,6 +46,7 @@ module current_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
   use string_oct_m
+  use symmetries_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use unit_oct_m
@@ -259,13 +260,14 @@ contains
   end subroutine current_batch_accumulate
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, namespace, der, hm, geo, st)
+  subroutine current_calculate(this, namespace, der, hm, geo, st, symm)
     type(current_t),          intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(inout) :: der
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
+    type(symmetries_t),       intent(in)    :: symm
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
@@ -519,9 +521,9 @@ contains
 
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
+      call symmetrizer_init(symmetrizer, der%mesh, symm)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = st%current(:, :, ispin), &
+        call dsymmetrizer_apply(symmetrizer, der%mesh, der%mesh%np, field_vector = st%current(:, :, ispin), &
           symmfield_vector = symmcurrent, suppress_warning = .true.)
         st%current(1:der%mesh%np, 1:der%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%dim)
       end do

@@ -815,7 +815,7 @@ contains
     if(ks%frozen_hxc) then      
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, ks%gr%symm)
       end if
 
       call profiling_out(prof)
@@ -850,7 +850,7 @@ contains
 
     if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, ks%gr%symm)
     end if
 
     nullify(ks%calc%hf_st)
