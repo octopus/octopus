@@ -555,7 +555,8 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
   do ifreq = 1, 3
     do idir = 1, ndir
       do idim = 1, st%d%dim
-        call X(sternheimer_calc_hvar)(sh, sys, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
+        call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, em_lr(idir, :, ifreq), 2, &
+          hvar(:, :, :, idim, idir, ifreq))
       end do !idim
     end do !idir
   end do !ifreq
@@ -974,14 +975,15 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
     hvar_e(:,:,:,:,:) = M_ZERO
     do dir1 = 1, sys%space%dim
       do ii = 1, nfactor
-        call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1, :, ii), nsigma, hvar_e(dir1, :, :, :, ii))
+        call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr_e(dir1, :, ii), nsigma, &
+          hvar_e(dir1, :, :, :, ii))
       end do
     end do
   end if
   if(calc_var_mo) then
     hvar_b(:,:,:,:) = M_ZERO
     do dir1 = 1, sys%space%dim
-      call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
+      call X(sternheimer_calc_hvar)(sh_mo, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
     end do
   end if
   
@@ -1149,7 +1151,7 @@ subroutine X(calc_kvar_energy)(sh_mo, sys, lr1, lr2, lr3, hpol_density)
   
   SAFE_ALLOCATE(kvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   
-  call X(calc_kvar)(sh_mo, sys, lr1%X(dl_rho), lr2%X(dl_rho), 1, kvar)
+  call X(calc_kvar)(sh_mo, sys%gr%mesh, sys%st, lr1%X(dl_rho), lr2%X(dl_rho), 1, kvar)
   do ip = 1, sys%gr%mesh%np
     do is = 1, sys%st%d%nspin
       hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1) * lr3%X(dl_rho)(ip,is)
@@ -1276,7 +1278,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfa
           lr0(1)%X(dl_rho)(ip, ispin) = lr0(1)%X(dl_rho)(ip, ispin) + lr_b(idir1, 1)%X(dl_rho)(ip, ispin)
         end do  
       end do
-      call X(sternheimer_calc_hvar)(sh2, sys, lr0, 1, hvar2(:,:,:, idir1))
+      call X(sternheimer_calc_hvar)(sh2, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr0, 1, hvar2(:,:,:, idir1))
       if(add_fxc2 .and. add_fxc1) then  
         do idir2 = 1, ndir
           do idir3 = 1, ndir 
@@ -1317,7 +1319,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfa
   if(add_hartree1 .or. add_fxc1) then
     do idir1 = 1, ndir
       do ii = 1, nfactor
-        call X(sternheimer_calc_hvar)(sh, sys, lr_e(idir1, :, ii), nsigma, hvar(:,:,:, idir1, ii))
+        call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr_e(idir1, :, ii), nsigma, &
+          hvar(:,:,:, idir1, ii))
       end do
     end do
   end if
@@ -2266,7 +2269,7 @@ subroutine X(inhomog_B)(sh, sys, idir1, idir2, &
       factor_k,lr_k2(1),lr_k1(1),lr0(1))
     if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) &
       call comm_allreduce(sys%st%st_kpt_mpi_grp%comm, lr0(1)%X(dl_rho))
-    call X(sternheimer_calc_hvar)(sh, sys, lr0(1:1), 1, hvar) 
+    call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr0(1:1), 1, hvar) 
     call lr_dealloc(lr0(1))
 
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
@@ -2708,7 +2711,7 @@ subroutine X(inhomog_KB_tot)(sh, sys, idir, idir1, idir2, &
       end do  
     end do
    
-    call X(sternheimer_calc_hvar)(sh, sys, lr0, 1, hvar)
+    call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr0, 1, hvar)
     call lr_dealloc(lr0(1))
   end if
   
@@ -2764,7 +2767,7 @@ subroutine X(inhomog_KE_tot)(sh, sys, idir, nsigma, &
   add_fxc = sternheimer_add_fxc(sh)
   
   if(add_hartree .or. add_fxc) then
-    call X(sternheimer_calc_hvar)(sh, sys, lr_e, nsigma, hvar)
+    call X(sternheimer_calc_hvar)(sh, sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, lr_e, nsigma, hvar)
   end if
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end

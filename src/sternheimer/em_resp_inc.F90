@@ -240,8 +240,8 @@ subroutine X(run_sternheimer)()
       call X(inhomog_B)(sh, sys, magn_dir(idir,1), magn_dir(idir,2), &
         kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1),inhomog) 
       call X(sternheimer_set_inhomog)(sh, inhomog)   
-      call X(sternheimer_solve)(sh, sys, em_vars%lr(idir, 1:1, ifactor), 1, &
-        R_TOPREC(frequency_zero), pert2_none, restart_dump, &
+      call X(sternheimer_solve)(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+        em_vars%lr(idir, 1:1, ifactor), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, &
         em_rho_tag(abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega)), idir), &
         em_wfs_tag(idir, ifactor), have_restart_rho = (ierr_e(idir) == 0), have_exact_freq = exact_freq(idir))
       call sternheimer_unset_inhomog(sh)
@@ -254,8 +254,8 @@ subroutine X(run_sternheimer)()
         call messages_info(1)
         call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
-        call X(sternheimer_solve)(sh_kmo, sys, k2_lr(idir, idir2, 1:1), 1, &
-          R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+        call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+          k2_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
           em_wfs_tag(idir, ifactor, idir2, PK2), have_restart_rho = .false., have_exact_freq = .false.)
         call sternheimer_unset_inhomog(sh_kmo)
         em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -272,8 +272,8 @@ subroutine X(run_sternheimer)()
           k2_lr(max(magn_dir(idir2, 1), idir), min(magn_dir(idir2,1), idir), 1:1),&
           k2_lr(max(magn_dir(idir2, 2), idir), min(magn_dir(idir2,2), idir), 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-        call X(sternheimer_solve)(sh_kmo, sys, kb_lr(idir, idir2, 1:1), 1, &
-          R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+        call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+          kb_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
           em_wfs_tag(idir, ifactor, idir2, PKB), have_restart_rho = .false., have_exact_freq = .false.)
         call sternheimer_unset_inhomog(sh_kmo)
         em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -301,13 +301,14 @@ subroutine X(run_sternheimer)()
         call messages_info(1)
   
         if((.not. em_vars%calc_magnetooptics) .or. ifactor==1) then
-          call X(sternheimer_solve)(sh, sys, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-            R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
-            em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
+          call X(sternheimer_solve)(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+            em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
+            em_vars%perturbation, restart_dump, em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
             em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
         else
-          call X(sternheimer_solve)(sh, sys, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-            R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
+          call X(sternheimer_solve)(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+            em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
+            em_vars%perturbation, restart_dump, &
             em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, ipert = PE), &
             em_wfs_tag(idir, ifactor), have_restart_rho=.true., have_exact_freq = exact_freq(idir))
         end if
@@ -353,11 +354,11 @@ subroutine X(run_sternheimer)()
             call messages_fatal(2)
           end if
           
-          call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-            kdotp_lr(idir2, 1:1), nsigma_eff, R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), &
-            em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
-            pert2_none, restart_dump, &
-            "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+          call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+            sys%geo, em_vars%lr(idir, 1:nsigma_eff, ifactor), kdotp_lr(idir2, 1:1), nsigma_eff, &
+            R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), em_vars%perturbation, pert_kdotp, &
+            kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), pert2_none, &
+            restart_dump, "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
             give_pert1psi2 = kdotp_lr2%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
       
           ! if the frequency is zero, we do not need to calculate both responses
@@ -384,8 +385,8 @@ subroutine X(run_sternheimer)()
           call X(inhomog_B)(sh_mo, sys, magn_dir(idir, 1), magn_dir(idir, 2),&
             kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
           call X(sternheimer_set_inhomog)(sh_mo, inhomog)   
-          call X(sternheimer_solve)(sh_mo, sys, b_lr(idir, 1:1), 1, &
-            R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+          call X(sternheimer_solve)(sh_mo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+            b_lr(idir, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
             em_wfs_tag(idir, ifactor, ipert = PB), have_restart_rho = .false., have_exact_freq = .false.)
           call sternheimer_unset_inhomog(sh_mo)
           em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_mo)
@@ -403,8 +404,9 @@ subroutine X(run_sternheimer)()
                     call messages_info(1)
                     call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
                     call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
-                    call X(sternheimer_solve)(sh_kmo, sys, k2_lr(idir, idir2, 1:1), 1, &
-                      R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+                    call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+                      sys%geo, k2_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), &
+                      pert2_none, restart_dump, "null", &
                       em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
                     call sternheimer_unset_inhomog(sh_kmo)
                     em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -421,8 +423,9 @@ subroutine X(run_sternheimer)()
                     k2_lr(max(magn_dir(idir2, 1), idir),min(magn_dir(idir2, 1), idir), 1:1),& 
                     k2_lr(max(magn_dir(idir2, 2), idir),min(magn_dir(idir2, 2), idir), 1:1), inhomog)
                   call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-                  call X(sternheimer_solve)(sh_kmo, sys, kb_lr(idir, idir2, 1:1), 1, &
-                    R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+                  call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+                    kb_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), &
+                    pert2_none, restart_dump, "null", &
                     em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
                   call sternheimer_unset_inhomog(sh_kmo)
                   em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -435,9 +438,11 @@ subroutine X(run_sternheimer)()
                   call X(inhomog_kE_tot)(sh, sys, idir, nsigma_eff, kdotp_lr(idir, 1:1), &
                     em_vars%lr(idir2, :, ifactor),k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
                   call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-                  call X(sternheimer_solve)(sh_kmo, sys, ke_lr(idir, idir2, 1:nsigma_eff, ifactor), nsigma_eff, &
-                    R_TOPREC(frequency_eta), pert2_none, restart_dump, "null", &
-                    em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
+                  call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+                    sys%geo, ke_lr(idir, idir2, 1:nsigma_eff, ifactor), nsigma_eff, &
+                    R_TOPREC(frequency_eta), &
+                    pert2_none, restart_dump, "null", em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., &
+                    have_exact_freq = .false.)
                   if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
                     ke_lr(idir, idir2, 2, ifactor)%X(dl_psi) = ke_lr(idir, idir2, 1, ifactor)%X(dl_psi)
                   end if
@@ -454,8 +459,8 @@ subroutine X(run_sternheimer)()
           message(1)="Info: Calculating response for B-perturbation"
           call messages_info(1)  
           call pert_setup_dir(pert_b, idir)
-          call X(sternheimer_solve)(sh_mo, sys, b_lr(idir, 1:1), 1, &
-            R_TOPREC(frequency_zero), pert_b, restart_dump, "null", &
+          call X(sternheimer_solve)(sh_mo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+            b_lr(idir, 1:1), 1, R_TOPREC(frequency_zero), pert_b, restart_dump, "null", &
             em_wfs_tag(idir, ifactor, ipert = PB), have_restart_rho = .false., &
             have_exact_freq = .false.)
           em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_mo)

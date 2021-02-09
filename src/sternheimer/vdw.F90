@@ -102,7 +102,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, wfs_are_cplx = .true.)
+    call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='write')
@@ -317,8 +317,8 @@ contains
         call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
-        call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
-             restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr(dir, :), &
+          1, omega, perturbation, restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
