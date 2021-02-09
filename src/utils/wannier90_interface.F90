@@ -192,15 +192,15 @@ program wannier90_interface
   call parse_variable(global_namespace, 'Wannier90UseTD', .false., read_td_states)
 
 
-  if(sys%gr%sb%kpoints%use_symmetries) then
+  if(sys%kpoints%use_symmetries) then
     message(1) = 'oct-wannier90: k-points symmetries are not allowed'
     call messages_fatal(1)
   end if
-  if(sys%gr%sb%kpoints%use_time_reversal) then
+  if(sys%kpoints%use_time_reversal) then
     message(1) = 'oct-wannier90: time-reversal symmetry is not allowed'
     call messages_fatal(1)
   end if
-  if(sys%gr%sb%kpoints%reduced%nshifts > 1) then
+  if(sys%kpoints%reduced%nshifts > 1) then
     message(1) = 'oct-wannier90: Wannier90 does not allow for multiple shifts of the k-point grid'
     call messages_fatal(1)
   end if
@@ -215,7 +215,7 @@ program wannier90_interface
   ! create setup files
   select case(w90_mode) 
   case(OPTION__WANNIER90MODE__W90_SETUP)
-    call wannier90_setup(sys%gr%sb, sys%geo)
+    call wannier90_setup(sys%gr%sb, sys%geo, sys%kpoints)
 
   ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
@@ -236,8 +236,9 @@ program wannier90_interface
 
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
-      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-        call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+      if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
+        call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                                 ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -245,7 +246,7 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st)
+    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st, sys%kpoints)
   case default
     message(1) = "Wannier90Mode is set to an unsupported value."
     call messages_fatal(1)
@@ -265,9 +266,10 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup(sb, geo)
+  subroutine wannier90_setup(sb, geo, kpoints)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo
+    type(kpoints_t),   intent(in) :: kpoints
 
     character(len=80) :: filename
     integer :: w90_win, ia, axis(3), npath
@@ -310,13 +312,13 @@ contains
        write(w90_win,'(a)') 'spinors = .true.'
     end if
 
-    !This is for convenience. This is needed for plotting the Wannier states, if requested.
+    ! This is for convenience. This is needed for plotting the Wannier states, if requested.
     write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)')  'translate_home_cell = .true.'
     write(w90_win,'(a)')  'write_xyz = .true.'
     write(w90_win,'(a)') ' '
 
-    if(sb%kpoints%reduced%npoints == 1) then
+    if(kpoints%reduced%npoints == 1) then
       write(w90_win,'(a)')  'gamma_only = .true.'
       write(w90_win,'(a)') ' '
     else
@@ -325,19 +327,19 @@ contains
         call messages_fatal(1)
       end if
 
-      !In case the user used also a k-point path, we ignore it
-      npath = kpoints_nkpt_in_path(sb%kpoints)
+      ! In case the user used also a k-point path, we ignore it
+      npath = kpoints_nkpt_in_path(kpoints)
 
-      axis(1:3) = sb%kpoints%nik_axis(1:3)
-      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
+      axis(1:3) = kpoints%nik_axis(1:3)
+      ASSERT(product(kpoints%nik_axis(1:3)) == kpoints%reduced%npoints - npath)
 
       write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
       write(w90_win,'(a)')  'begin kpoints '
-      !Put a minus sign here for the wrong convention in Octopus
+      ! Put a minus sign here for the wrong convention in Octopus
 
-      do ii = 1, sb%kpoints%reduced%npoints-npath
-        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
+      do ii = 1, kpoints%reduced%npoints-npath
+        write(w90_win,'(f13.8,f13.8,f13.8)') - kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
     end if
@@ -365,8 +367,9 @@ contains
 
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
-      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-         call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+      if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
+         call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                    ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -430,7 +433,7 @@ contains
       chi(1:w90_num_bands, 1:w90_num_bands) = M_ZERO
 
       do ik = 1, nik
-        kvec(:) = sys%gr%sb%kpoints%reduced%point(:, ik)
+        kvec(:) = sys%kpoints%reduced%point(:, ik)
         do ist = 1, w90_num_bands
           call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
           smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
@@ -485,7 +488,7 @@ contains
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
-      call create_wannier90_amn(sys%gr%mesh, sys%gr%sb,sys%st)
+      call create_wannier90_amn(sys%gr%mesh, sys%gr%sb, sys%st, sys%kpoints)
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
@@ -508,7 +511,7 @@ contains
 
     PUSH_SUB(read_wannier90_files)
 
-    w90_num_kpts = product(sys%gr%sb%kpoints%nik_axis(1:3))
+    w90_num_kpts = product(sys%kpoints%nik_axis(1:3))
     w90_num_exclude = 0 
 
     ! open nnkp file
@@ -948,10 +951,11 @@ contains
 
   end subroutine write_unk
 
-  subroutine create_wannier90_amn(mesh, sb, st)
+  subroutine create_wannier90_amn(mesh, sb, st, kpoints)
     type(mesh_t),         intent(in) :: mesh
     type(simul_box_t),    intent(in) :: sb 
     type(states_elec_t),  intent(in) :: st
+    type(kpoints_t),      intent(in) :: kpoints
 
     integer ::  ist, ik, w90_amn, idim, iw, ip
     FLOAT   ::  center(3),  kpoint(1:MAX_DIM), threshold
@@ -1049,7 +1053,7 @@ contains
         SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
         orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
       
-        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, &
+        call orbitalset_update_phase(orbitals(iw), sb%dim, st%d%kpt, kpoints, st%d%ispin == SPIN_POLARIZED, &
                                         kpt_max = w90_num_kpts)
       
         SAFE_DEALLOCATE_A(rr)
@@ -1061,7 +1065,7 @@ contains
       
       do ik = 1, w90_num_kpts
         !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
+        kpoint(1:sb%dim) = kpoints_get_point(kpoints, ik)
       
         do ip = 1, mesh%np
           phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
@@ -1119,11 +1123,12 @@ contains
 
   end subroutine create_wannier90_amn
 
-  subroutine generate_wannier_states(mesh, sb, geo, st)
+  subroutine generate_wannier_states(mesh, sb, geo, st, kpoints)
     type(mesh_t),           intent(in) :: mesh
     type(simul_box_t),      intent(in) :: sb
     type(geometry_t),       intent(in) :: geo
     type(states_elec_t),    intent(in) :: st
+    type(kpoints_t),        intent(in) :: kpoints
 
     integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
@@ -1213,7 +1218,7 @@ contains
 
       do ik = 1, w90_num_kpts
         !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik, absolute_coordinates=.true.)
+        kpoint(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates=.true.)
 
         do iw2 = 1, st%nst
           if(exclude_list(iw2)) cycle

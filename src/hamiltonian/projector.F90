@@ -36,7 +36,6 @@ module projector_oct_m
   use profiling_oct_m
   use ps_oct_m
   use rkb_projector_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
@@ -101,7 +100,6 @@ module projector_oct_m
     type(kb_projector_t),  allocatable, public :: kb_p(:, :)
     type(rkb_projector_t), allocatable         :: rkb_p(:, :)
     CMPLX,                 allocatable, public :: phase(:, :, :)
-    integer,                            public :: ndim
   end type projector_t
 
 contains
@@ -185,24 +183,23 @@ contains
 
   !---------------------------------------------
 
-  subroutine projector_init_phases(this, sb, std, bnd, vec_pot, vec_pot_var)
+  subroutine projector_init_phases(this, dim, std, bnd, kpoints, vec_pot, vec_pot_var)
     type(projector_t),             intent(inout) :: this
-    type(simul_box_t),             intent(in)    :: sb
-    type(states_elec_dim_t),            intent(in)    :: std
+    integer,                       intent(in)    :: dim
+    type(states_elec_dim_t),       intent(in)    :: std
     type(boundaries_t),            intent(in)    :: bnd
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+    type(kpoints_t),               intent(in)    :: kpoints
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (dim)
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:dim, 1:ns)
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim
     integer :: nphase, iphase
     FLOAT, allocatable :: diff(:,:) 
 
     PUSH_SUB(projector_init_phases)
 
     ns = this%sphere%np !< number of points in the sphere
-    ndim = sb%dim
     nphase = 1
     if(bnd%spiralBC) nphase = 3
 
@@ -214,37 +211,37 @@ contains
     !   The positions this%sphere%x can lie outside the unit cell, while
     !   this%sphere%mesh%x(this%sphere%map(is), 1:ndim) by construction is the periodic image inside the unit cell.
     !   If a point of the submesh is inside the unit cell, diff(:,is) = 0.
-    SAFE_ALLOCATE(diff(1:ndim, 1:ns))
+    SAFE_ALLOCATE(diff(1:dim, 1:ns))
     do is = 1, ns
-      diff(1:ndim, is) = this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)
+      diff(1:dim, is) = this%sphere%x(is, 1:dim) - this%sphere%mesh%x(this%sphere%map(is), 1:dim)
     end do
 
     do iq = std%kpt%start, std%kpt%end
       ikpoint = states_elec_dim_get_kpoint_index(std, iq)
 
       ! if this fails, it probably means that sb is not compatible with std
-      ASSERT(ikpoint <= kpoints_number(sb%kpoints))
+      ASSERT(ikpoint <= kpoints_number(kpoints))
       
       kpoint = M_ZERO
-      kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
+      kpoint(1:dim) = kpoints_get_point(kpoints, ikpoint)
         
       do iphase = 1, nphase
         do is = 1, ns
           ! this is only the correction to the global phase, that can
           ! appear if the sphere crossed the boundary of the cell. (diff=0 otherwise)
           
-          kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
+          kr = sum(kpoint(1:dim)*diff(1:dim, is))
 
           if(present(vec_pot)) then
-            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*diff(1:ndim, is))
+            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:dim)*diff(1:dim, is))
           end if
 
           if(present(vec_pot_var)) then
-            if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
+            if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:dim, this%sphere%map(is))*this%sphere%x(is, 1:dim))
           end if
 
           if(bnd%spiralBC .and. iphase > 1) then
-            kr = kr + (2*(iphase-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is)) 
+            kr = kr + (2*(iphase-1)-3)*sum(bnd%spiral_q(1:dim)*diff(1:dim, is)) 
           end if
 
           this%phase(is, iphase, iq) = exp(-M_zI*kr)

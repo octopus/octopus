@@ -42,7 +42,7 @@
     call propagate_forward(sys, td, par, oct_target, qcpsi, write_iter = .true.)
     call opt_control_get_qs(psi, qcpsi)
 
-    j1 = target_j1(oct_target, sys%namespace, sys%gr, qcpsi)
+    j1 = target_j1(oct_target, sys%namespace, sys%gr, sys%kpoints, qcpsi)
     call opt_control_state_end(qcpsi)
 
     fluence = controlfunction_fluence(par)

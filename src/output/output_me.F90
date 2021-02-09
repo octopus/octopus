@@ -218,12 +218,12 @@ contains
 
     if(bitand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
-      call output_me_out_momentum(fname, st, gr, namespace)
+      call output_me_out_momentum(fname, st, gr, namespace, hm%kpoints)
     end if
 
     if(bitand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
-      call output_me_out_ang_momentum(fname, st, gr, namespace)
+      call output_me_out_ang_momentum(fname, st, gr, namespace, hm%kpoints)
     end if
 
     if(bitand(this%what, output_me_ks_multipoles) /= 0) then
@@ -360,7 +360,7 @@ contains
       end if
 
       if(states_are_complex(st)) then
-        call singularity_init(singul, namespace, st, gr%sb)
+        call singularity_init(singul, namespace, st, gr%sb, hm%kpoints)
       end if
 
       SAFE_ALLOCATE(iindex(1:2, 1:id))
@@ -370,8 +370,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
-          lindex, dtwoint)
+        call dstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
+                this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -381,11 +381,11 @@ contains
         if (allocated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
+                     this%st_end, iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, &
                      singularity = singul, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0)) 
         else
-          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if
 
@@ -416,11 +416,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_momentum(fname, st, gr, namespace)
+  subroutine output_me_out_momentum(fname, st, gr, namespace, kpoints)
     character(len=*),    intent(in)    :: fname
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
+    type(kpoints_t),     intent(in)    :: kpoints
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
@@ -431,7 +432,7 @@ contains
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
-    call states_elec_calc_momentum(st, gr%der, momentum)
+    call states_elec_calc_momentum(st, gr%der, kpoints, momentum)
 
     iunit = io_open(fname, namespace, action='write')
 
@@ -447,7 +448,7 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
@@ -504,11 +505,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_ang_momentum(fname, st, gr, namespace)
+  subroutine output_me_out_ang_momentum(fname, st, gr, namespace, kpoints)
     character(len=*),    intent(in)    :: fname
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
+    type(kpoints_t),     intent(in)    :: kpoints
 
     integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin
@@ -586,7 +588,7 @@ contains
       if(st%d%nik > ns) then
 
         kpoint = M_ZERO
-        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
         
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
         do idir = 1, gr%sb%dim

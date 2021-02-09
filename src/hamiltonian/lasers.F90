@@ -21,11 +21,12 @@
 module lasers_oct_m
   use derivatives_oct_m
   use global_oct_m
+  use kpoints_oct_m
   use mpi_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use states_elec_dim_oct_m
@@ -286,11 +287,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_init(lasers, namespace, no_l, mesh)
+  subroutine laser_init(lasers, namespace, no_l, mesh, kpoints)
     type(laser_t),       allocatable :: lasers(:)
     type(namespace_t),   intent(in)  :: namespace
     integer,             intent(out) :: no_l
     type(mesh_t),        intent(in)  :: mesh
+    type(kpoints_t),     intent(in)  :: kpoints
 
     type(block_t)     :: blk
     integer           :: il, ip, jj, ierr
@@ -475,7 +477,7 @@ contains
       call parse_block_end(blk)
     end if
 
-    if(mesh%sb%kpoints%use_symmetries) then
+    if(kpoints%use_symmetries) then
       do iop = 1, symmetries_number(mesh%sb%symm)
         if(iop == symmetries_identity_index(mesh%sb%symm)) cycle
         do il = 1, no_l

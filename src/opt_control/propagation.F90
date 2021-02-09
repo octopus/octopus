@@ -34,6 +34,7 @@ module propagation_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
+  use kpoints_oct_m
   use lasers_oct_m
   use loct_oct_m
   use mesh_function_oct_m
@@ -199,7 +200,7 @@ contains
     call target_tdcalc(tg, sys%namespace, sys%hm, sys%gr, sys%geo, psi, 0, td%max_iter)
 
     if (present(prop)) then
-      call oct_prop_dump_states(prop, 0, psi, sys%gr, ierr)
+      call oct_prop_dump_states(prop, 0, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
@@ -217,7 +218,7 @@ contains
         sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
 
       if(present(prop)) then
-        call oct_prop_dump_states(prop, istep, psi, sys%gr, ierr)
+        call oct_prop_dump_states(prop, istep, psi, sys%gr, sys%kpoints, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write OCT states restart."
           call messages_warning(1)
@@ -297,7 +298,7 @@ contains
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
 
-    call oct_prop_dump_states(prop, td%max_iter, psi, sys%gr, ierr)
+    call oct_prop_dump_states(prop, td%max_iter, psi, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to write OCT states restart."
       call messages_warning(1)
@@ -310,7 +311,7 @@ contains
         (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp, &
         move_ions = ion_dynamics_ions_move(td%ions))
 
-      call oct_prop_dump_states(prop, istep - 1, psi, sys%gr, ierr)
+      call oct_prop_dump_states(prop, istep - 1, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
@@ -396,12 +397,12 @@ contains
       call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_psi2)
     end if
 
-    call oct_prop_dump_states(prop_psi, 0, psi, sys%gr, ierr)
+    call oct_prop_dump_states(prop_psi, 0, psi, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to write OCT states restart."
       call messages_warning(1)
     end if
-    call oct_prop_load_states(prop_chi, sys%namespace, chi, sys%gr, 0, ierr)
+    call oct_prop_load_states(prop_chi, sys%namespace, chi, sys%gr, sys%kpoints, 0, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
@@ -427,12 +428,12 @@ contains
         sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
       call target_tdcalc(tg, sys%namespace, sys%hm, sys%gr, sys%geo, psi, i, td%max_iter) 
 
-      call oct_prop_dump_states(prop_psi, i, psi, sys%gr, ierr)
+      call oct_prop_dump_states(prop_psi, i, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
       end if
-      call oct_prop_check(prop_chi, sys%namespace, chi, sys%gr, i)
+      call oct_prop_check(prop_chi, sys%namespace, chi, sys%gr, sys%kpoints, i)
     end do
     call update_field(td%max_iter+1, par, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
 
@@ -498,7 +499,7 @@ contains
     call propagator_elec_remove_scf_prop(tr_chi)
 
     call states_elec_copy(psi, chi)
-    call oct_prop_load_states(prop_psi, sys%namespace, psi, sys%gr, td%max_iter, ierr)
+    call oct_prop_load_states(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, td%max_iter, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
@@ -513,20 +514,20 @@ contains
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
 
     td%dt = -td%dt
-    call oct_prop_dump_states(prop_chi, td%max_iter, chi, sys%gr, ierr)
+    call oct_prop_dump_states(prop_chi, td%max_iter, chi, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to write OCT states restart."
       call messages_warning(1)
     end if
 
     do i = td%max_iter, 1, -1
-      call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, i)
+      call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, i)
       call update_field(i, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, sys%gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
         td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
-      call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, ierr)
+      call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
@@ -607,7 +608,7 @@ contains
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, qcchi)
     psi => opt_control_point_qs(qcpsi)
-    call oct_prop_load_states(prop_psi, sys%namespace, psi, sys%gr, td%max_iter, ierr)
+    call oct_prop_load_states(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, td%max_iter, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
@@ -621,7 +622,7 @@ contains
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
     td%dt = -td%dt
-    call oct_prop_dump_states(prop_chi, td%max_iter, chi, sys%gr, ierr)
+    call oct_prop_dump_states(prop_chi, td%max_iter, chi, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to write OCT states restart."
       call messages_warning(1)
@@ -643,7 +644,7 @@ contains
 
     do i = td%max_iter, 1, -1
 
-      call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, i)
+      call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, i)
       call update_field(i, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
       select case(td%tr%method)
@@ -724,7 +725,7 @@ contains
 
       end select
 
-      call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, ierr)
+      call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
@@ -793,7 +794,7 @@ contains
 
     if(target_mode(tg) == oct_targetmode_td) then
       call states_elec_copy(inh, st)
-      call target_inh(st, gr, tg, abs(td%dt)*iter, inh, iter)
+      call target_inh(st, gr, hm%kpoints, tg, abs(td%dt)*iter, inh, iter)
       call hamiltonian_elec_set_inh(hm, inh)
       call states_elec_end(inh)
     end if
@@ -1123,11 +1124,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_check(prop, namespace, psi, gr, iter)
+  subroutine oct_prop_check(prop, namespace, psi, gr, kpoints, iter)
     type(oct_prop_t),    intent(inout) :: prop
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(inout) :: psi
     type(grid_t),        intent(in)    :: gr
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: iter
 
     type(states_elec_t) :: stored_st
@@ -1143,8 +1145,10 @@ contains
        call states_elec_copy(stored_st, psi)
        write(dirname,'(a, i4.4)') trim(prop%dirname), j
        call restart_open_dir(prop%restart_load, dirname, ierr)
-       if (ierr == 0) call states_elec_load(prop%restart_load, namespace, stored_st, gr, ierr, verbose=.false.)
-       if (ierr /= 0) then
+       if (ierr == 0) then
+         call states_elec_load(prop%restart_load, namespace, stored_st, gr, kpoints, ierr, verbose=.false.)
+       end if
+       if(ierr /= 0) then
          message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
          call messages_fatal(1)
        end if
@@ -1171,11 +1175,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_dump_states(prop, iter, psi, gr, ierr)
+  subroutine oct_prop_dump_states(prop, iter, psi, gr, kpoints, ierr)
     type(oct_prop_t),    intent(inout) :: prop
     integer,             intent(in)    :: iter
     type(states_elec_t), intent(inout) :: psi
     type(grid_t),        intent(inout) :: gr
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,              intent(out)  :: ierr
 
     integer :: j, err
@@ -1199,8 +1204,10 @@ contains
       if(prop%iter(j)  ==  iter) then
         write(dirname,'(a,i4.4)') trim(prop%dirname), j
         call restart_open_dir(prop%restart_dump, dirname, err)
-        if (err == 0) call states_elec_dump(prop%restart_dump, psi, gr, err, iter, verbose = .false.)
-        if (err /= 0) then
+        if (err == 0) then
+          call states_elec_dump(prop%restart_dump, psi, gr, kpoints, err, iter, verbose = .false.)
+        end if
+        if(err /= 0) then
           message(1) = "Unable to write wavefunctions to '"//trim(dirname)//"'."
           call messages_warning(1)
           ierr = ierr + 2**j
@@ -1220,11 +1227,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_load_states(prop, namespace, psi, gr, iter, ierr)
+  subroutine oct_prop_load_states(prop, namespace, psi, gr, kpoints, iter, ierr)
     type(oct_prop_t),    intent(inout) :: prop
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(inout) :: psi
     type(grid_t),        intent(in)    :: gr
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: iter
     integer,             intent(out)   :: ierr
 
@@ -1250,8 +1258,10 @@ contains
       if (prop%iter(j)  ==  iter) then
         write(dirname,'(a, i4.4)') trim(prop%dirname), j
         call restart_open_dir(prop%restart_load, dirname, err)
-        if (err == 0) call states_elec_load(prop%restart_load, namespace, psi, gr, err, verbose=.false.)
-        if (err /= 0) then
+        if (err == 0) then
+          call states_elec_load(prop%restart_load, namespace, psi, gr, kpoints, err, verbose=.false.)
+        end if
+        if(err /= 0) then
           message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
           call messages_warning(1)
           ierr = ierr + 2**j

@@ -98,7 +98,7 @@ contains
       call messages_not_implemented('Van der Waals calculation for periodic system')
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
+    if (sys%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
 
     call input()
     call init_()
@@ -237,7 +237,7 @@ contains
       ! we always need complex response
       call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = .true.)
+        call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -261,7 +261,8 @@ contains
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+              ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)

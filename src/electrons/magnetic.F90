@@ -24,6 +24,7 @@ module magnetic_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
+  use kpoints_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -273,15 +274,16 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: We should remove this routine and use st%current. NTD
-  subroutine calc_physical_current(der, st, jj)
+  subroutine calc_physical_current(der, st, kpoints, jj)
     type(derivatives_t),  intent(in)    :: der
     type(states_elec_t),  intent(inout) :: st
+    type(kpoints_t),      intent(in)    :: kpoints
     FLOAT,                intent(out)   :: jj(:,:,:)
 
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
-    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, kpoints, .false., paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -294,10 +296,11 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, psolver, kpoints, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_elec_t),  intent(inout) :: st
     type(poisson_t),      intent(in)    :: psolver
+    type(kpoints_t),      intent(in)    :: kpoints
     FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
@@ -318,7 +321,7 @@ contains
     end if
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, kpoints, .false., paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then

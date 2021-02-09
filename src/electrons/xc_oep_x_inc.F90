@@ -60,9 +60,6 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   call profiling_in(C_PROFILING_XC_EXX, TOSTRING(X(XC_EXX)))
   PUSH_SUB(X(oep_x))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) &
-    call messages_not_implemented("exchange operator with k-points", namespace=namespace)
-
   socc = M_ONE / st%smear%el_per_state
   !
   ! distinguish between 'is' being the spin_channel index (collinear)

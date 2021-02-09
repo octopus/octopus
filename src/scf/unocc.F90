@@ -122,7 +122,7 @@ contains
     call parse_variable(sys%namespace, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
-    if(sys%space%is_periodic() .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
+    if(sys%space%is_periodic() .and. kpoints_get_kpoint_method(sys%kpoints) == KPOINTS_PATH) then
       bandstructure_mode = .true.
     end if
 
@@ -154,7 +154,8 @@ contains
         mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
-        call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                  ierr, lowest_missing = lowest_missing)
         call restart_end(restart_load_unocc)
       end if
       
@@ -175,7 +176,8 @@ contains
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+               ierr, lowest_missing = lowest_missing)
       end if
       if(sys%hm%lda_u_level /= DFT_U_NONE) &
         call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, sys%hm%energy%dft_u, ierr)
@@ -308,7 +310,7 @@ contains
         end if
         write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
         write(iunit,'(1x)')
-        call states_elec_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
+        call states_elec_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, sys%kpoints, eigens%diff)
         call io_close(iunit)
       end if
 
@@ -318,7 +320,7 @@ contains
         ! write restart information.
         if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
                      .or. iter == max_iter .or. forced_finish) then
-          call states_elec_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
+          call states_elec_dump(restart_dump, sys%st, sys%gr, sys%kpoints, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)
@@ -354,9 +356,9 @@ contains
     end if
 
     if(sys%space%is_periodic().and. sys%st%d%nik > sys%st%d%nspin) then
-      if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
+      if(bitand(sys%kpoints%method, KPOINTS_PATH) /= 0) then
         call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, &
-              sys%gr%sb, sys%geo, sys%gr%mesh, &
+              sys%gr%sb, sys%geo, sys%gr%mesh, sys%kpoints, &
               sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
               vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
@@ -417,7 +419,8 @@ contains
       write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
       call messages_info(1)
 
-      call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
+      call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, sys%kpoints, &
+                eigens%diff, st_start = showstart, compact = .true.)
 
       call scf_print_mem_use()
 

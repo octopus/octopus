@@ -28,6 +28,7 @@ module epot_oct_m
   use grid_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
+  use kpoints_oct_m
   use lasers_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
@@ -139,7 +140,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, xc_family, mc)
+  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, xc_family, mc, kpoints)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -149,6 +150,7 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: xc_family
     type(multicomm_t),                  intent(in)    :: mc
+    type(kpoints_t),                    intent(in)    :: kpoints
 
 
     integer :: ispec, ia, ierr
@@ -229,9 +231,9 @@ contains
     end if
 
     ! lasers
-    call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
+    call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh, kpoints)
 
-    call kick_init(ep%kick, namespace, gr%sb, ispin)
+    call kick_init(ep%kick, namespace, gr%sb, kpoints, ispin)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')

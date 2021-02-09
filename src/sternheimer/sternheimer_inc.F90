@@ -309,7 +309,7 @@ subroutine X(sternheimer_solve)(                           &
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
       call restart_open_dir(restart, wfs_tag_sigma(wfs_tag, sigma_alt), err)
-      if (err == 0) call states_elec_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      if (err == 0) call states_elec_dump(restart, st, sys%gr, sys%kpoints, err, iter = iter, lr = lr(sigma))
       if (err /= 0) then
         message(1) = "Unable to write response wavefunctions."
         call messages_warning(1)

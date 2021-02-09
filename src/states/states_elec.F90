@@ -221,11 +221,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_init(st, namespace, gr, geo)
+  subroutine states_elec_init(st, namespace, gr, geo, kpoints)
     type(states_elec_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
+    type(kpoints_t),             intent(in)    :: kpoints
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default
@@ -264,7 +265,7 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) call states_set_complex(st)
 
-    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+    if(st%d%ispin /= UNPOLARIZED .and. kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
       message(2) = "Use KPointsUseTimeReversal = no."
       call messages_fatal(2, namespace=namespace)
@@ -371,7 +372,7 @@ contains
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_elec_choose_kpoints(st%d, gr%sb%kpoints, namespace)
+    call states_elec_choose_kpoints(st%d, kpoints, namespace)
 
     st%val_charge = geometry_val_charge(geo)
 
@@ -455,7 +456,7 @@ contains
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
-    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
+    if (.not. kpoints_gamma_only(kpoints)) then
       call states_set_complex(st)
     end if
 
@@ -503,7 +504,7 @@ contains
     call parse_variable(namespace, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_elec_read_initial_occs(st, namespace, excess_charge, gr%sb%kpoints)
+    call states_elec_read_initial_occs(st, namespace, excess_charge, kpoints)
     call states_elec_read_initial_spins(st, namespace)
 
     st%st_start = 1
@@ -536,7 +537,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call parse_variable(namespace, 'SymmetrizeDensity', kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     !%Variable ForceComplex
@@ -1443,10 +1444,10 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_elec_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
+  subroutine states_elec_generate_random(st, mesh, kpoints, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
     type(states_elec_t),    intent(inout) :: st
     type(mesh_t),           intent(in)    :: mesh
-    type(simul_box_t),      intent(in)    :: sb
+    type(kpoints_t),        intent(in)    :: kpoints
     integer, optional,      intent(in)    :: ist_start_
     integer, optional,      intent(in)    :: ist_end_
     integer, optional,      intent(in)    :: ikpt_start_
@@ -1481,7 +1482,7 @@ contains
       do ik = ikpt_start, ikpt_end
         ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
         do ist = ist_start, ist_end
-          if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+          if (states_are_real(st).or.kpoints_point_is_gamma(kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
               call dmf_random(mesh, dpsi(:, 1), &
                 pre_shift = mesh%vp%xlocal-1, &
@@ -1523,7 +1524,7 @@ contains
         do ik = ikpt_start, ikpt_end
           ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
           do ist = ist_start, ist_end
-            if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+            if(kpoints_point_is_gamma(kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call dmf_random(mesh, dpsi(:, 1), &
                   pre_shift = mesh%vp%xlocal-1, &
@@ -1772,11 +1773,12 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_elec_calc_quantities(der, st, nlcc, &
+  subroutine states_elec_calc_quantities(der, st, kpoints, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, &
     gi_kinetic_energy_density, st_end)
     type(derivatives_t),     intent(in)    :: der
     type(states_elec_t),     intent(in)    :: st
+    type(kpoints_t),         intent(in)    :: kpoints
     logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
@@ -1843,7 +1845,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
       is = states_elec_dim_get_spin_index(st%d, ik)
 
       do ist = st%st_start, st_end_

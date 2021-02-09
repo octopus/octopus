@@ -26,6 +26,7 @@ module td_calc_oct_m
   use grid_oct_m
   use hamiltonian_elec_base_oct_m
   use hamiltonian_elec_oct_m
+  use kpoints_oct_m
   use lasers_oct_m
   use loct_math_oct_m
   use mesh_function_oct_m
@@ -80,7 +81,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
-  call total_force_calculate(gr, geo, hm%ep, st, acc, hm%lda_u_level)
+  call total_force_calculate(gr, geo, hm%ep, st, hm%kpoints, acc, hm%lda_u_level)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
@@ -167,9 +168,10 @@ end subroutine td_calc_tacc
 !! d<x>/dt = <p>
 !! \f]
 ! ---------------------------------------------------------
-subroutine td_calc_tvel(gr, st, vel)
+subroutine td_calc_tvel(gr, st, kpoints, vel)
   type(grid_t),        intent(in)  :: gr
   type(states_elec_t), intent(in)  :: st
+  type(kpoints_t),     intent(in)  :: kpoints
   FLOAT,               intent(out) :: vel(MAX_DIM)
 
   FLOAT, allocatable :: momentum(:,:,:)
@@ -177,7 +179,7 @@ subroutine td_calc_tvel(gr, st, vel)
   PUSH_SUB(td_calc_tvel)
 
   SAFE_ALLOCATE(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call states_elec_calc_momentum(st, gr%der, momentum)
+  call states_elec_calc_momentum(st, gr%der, kpoints, momentum)
 
   momentum(1:gr%sb%dim, st%st_start:st%st_end, 1) = & 
     sum(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)

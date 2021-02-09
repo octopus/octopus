@@ -595,7 +595,7 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, ff, vector_dim, &
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, kpoints, ff, vector_dim, &
     unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
@@ -603,6 +603,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
+  type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,           target,   intent(in)  :: ff(:, :)
   integer,                    intent(in)  :: vector_dim
   type(unit_t),               intent(in)  :: unit
@@ -640,8 +641,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
 
     i_am_root = (grp%rank == root_)
 
-    SAFE_ALLOCATE(ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim))
-    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
+    SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:vector_dim))
+    ff_global(1:kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
  
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
@@ -668,7 +669,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, &
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, kpoints, &
           ff_global(:, ivd), unit, ierr)
       end do
     end if
@@ -1497,11 +1498,12 @@ end subroutine X(io_function_output_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff, unit, ierr)
+subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, kpoints, ff, unit, ierr)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
+  type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
@@ -1521,9 +1523,9 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   mfmtheader = '(a,a10,5a23)'
 
   ASSERT(how > 0)
-  ASSERT(ubound(ff, dim = 1) >= mesh%sb%kpoints%reduced%npoints)
+  ASSERT(ubound(ff, dim = 1) >= kpoints%reduced%npoints)
 
-  np_max = mesh%sb%kpoints%reduced%npoints
+  np_max = kpoints%reduced%npoints
 
   if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
   if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
@@ -1564,11 +1566,11 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
     write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
 
     kk(1:MAX_DIM) = M_ZERO
-    dim = mesh%sb%kpoints%reduced%dim
+    dim = kpoints%reduced%dim
 
-    do ik = 1, mesh%sb%kpoints%reduced%npoints
+    do ik = 1, kpoints%reduced%npoints
       kk(1:dim) = units_from_atomic(units_out%length**(-1), &
-                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
+                         kpoints%reduced%point1BZ(1:dim,ik))
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &

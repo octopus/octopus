@@ -28,12 +28,13 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, dir, st, gr, geo)
+subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
   character(len=*),       intent(in) :: dir
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
+  type(kpoints_t),        intent(in) :: kpoints
   type(geometry_t),       intent(in) :: geo
 
   type(cube_t) :: dcube, zcube
@@ -114,7 +115,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
-    call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
+    call output_etsf_kpoints_dims(kpoints, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
     call output_etsf_wfs_rsp_dims(st, dcube, wfs_dims, wfs_flags)
 
@@ -124,7 +125,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
       call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
-      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, gr%sb%dim, ncid, namespace)
     end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
@@ -149,7 +150,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
     call fourier_shell_init(shell, zcube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
-    call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
+    call output_etsf_kpoints_dims(kpoints, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
     call output_etsf_basisdata_dims(pw_flags)
     call output_etsf_wfs_pw_dims(shell, pw_dims, pw_flags)
@@ -160,7 +161,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
       call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
-      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, gr%sb%dim, ncid, namespace)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid, namespace)
@@ -339,8 +340,8 @@ end subroutine output_etsf_geometry_write
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_kpoints_dims(sb, dims, flags)
-  type(simul_box_t),       intent(in)    :: sb
+subroutine output_etsf_kpoints_dims(kpoints, dims, flags)
+  type(kpoints_t),         intent(in)    :: kpoints
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   
@@ -348,42 +349,43 @@ subroutine output_etsf_kpoints_dims(sb, dims, flags)
 
   flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
 
-  dims%number_of_kpoints = sb%kpoints%reduced%npoints
+  dims%number_of_kpoints = kpoints%reduced%npoints
 
   POP_SUB(output_etsf_kpoints_dims)
 end subroutine output_etsf_kpoints_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_kpoints_write(sb, ncid, namespace)
-  type(simul_box_t),      intent(in)    :: sb
+subroutine output_etsf_kpoints_write(kpoints, dim, ncid, namespace)
+  type(kpoints_t),        intent(in)    :: kpoints
+  integer,                intent(in)    :: dim
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
   
-  type(etsf_kpoints), target :: kpoints
+  type(etsf_kpoints), target :: etsf_kpts
   integer  :: nkpoints, ikpoint
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
 
   PUSH_SUB(output_etsf_kpoints_write)
 
-  nkpoints = sb%kpoints%reduced%npoints
+  nkpoints = kpoints%reduced%npoints
   
   !Create the kpoints container
-  SAFE_ALLOCATE(kpoints%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
-  SAFE_ALLOCATE(kpoints%kpoint_weights(1:nkpoints))
+  SAFE_ALLOCATE(etsf_kpts%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
+  SAFE_ALLOCATE(etsf_kpts%kpoint_weights(1:nkpoints))
   
   do ikpoint = 1, nkpoints
-    kpoints%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
-    kpoints%reduced_coordinates_of_kpoints(1:sb%dim, ikpoint) = sb%kpoints%reduced%red_point(1:sb%dim, ikpoint)
-    kpoints%kpoint_weights(ikpoint) = kpoints_get_weight(sb%kpoints, ikpoint)
+    etsf_kpts%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
+    etsf_kpts%reduced_coordinates_of_kpoints(1:dim, ikpoint) = kpoints%reduced%red_point(1:dim, ikpoint)
+    etsf_kpts%kpoint_weights(ikpoint) = kpoints_get_weight(kpoints, ikpoint)
   end do
   
-  call etsf_io_kpoints_put(ncid, kpoints, lstat, error_data = error_data)
+  call etsf_io_kpoints_put(ncid, etsf_kpts, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data, namespace)
 
-  SAFE_DEALLOCATE_P(kpoints%reduced_coordinates_of_kpoints)
-  SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
+  SAFE_DEALLOCATE_P(etsf_kpts%reduced_coordinates_of_kpoints)
+  SAFE_DEALLOCATE_P(etsf_kpts%kpoint_weights)
 
   POP_SUB(output_etsf_kpoints_write)
 end subroutine output_etsf_kpoints_write

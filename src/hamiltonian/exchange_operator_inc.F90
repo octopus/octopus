@@ -18,11 +18,12 @@
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, rdmft)
+subroutine X(exchange_operator_single)(this, namespace, der, st_d, kpoints, ist, ik, psi, hpsi, rdmft)
   type(exchange_operator_t), intent(inout) :: this 
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
+  type(kpoints_t),           intent(in)    :: kpoints
   integer,                   intent(in)    :: ist
   integer,                   intent(in)    :: ik
   R_TYPE, contiguous,        intent(inout) :: psi(:, :)
@@ -36,7 +37,7 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   call wfs_elec_init(psib, st_d%dim, ist, ist, psi, ik)
   call wfs_elec_init(hpsib, st_d%dim, ist, ist, hpsi, ik)
 
-  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
+  call X(exchange_operator_apply)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
 
   call psib%end()
   call hpsib%end()
@@ -45,11 +46,12 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
 end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft) 
+subroutine X(exchange_operator_apply)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft) 
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
+  type(kpoints_t),           intent(in)    :: kpoints
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
   logical,                   intent(in)    :: rdmft
@@ -59,7 +61,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   if(this%useACE) then
     call X(exchange_operator_apply_ACE)(this, der, st_d, psib, hpsib)
   else
-    call X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib, hpsib, rdmft)
+    call X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
   end if
 
   POP_SUB(X(exchange_operator_apply))
@@ -68,11 +70,12 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib, hpsib, rdmft)
+subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
+  type(kpoints_t),           intent(in)    :: kpoints
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
   logical,                   intent(in)    :: rdmft
@@ -97,14 +100,14 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib,
   ! in the Coulomb potential, and must be changed for each q point
   exx_coef = max(this%cam_alpha,this%cam_beta)
 
-  npath = SIZE(der%mesh%sb%kpoints%coord_along_path)
+  npath = SIZE(kpoints%coord_along_path)
 
   if(this%cam_beta > M_EPSILON) then
     ASSERT(this%cam_alpha < M_EPSILON)
   end if
 
   !The symmetries require a full treatment
-  if(der%mesh%sb%kpoints%use_symmetries) then
+  if(kpoints%use_symmetries) then
    call messages_not_implemented("symmetries with Fock operator", namespace=namespace)
   end if
 
@@ -135,16 +138,16 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, psib,
       ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
       !Down-sampling and q-grid
       if(st_d%nik > st_d%spin_channels) then
-        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ikpoint2)) cycle
-        qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
-                      - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2, absolute_coordinates=.false.)
+        if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
+        qq(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.) &
+                      - kpoints_get_point(kpoints, ikpoint2, absolute_coordinates=.false.)
       end if
       ! Updating of the poisson solver
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
         call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega, &
-                  -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
+                  -(kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if
 
@@ -280,12 +283,13 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
+subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st, kpoints)
   type(exchange_operator_t), intent(inout) :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(simul_box_t),         intent(in)    :: sb
   type(states_elec_t),       intent(in)    :: st 
+  type(kpoints_t),           intent(in)    :: kpoints
 
   integer :: ib, ii, ik, ist, ikloc, node_fr, node_to
   integer :: ip, idim, is, nsend, nreceiv
@@ -329,25 +333,25 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   !This is unclear is one would gain a lot doing that
   !potential, plus some communications
   double_sided_communication = .true.
-  if(sb%kpoints%use_symmetries) double_sided_communication = .false.
+  if(kpoints%use_symmetries) double_sided_communication = .false.
   !In case of unscreened hybrids, we cannot use the double-sided communication, as 
   !the Coulomb singularity is different for k or kp
   if(this%cam_omega <= M_EPSILON) double_sided_communication = .false.
 
-  if(sb%kpoints%use_symmetries .and. .not. st%symmetrize_density) then
+  if(kpoints%use_symmetries .and. .not. st%symmetrize_density) then
     call messages_not_implemented("ACE with KPointsUseSymmetries=yes and with SymmetrizeDensity=no")
   end if
 
   if(double_sided_communication) then
     !The MPI distribution scheme is not compatible with the downsampling as implemented now
     !This is because of the "returned potential"
-    if(any(sb%kpoints%downsampling(1:sb%dim)/=1)) then
+    if(any(kpoints%downsampling(1:sb%dim)/=1)) then
       call messages_not_implemented("ACE with downsampling")
     end if
   end if
 
-  if(sb%kpoints%use_symmetries) then
-    if(any(sb%kpoints%downsampling(1:sb%dim)/=1)) then
+  if(kpoints%use_symmetries) then
+    if(any(kpoints%downsampling(1:sb%dim)/=1)) then
       call messages_not_implemented("Downsampling with k-point symmetries")
     end if
   end if
@@ -363,7 +367,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   call states_elec_set_zero(this%xst)
 
   !We do the symmetrization on the received states, to reduce the amount of Poisson equation solved
-  if(sb%kpoints%use_symmetries) then
+  if(kpoints%use_symmetries) then
     call symmetrizer_init(symmetrizer, der%mesh)
   end if
 
@@ -588,7 +592,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
 
     call profiling_in(prof_full, "EXCHANGE_LOCAL")
      
-    npath = SIZE(sb%kpoints%coord_along_path)
+    npath = SIZE(kpoints%coord_along_path)
     qq(1:der%dim) = M_ZERO
 
     use_external_kernel = (st%d%nik > st%d%spin_channels .or. this%cam_omega > M_EPSILON)
@@ -607,15 +611,15 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
 
     SAFE_ALLOCATE(ff_psi_sym(1:der%mesh%np, 1:st%d%dim))
 
-    do ii = 1, kpoints_get_num_symmetry_ops(sb%kpoints, ikpoint)
-      iop = kpoints_get_symmetry_ops(sb%kpoints, ikpoint, ii)
+    do ii = 1, kpoints_get_num_symmetry_ops(kpoints, ikpoint)
+      iop = kpoints_get_symmetry_ops(kpoints, ikpoint, ii)
 
-      if(sb%kpoints%use_symmetries) then
+      if(kpoints%use_symmetries) then
         !We apply the symmetry
-        kpt2(1:der%dim) = kpoints_get_point(sb%kpoints, ikpoint, absolute_coordinates=.false.)
+        kpt2(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.)
         call symmetries_apply_kpoint_red(sb%symm, iop, kpt2, kpt1)
       else
-        kpt1(1:der%dim) = kpoints_get_point(sb%kpoints, ikpoint, absolute_coordinates=.false.)
+        kpt1(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.)
       end if
 
       !Local contribution
@@ -625,9 +629,9 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
 
         !Down-sampling and q-point
         if(use_external_kernel) then
-          if(.not.kpoints_is_compatible_downsampling(sb%kpoints, ikpoint, ikpoint2)) cycle
+          if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
 
-          kpt2(1:der%dim) = kpoints_get_point(sb%kpoints, ikpoint2, absolute_coordinates=.false.)
+          kpt2(1:der%dim) = kpoints_get_point(kpoints, ikpoint2, absolute_coordinates=.false.)
           qq(1:der%dim) = kpt1(1:der%dim)-kpt2(1:der%dim)
         end if
         ! Updating of the poisson solver
@@ -635,7 +639,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
           call poisson_build_kernel(this%psolver, namespace, sb, coulb, qq, this%cam_omega, &
-                  -(sb%kpoints%full%npoints-npath)*sb%rcell_volume  &
+                  -(kpoints%full%npoints-npath)*sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if
 
@@ -646,9 +650,9 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
           if(local .and. ff <= M_EPSILON) cycle
 
           !We do the symmetrization of the received wavefunctions
-          if(sb%kpoints%use_symmetries) then
+          if(kpoints%use_symmetries) then
             SAFE_ALLOCATE(psi_sym(1:der%mesh%np, 1:st%d%dim))
-            ff = ff/kpoints_get_num_symmetry_ops(sb%kpoints, ikpoint)
+            ff = ff/kpoints_get_num_symmetry_ops(kpoints, ikpoint)
             do idim = 1, st%d%dim
               call X(symmetrizer_apply_single)(symmetrizer, der%mesh%np, iop, rec_buffer(:,idim,ist), psi_sym(:,idim))
             end do
@@ -779,7 +783,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
            call profiling_out(prof_acc)
          end do !ib2
 
-         if(sb%kpoints%use_symmetries) then
+         if(kpoints%use_symmetries) then
            SAFE_DEALLOCATE_P(psi_sym)
          else
            nullify(psi_sym)
@@ -1013,11 +1017,12 @@ end subroutine X(exchange_operator_commute_r)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib)
+subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, kpoints, exx_coef, psib, hpsib)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
+  type(kpoints_t),           intent(in)    :: kpoints
   FLOAT,                     intent(in)    :: exx_coef
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
@@ -1028,7 +1033,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
 
   PUSH_SUB(X(exchange_operator_hartree_apply))
 
-  if(der%mesh%sb%kpoints%full%npoints > st_d%ispin) then
+  if(kpoints%full%npoints > st_d%ispin) then
     call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   end if
 
@@ -1091,12 +1096,14 @@ end subroutine X(exchange_operator_hartree_apply)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree)
+subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, kpoints, &
+                                               psib, hpsib, exx_coef, hartree)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(scdm_t),              intent(in)    :: scdm
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
+  type(kpoints_t),           intent(in)    :: kpoints
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,                     intent(in)    :: exx_coef
@@ -1112,7 +1119,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
   
   call profiling_in(prof_exx_scdm, TOSTRING(X(SCDM_EXX_OPERATOR)))
 
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  if(kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   
   ! make sure scdm is localized
   call X(scdm_localize)(scdm, namespace, this%st, der%mesh)

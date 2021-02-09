@@ -222,7 +222,7 @@
         end if
 
         write(fname, '(2a)') 'current_kpt'
-        call io_function_output_vector_BZ(outp%how, dir, fname, namespace, der%mesh, st%d%kpt, &
+        call io_function_output_vector_BZ(outp%how, dir, fname, namespace, der%mesh, st%d%kpt, hm%kpoints, &
             current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         SAFE_DEALLOCATE_A(current_kpt)
@@ -289,7 +289,7 @@
           write(fname, '(a,i1)') 'density_kpt-sp', is
         end if
         call io_function_output_global_BZ(outp%how, dir, fname, namespace, &
-          gr%mesh, density_kpt(:, is), unit_one, err)
+          gr%mesh, hm%kpoints, density_kpt(:, is), unit_one, err)
       end do
       SAFE_DEALLOCATE_A(density_tmp)
       SAFE_DEALLOCATE_A(density_kpt)

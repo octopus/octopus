@@ -34,6 +34,7 @@ module v_ks_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use kick_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
@@ -161,7 +162,7 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space)
+  subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space, kpoints)
     type(v_ks_t),            intent(inout) :: ks
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
@@ -169,6 +170,7 @@ contains
     type(geometry_t),        intent(inout) :: geo
     type(multicomm_t),       intent(in)    :: mc
     type(space_t),           intent(in)    :: space
+    type(kpoints_t),         intent(in)    :: kpoints
 
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
@@ -364,11 +366,11 @@ contains
       call messages_experimental("Hartree theory level")
       if(space%periodic_dim == space%dim) &
         call messages_experimental("Hartree in fully periodic system")
-      if(gr%sb%kpoints%full%npoints > 1) &
+      if(kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
-      if(gr%sb%kpoints%full%npoints > 1) &
+      if(kpoints%full%npoints > 1) &
         call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE
@@ -407,17 +409,29 @@ contains
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
-        if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER) then 
-          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc, space)
-        else
+        select case(ks%xc%functional(FUNC_X,1)%id)
+        case(XC_OEP_X_SLATER) 
+          if(kpoints%reduced%npoints > 1) then
+            call messages_not_implemented("Slater with k-points", namespace=namespace)
+          end if
           ks%oep%level = XC_OEP_NONE
-        end if
+        case(XC_OEP_X_FBE) 
+          if(kpoints%reduced%npoints > 1) then
+            call messages_not_implemented("FBE functional with k-points", namespace=namespace)
+          end if
+          ks%oep%level = XC_OEP_NONE
+        case default
+          if(kpoints%reduced%npoints > 1 .and. ks%sic_type == SIC_NONE) then
+            call messages_not_implemented("OEP exchange with k-points", namespace=namespace)
+          end if
+          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc, space)
+        end select
       else
         ks%oep%level = XC_OEP_NONE
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc, space)
+        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc, space, kpoints)
       end if
 
     end select
@@ -865,7 +879,7 @@ contains
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      call magnetic_induced(ks%gr%der, st, hm%psolver, ks%calc%a_ind, ks%calc%b_ind)
+      call magnetic_induced(ks%gr%der, st, hm%psolver, hm%kpoints, ks%calc%a_ind, ks%calc%b_ind)
     end if
    
     call profiling_out(prof)
@@ -952,7 +966,7 @@ contains
           vxc_sic = M_ZERO
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, vxc_sic)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, rho, st%d%ispin, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -1007,19 +1021,19 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
             vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc)
         end if
       end if
@@ -1283,10 +1297,10 @@ contains
         !Maybe the parameters should be mixed too.
         if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
             call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))

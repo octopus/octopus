@@ -33,6 +33,7 @@ module target_oct_m
   use io_oct_m
   use io_function_oct_m
   use ion_dynamics_oct_m
+  use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -180,8 +181,9 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, namespace, geo, qcs, td, w0, tg, oct, ep, mc)
+  subroutine target_init(gr, kpoints, namespace, geo, qcs, td, w0, tg, oct, ep, mc)
     type(grid_t),                intent(in)    :: gr
+    type(kpoints_t),             intent(in)    :: kpoints
     type(namespace_t),           intent(in)    :: namespace
     type(geometry_t),            intent(in)    :: geo
     type(opt_control_state_t),   intent(inout) :: qcs
@@ -278,18 +280,18 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_init_groundstate(gr, namespace, tg, td, restart)
+      call target_init_groundstate(gr, namespace, tg, td, restart, kpoints)
     case(oct_tg_excited)
       call messages_experimental('OCTTargetOperator = oct_tg_excited')
-      call target_init_excited(gr, namespace, tg, td, restart)
+      call target_init_excited(gr, namespace, tg, td, restart, kpoints)
     case(oct_tg_exclude_state)
-      call target_init_exclude(gr, namespace, tg, td, restart)
+      call target_init_exclude(gr, namespace, tg, td, restart, kpoints)
     case(oct_tg_gstransformation)
-      call target_init_gstransformation(gr, namespace, tg, td, restart)
+      call target_init_gstransformation(gr, namespace, tg, td, restart, kpoints)
     case(oct_tg_userdefined) 
       call target_init_userdefined(gr, namespace, tg, td)
     case(oct_tg_jdensity)
-      call target_init_density(gr, namespace, tg, stin, td, restart)
+      call target_init_density(gr, kpoints, namespace, tg, stin, td, restart)
     case(oct_tg_local)
       call target_init_local(gr, namespace, tg, td)
     case(oct_tg_td_local)
@@ -435,7 +437,7 @@ contains
     case(oct_tg_hhg)
       call target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
     case(oct_tg_jdensity)
-      call target_tdcalc_density(tg, gr, psi, time)
+      call target_tdcalc_density(tg, gr, hm%kpoints, psi, time)
     case default
       message(1) = 'Error in target.target_tdcalc: default.'
       call messages_fatal(1)
@@ -450,9 +452,10 @@ contains
   ! ---------------------------------------------------------------
   !> Calculates the inhomogeneous term that appears in the equation
   !! for chi, and places it into inh.
-  subroutine target_inh(psi, gr, tg, time, inh, iter)
+  subroutine target_inh(psi, gr, kpoints, tg, time, inh, iter)
     type(states_elec_t), intent(inout)     :: psi
     type(grid_t),        intent(in)        :: gr
+    type(kpoints_t),     intent(in)        :: kpoints
     type(target_t),      intent(inout)     :: tg
     FLOAT,               intent(in)        :: time
     type(states_elec_t), intent(inout)     :: inh
@@ -519,7 +522,7 @@ contains
       end do
         
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
-        call chi_current(tg, gr, CNST(-1.0), psi, inh)
+        call chi_current(tg, gr, kpoints, CNST(-1.0), psi, inh)
       end if     
 
     case default
@@ -540,10 +543,11 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, namespace, gr, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, namespace, gr, kpoints, qcpsi, geo) result(j1)
     type(target_t),             intent(inout)   :: tg
-    type(namespace_t),          intent(in)    :: namespace
+    type(namespace_t),          intent(in)      :: namespace
     type(grid_t),               intent(in)      :: gr
+    type(kpoints_t),            intent(in)      :: kpoints
     type(opt_control_state_t),  intent(inout)   :: qcpsi
     type(geometry_t), optional, intent(in)      :: geo
 
@@ -563,7 +567,7 @@ contains
     case(oct_tg_userdefined)
       j1 = target_j1_userdefined(tg, gr, psi)
     case(oct_tg_jdensity)
-      j1 = target_j1_density(gr, tg, psi)
+      j1 = target_j1_density(gr, kpoints, tg, psi)
     case(oct_tg_local)
       j1 = target_j1_local(gr, tg, psi)
     case(oct_tg_td_local)
@@ -590,10 +594,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(tg, namespace, gr, qcpsi_in, qcchi_out, geo)
+  subroutine target_chi(tg, namespace, gr, kpoints, qcpsi_in, qcchi_out, geo)
     type(target_t),                    intent(inout) :: tg
     type(namespace_t),                 intent(in)    :: namespace
     type(grid_t),                      intent(in)    :: gr
+    type(kpoints_t),                   intent(in)    :: kpoints
     type(opt_control_state_t), target, intent(inout) :: qcpsi_in
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
     type(geometry_t),                  intent(in)    :: geo
@@ -616,7 +621,7 @@ contains
     case(oct_tg_userdefined)
       call target_chi_userdefined(tg, gr, psi_in, chi_out)
     case(oct_tg_jdensity)
-      call target_chi_density(tg, gr, psi_in, chi_out)
+      call target_chi_density(tg, gr, kpoints, psi_in, chi_out)
     case(oct_tg_local)
       call target_chi_local(tg, gr, psi_in, chi_out)
     case(oct_tg_td_local)

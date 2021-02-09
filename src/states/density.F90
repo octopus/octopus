@@ -627,11 +627,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_freeze_orbitals(st, namespace, gr, mc, n, family_is_mgga)
+  subroutine states_elec_freeze_orbitals(st, namespace, gr, mc, kpoints, n, family_is_mgga)
     type(states_elec_t), intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(multicomm_t),   intent(in)    :: mc
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: n
     logical,             intent(in)    :: family_is_mgga
 
@@ -706,7 +707,7 @@ contains
         SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
       end if
 
-      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
+      call states_elec_calc_quantities(gr%der, st, kpoints, .true., kinetic_energy_density = st%frozen_tau, &
            density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
     end if 
 

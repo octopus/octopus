@@ -126,7 +126,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) then
+    if (sys%kpoints%use_symmetries) then
       call messages_experimental("KPoints symmetries with CalculationMode = go")
     end if
 
@@ -135,7 +135,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
+      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."

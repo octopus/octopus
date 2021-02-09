@@ -675,7 +675,7 @@ contains
     call output_states(outp, namespace, dir, st, gr, geo, hm)
     call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
-    call output_current_flow(outp, namespace, dir, gr, st)
+    call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
@@ -703,7 +703,7 @@ contains
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, dir, st, gr, geo)
+      call output_etsf(outp, namespace, dir, st, gr, hm%kpoints, geo)
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -775,7 +775,7 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%sb%dim /= 1)
 
-      call elf_calc(st, gr, f_loc)
+      call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
@@ -883,7 +883,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
+    call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -936,7 +936,7 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+      call states_elec_calc_quantities(gr%der, st, hm%kpoints, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
       do is = 1, st%d%nspin
@@ -958,7 +958,7 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
       do is = 1, st%d%nspin
         do ip = 1, gr%fine%mesh%np
@@ -1252,7 +1252,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
@@ -1340,7 +1340,7 @@ contains
 
     ! FIXME: is parallelization over k-points possible?
     do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
 
       if(mpi_grp_is_root(mpi_world)) &
         call write_binary_gvectors(iunit, shell_wfn%ngvectors, shell_wfn%ngvectors, shell_wfn%red_gvec)
@@ -1408,10 +1408,10 @@ contains
       end do
       ! some further work on conventions of mtrx and tnp is required!
       
-      SAFE_ALLOCATE(ifmin(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(ifmax(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(energies(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(occupations(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(ifmin(1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(ifmax(1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(energies(1:st%nst, 1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(occupations(1:st%nst, 1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
 
       ifmin(:,:) = 1
 !     This is how semiconducting smearing "should" work, but not in our implementation.
@@ -1433,9 +1433,9 @@ contains
         end do
       end do
 
-      SAFE_ALLOCATE(ngk(1:gr%sb%kpoints%reduced%npoints))
+      SAFE_ALLOCATE(ngk(1:hm%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
-        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
         ngk(ik) = shell_wfn%ngvectors
         call fourier_shell_end(shell_wfn)
@@ -1449,7 +1449,7 @@ contains
         apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
       end do
 
-      if(any(gr%sb%kpoints%nik_axis(1:3) == 0)) then
+      if(any(hm%kpoints%nik_axis(1:3) == 0)) then
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"
         message(2) = "or this WFN will only be usable in BerkeleyGW's inteqp."
         call messages_warning(1, namespace=namespace)
@@ -1467,13 +1467,13 @@ contains
 
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
-      weight => gr%sb%kpoints%reduced%weight
-      red_point => gr%sb%kpoints%reduced%red_point
+      weight => hm%kpoints%reduced%weight
+      red_point => hm%kpoints%reduced%red_point
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
         symmetries_number(gr%sb%symm), 0, geo%natoms, &
-        gr%sb%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
-        ecutwfc * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%full%shifts, &
+        hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
+        ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
         gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
         M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &

@@ -200,7 +200,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! the non-local potential contribution
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
-        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+        .not. (st%symmetrize_density .and. hm%kpoints%use_symmetries)) then
 
         call X(hamiltonian_elec_base_nlocal_force)(hm%hm_base, gr%mesh, st, gr%der%boundaries, iq, &
                    gr%sb%dim, psib, grad_psib, force_nl)
@@ -221,7 +221,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
           call profiling_count_operations(np*st%d%dim*gr%sb%dim*(2 + R_MUL))
 
-          if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+          if(st%symmetrize_density .and. hm%kpoints%use_symmetries) then
 
             ! We use that
             !
@@ -234,11 +234,11 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
             !
 
             !We apply N symmetries, so we have to use the proper weight
-            kweight = st%d%kweights(iq) / kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+            kweight = st%d%kweights(iq) / kpoints_get_num_symmetry_ops(hm%kpoints, ikpoint)
 
-            do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+            do ii = 1, kpoints_get_num_symmetry_ops(hm%kpoints, ikpoint)
 
-              iop = abs(kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii))
+              iop = abs(kpoints_get_symmetry_ops(hm%kpoints, ikpoint, ii))
               !if(iop < 0 ) cycle !Time reversal symmetry
 
               do iatom = 1, geo%natoms
@@ -330,7 +330,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
  ! in this case we need to convert to Cartesian coordinates at the end
  ! TODO: integrate this to the routine X(hamiltonian_elec_base_nlocal_force)
  if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
-        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+        .not. (st%symmetrize_density .and. hm%kpoints%use_symmetries)) then
    ! We convert the forces to Cartesian coordinates
    if (simul_box_is_periodic(gr%sb) .and. gr%sb%nonorthogonal ) then
      do iatom = 1, geo%natoms
@@ -389,11 +389,12 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 end subroutine X(forces_from_potential)
 
 !---------------------------------------------------------------------------
-subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
+subroutine X(total_force_from_potential)(gr, geo, ep, st, kpoints, x, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_elec_t),            intent(in)    :: st
+  type(kpoints_t),                intent(in)    :: kpoints
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
   integer,                        intent(in)    :: lda_u_level
  
@@ -436,10 +437,10 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
       do idim = 1, st%d%dim
         call boundaries_set(gr%der%boundaries, psi(:, idim))
 
-        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(kpoints, ikpoint)) then
 
           kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
+          kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, ikpoint)
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
@@ -506,12 +507,13 @@ end subroutine X(total_force_from_potential)
 
 
 ! --------------------------------------------------------------------------------
-subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
+subroutine X(forces_derivative)(gr, namespace, geo, ep, st, kpoints, lr, lr2, force_deriv, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_elec_t),            intent(in)    :: st
+  type(kpoints_t),                intent(in)    :: kpoints
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%sb%dim, geo%natoms)
@@ -567,10 +569,10 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
         call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, iq), dl_psi2(:, idim))
         call boundaries_set(gr%der%boundaries, dl_psi2(:, idim))
 
-        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(kpoints, ikpoint)) then
 
           kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
+          kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, ikpoint)
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
@@ -647,12 +649,13 @@ end subroutine X(forces_derivative)
 ! --------------------------------------------------------------------------------
 !> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
 !! for each atom, Z*(i,j) = dF(j)/dE(i)
-subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, lr, lr2, born_charges, lda_u_level)
+subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, kpoints, lr, lr2, born_charges, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_elec_t),            intent(in)    :: st
+  type(kpoints_t),                intent(in)    :: kpoints
   type(lr_t),                     intent(in)    :: lr(:)  !< (gr%sb%dim)
   type(lr_t),                     intent(in)    :: lr2(:) !< (gr%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges
@@ -666,7 +669,7 @@ subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, lr, lr2, born_char
   SAFE_ALLOCATE(force_deriv(1:gr%sb%dim, 1:geo%natoms))
 
   do idir = 1, gr%sb%dim
-    call X(forces_derivative)(gr, namespace, geo, ep, st, lr(idir), lr2(idir), force_deriv, lda_u_level)
+    call X(forces_derivative)(gr, namespace, geo, ep, st, kpoints, lr(idir), lr2(idir), force_deriv, lda_u_level)
     do iatom = 1, geo%natoms
       born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)
       born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%species)

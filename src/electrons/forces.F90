@@ -87,11 +87,12 @@ contains
   ! ---------------------------------------------------------
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
-  subroutine total_force_calculate(gr, geo, ep, st, x, lda_u)
+  subroutine total_force_calculate(gr, geo, ep, st, kpoints, x, lda_u)
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(epot_t),        intent(in)    :: ep
     type(states_elec_t), intent(in)    :: st
+    type(kpoints_t),     intent(in)    :: kpoints
     FLOAT,               intent(inout) :: x(MAX_DIM)
     integer,             intent(in)    :: lda_u
 
@@ -102,9 +103,9 @@ contains
 
     x = M_ZERO
     if (states_are_real(st) ) then 
-      call dtotal_force_from_potential(gr, geo, ep, st, x, lda_u)
+      call dtotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
     else
-      call ztotal_force_from_potential(gr, geo, ep, st, x, lda_u)
+      call ztotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
     end if
 
     POP_SUB(total_force_calculate)

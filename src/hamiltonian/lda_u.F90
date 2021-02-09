@@ -31,6 +31,7 @@ module lda_u_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_base_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use loewdin_oct_m
@@ -187,7 +188,7 @@ contains
   end subroutine lda_u_nullify
 
   ! ---------------------------------------------------------
-  subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
+  subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver, kpoints)
     type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: level
@@ -195,6 +196,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
+    type(kpoints_t),           intent(in)    :: kpoints
 
     logical :: complex_coulomb_integrals
     integer :: ios, is
@@ -362,7 +364,7 @@ contains
 
         !This is a non local operator. To make this working, one probably needs to apply the
         ! symmetries to the generalized occupation matrices
-        if(gr%sb%kpoints%use_symmetries) then
+        if(kpoints%use_symmetries) then
           call messages_not_implemented("Intersite interaction with kpoint symmetries", namespace=namespace)
         end if
 
@@ -537,13 +539,14 @@ contains
   end subroutine lda_u_end
 
   ! When moving the ions, the basis must be reconstructed
-  subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, has_phase)
+  subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, kpoints, has_phase)
     type(lda_u_t),     target, intent(inout) :: this
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(namespace_t),         intent(in)    :: namespace
+    type(kpoints_t),           intent(in)    :: kpoints
     logical,                   intent(in)    :: has_phase
 
     integer :: ios, maxorbs, nspin
@@ -606,7 +609,7 @@ contains
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%sb, st%d, gr%der%boundaries, namespace)
+      call lda_u_build_phase_correction(this, gr%sb%dim, st%d, gr%der%boundaries, namespace, kpoints)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then
@@ -647,12 +650,13 @@ contains
 
 
   !> Build the phase correction to the global phase for all orbitals
-  subroutine lda_u_build_phase_correction(this, sb, std, boundaries, namespace, vec_pot, vec_pot_var)
+  subroutine lda_u_build_phase_correction(this, dim, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
     type(lda_u_t),                 intent(inout) :: this
-    type(simul_box_t),             intent(in)    :: sb
+    integer,                       intent(in)    :: dim
     type(states_elec_dim_t),       intent(in)    :: std
     type(boundaries_t),            intent(in)    :: boundaries
     type(namespace_t),             intent(in)    :: namespace
+    type(kpoints_t),               intent(in)    :: kpoints
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -668,7 +672,7 @@ contains
     PUSH_SUB(lda_u_build_phase_correction)
 
     do ios = 1, this%norbsets
-      call orbitalset_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
+      call orbitalset_update_phase(this%orbsets(ios), dim, std%kpt, kpoints, (std%ispin==SPIN_POLARIZED), &
         vec_pot, vec_pot_var)
     end do
 
