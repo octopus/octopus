@@ -465,10 +465,9 @@ contains
   end subroutine simul_box_init
 
   !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, namespace, rlattice_primitive)
+  subroutine simul_box_build_lattice(sb, namespace)
     type(simul_box_t), intent(inout) :: sb
     type(namespace_t), intent(in)    :: namespace
-    FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
     FLOAT :: norm, lparams(3), volume_element
@@ -483,142 +482,134 @@ contains
     sb%beta  = CNST(90.0)
     sb%gamma = CNST(90.0)
 
-    if(present(rlattice_primitive)) then
-      sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
-      sb%nonorthogonal = .false.
+    !%Variable LatticeParameters
+    !%Type block
+    !%Default 1 | 1 | 1
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% The lattice parameters (a, b, c). 
+    !% This option is incompatible with Lsize and either one of the 
+    !% two must be specified in the input file for periodic systems.
+    !% A second optional line can be used tu define the angles between the lattice vectors
+    !%End
+    lparams(:) = M_ONE
+    has_angles = .false.
+    angles = CNST(90.0)
+
+    if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      do idim = 1, sb%dim
+        call parse_block_float(blk, 0, idim - 1, lparams(idim))
+      end do
+
+      if(parse_block_n(blk) > 1) then ! we have a shift, or even more
+        ncols = parse_block_cols(blk, 1)
+        if(ncols /= sb%dim) then
+          write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
+          call messages_fatal(1, namespace=namespace)
+        end if
+        do idim = 1, sb%dim
+          call parse_block_float(blk, 1, idim - 1, angles(idim))
+        end do
+        has_angles = .true.
+      end if
+      call parse_block_end(blk)
+
+      if (parse_is_defined(namespace, 'Lsize')) then
+        message(1) = 'LatticeParameters is incompatible with Lsize'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+    end if
+
+    if( has_angles ) then
+      sb%alpha = angles(1)
+      sb%beta  = angles(2)
+      sb%gamma = angles(3)
+
+      !Converting the angles to LatticeVectors
+      !See 57_iovars/ingeo.F90 in Abinit for details
+      if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
+        (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
+
+        cosang=cos(M_PI*angles(1)/CNST(180.0));
+        a2=M_TWO/M_THREE*(M_ONE-cosang);
+        aa=sqrt(a2);
+        cc=sqrt(M_ONE-a2);
+        sb%rlattice_primitive(1,1) = aa
+        sb%rlattice_primitive(2,1) = M_ZERO
+        sb%rlattice_primitive(3,1) = cc
+        sb%rlattice_primitive(1,2) =-M_HALF*aa
+        sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
+        sb%rlattice_primitive(3,2) = cc
+        sb%rlattice_primitive(1,3) =-M_HALF*aa
+        sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
+        sb%rlattice_primitive(3,3) = cc
+      else
+        sb%rlattice_primitive(1,1) = M_ONE
+        sb%rlattice_primitive(2,1) = M_ZERO
+        sb%rlattice_primitive(3,1) = M_ZERO
+        sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
+        sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
+        sb%rlattice_primitive(3,2) = M_ZERO
+        sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
+        sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
+                                         /sb%rlattice_primitive(2,2) 
+        sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
+      end if
+
+      if (parse_is_defined(namespace, 'LatticeVectors')) then
+        message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
+        sb%nonorthogonal = .true.
+      else
+        sb%nonorthogonal = .false.
+      end if
+
     else
-      
-      
-      !%Variable LatticeParameters
+
+      !%Variable LatticeVectors
       !%Type block
-      !%Default 1 | 1 | 1
+      !%Default simple cubic
       !%Section Mesh::Simulation Box
       !%Description
-      !% The lattice parameters (a, b, c). 
-      !% This option is incompatible with Lsize and either one of the 
-      !% two must be specified in the input file for periodic systems.
-      !% A second optional line can be used tu define the angles between the lattice vectors
+      !% Primitive lattice vectors. Vectors are stored in rows.
+      !% Default:
+      !% <br><br><tt>%LatticeVectors
+      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+      !% <br>%<br></tt>
       !%End
-      lparams(:) = M_ONE
-      has_angles = .false.
-      angles = CNST(90.0)
+      sb%rlattice_primitive = M_ZERO
+      sb%nonorthogonal = .false.
+      do idim = 1, sb%dim
+        sb%rlattice_primitive(idim, idim) = M_ONE
+      end do
 
-      if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
         do idim = 1, sb%dim
-          call parse_block_float(blk, 0, idim - 1, lparams(idim))
+          do jdim = 1, sb%dim
+            call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
+            if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
+          enddo
         end do
-
-        if(parse_block_n(blk) > 1) then ! we have a shift, or even more
-          ncols = parse_block_cols(blk, 1)
-          if(ncols /= sb%dim) then
-            write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
-            call messages_fatal(1, namespace=namespace)
-          end if
-          do idim = 1, sb%dim
-            call parse_block_float(blk, 1, idim - 1, angles(idim))
-          end do
-          has_angles = .true.
-        end if
         call parse_block_end(blk)
 
-        if (parse_is_defined(namespace, 'Lsize')) then
-          message(1) = 'LatticeParameters is incompatible with Lsize'
-          call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1, namespace=namespace)
-        end if 
-
       end if
+    end if
 
-      if( has_angles ) then
-        sb%alpha = angles(1)
-        sb%beta  = angles(2)
-        sb%gamma = angles(3)
-
-        !Converting the angles to LatticeVectors
-        !See 57_iovars/ingeo.F90 in Abinit for details
-        if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-                 (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
-
-          cosang=cos(M_PI*angles(1)/CNST(180.0));
-          a2=M_TWO/M_THREE*(M_ONE-cosang);
-          aa=sqrt(a2);
-          cc=sqrt(M_ONE-a2);
-          sb%rlattice_primitive(1,1) = aa
-          sb%rlattice_primitive(2,1) = M_ZERO
-          sb%rlattice_primitive(3,1) = cc
-          sb%rlattice_primitive(1,2) =-M_HALF*aa
-          sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(3,2) = cc
-          sb%rlattice_primitive(1,3) =-M_HALF*aa
-          sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(3,3) = cc
-        else
-          sb%rlattice_primitive(1,1) = M_ONE
-          sb%rlattice_primitive(2,1) = M_ZERO
-          sb%rlattice_primitive(3,1) = M_ZERO
-          sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(3,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
-          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
-                                         /sb%rlattice_primitive(2,2) 
-          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
+    ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+    if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
+      do idim = 1, sb%dim
+        if (sb%lsize(idim) == M_ZERO) then
+          sb%lsize(idim) = lparams(idim)*M_HALF
         end if
-
-        if (parse_is_defined(namespace, 'LatticeVectors')) then
-          message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
-          call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1, namespace=namespace)
-        end if
-
-        if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
-          sb%nonorthogonal = .true.
-        else
-          sb%nonorthogonal = .false.
-        end if
-        
-      else  
-
-        !%Variable LatticeVectors
-        !%Type block
-        !%Default simple cubic
-        !%Section Mesh::Simulation Box
-        !%Description
-        !% Primitive lattice vectors. Vectors are stored in rows.
-        !% Default:
-        !% <br><br><tt>%LatticeVectors
-        !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
-        !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
-        !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-        !% <br>%<br></tt>
-        !%End
-        sb%rlattice_primitive = M_ZERO
-        sb%nonorthogonal = .false.
-        do idim = 1, sb%dim
-          sb%rlattice_primitive(idim, idim) = M_ONE
-        end do
-
-        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
-          do idim = 1, sb%dim
-            do jdim = 1, sb%dim
-              call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
-              if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
-            enddo
-          end do
-          call parse_block_end(blk)
-
-        end if
-      end if
-
-      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
-      if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
-        do idim = 1, sb%dim
-          if (sb%lsize(idim) == M_ZERO) then
-            sb%lsize(idim) = lparams(idim)*M_HALF
-          end if
-        end do
-      end if
-
+      end do
     end if
 
     sb%rlattice = M_ZERO
@@ -630,7 +621,7 @@ contains
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end do
     end do
-    
+
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
