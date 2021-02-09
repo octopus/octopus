@@ -902,7 +902,7 @@ contains
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do ip = 1, np_max
-      call index_to_coords(mesh%idx, ip, ixvect)
+      call mesh_global_index_to_coords(mesh, ip, ixvect)
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
         xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -945,9 +945,9 @@ contains
 ! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
         ixvect_test = 1
         ixvect_test(jdim) = ix
-        ip = index_from_coords(mesh%idx, ixvect_test)
+        ip = mesh_global_index_from_coords(mesh, ixvect_test)
         if(ip /= 0) then 
-          call index_to_coords(mesh%idx, ip, ixvect_test)
+          call mesh_global_index_to_coords(mesh, ip, ixvect_test)
           if(ixvect_test(jdim) == 0) exit
         end if
       end do
@@ -963,7 +963,7 @@ contains
 
         ixvect(d2) = iy
         ixvect(d3) = iz
-        ip = index_from_coords(mesh%idx, ixvect)
+        ip = mesh_global_index_from_coords(mesh, ixvect)
 
         if(ip <= np_max .and. ip > 0) then
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -1005,7 +1005,7 @@ contains
        
           ixvect(d1) = ix
           ixvect(d2) = iy
-          ip = index_from_coords(mesh%idx, ixvect)
+          ip = mesh_global_index_from_coords(mesh, ixvect)
          
           if(ip <= np_max .and. ip > 0) then
             xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -1081,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
+          ip = mesh_global_index_from_coords(mesh, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
+          ip = mesh_global_index_from_coords(mesh, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
+          ip = mesh_global_index_from_coords(mesh, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)

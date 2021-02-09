@@ -355,7 +355,8 @@ contains
       call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
            this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
            set_initial_state = .true.)
-      this%st%rs_state_const(:) = this%st%rs_state(index_from_coords(this%gr%mesh%idx, [0,0,0]),:)
+      ! for mesh parallelization, this needs communication!
+      this%st%rs_state_const(:) = this%st%rs_state(mesh_global_index_from_coords(this%gr%mesh, [0,0,0]),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then

@@ -869,7 +869,7 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
 
-    integer :: ip, jp, idir, dim, idx(MAX_DIM)
+    integer :: ip, idir, dim, idx(MAX_DIM)
     FLOAT   :: r, chi(MAX_DIM)
 
     PUSH_SUB(getrho)
@@ -877,12 +877,7 @@ contains
     dim = mesh_p%sb%dim
     rho_p = M_ZERO
     do ip = 1, mesh_p%np
-
-      jp = ip
-      if(mesh_p%parallel_in_domains) &
-        jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
-
-      call index_to_coords(mesh_p%idx, jp, idx)
+      call mesh_local_index_to_coords(mesh_p, ip, idx)
       chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )

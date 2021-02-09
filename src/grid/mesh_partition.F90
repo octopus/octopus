@@ -209,7 +209,7 @@ contains
     ! Iterate over number of vertices.
     do iv = 1, lsize(ipart)
       ! Get coordinates of point iv (vertex iv).
-      call index_to_coords(mesh%idx, istart(ipart)-1 + iv, ix)
+      call mesh_global_index_to_coords(mesh, istart(ipart)-1 + iv, ix)
 
       ! Set entry in index table.
       xadj(iv) = ne
@@ -224,7 +224,7 @@ contains
         if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
           ! Only points inside the mesh or its enlargement
           ! are included in the graph.
-          inb = index_from_coords(mesh%idx, jx)
+          inb = mesh_global_index_from_coords(mesh, jx)
           if(inb /= 0 .and. inb <= nv_global) then
             ! Store a new edge and increment edge counter.
             adjncy(ne) = inb
@@ -469,12 +469,12 @@ contains
       ii = mesh%np_global + istart - 1 + is
 
       !get the coordinates of the point
-      call index_to_coords(mesh%idx, ii, ix)
+      call mesh_global_index_to_coords(mesh, ii, ix)
 
       do jj = 1, stencil%size
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
         if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
-        ip = index_from_coords(mesh%idx, jx)
+        ip = mesh_global_index_from_coords(mesh, jx)
         if (ip > 0 .and. ip <= mesh%np_global) neighbours_index((is-1)*stencil%size + jj) = ip
       end do
 
@@ -573,8 +573,8 @@ contains
     SAFE_ALLOCATE(part(1:np))
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
-      call index_to_coords(mesh%idx, ip_global, idx)
-      points(ip_local) = index_from_coords(parent%idx, 2*idx)
+      call mesh_global_index_to_coords(mesh, ip_global, idx)
+      points(ip_local) = mesh_global_index_from_coords(parent, 2*idx)
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)
 
@@ -765,7 +765,7 @@ contains
       if(ipart /= point_to_part(ip)) cycle
       
       INCR(nlocal(ipart), 1)
-      call index_to_coords(mesh%idx, ip, ipcoords)
+      call mesh_global_index_to_coords(mesh, ip, ipcoords)
       
       do istencil = 1, stencil%size
         jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)

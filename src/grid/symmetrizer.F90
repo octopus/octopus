@@ -81,12 +81,7 @@ contains
     offset(1:3) = TOFLOAT(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
     do ip = 1, mesh%np
-      if(mesh%parallel_in_domains) then
-        ! convert to global point
-        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), idx)
-      else
-        call index_to_coords(mesh%idx, ip, idx)
-      end if
+      call mesh_local_index_to_coords(mesh, ip, idx)
       destpoint(1:3) = TOFLOAT(idx(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
 
@@ -134,9 +129,9 @@ contains
         ASSERT(all(srcpoint_inv < lsize))
         srcpoint_inv(1:3) = srcpoint_inv(1:3) + offset(1:3)
 
-        this%map(ip, iop) = index_from_coords(this%mesh%idx, &
+        this%map(ip, iop) = mesh_global_index_from_coords(this%mesh, &
           [nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3))])
-        this%map_inv(ip, iop) = index_from_coords(this%mesh%idx, &
+        this%map_inv(ip, iop) = mesh_global_index_from_coords(this%mesh, &
           [nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3))])
       end do
     end do
