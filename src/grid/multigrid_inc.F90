@@ -48,7 +48,7 @@
 
     call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
 
-    factor = factor/coarse_der%mesh%sb%dim
+    factor = factor/coarse_der%dim
 
     call boundaries_set(coarse_der%boundaries, f_coarse)
 
@@ -69,7 +69,7 @@
       
       f_fine(ipf) = M_ZERO
       
-      do idir = 1, coarse_der%mesh%sb%dim
+      do idir = 1, coarse_der%dim
         ifactor = 1
         do ii = -order_, order_
           if(ii == 0) cycle

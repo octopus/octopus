@@ -16,8 +16,8 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, infrared)
-  type(grid_t),         intent(in)    :: gr
+subroutine X(phonons_lr_infrared)(mesh, geo, st, lr, kdotp_lr, imat, iatom, idir, infrared)
+  type(mesh_t),         intent(in)    :: mesh
   type(geometry_t),     intent(in)    :: geo
   type(states_elec_t),  intent(in)    :: st
   type(lr_t),           intent(in)    :: lr
@@ -33,21 +33,21 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
   PUSH_SUB(X(phonons_lr_infrared))
 
   if(smear_is_semiconducting(st%smear)) then
-    do jdir = 1, gr%sb%periodic_dim
+    do jdir = 1, geo%space%periodic_dim
       infrared(imat, jdir) = M_ZERO
       do ik = 1, st%d%nik
         term = M_ZERO
         do ist = 1, st%nst
           term = term + &
-            TOFLOAT(X(mf_dotp)(gr%mesh, st%d%dim, lr%X(dl_psi)(:, :, ist, ik), kdotp_lr(jdir)%X(dl_psi)(:, :, ist, ik)))
+            TOFLOAT(X(mf_dotp)(mesh, st%d%dim, lr%X(dl_psi)(:, :, ist, ik), kdotp_lr(jdir)%X(dl_psi)(:, :, ist, ik)))
         end do
         infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
       end do
     end do
   end if
   
-  do jdir = gr%sb%periodic_dim + 1, gr%sb%dim
-    infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), TOFLOAT(lr%X(dl_rho)(:, 1)))
+  do jdir = geo%space%periodic_dim + 1, geo%space%dim
+    infrared(imat, jdir) = dmf_dotp(mesh, mesh%x(:, jdir), TOFLOAT(lr%X(dl_rho)(:, 1)))
   end do
   infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%species)
   

@@ -1810,7 +1810,7 @@ contains
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
     SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
     SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np, 1:st%d%dim))
@@ -1828,7 +1828,7 @@ contains
     ! current and the kinetic energy density
     if(present(gi_kinetic_energy_density)) then
       if(.not. present(paramagnetic_current) .and. states_are_complex(st)) then
-        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%dim, 1:st%d%nspin))
       end if
       if(.not. present(kinetic_energy_density)) then
         SAFE_ALLOCATE(tau(1:der%mesh%np, 1:st%d%nspin))
@@ -1843,7 +1843,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
       is = states_elec_dim_get_spin_index(st%d, ik)
 
       do ist = st%st_start, st_end_
@@ -1888,7 +1888,7 @@ contains
           end if
         end if
         
-        do i_dim = 1, der%mesh%sb%dim
+        do i_dim = 1, der%dim
 
           !We precompute some quantites, to avoid to compute it many times
           psi_gpsi(1:der%mesh%np, 1:st%d%dim) = wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*gwf_psi(1:der%mesh%np,i_dim,1:st%d%dim)
@@ -1996,7 +1996,7 @@ contains
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
+      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin
         if(associated(tau)) then
@@ -2014,13 +2014,13 @@ contains
         if(associated(jp)) then 
           call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
             suppress_warning = .true.)
-          jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+          jp(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if
  
         if(present(density_gradient)) then
           call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
             symmfield_vector = symm, suppress_warning = .true.)
-          density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+          density_gradient(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if   
       end do
       call symmetrizer_end(symmetrizer)
@@ -2039,8 +2039,8 @@ contains
          ! calculate gradient of the NLCC
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
-           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
-                                                                    real(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1))
+           density_gradient(1:der%mesh%np, 1:der%dim, is) = density_gradient(1:der%mesh%np, 1:der%dim, is) + &
+                                                                    real(gwf_psi(1:der%mesh%np, 1:der%dim,1))
          end do
        end if
 
@@ -2065,7 +2065,7 @@ contains
     end if
     if (allocated(st%frozen_gdens) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
-        do idir = 1, der%mesh%sb%dim
+        do idir = 1, der%dim
           do ii = 1, der%mesh%np
             density_gradient(ii, idir, is) = density_gradient(ii, idir, is) + st%frozen_gdens(ii, idir, is)
           end do
@@ -2095,7 +2095,7 @@ contains
           do ii = 1, der%mesh%np
             if(st%rho(ii, is) < CNST(1.0e-7)) cycle
             gi_kinetic_energy_density(ii, is) = &
-              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%mesh%sb%dim, is)**2)/st%rho(ii, is)
+              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%dim, is)**2)/st%rho(ii, is)
           end do
         end if
       end do
@@ -2125,10 +2125,10 @@ contains
       if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
 
       do is = 1, st%d%nspin
-        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
+        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
 
         if(present(density_gradient)) &
-          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
+          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
       end do
 
       POP_SUB(states_elec_calc_quantities.reduce_all)

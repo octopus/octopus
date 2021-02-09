@@ -35,9 +35,9 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
 
   PUSH_SUB(X(physics_op_L))
 
-  ASSERT(der%mesh%sb%dim /= 1)
+  ASSERT(der%dim /= 1)
 
-  SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
+  SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%dim))
 
   call X(derivatives_grad)(der, ff, gf, ghost_update, set_bc)
 
@@ -47,7 +47,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
   factor = M_ONE
 #endif
 
-  select case(der%mesh%sb%dim)
+  select case(der%dim)
   case(3)
     do ip = 1, der%mesh%np
       x1 = der%mesh%x(ip, 1)
@@ -88,11 +88,11 @@ subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
 
   PUSH_SUB(X(physics_op_L2))
 
-  ASSERT(der%mesh%sb%dim == 2 .or. der%mesh%sb%dim == 3)
+  ASSERT(der%dim == 2 .or. der%dim == 3)
 
   l2f = R_TOTYPE(M_ZERO)
 
-  select case(der%mesh%sb%dim)
+  select case(der%dim)
   case(3)
     SAFE_ALLOCATE( gf(1:der%mesh%np_part, 1:3))
     SAFE_ALLOCATE(ggf(1:der%mesh%np_part, 1:3, 1:3))

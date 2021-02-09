@@ -311,9 +311,9 @@ contains
       
       if(do_infrared) then
         if(states_are_real(st)) then
-          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call dphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         else
-          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call zphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         end if
       end if
 
@@ -377,7 +377,7 @@ contains
     call sternheimer_end(sh)
     call states_elec_deallocate_wfns(st)
     if (sys%space%is_periodic() .and. do_infrared) then
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
       end do
     end if

@@ -134,9 +134,9 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
+    if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%dim /= 3)) then
 
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -171,7 +171,7 @@ contains
 
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
-      ASSERT(der%mesh%sb%dim == 3)
+      ASSERT(der%dim == 3)
 
       SAFE_ALLOCATE(weight(1:psib%nst))
       do ist = 1, psib%nst
@@ -201,14 +201,14 @@ contains
       
       call accel_kernel_run(kernel, (/pad(der%mesh%np, wgsize)/), (/wgsize/))
       
-      SAFE_ALLOCATE(current_tmp(1:der%mesh%sb%dim, der%mesh%np))
+      SAFE_ALLOCATE(current_tmp(1:der%dim, der%mesh%np))
 
       call accel_finish()
 
       call accel_read_buffer(buff_current, der%mesh%np*3, current_tmp)
 
       do ip = 1, der%mesh%np
-        do idir = 1, der%mesh%sb%dim
+        do idir = 1, der%dim
           st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) + current_tmp(idir, ip)
         end do
       end do
@@ -230,7 +230,7 @@ contains
         if(abs(ww) <= M_EPSILON) cycle
 
         if(psib%is_packed()) then
-          do idir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
               st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) &
@@ -239,7 +239,7 @@ contains
             !$omp end parallel do
           end do
         else
-          do idir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
               st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) &
@@ -281,17 +281,17 @@ contains
     PUSH_SUB(current_calculate)
 
     ! spin not implemented or tested
-    ASSERT(all(ubound(st%current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
-    ASSERT(all(ubound(st%current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(ubound(st%current) == (/der%mesh%np_part, der%dim, st%d%nspin/)))
+    ASSERT(all(ubound(st%current_kpt) == (/der%mesh%np, der%dim, st%d%kpt%end/)))
     ASSERT(all(lbound(st%current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
     SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%mesh%sb%dim))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%dim))
 
     st%current = M_ZERO
     st%current_kpt = M_ZERO
@@ -314,7 +314,7 @@ contains
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, set_bc = .false.)
 
-          do idir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
@@ -392,7 +392,7 @@ contains
             end if
 
             ! this now takes non-orthogonal axis into account
-            do idir = 1, der%mesh%sb%dim
+            do idir = 1, der%dim
               call epsib%copy_to(commpsib(idir))
             end do
             call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
@@ -403,7 +403,7 @@ contains
 
             call current_batch_accumulate(st, der, ik, ib, epsib, commpsib)
 
-            do idir = 1, der%mesh%sb%dim
+            do idir = 1, der%dim
               call commpsib(idir)%end()
             end do
 
@@ -443,7 +443,7 @@ contains
               !This must be done first, as this is like a position-dependent mass 
               if (family_is_mgga_with_exc(hm%xc)) then
                 do idim = 1, st%d%dim
-                  do idir = 1, der%mesh%sb%dim
+                  do idir = 1, der%dim
                     !$omp parallel do
                     do ip = 1, der%mesh%np
                       gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
@@ -470,7 +470,7 @@ contains
             end if
 
             if(st%d%ispin /= SPINORS) then
-              do idir = 1, der%mesh%sb%dim
+              do idir = 1, der%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   st%current_kpt(ip, idir, ik) = st%current_kpt(ip, idir, ik) + &
@@ -479,7 +479,7 @@ contains
                 !$omp end parallel do
               end do
             else
-              do idir = 1, der%mesh%sb%dim
+              do idir = 1, der%dim
                 !$omp parallel do  private(c_tmp)
                 do ip = 1, der%mesh%np
                   st%current(ip, idir, 1) = st%current(ip, idir, 1) + &
@@ -509,21 +509,21 @@ contains
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_elec_dim_get_spin_index(st%d, ik)
-        call lalg_axpy(der%mesh%np, der%mesh%sb%dim, M_ONE, st%current_kpt(:, :, ik), st%current(:, :, ispin))
+        call lalg_axpy(der%mesh%np, der%dim, M_ONE, st%current_kpt(:, :, ik), st%current(:, :, ispin))
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%current, dim = (/der%mesh%np, der%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
+      SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
         call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = st%current(:, :, ispin), &
           symmfield_vector = symmcurrent, suppress_warning = .true.)
-        st%current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
+        st%current(1:der%mesh%np, 1:der%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%dim)
       end do
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symmcurrent)
@@ -556,16 +556,16 @@ contains
     CMPLX,                intent(in)    :: psi_i(:,:)
     CMPLX,                intent(in)    :: psi_j(:,:)
     integer,              intent(in)    :: ik
-    CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%mesh%sb%dim, 1:st%d%nspin)
+    CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%dim, 1:st%d%nspin)
 
     integer ::  idir, idim, ip, ispin
     CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:),  gpsi_i(:, :, :), ppsi_i(:,:)
 
     PUSH_SUB(current_calculate_mel)
 
-    SAFE_ALLOCATE(gpsi_i(1:der%mesh%np, 1:der%mesh%sb%dim, 1:hm%d%dim))
+    SAFE_ALLOCATE(gpsi_i(1:der%mesh%np, 1:der%dim, 1:hm%d%dim))
     SAFE_ALLOCATE(ppsi_i(1:der%mesh%np_part,1:hm%d%dim))
-    SAFE_ALLOCATE(gpsi_j(1:der%mesh%np, 1:der%mesh%sb%dim, 1:hm%d%dim))
+    SAFE_ALLOCATE(gpsi_j(1:der%mesh%np, 1:der%dim, 1:hm%d%dim))
     SAFE_ALLOCATE(ppsi_j(1:der%mesh%np_part,1:hm%d%dim))
 
     cmel = M_z0
@@ -603,7 +603,7 @@ contains
     !This must be done first, as this is like a position-dependent mass 
     if (family_is_mgga_with_exc(hm%xc)) then
       do idim = 1, hm%d%dim
-        do idir = 1, der%mesh%sb%dim
+        do idir = 1, der%dim
           !$omp parallel do
           do ip = 1, der%mesh%np
             gpsi_i(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi_i(ip, idir, idim)
@@ -627,7 +627,7 @@ contains
     end if
 
 
-    do idir = 1, der%mesh%sb%dim
+    do idir = 1, der%dim
       
       do idim = 1, hm%d%dim
           
@@ -666,7 +666,7 @@ contains
     ASSERT(simul_box_is_periodic(der%mesh%sb))
     ASSERT(st%d%dim == 1)
 
-    ndim = der%mesh%sb%dim
+    ndim = der%dim
     
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))

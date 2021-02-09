@@ -1025,7 +1025,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
   PUSH_SUB(X(states_elec_calc_momentum))
 
   SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -1033,10 +1033,10 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       call states_elec_get_state(st, der%mesh, ist, ik, psi)
 
       do idim = 1, st%d%dim
-        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
+        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%dim))
       end do
 
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
@@ -1054,7 +1054,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
       do idir = 1, der%mesh%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
@@ -1067,7 +1067,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       SAFE_ALLOCATE(lmomentum(1:st%lnst))
       SAFE_ALLOCATE(gmomentum(1:st%nst))
 
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)

@@ -251,7 +251,7 @@ contains
       do ip = der%mesh%np + 1, der%mesh%np_part
         vv = M_ZERO
         do ip2 = 1, der%mesh%np
-          rr = sqrt(sum((der%mesh%x(ip, 1:der%mesh%sb%dim) - der%mesh%x(ip2, 1:der%mesh%sb%dim))**2))
+          rr = sqrt(sum((der%mesh%x(ip, 1:der%dim) - der%mesh%x(ip2, 1:der%dim))**2))
           vv = vv + rho(ip2)/rr
         end do
         vh_correction(ip) = der%mesh%volume_element*vv
