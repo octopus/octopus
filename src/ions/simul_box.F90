@@ -50,7 +50,6 @@ module simul_box_oct_m
   public ::                     &
     simul_box_t,                &
     simul_box_init,             &
-    simul_box_lookup_init,      &
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_write_short_info, &
@@ -84,7 +83,12 @@ module simul_box_oct_m
 
     type(lookup_t), private :: atom_lookup
 
-    type(geometry_t), pointer, private :: geo
+    integer, private :: n_site_types
+    character(len=LABEL_LEN), allocatable, private :: site_type_label(:)
+    FLOAT,   allocatable, private :: site_type_radius(:)
+    integer, private :: n_sites
+    integer, allocatable, private :: site_type(:)
+    FLOAT,   allocatable, private :: site_position(:,:)
 
     character(len=1024), private :: user_def !< for the user-defined box
 
@@ -92,7 +96,6 @@ module simul_box_oct_m
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
-    FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
@@ -117,7 +120,7 @@ contains
   subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t), target,            intent(inout) :: geo
+    type(geometry_t),                    intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -127,12 +130,10 @@ contains
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
-    sb%geo => geo
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
     call read_box()                        ! Parameters defining the simulation box.
-    call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
@@ -151,7 +152,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape, idir, iatom
+      integer :: default_boxshape, idir, iatom, ispec
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -259,17 +260,41 @@ contains
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
 
-        if (sb%rsize <= M_ZERO) then
-          do iatom = 1, sb%geo%natoms
-            if (species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
+
+        sb%n_site_types = geo%nspecies
+        SAFE_ALLOCATE(sb%site_type_label(1:sb%n_site_types))
+        SAFE_ALLOCATE(sb%site_type_radius(1:sb%n_site_types))
+
+        do ispec = 1, geo%nspecies
+          sb%site_type_label(ispec) = species_label(geo%species(ispec))
+          if (sb%rsize > M_ZERO) then
+            sb%site_type_radius(ispec) = sb%rsize
+          else
+            if (species_def_rsize(geo%species(ispec)) < -M_EPSILON) then
               write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-                trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
+                trim(species_label(geo%species(ispec))), ' is negative or undefined.'
               message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
               call messages_fatal(2, namespace=namespace)
+            else
+              sb%site_type_radius(ispec) = species_def_rsize(geo%species(ispec))
+            end if
+          end if
+        end do
+
+        sb%n_sites = geo%natoms
+        SAFE_ALLOCATE(sb%site_position(1:sb%dim, 1:sb%n_sites))
+        SAFE_ALLOCATE(sb%site_type(1:sb%n_sites))
+        do iatom = 1, geo%natoms
+          sb%site_position(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
+          do ispec = 1, sb%n_site_types
+            if (geo%atom(iatom)%label == sb%site_type_label(ispec)) then
+              sb%site_type(iatom) = ispec
             end if
           end do
-        end if
+        end do
 
+        call lookup_init(sb%atom_lookup, sb%dim, sb%n_sites, sb%site_position)
+        
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -439,37 +464,13 @@ contains
 
   end subroutine simul_box_init
 
-  ! ------------------------------------------------------------
-  subroutine simul_box_lookup_init(this, geo)
-    type(simul_box_t), intent(inout) :: this
-    type(geometry_t),  intent(in)    :: geo
-    !
-    FLOAT, allocatable :: pos(:, :)
-    integer            :: iatom
-    !
-    PUSH_SUB(simul_box_lookup_init)
-
-    SAFE_ALLOCATE(pos(1:this%dim,1:geo%natoms))
-
-    do iatom = 1, geo%natoms
-      pos(:,iatom) = geo%atom(iatom)%x(1:this%dim)
-    end do
-
-    call lookup_init(this%atom_lookup, this%dim, geo%natoms, pos)
-
-    SAFE_DEALLOCATE_A(pos)
-    POP_SUB(simul_box_lookup_init)
-    return
-  end subroutine simul_box_lookup_init
-
   !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, namespace, rlattice_primitive)
+  subroutine simul_box_build_lattice(sb, namespace)
     type(simul_box_t), intent(inout) :: sb
     type(namespace_t), intent(in)    :: namespace
-    FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(3)
+    FLOAT :: norm, lparams(3), volume_element
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
@@ -481,142 +482,134 @@ contains
     sb%beta  = CNST(90.0)
     sb%gamma = CNST(90.0)
 
-    if(present(rlattice_primitive)) then
-      sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
-      sb%nonorthogonal = .false.
+    !%Variable LatticeParameters
+    !%Type block
+    !%Default 1 | 1 | 1
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% The lattice parameters (a, b, c). 
+    !% This option is incompatible with Lsize and either one of the 
+    !% two must be specified in the input file for periodic systems.
+    !% A second optional line can be used tu define the angles between the lattice vectors
+    !%End
+    lparams(:) = M_ONE
+    has_angles = .false.
+    angles = CNST(90.0)
+
+    if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      do idim = 1, sb%dim
+        call parse_block_float(blk, 0, idim - 1, lparams(idim))
+      end do
+
+      if(parse_block_n(blk) > 1) then ! we have a shift, or even more
+        ncols = parse_block_cols(blk, 1)
+        if(ncols /= sb%dim) then
+          write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
+          call messages_fatal(1, namespace=namespace)
+        end if
+        do idim = 1, sb%dim
+          call parse_block_float(blk, 1, idim - 1, angles(idim))
+        end do
+        has_angles = .true.
+      end if
+      call parse_block_end(blk)
+
+      if (parse_is_defined(namespace, 'Lsize')) then
+        message(1) = 'LatticeParameters is incompatible with Lsize'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+    end if
+
+    if( has_angles ) then
+      sb%alpha = angles(1)
+      sb%beta  = angles(2)
+      sb%gamma = angles(3)
+
+      !Converting the angles to LatticeVectors
+      !See 57_iovars/ingeo.F90 in Abinit for details
+      if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
+        (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
+
+        cosang=cos(M_PI*angles(1)/CNST(180.0));
+        a2=M_TWO/M_THREE*(M_ONE-cosang);
+        aa=sqrt(a2);
+        cc=sqrt(M_ONE-a2);
+        sb%rlattice_primitive(1,1) = aa
+        sb%rlattice_primitive(2,1) = M_ZERO
+        sb%rlattice_primitive(3,1) = cc
+        sb%rlattice_primitive(1,2) =-M_HALF*aa
+        sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
+        sb%rlattice_primitive(3,2) = cc
+        sb%rlattice_primitive(1,3) =-M_HALF*aa
+        sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
+        sb%rlattice_primitive(3,3) = cc
+      else
+        sb%rlattice_primitive(1,1) = M_ONE
+        sb%rlattice_primitive(2,1) = M_ZERO
+        sb%rlattice_primitive(3,1) = M_ZERO
+        sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
+        sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
+        sb%rlattice_primitive(3,2) = M_ZERO
+        sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
+        sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
+                                         /sb%rlattice_primitive(2,2) 
+        sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
+      end if
+
+      if (parse_is_defined(namespace, 'LatticeVectors')) then
+        message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
+        sb%nonorthogonal = .true.
+      else
+        sb%nonorthogonal = .false.
+      end if
+
     else
-      
-      
-      !%Variable LatticeParameters
+
+      !%Variable LatticeVectors
       !%Type block
-      !%Default 1 | 1 | 1
+      !%Default simple cubic
       !%Section Mesh::Simulation Box
       !%Description
-      !% The lattice parameters (a, b, c). 
-      !% This option is incompatible with Lsize and either one of the 
-      !% two must be specified in the input file for periodic systems.
-      !% A second optional line can be used tu define the angles between the lattice vectors
+      !% Primitive lattice vectors. Vectors are stored in rows.
+      !% Default:
+      !% <br><br><tt>%LatticeVectors
+      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+      !% <br>%<br></tt>
       !%End
-      lparams(:) = M_ONE
-      has_angles = .false.
-      angles = CNST(90.0)
+      sb%rlattice_primitive = M_ZERO
+      sb%nonorthogonal = .false.
+      do idim = 1, sb%dim
+        sb%rlattice_primitive(idim, idim) = M_ONE
+      end do
 
-      if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
         do idim = 1, sb%dim
-          call parse_block_float(blk, 0, idim - 1, lparams(idim))
+          do jdim = 1, sb%dim
+            call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
+            if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
+          enddo
         end do
-
-        if(parse_block_n(blk) > 1) then ! we have a shift, or even more
-          ncols = parse_block_cols(blk, 1)
-          if(ncols /= sb%dim) then
-            write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
-            call messages_fatal(1, namespace=namespace)
-          end if
-          do idim = 1, sb%dim
-            call parse_block_float(blk, 1, idim - 1, angles(idim))
-          end do
-          has_angles = .true.
-        end if
         call parse_block_end(blk)
 
-        if (parse_is_defined(namespace, 'Lsize')) then
-          message(1) = 'LatticeParameters is incompatible with Lsize'
-          call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1, namespace=namespace)
-        end if 
-
       end if
+    end if
 
-      if( has_angles ) then
-        sb%alpha = angles(1)
-        sb%beta  = angles(2)
-        sb%gamma = angles(3)
-
-        !Converting the angles to LatticeVectors
-        !See 57_iovars/ingeo.F90 in Abinit for details
-        if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-                 (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
-
-          cosang=cos(M_PI*angles(1)/CNST(180.0));
-          a2=M_TWO/M_THREE*(M_ONE-cosang);
-          aa=sqrt(a2);
-          cc=sqrt(M_ONE-a2);
-          sb%rlattice_primitive(1,1) = aa
-          sb%rlattice_primitive(2,1) = M_ZERO
-          sb%rlattice_primitive(3,1) = cc
-          sb%rlattice_primitive(1,2) =-M_HALF*aa
-          sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(3,2) = cc
-          sb%rlattice_primitive(1,3) =-M_HALF*aa
-          sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(3,3) = cc
-        else
-          sb%rlattice_primitive(1,1) = M_ONE
-          sb%rlattice_primitive(2,1) = M_ZERO
-          sb%rlattice_primitive(3,1) = M_ZERO
-          sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(3,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
-          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
-                                         /sb%rlattice_primitive(2,2) 
-          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
+    ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+    if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
+      do idim = 1, sb%dim
+        if (sb%lsize(idim) == M_ZERO) then
+          sb%lsize(idim) = lparams(idim)*M_HALF
         end if
-
-        if (parse_is_defined(namespace, 'LatticeVectors')) then
-          message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
-          call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1, namespace=namespace)
-        end if
-
-        if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
-          sb%nonorthogonal = .true.
-        else
-          sb%nonorthogonal = .false.
-        end if
-        
-      else  
-
-        !%Variable LatticeVectors
-        !%Type block
-        !%Default simple cubic
-        !%Section Mesh::Simulation Box
-        !%Description
-        !% Primitive lattice vectors. Vectors are stored in rows.
-        !% Default:
-        !% <br><br><tt>%LatticeVectors
-        !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
-        !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
-        !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-        !% <br>%<br></tt>
-        !%End
-        sb%rlattice_primitive = M_ZERO
-        sb%nonorthogonal = .false.
-        do idim = 1, sb%dim
-          sb%rlattice_primitive(idim, idim) = M_ONE
-        end do
-
-        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
-          do idim = 1, sb%dim
-            do jdim = 1, sb%dim
-              call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
-              if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
-            enddo
-          end do
-          call parse_block_end(blk)
-
-        end if
-      end if
-
-      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
-      if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
-        do idim = 1, sb%dim
-          if (sb%lsize(idim) == M_ZERO) then
-            sb%lsize(idim) = lparams(idim)*M_HALF
-          end if
-        end do
-      end if
-
+      end do
     end if
 
     sb%rlattice = M_ZERO
@@ -628,11 +621,11 @@ contains
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end do
     end do
-    
+
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim, namespace)
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, volume_element, sb%dim, namespace)
 
     if(sb%dim == 3) then
       sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
@@ -855,9 +848,9 @@ contains
     end if
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      do ispec = 1, sb%geo%nspecies
-        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(sb%geo%species(ispec))), 'Radius = ', &
-          units_from_atomic(units_out%length, species_def_rsize(sb%geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
+      do ispec = 1, sb%n_site_types
+        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(sb%site_type_label(ispec)), 'Radius = ', &
+          units_from_atomic(units_out%length, sb%site_type_radius(ispec)), ' ', trim(units_abbrev(units_out%length))
         call messages_info(1, iunit)
       end do
     end if
@@ -971,7 +964,7 @@ contains
     FLOAT :: rr, re, im, dist2, radius
     FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx_red(:, :)
-    integer :: ip, idir, iatom, ilist
+    integer :: ip, idir, site, ilist
     integer, allocatable :: nlist(:)
     integer, allocatable :: list(:, :)
 
@@ -1010,20 +1003,11 @@ contains
 
     case(MINIMUM)
 
-      if(this%rsize > M_ZERO) then
-        radius = this%rsize
-      else
-        radius = M_ZERO
-        do iatom = 1, this%geo%natoms
-          radius = max(radius, species_def_rsize(this%geo%atom(iatom)%species))
-        end do
-      end if
-
-      radius = radius + DELTA
+      radius = maxval(this%site_type_radius) + DELTA
 
       SAFE_ALLOCATE(nlist(1:nn))
 
-      if(this%rsize > M_ZERO) then
+      if (this%rsize > M_ZERO) then
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist)
       else
         call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist, list = list)
@@ -1037,9 +1021,9 @@ contains
         do ip = 1, nn
           contained(ip) = .false.
           do ilist = 1, nlist(ip)
-            iatom = list(ilist, ip)
-            dist2 = sum((xx_red(ip, 1:this%dim) - this%geo%atom(iatom)%x(1:this%dim))**2)
-            if(dist2 < species_def_rsize(this%geo%atom(iatom)%species)**2) then
+            site = list(ilist, ip)
+            dist2 = sum((xx_red(ip, 1:this%dim) - this%site_position(1:this%dim, site))**2)
+            if(dist2 < this%site_type_radius(this%site_type(site))**2) then
               contained(ip) = .true.
               exit
             end if
@@ -1128,7 +1112,6 @@ contains
     sbout%rlattice_primitive      = sbin%rlattice_primitive
     sbout%klattice                = sbin%klattice
     sbout%klattice_primitive      = sbin%klattice_primitive
-    sbout%volume_element          = sbin%volume_element
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
 

@@ -161,7 +161,6 @@ contains
     this%geo%kinetic_energy = M_ZERO
     call distributed_nullify(this%geo%atoms_dist, 0)
     this%geo%reduced_coordinates = .false.
-    this%geo%periodic_dim = 0
     this%geo%lsize = M_ZERO
 
     call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
