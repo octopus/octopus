@@ -281,7 +281,7 @@ contains
   subroutine electrons_iteration_info(this)
     class(electrons_t), intent(in) :: this
 
-    PUSH_SUB(electrons_iteraction_info)
+    PUSH_SUB(electrons_iteration_info)
 
     POP_SUB(electrons_iteration_info)
   end subroutine electrons_iteration_info
