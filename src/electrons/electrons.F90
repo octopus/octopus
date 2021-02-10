@@ -91,7 +91,7 @@ module electrons_oct_m
     procedure :: output_write => electrons_output_write
     procedure :: output_finish => electrons_output_finish
     procedure :: process_is_slave  => electrons_process_is_slave
-    procedure :: exec_tasks_end_of_tdstep => electrons_exec_tasks_end_of_tdstep
+    procedure :: exec_end_of_timestep_tasks => electrons_exec_end_of_timestep_tasks
     final :: electrons_finalize
   end type electrons_t
 
@@ -392,13 +392,13 @@ contains
   end function electrons_process_is_slave
 
   ! ---------------------------------------------------------
-  subroutine electrons_exec_tasks_end_of_tdstep(this)
+  subroutine electrons_exec_end_of_timestep_tasks(this)
     class(electrons_t), intent(inout) :: this
 
-    PUSH_SUB(electrons_exec_tasks_end_of_tdstep)
+    PUSH_SUB(electrons_exec_end_of_timestep_tasks)
 
-    POP_SUB(electrons_exec_tasks_end_of_tdstep)
-  end subroutine electrons_exec_tasks_end_of_tdstep
+    POP_SUB(electrons_exec_end_of_timestep_tasks)
+  end subroutine electrons_exec_end_of_timestep_tasks
 
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)

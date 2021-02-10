@@ -86,7 +86,7 @@ module system_oct_m
     procedure :: output_write => system_output_write
     procedure :: output_finish => system_output_finish
     procedure :: process_is_slave => system_process_is_slave
-    procedure :: exec_tasks_end_of_tdstep => system_exec_tasks_end_of_tdstep
+    procedure :: exec_end_of_timestep_tasks => system_exec_end_of_timestep_tasks
     procedure(system_init_interaction),               deferred :: init_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -188,7 +188,7 @@ contains
         this%clock = this%clock + CLOCK_TICK
 
         ! Execute additional operations at the end of the time step
-        call this%exec_tasks_end_of_tdstep()
+        call this%exec_end_of_timestep_tasks()
 
         ! Print information about the current iteration and write output
         call this%output_write()
@@ -761,16 +761,16 @@ contains
   end function system_process_is_slave
 
   ! ---------------------------------------------------------
-  subroutine system_exec_tasks_end_of_tdstep(this)
+  subroutine system_exec_end_of_timestep_tasks(this)
     class(system_t), intent(inout) :: this
 
-    PUSH_SUB(system_exec_tasks_end_of_tdstep)
+    PUSH_SUB(system_exec_end_of_timestep_tasks)
 
     ! By default no extra tasks are executed at the end of each time step.
     ! Child classes that wish to change this behaviour should override this method.
 
-    POP_SUB(system_exec_tasks_end_of_tdstep)
-  end subroutine system_exec_tasks_end_of_tdstep
+    POP_SUB(system_exec_end_of_timestep_tasks)
+  end subroutine system_exec_end_of_timestep_tasks
 
   ! ---------------------------------------------------------
   subroutine system_end(this)
