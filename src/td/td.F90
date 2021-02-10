@@ -83,34 +83,38 @@ module td_oct_m
     td_run,               &
     td_run_init,          &
     td_init,              &
-    td_end
+    td_init_run,          &
+    td_end,               &
+    td_end_run,           &
+    td_write_iter,        &
+    td_check_point
 
   !> Parameters.
-  integer, parameter :: &
+  integer, parameter, public :: &
     EHRENFEST = 1,   &
     BO        = 2
 
   type td_t
     private
     type(propagator_base_t), public :: tr             !< contains the details of the time-evolution
-    type(scf_t)                     :: scf
+    type(scf_t),             public :: scf
     type(ion_dynamics_t),    public :: ions
     FLOAT,                   public :: dt             !< time step
     integer,                 public :: max_iter       !< maximum number of iterations to perform
     integer,                 public :: iter           !< the actual iteration
     logical                         :: recalculate_gs !< Recalculate ground-state along the evolution.
 
-    type(pes_t)                     :: pesv
+    type(pes_t),             public :: pesv
 
     FLOAT,                   public :: mu
-    integer                         :: dynamics
-    integer                         :: energy_update_iter
+    integer,                 public :: dynamics
+    integer,                 public :: energy_update_iter
     FLOAT                           :: scissor
 
     logical                         :: freeze_occ
     logical                         :: freeze_u
 
-    type(td_write_t)                :: write_handler
+    type(td_write_t), public        :: write_handler
     type(restart_t)                 :: restart_load
     type(restart_t)                 :: restart_dump
   end type td_t
@@ -376,24 +380,7 @@ contains
   end subroutine td_init
 
   ! ---------------------------------------------------------
-  
-  subroutine td_end(td)
-    type(td_t), intent(inout) :: td
-
-    PUSH_SUB(td_end)
-
-    call pes_end(td%pesv)
-    call propagator_elec_end(td%tr)  ! clean the evolution method
-    call ion_dynamics_end(td%ions)
-
-    if(td%dynamics == BO) call scf_end(td%scf)
-
-    POP_SUB(td_end)
-  end subroutine td_end
-
-  ! ---------------------------------------------------------
-  
-  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+  subroutine td_init_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(inout) :: mc
@@ -406,16 +393,9 @@ contains
     type(space_t),            intent(in)    :: space
     logical,                  intent(inout) :: fromScratch
 
-    logical                      :: stopping
-#ifdef HAVE_MPI
-    logical                      :: stopping_tmp
-#endif
-    integer                      :: iter, ierr, scsteps
-    FLOAT                        :: etime
-    type(profile_t),        save :: prof
+    integer :: ierr
 
-    PUSH_SUB(td_run)
-
+    PUSH_SUB(td_init_run)
     ! Allocate wavefunctions during time-propagation
     if (td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
@@ -502,6 +482,68 @@ contains
 
     if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%pack()
 
+    POP_SUB(td_init_run)
+  end subroutine td_init_run
+
+  ! ---------------------------------------------------------
+  subroutine td_end(td)
+    type(td_t),               intent(inout) :: td
+
+    PUSH_SUB(td_end)
+
+    call pes_end(td%pesv)
+    call propagator_elec_end(td%tr)  ! clean the evolution method
+    call ion_dynamics_end(td%ions)
+
+    if(td%dynamics == BO) call scf_end(td%scf)
+
+    POP_SUB(td_end)
+  end subroutine td_end
+
+  ! ---------------------------------------------------------
+  subroutine td_end_run(td, st, hm)
+    type(td_t),               intent(inout) :: td
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+
+    PUSH_SUB(td_end_run)
+
+    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
+
+    call restart_end(td%restart_dump)
+    call td_write_end(td%write_handler)
+
+    ! free memory
+    call states_elec_deallocate_wfns(st)
+    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
+
+    POP_SUB(td_end_run)
+  end subroutine td_end_run
+
+  ! ---------------------------------------------------------
+  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+    type(td_t),               intent(inout) :: td
+    type(namespace_t),        intent(in)    :: namespace
+    type(multicomm_t),        intent(inout) :: mc
+    type(grid_t),             intent(inout) :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(output_t),           intent(inout) :: outp
+    type(space_t),            intent(in)    :: space
+    logical,                  intent(inout) :: fromScratch
+
+    logical                      :: stopping
+#ifdef HAVE_MPI
+    logical                      :: stopping_tmp
+#endif
+    integer                      :: iter, scsteps
+    FLOAT                        :: etime
+    type(profile_t),        save :: prof
+
+    PUSH_SUB(td_run)
+
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
@@ -564,15 +606,6 @@ contains
       if (stopping) exit
 
     end do propagation
-
-    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
-
-    call restart_end(td%restart_dump)
-    call td_write_end(td%write_handler)
-
-    ! free memory
-    call states_elec_deallocate_wfns(st)
-    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
 
     POP_SUB(td_run)
   end subroutine td_run
