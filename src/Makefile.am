@@ -498,6 +498,7 @@ interactions_f_srcs =                                 \
 	interactions/coulomb_force.F90                \
         interactions/external_potential.F90           \
 	interactions/force_interaction.F90            \
+        interactions/potential_interaction.F90        \
 	interactions/gravity.F90                      \
 	interactions/lorentz_force.F90                \
 	interactions/interactions_factory.F90
