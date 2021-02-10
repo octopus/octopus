@@ -187,7 +187,9 @@ contains
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
     call grid_init_stage_2(this%gr, this%namespace, this%mc)
-    if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%symm, this%geo%periodic_dim)
+    if(this%st%symmetrize_density) then
+      call mesh_check_symmetries(this%gr%mesh, this%gr%symm, this%geo%space%periodic_dim)
+    end if
 
     call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)
     call states_elec_densities_init(this%st, this%gr)

@@ -1402,9 +1402,9 @@ contains
       recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
-      do itran = 1, symmetries_number(gr%sb%symm)
-        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%sb%symm%ops(itran))
-        tnp(:, itran) = symm_op_translation_vector_red(gr%sb%symm%ops(itran))
+      do itran = 1, symmetries_number(gr%symm)
+        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%symm%ops(itran))
+        tnp(:, itran) = symm_op_translation_vector_red(gr%symm%ops(itran))
       end do
       ! some further work on conventions of mtrx and tnp is required!
       
@@ -1471,7 +1471,7 @@ contains
       red_point => hm%kpoints%reduced%red_point
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
-        symmetries_number(gr%sb%symm), 0, geo%natoms, &
+        symmetries_number(gr%symm), 0, geo%natoms, &
         hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
         ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
         gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
