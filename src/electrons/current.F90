@@ -523,7 +523,7 @@ contains
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%dim))
       call symmetrizer_init(symmetrizer, der%mesh, symm)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, der%mesh, der%mesh%np, field_vector = st%current(:, :, ispin), &
+        call dsymmetrizer_apply(symmetrizer, der%mesh, field_vector = st%current(:, :, ispin), &
           symmfield_vector = symmcurrent, suppress_warning = .true.)
         st%current(1:der%mesh%np, 1:der%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%dim)
       end do

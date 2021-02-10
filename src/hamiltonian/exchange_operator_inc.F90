@@ -654,7 +654,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
             SAFE_ALLOCATE(psi_sym(1:der%mesh%np, 1:st%d%dim))
             ff = ff/kpoints_get_num_symmetry_ops(kpoints, ikpoint)
             do idim = 1, st%d%dim
-              call X(symmetrizer_apply_single)(symmetrizer, der%mesh, der%mesh%np, iop, &
+              call X(symmetrizer_apply_single)(symmetrizer, der%mesh, iop, &
                                                    rec_buffer(:,idim,ist), psi_sym(:,idim))
             end do
           else

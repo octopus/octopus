@@ -17,11 +17,10 @@
 !!
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, symmfield_vector, &
+subroutine X(symmetrizer_apply)(this, mesh, field, field_vector, symmfield, symmfield_vector, &
           suppress_warning, reduced_quantity)
   type(symmetrizer_t),         intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
-  integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
   R_TYPE,            optional, intent(out)   :: symmfield(:) !< (np)
@@ -44,34 +43,34 @@ subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, 
   ASSERT(present(field) .or. present(field_vector))
 
   if(present(field)) then
-    ASSERT(ubound(field, dim = 1) >= np)
-    ASSERT(ubound(symmfield, dim = 1) >= np)
+    ASSERT(ubound(field, dim = 1) >= mesh%np)
+    ASSERT(ubound(symmfield, dim = 1) >= mesh%np)
   else
-    ASSERT(ubound(field_vector, dim = 1) >= np)
-    ASSERT(ubound(symmfield_vector, dim = 1) >= np)
+    ASSERT(ubound(field_vector, dim = 1) >= mesh%np)
+    ASSERT(ubound(symmfield_vector, dim = 1) >= mesh%np)
   end if
 
   ASSERT(associated(this%symm))
 
   ! If the quantity to be symmetrized is uniformly zero, we don`t symmetrize
   if(present(field)) then
-    maxabs = maxval(abs(field(1:np)))
+    maxabs = maxval(abs(field(1:mesh%np)))
     if(mesh%parallel_in_domains) then
       call comm_allreduce(mesh%mpi_grp%comm, maxabs)
     end if
     if(maxabs < M_EPSILON) then
-      symmfield(1:np) = field(1:np)
+      symmfield(1:mesh%np) = field(1:mesh%np)
       POP_SUB(X(symmetrizer_apply))
       return
     end if
   end if
   if(present(field_vector)) then
-    maxabs = maxval(abs(field_vector(1:np, 1:3)))
+    maxabs = maxval(abs(field_vector(1:mesh%np, 1:3)))
     if(mesh%parallel_in_domains) then
       call comm_allreduce(mesh%mpi_grp%comm, maxabs)
     end if
     if(maxabs < M_EPSILON) then
-      symmfield_vector(1:np, 1:3) = field_vector(1:np, 1:3)
+      symmfield_vector(1:mesh%np, 1:3) = field_vector(1:mesh%np, 1:3)
       POP_SUB(X(symmetrizer_apply))
       return
     end if
@@ -107,7 +106,7 @@ subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, 
   nops = symmetries_number(this%symm)
   weight = M_ONE/nops
 
-  do ip = 1, np
+  do ip = 1, mesh%np
     if(present(field)) acc = M_ZERO
     if(present(field_vector)) acc_vector(1:3) = M_ZERO
 
@@ -135,7 +134,7 @@ subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, 
 
   if(.not. optional_default(suppress_warning, .false.)) then
     if(present(field)) then
-      maxabsdiff = maxval(abs(field(1:np) - symmfield(1:np)))
+      maxabsdiff = maxval(abs(field(1:mesh%np) - symmfield(1:mesh%np)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
         call messages_warning(1)
@@ -143,7 +142,7 @@ subroutine X(symmetrizer_apply)(this, mesh, np, field, field_vector, symmfield, 
     end if
     
     if(present(field_vector)) then
-      maxabsdiff = maxval(abs(field_vector(1:np, 1:3) - symmfield_vector(1:np, 1:3)))
+      maxabsdiff = maxval(abs(field_vector(1:mesh%np, 1:3) - symmfield_vector(1:mesh%np, 1:3)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
         call messages_warning(1)
@@ -165,10 +164,9 @@ end subroutine X(symmetrizer_apply)
 
 !The same as for symmetrizer_apply, but a single symmetry operation
 !Here iop can be negative, indicating the spatial symmetry plus time reversal symmetry
-subroutine X(symmetrizer_apply_single)(this, mesh, np, iop, field, symmfield)
+subroutine X(symmetrizer_apply_single)(this, mesh, iop, field, symmfield)
   type(symmetrizer_t),         intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
-  integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   integer,                     intent(in)    :: iop
   R_TYPE,              target, intent(in)    :: field(:) !< (np)
   R_TYPE,                      intent(out)   :: symmfield(:) !< (np)
@@ -181,8 +179,8 @@ subroutine X(symmetrizer_apply_single)(this, mesh, np, iop, field, symmfield)
 
   call profiling_in(prof, TOSTRING(X(SYMMETRIZE_SINGLE)))
 
-  ASSERT(ubound(field, dim = 1) >= np)
-  ASSERT(ubound(symmfield, dim = 1) >= np)
+  ASSERT(ubound(field, dim = 1) >= mesh%np)
+  ASSERT(ubound(symmfield, dim = 1) >= mesh%np)
 
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
@@ -198,11 +196,11 @@ subroutine X(symmetrizer_apply_single)(this, mesh, np, iop, field, symmfield)
   end if
 
   if(iop>0) then
-    do ip = 1, np
+    do ip = 1, mesh%np
        symmfield(ip) = field_global(this%map(ip,abs(iop)))
     end do
   else
-    do ip = 1, np
+    do ip = 1, mesh%np
        symmfield(ip) = R_CONJ(field_global(this%map(ip,abs(iop))))
     end do
   end if
