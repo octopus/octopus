@@ -72,7 +72,7 @@ contains
     !% The second column should be the system type. See below for a list of
     !% available system types.
     !%Option electronic 1
-    !% An electronic system. (NOT IMPLEMENTED)
+    !% An electronic system. (not fully implemented yet)
     !%Option maxwell 2
     !% A maxwell system.
     !%Option classical_particle 3
