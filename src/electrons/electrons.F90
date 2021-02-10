@@ -91,15 +91,16 @@ module electrons_oct_m
     procedure :: output_write => electrons_output_write
     procedure :: output_finish => electrons_output_finish
     procedure :: process_is_slave  => electrons_process_is_slave
+    procedure :: exec_tasks_end_of_tdstep => electrons_exec_tasks_end_of_tdstep
     final :: electrons_finalize
   end type electrons_t
-  
+
   interface electrons_t
     procedure electrons_constructor
   end interface electrons_t
 
 contains
-  
+
   !----------------------------------------------------------
   function electrons_constructor(namespace, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
@@ -390,6 +391,15 @@ contains
     POP_SUB(electrons_process_is_slave)
   end function electrons_process_is_slave
 
+  ! ---------------------------------------------------------
+  subroutine electrons_exec_tasks_end_of_tdstep(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_exec_tasks_end_of_tdstep)
+
+    POP_SUB(electrons_exec_tasks_end_of_tdstep)
+  end subroutine electrons_exec_tasks_end_of_tdstep
+
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)
     type(electrons_t), intent(inout) :: sys
@@ -405,7 +415,7 @@ contains
     call multicomm_end(sys%mc)
 
     call v_ks_end(sys%ks)
-    
+
     call states_elec_end(sys%st)
 
     call geometry_end(sys%geo)
