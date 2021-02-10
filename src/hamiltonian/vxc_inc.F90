@@ -16,10 +16,11 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, kpoints, psolver, namespace, rho, ispin, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
   type(states_elec_t),    intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(kpoints_t),        intent(in)    :: kpoints
   type(poisson_t),        intent(in)    :: psolver
   type(namespace_t),      intent(in)    :: namespace
   FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
@@ -155,10 +156,10 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
     end if
 
     if (xcs%use_gi_ked) then
-      call states_elec_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, kpoints, .true., gi_kinetic_energy_density = tau, &
                                   density_gradient = gdens, density_laplacian = ldens)
     else
-      call states_elec_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, kpoints, .true., kinetic_energy_density = tau, &
  density_gradient = gdens, density_laplacian = ldens)
     end if
 

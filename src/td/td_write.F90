@@ -37,6 +37,7 @@ module td_write_oct_m
   use ion_dynamics_oct_m
   use iso_c_binding
   use kick_oct_m
+  use kpoints_oct_m
   use lasers_oct_m
   use lalg_adv_oct_m
   use lda_u_oct_m
@@ -488,7 +489,7 @@ contains
         
       end if
  
-      call states_elec_load(restart_gs, namespace, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
+      call states_elec_load(restart_gs, namespace, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -907,7 +908,7 @@ contains
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
-      call td_write_proj_kp(gr, st, writ%gs_st, namespace, iter)
+      call td_write_proj_kp(gr, hm%kpoints, st, writ%gs_st, namespace, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -933,7 +934,7 @@ contains
     end if
       
     if(writ%out(OUT_VEL)%write) &
-      call td_write_vel(writ%out(OUT_VEL)%handle, gr, st, iter)
+      call td_write_vel(writ%out(OUT_VEL)%handle, gr, st, hm%kpoints, iter)
 
     ! td_write_laser no longer called here, because the whole laser is printed
     ! out at the beginning.
@@ -965,7 +966,7 @@ contains
     
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
-      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, namespace, gr, st, writ%gs_st, iter)
+      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, namespace, gr, hm%kpoints, st, writ%gs_st, iter)
     end if
 
     !LDA+U outputs
@@ -1867,10 +1868,11 @@ contains
   end subroutine td_write_acc
   
   ! ---------------------------------------------------------
-  subroutine td_write_vel(out_vel, gr, st, iter)
+  subroutine td_write_vel(out_vel, gr, st, kpoints, iter)
     type(c_ptr),         intent(inout) :: out_vel
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(inout) :: st
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: iter
 
     integer :: idim
@@ -1902,7 +1904,7 @@ contains
       call td_write_print_header_end(out_vel)
     end if
 
-    call td_calc_tvel(gr, st, vel)
+    call td_calc_tvel(gr, st, kpoints, vel)
 
     call write_iter_start(out_vel)
     vel = units_from_atomic(units_out%velocity, vel)
@@ -2451,13 +2453,12 @@ contains
   !> based on projections on the GS orbitals
   !> The procedure is very similar to the td_write_proj
   ! ---------------------------------------------------------
-  subroutine td_write_n_ex(out_nex, outp, namespace, gr, st, gs_st, iter)
-    implicit none
- 
+  subroutine td_write_n_ex(out_nex, outp, namespace, gr, kpoints, st, gs_st, iter)
     type(c_ptr),         intent(inout) :: out_nex
     type(output_t),      intent(in)    :: outp
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
+    type(kpoints_t),     intent(in)    :: kpoints
     type(states_elec_t), intent(inout) :: st
     type(states_elec_t), intent(in)    :: gs_st
     integer,             intent(in)    :: iter
@@ -2549,7 +2550,7 @@ contains
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
   call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", namespace, &
-    gr%mesh, Nex_kpt, unit_one, err) 
+    gr%mesh, kpoints, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(Nex_kpt)
@@ -2601,8 +2602,9 @@ contains
   end subroutine calc_projections
 
 
-  subroutine td_write_proj_kp(gr, st, gs_st, namespace, iter)
+  subroutine td_write_proj_kp(gr, kpoints, st, gs_st, namespace, iter)
     type(grid_t),        intent(in)    :: gr
+    type(kpoints_t),     intent(in)    :: kpoints
     type(states_elec_t), intent(in)    :: st
     type(states_elec_t), intent(inout) :: gs_st
     type(namespace_t),   intent(in)    :: namespace
@@ -2636,9 +2638,9 @@ contains
     ! Why? It is unlikely that one is interested in the projections 
     ! of the Monkhorst-Pack kpoints, but instead we assume that
     ! the user has specified a k-path with zero weights
-    nk_proj = gr%sb%kpoints%nik_skip
+    nk_proj = kpoints%nik_skip
 
-    do ik=gr%sb%kpoints%reduced%npoints-nk_proj+1,gr%sb%kpoints%reduced%npoints
+    do ik = kpoints%reduced%npoints-nk_proj+1, kpoints%reduced%npoints
       ! reset arrays
       psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
       gs_psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
@@ -2655,7 +2657,7 @@ contains
           do idim = 1,gs_st%d%dim
             psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
-          call states_elec_get_state(gs_st, mesh, ist, ik,temp_state )
+          call states_elec_get_state(gs_st, mesh, ist, ik, temp_state )
           do idim = 1,gs_st%d%dim
             gs_psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
@@ -2792,7 +2794,7 @@ contains
     dt = Tcycle/TOFLOAT(nT)
 
     ! we are only interested for k-point with zero weight
-    nik=gr%sb%kpoints%nik_skip
+    nik = hm%kpoints%nik_skip
 
     SAFE_ALLOCATE(hmss(1:nst,1:nst))
     SAFE_ALLOCATE( psi(1:nst,1:st%d%dim,1:mesh%np))
@@ -2818,7 +2820,7 @@ contains
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0
 
-      do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+      do ik = hm%kpoints%reduced%npoints-nik+1, hm%kpoints%reduced%npoints
         ik_count = ik_count + 1
 
         psi(1:nst, 1:st%d%dim, 1:mesh%np)= M_ZERO
@@ -2827,12 +2829,12 @@ contains
         do ist=st%st_start,st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
             call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
-            do idim = 1,st%d%dim
-              psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
+            do idim = 1, st%d%dim
+              psi(ist, idim, 1:mesh%np) =  temp_state1(1:mesh%np,idim)
             end do
             call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
-            do idim = 1,st%d%dim
-              hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
+            do idim = 1, st%d%dim
+              hpsi(ist, idim,1:mesh%np) = temp_state1(1:mesh%np,idim)
             end do
           end if
         end do

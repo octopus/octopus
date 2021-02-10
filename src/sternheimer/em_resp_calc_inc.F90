@@ -20,9 +20,10 @@
 ! ---------------------------------------------------------
 ! \warning: This subroutine is clearly broken after the changes
 ! to include temperature in linear response
-subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
+subroutine X(lr_calc_elf)(st, gr, kpoints, lr, lr_m)
   type(states_elec_t),  intent(inout) :: st
   type(grid_t),         intent(inout) :: gr
+  type(kpoints_t),      intent(in)    :: kpoints
   type(lr_t),           intent(inout) :: lr
   type(lr_t), optional, intent(inout) :: lr_m !< when this argument is present, we are doing dynamical response
 
@@ -68,11 +69,11 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   end if
 
   !calculate the gs elf
-  call elf_calc(st, gr, elf, de)
+  call elf_calc(st, gr, kpoints, elf, de)
 
   !calculate current and its variation
   if(states_are_complex(st)) then 
-    call calc_physical_current(gr%der, st, current)
+    call calc_physical_current(gr%der, st, kpoints, current)
     if(present(lr_m)) then 
       call lr_calc_current(st, gr, lr, lr_m)
     else

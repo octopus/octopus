@@ -717,7 +717,7 @@ contains
 
       if (.not. present(st_start)) then
         call states_elec_fermi(st, namespace, gr%mesh)
-        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb)
+        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb, hm%kpoints)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
@@ -745,7 +745,7 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_elec_generate_random(st, gr%mesh, gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(st, gr%mesh, hm%kpoints, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()

@@ -32,6 +32,7 @@ program oct_convert
   use io_function_oct_m
   use io_binary_oct_m
   use kick_oct_m
+  use kpoints_oct_m
   use loct_oct_m
   use messages_oct_m
   use mesh_oct_m
@@ -252,7 +253,7 @@ contains
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, global_namespace, sys%geo, sys%mc, basename, folder, &
+      call convert_transform(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%kpoints, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
@@ -398,12 +399,13 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, namespace, geo, mc, kpoints, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    ,  intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
     type(geometry_t),  intent(in)    :: geo
-    type(multicomm_t), intent(in)   :: mc
+    type(multicomm_t), intent(in)    :: mc
+    type(kpoints_t),   intent(in)    :: kpoints
     character(len=*),  intent(inout) :: basename       !< File name
     character(len=*),  intent(in)    :: in_folder      !< Folder name
     integer,           intent(in)    :: c_start        !< The first file number
@@ -570,7 +572,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
-    call kick_init(kick, namespace, mesh%sb, 1)
+    call kick_init(kick, namespace, mesh%sb, kpoints, 1)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)

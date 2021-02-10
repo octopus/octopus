@@ -174,7 +174,7 @@ contains
     PUSH_SUB(pes_calc)
 
     if(pes%calc_spm)  call pes_spm_calc(pes%spm, st, mesh, dt, iter, hm)
-    if(pes%calc_mask) call pes_mask_calc(pes%mask, namespace, mesh, st, dt, iter)
+    if(pes%calc_mask) call pes_mask_calc(pes%mask, namespace, mesh, st, hm%kpoints, dt, iter)
     if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt, stopping)
 
     POP_SUB(pes_calc)

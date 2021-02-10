@@ -172,11 +172,11 @@ contains
 
     gr => sys%gr
 
-    if (gr%sb%kpoints%use_symmetries) then
+    if (sys%kpoints%use_symmetries) then
       call messages_experimental("em_resp with k-points symmetries")
     end if
 
-    if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
+    if(sys%kpoints%reduced%npoints /= sys%kpoints%full%npoints) then
       call messages_experimental('em_resp with reduced k-grid')
     end if
 
@@ -199,7 +199,8 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                    is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -250,7 +251,9 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        if (ierr == 0) then
+          call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr, lr=kdotp_lr(idir, 1))
+        end if
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -431,7 +434,7 @@ contains
           SAFE_ALLOCATE(em_vars%alpha_be_k(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM, 1:sys%st%d%nik))
         end if
         nfactor_ke = 1
-        if(gr%sb%kpoints%use_time_reversal .and. gr%sb%kpoints%full%npoints > 1) nfactor_ke = em_vars%nfactor
+        if(sys%kpoints%use_time_reversal .and. sys%kpoints%full%npoints > 1) nfactor_ke = em_vars%nfactor
         SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:nfactor_ke))
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
@@ -1222,8 +1225,8 @@ contains
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
-        SAFE_ALLOCATE(epsilon_k(1:gr%sb%dim, 1:gr%sb%dim, 1:gr%sb%kpoints%reduced%npoints))
-        do ik = 1, gr%sb%kpoints%reduced%npoints
+        SAFE_ALLOCATE(epsilon_k(1:gr%sb%dim, 1:gr%sb%dim, 1:hm%kpoints%reduced%npoints))
+        do ik = 1, hm%kpoints%reduced%npoints
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
               epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / gr%sb%rcell_volume
@@ -1247,11 +1250,11 @@ contains
         end do
         write(iunit, *)
 
-        do ik = 1, gr%sb%kpoints%reduced%npoints
+        do ik = 1, hm%kpoints%reduced%npoints
           write(iunit, '(i8)', advance = 'no') ik
-          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
           do idir = 1, gr%sb%dim
-            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+            write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
@@ -1279,11 +1282,11 @@ contains
         end do
         write(iunit, *)
 
-        do ik = 1, gr%sb%kpoints%reduced%npoints                              
+        do ik = 1, hm%kpoints%reduced%npoints                              
           write(iunit, '(i8)', advance = 'no') ik
-          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
           do idir = 1, gr%sb%dim
-            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+            write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
@@ -1375,9 +1378,9 @@ contains
 
           if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
-              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+              call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
-              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+              call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
             end if
           end if
           do isigma = 1, em_vars%nsigma
@@ -1387,9 +1390,9 @@ contains
 
           if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
-              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+              call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
-              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+              call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
             end if
           end if
 
@@ -1584,16 +1587,16 @@ contains
         write(iunit, '(a20)', advance = 'no') str_center("Im eps_xy,z", 20)
         write(iunit, *)
 
-        do ik = 1, gr%sb%kpoints%reduced%npoints
+        do ik = 1, hm%kpoints%reduced%npoints
           write(iunit, '(i8)', advance = 'no') ik
-          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
           do idir = 1, gr%sb%dim
             eps_mk(idir) = M_TWO * M_PI * (em_vars%alpha_be_k(magn_dir(idir, 1), magn_dir(idir, 2), idir, ik) - &
               em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / gr%sb%rcell_volume
           end do
 
           do idir = 1, gr%sb%dim
-            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+            write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
           do idir = 1, gr%sb%dim
             write(iunit, '(e20.8)', advance = 'no') TOFLOAT(eps_mk(idir))

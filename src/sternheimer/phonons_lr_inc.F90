@@ -56,11 +56,12 @@ end subroutine X(phonons_lr_infrared)
 
 ! ---------------------------------------------------------
 !> calculate the wavefunction associated with each normal mode
-subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load, restart_dump)
+subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, kpoints, vib, restart_load, restart_dump)
   type(lr_t),         intent(inout) :: lr
   type(namespace_t),  intent(in)    :: namespace
   type(states_elec_t),intent(inout) :: st !< not changed, just because of restart_read intent
   type(grid_t),       intent(in)    :: gr
+  type(kpoints_t),    intent(in)    :: kpoints
   type(vibrations_t), intent(in)    :: vib
   type(restart_t),    intent(inout) :: restart_load
   type(restart_t),    intent(inout) :: restart_dump
@@ -83,7 +84,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load,
         imat = vibrations_get_index(vib, iatom, idir)
 
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, namespace, st, gr, ierr, lr = lrtmp)
+        if (ierr == 0) call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, lr = lrtmp)
         call restart_close_dir(restart_load)
 
         if(ierr /= 0) then
@@ -106,7 +107,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load,
     end do
 
     call restart_open_dir(restart_dump, phn_nm_wfs_tag(inm), ierr)
-    if (ierr == 0) call states_elec_dump(restart_dump, st, gr, ierr, lr = lr)
+    if (ierr == 0) call states_elec_dump(restart_dump, st, gr, kpoints, ierr, lr = lr)
     if (ierr /= 0) then
       message(1) = "Unable to write response wavefunctions to '"//trim(phn_nm_wfs_tag(inm))//"'."
       call messages_warning(1)

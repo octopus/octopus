@@ -406,13 +406,11 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
 
-    !Initialize external potential
+    ! Initialize external potential
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
 
-
-    !Initialize external potential
     call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
@@ -462,12 +460,12 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
 
-    !We set the phase of the batch if needed
+    ! We set the phase of the batch if needed
     if (.not. allocated(sys%hm%hm_base%phase)) then
       call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
     else
@@ -477,7 +475,7 @@ contains
       epsib2%has_phase = .true.
     end if
 
-    !Initialize the orbital basis
+    ! Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace, sys%space%periodic_dim)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
@@ -485,13 +483,13 @@ contains
       SAFE_ALLOCATE(ddot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
       call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
-      call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
+      call orbitalset_update_phase(basis%orbsets(1), sys%space%dim, sys%st%d%kpt, sys%kpoints, (sys%st%d%ispin==SPIN_POLARIZED))
       SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
 
       !We set the phase of the orbitals if needed
       if (allocated(sys%hm%hm_base%phase)) then
-        call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
+        call orbitalset_update_phase(basis%orbsets(1), sys%space%dim, sys%st%d%kpt, sys%kpoints, &
                    (sys%st%d%ispin==SPIN_POLARIZED))
       end if
     end if
@@ -572,9 +570,9 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
 
-    !Initialize external potential
+    ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -634,7 +632,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -672,7 +670,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -710,9 +708,9 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
 
-    !Initialize external potential
+    ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -759,7 +757,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
@@ -841,7 +839,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_AXPY) /= 0) then
@@ -1065,7 +1063,7 @@ contains
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       do itime = 1, param%repetitions
-        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%kpoints)
       end do
     end if
 
@@ -1073,7 +1071,7 @@ contains
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       do itime = 1, param%repetitions
-        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%kpoints)
       end do
     end if
 

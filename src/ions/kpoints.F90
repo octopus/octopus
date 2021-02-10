@@ -241,18 +241,18 @@ contains
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, namespace, symm, dim, rlattice, klattice, only_gamma)
+  subroutine kpoints_init(this, namespace, symm, dim, periodic_dim, rlattice, klattice)
     type(kpoints_t),    intent(out) :: this
     type(namespace_t),  intent(in)  :: namespace
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
+    integer,            intent(in)  :: periodic_dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
-    logical,            intent(in)  :: only_gamma
 
     integer :: ik, idir, is
     character(len=100) :: str_tmp
     FLOAT :: weight_sum
-    logical :: default_timereversal
+    logical :: default_timereversal, only_gamma
 
     PUSH_SUB(kpoints_init)
 
@@ -260,6 +260,8 @@ contains
 
     call kpoints_nullify(this)
     this%nik_axis(1:MAX_DIM) = 1
+
+    only_gamma = (periodic_dim == 0)
 
     !%Variable KPointsUseSymmetries
     !%Type logical

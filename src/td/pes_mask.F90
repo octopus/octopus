@@ -1063,9 +1063,10 @@ contains
   !!  with 
   !!
   ! ---------------------------------------------------------
-  subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf, ikpoint)
+  subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, kpoints, dt, iter, wf, ikpoint)
     type(pes_mask_t), intent(in)    :: mask
     type(mesh_t),     intent(in)    :: mesh
+    type(kpoints_t),  intent(in)    :: kpoints
     FLOAT,            intent(in)    :: dt
     integer,          intent(in)    :: iter
     CMPLX,            intent(inout) :: wf(:,:,:)
@@ -1079,7 +1080,7 @@ contains
 
     kpoint = M_ZERO
     if(mesh%sb%periodic_dim > 0) then
-      kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, ikpoint)
+      kpoint(1:mesh%sb%dim) = kpoints_get_point(kpoints, ikpoint)
     end if
   
     do ix = 1, mask%ll(1)
@@ -1294,11 +1295,12 @@ contains
   !            Performs all the dirty work 
   !
   !---------------------------------------------------------
-  subroutine pes_mask_calc(mask, namespace, mesh, st, dt, iter)
+  subroutine pes_mask_calc(mask, namespace, mesh, st, kpoints, dt, iter)
     type(pes_mask_t),    intent(inout) :: mask
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
+    type(kpoints_t),     intent(in)    :: kpoints
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
@@ -1365,7 +1367,7 @@ contains
               
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
-              call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
+              call pes_mask_Volkov_time_evolution_wf(mask, mesh, kpoints, dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
                                                      states_elec_dim_get_kpoint_index(st%d, ik))
                                                      
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&

@@ -63,11 +63,12 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, namespace, st, sb)
+  subroutine dos_init(this, namespace, st, sb, kpoints)
     type(dos_t),         intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(in)    :: st
     type(simul_box_t),   intent(in)    :: sb
+    type(kpoints_t),     intent(in)    :: kpoints
 
     FLOAT :: evalmin, evalmax, eextend
     integer :: npath
@@ -76,7 +77,7 @@ contains
 
     !The range of the dos is only calculated for physical points,
     !without the one from a k-point path
-    npath = kpoints_nkpt_in_path(sb%kpoints)
+    npath = kpoints_nkpt_in_path(kpoints)
     if(st%d%nik > npath) then
       evalmin = minval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
       evalmax = maxval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
@@ -351,7 +352,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb%dim, st%d%kpt, hm%kpoints, (st%d%ispin==SPIN_POLARIZED), &
                                             vec_pot = hm%hm_base%uniform_vector_potential, &
                                             vec_pot_var = hm%hm_base%vector_potential)
           end if

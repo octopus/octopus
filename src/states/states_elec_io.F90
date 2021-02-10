@@ -61,10 +61,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
+  subroutine states_elec_write_eigenvalues(iunit, nst, st, sb, kpoints, error, st_start, compact)
     integer,             intent(in) :: iunit, nst
     type(states_elec_t), intent(in) :: st
     type(simul_box_t),   intent(in) :: sb
+    type(kpoints_t),     intent(in) :: kpoints
     FLOAT, optional,     intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional,   intent(in) :: st_start
     logical, optional,   intent(in) :: compact
@@ -117,7 +118,7 @@ contains
       do ik = 1, st%d%nik, ns
         if(simul_box_is_periodic(sb)) then
           ikk = states_elec_dim_get_kpoint_index(st%d, ik)
-          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
+          kpoint(1:sb%dim) = kpoints_get_point(kpoints, ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
           do idir = 1, sb%dim
             write(tmp_str(1), '(f10.6)') kpoint(idir)
@@ -325,7 +326,7 @@ contains
         ien = nint((flat_eigenval(iev) - emin)/de) + 1
         ASSERT(ien >= 1)
         ASSERT(ien <= ndiv)
-        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
+        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*kpoints%full%npoints
       end do
 
       !normalize
@@ -636,14 +637,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
-    character(len=*),         intent(in)      :: dir
-    type(namespace_t),        intent(in)      :: namespace
-    integer,                  intent(in)      :: nst
-    type(states_elec_t),      intent(in)      :: st
-    type(simul_box_t),        intent(in)      :: sb
-    type(geometry_t), target, intent(in)      :: geo
-    type(mesh_t),             intent(in)      :: mesh
+  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, kpoints, &
+                                              phase, vec_pot, vec_pot_var)
+    character(len=*),             intent(in)  :: dir
+    type(namespace_t),            intent(in)  :: namespace
+    integer,                      intent(in)  :: nst
+    type(states_elec_t),          intent(in)  :: st
+    type(simul_box_t),            intent(in)  :: sb
+    type(geometry_t), target,     intent(in)  :: geo
+    type(mesh_t),                 intent(in)  :: mesh
+    type(kpoints_t),              intent(in)  :: kpoints
     CMPLX,           allocatable, intent(in)  :: phase(:, :)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
@@ -711,7 +714,7 @@ contains
       end do
     end if
  
-    npath = kpoints_nkpt_in_path(sb%kpoints)*ns
+    npath = kpoints_nkpt_in_path(kpoints)*ns
 
 
     !We need to compute the projections of each wavefunctions on the localized basis
@@ -784,7 +787,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb%dim, st%d%kpt, kpoints, (st%d%ispin==SPIN_POLARIZED), &
                               vec_pot, vec_pot_var)
           end if
 
@@ -842,15 +845,15 @@ contains
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
+        red_kpoint(1:sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         if(st%d%nik > npath) then
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, & 
                                                states_elec_dim_get_kpoint_index(st%d, ik + is) &
                                               -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
         else
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, &
                                                states_elec_dim_get_kpoint_index(st%d, ik + is))
         end if
         do idir = 1, sb%dim

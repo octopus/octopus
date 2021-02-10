@@ -93,7 +93,7 @@ contains
 
     SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
 
-    if(gr%mesh%sb%kpoints%use_symmetries) then
+    if(hm%kpoints%use_symmetries) then
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
     end if
 

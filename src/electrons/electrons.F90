@@ -33,6 +33,7 @@ module electrons_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use interaction_oct_m
+  use kpoints_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -72,6 +73,9 @@ module electrons_oct_m
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(hamiltonian_elec_t)     :: hm
     type(td_t)                   :: td
+
+    type(kpoints_t) :: kpoints                   !< the k-points
+
     logical :: generate_epot
   contains
     procedure :: init_interaction => electrons_init_interaction
@@ -120,7 +124,12 @@ contains
     
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
-    call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
+
+    ! we need k-points for periodic systems
+    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%sb%symm, sys%space%dim, &
+             sys%space%periodic_dim, sys%gr%sb%rlattice, sys%gr%sb%klattice)
+
+    call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo, sys%kpoints)
     call sys%st%write_info(sys%namespace)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
@@ -183,10 +192,11 @@ contains
     call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 
-    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc, this%space)
+    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc, this%space, this%kpoints)
 
-    call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, this%ks%theory_level, &
-      this%ks%xc, this%mc, need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)
+    call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, &
+          this%ks%theory_level, this%ks%xc, this%mc, this%kpoints, &
+          need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)
     
     if (this%hm%pcm%run_pcm .and. this%mc%par_strategy /= P_STRATEGY_SERIAL .and. this%mc%par_strategy /= P_STRATEGY_STATES) then
       call messages_experimental('Parallel in domain calculations with PCM')
@@ -399,6 +409,9 @@ contains
     call states_elec_end(sys%st)
 
     call geometry_end(sys%geo)
+
+    call kpoints_end(sys%kpoints)
+
     call simul_box_end(sys%gr%sb)
     call grid_end(sys%gr)
 

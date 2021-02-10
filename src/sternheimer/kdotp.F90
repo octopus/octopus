@@ -133,7 +133,7 @@ contains
       call messages_not_implemented('Commutator of Fock operator')
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) then
+    if (sys%kpoints%use_symmetries) then
       call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
     end if
 
@@ -160,7 +160,8 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(restart_load, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
+      call states_elec_look_and_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                                       is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."
@@ -230,7 +231,8 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                                 ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
@@ -243,7 +245,8 @@ contains
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
             if (ierr == 0) then
-              call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+              call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                           ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             end if
             call restart_close_dir(restart_load)
           
@@ -349,7 +352,7 @@ contains
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
-      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace, sys%space%periodic_dim)
+      call kdotp_write_eff_mass(sys%st, sys%gr, sys%kpoints, kdotp_vars, sys%namespace, sys%space%periodic_dim)
 
       SAFE_DEALLOCATE_A(kdotp_vars%eff_mass_inv)
     end if
@@ -534,9 +537,10 @@ contains
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars, namespace, periodic_dim)
+  subroutine kdotp_write_eff_mass(st, gr, kpoints, kdotp_vars, namespace, periodic_dim)
     type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
+    type(kpoints_t),      intent(in)    :: kpoints
     type(kdotp_t),        intent(inout) :: kdotp_vars
     type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: periodic_dim
@@ -556,7 +560,7 @@ contains
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2
-      write(iunit,'(a, 99f12.8)') '# k-point coordinates = ', kpoints_get_point(gr%sb%kpoints, ik2)
+      write(iunit,'(a, 99f12.8)') '# k-point coordinates = ', kpoints_get_point(kpoints, ik2)
       if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
       
       write(iunit,'(a)')

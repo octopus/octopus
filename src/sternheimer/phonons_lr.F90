@@ -30,6 +30,7 @@ module phonons_lr_oct_m
   use io_function_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use math_oct_m
@@ -170,7 +171,7 @@ contains
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, st, gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, st, gr, sys%kpoints)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -196,7 +197,8 @@ contains
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                               ierr, lr=kdotp_lr(idir))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -270,7 +272,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, st, gr, ierr, lr = lr(1))
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, st, gr, sys%kpoints, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_warning(1)
@@ -290,9 +292,9 @@ contains
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
+        call dforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       else
-        call zforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
+        call zforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes
@@ -363,9 +365,9 @@ contains
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
       if(states_are_real(st)) then
-        call dphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
+        call dphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, sys%kpoints, vib, restart_load, restart_dump)
       else
-        call zphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
+        call zphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, sys%kpoints, vib, restart_load, restart_dump)
       end if
     end if
 

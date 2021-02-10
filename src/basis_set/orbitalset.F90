@@ -34,7 +34,6 @@ module orbitalset_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
   use wfs_elec_oct_m
@@ -167,10 +166,11 @@ contains
 
 
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
-  subroutine orbitalset_update_phase(os, sb, kpt, spin_polarized, vec_pot, vec_pot_var, kpt_max)
+  subroutine orbitalset_update_phase(os, dim, kpt, kpoints, spin_polarized, vec_pot, vec_pot_var, kpt_max)
     type(orbitalset_t),            intent(inout) :: os
-    type(simul_box_t),             intent(in)    :: sb
+    integer,                       intent(in)    :: dim
     type(distributed_t),           intent(in)    :: kpt
+    type(kpoints_t),               intent(in)    :: kpoints
     logical,                       intent(in)    :: spin_polarized
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
@@ -178,12 +178,11 @@ contains
 
     integer :: ns, iq, is, ikpoint, im, idim
     FLOAT   :: kr, kpoint(1:MAX_DIM), dx(1:MAX_DIM)
-    integer :: ndim, inn, kpt_end
+    integer :: inn, kpt_end
 
     PUSH_SUB(orbitalset_update_phase)
 
     ns = os%sphere%np
-    ndim = sb%dim
 
     kpt_end = kpt%end
     if(present(kpt_max)) kpt_end = min(kpt_max, kpt_end)
@@ -197,22 +196,22 @@ contains
       end if
 
       ! if this fails, it probably means that sb is not compatible with std
-      ASSERT(ikpoint <= kpoints_number(sb%kpoints))
+      ASSERT(ikpoint <= kpoints_number(kpoints))
 
       kpoint = M_ZERO
-      kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
+      kpoint(1:dim) = kpoints_get_point(kpoints, ikpoint)
 
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim) + os%sphere%center(1:ndim)
-        kr = sum(kpoint(1:ndim)*dx(1:ndim))
+        dx(1:dim) = os%sphere%x(is, 1:dim) - os%sphere%mesh%x(os%sphere%map(is), 1:dim) + os%sphere%center(1:dim)
+        kr = sum(kpoint(1:dim)*dx(1:dim))
         if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
+          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:dim)*dx(1:dim))
         end if
 
         if(present(vec_pot_var)) then
-          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, os%sphere%map(is))*os%sphere%x(is, 1:ndim))
+          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:dim, os%sphere%map(is))*os%sphere%x(is, 1:dim))
         end if
 
         os%phase(is, iq) = exp(M_zI*kr)
@@ -242,15 +241,15 @@ contains
 
       if(os%nneighbors > 0) then
         do inn = 1, os%nneighbors       
-          dx(1:ndim) = os%V_ij(inn,1:ndim)
-          kr = sum(kpoint(1:ndim)*dx(1:ndim))
+          dx(1:dim) = os%V_ij(inn,1:dim)
+          kr = sum(kpoint(1:dim)*dx(1:dim))
           if(present(vec_pot)) then
-            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
+            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:dim)*dx(1:dim))
           end if
     
           !At the moment the uniform vector potential is in vec_pot_var
           if(present(vec_pot_var)) then
-            if(allocated(vec_pot_var))  kr = kr + sum(vec_pot_var(1:ndim, 1)*dx(1:ndim))
+            if(allocated(vec_pot_var))  kr = kr + sum(vec_pot_var(1:dim, 1)*dx(1:dim))
           end if
 
           !The sign is different as this is applied on the wavefunction and not the orbitals

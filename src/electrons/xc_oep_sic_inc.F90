@@ -18,12 +18,13 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
+subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, kpoints, is, oep, ex, ec)
   type(xc_t),          intent(inout) :: xcs
   type(grid_t),        intent(in)    :: gr
   type(poisson_t),     intent(in)    :: psolver
   type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
+  type(kpoints_t),     intent(in)    :: kpoints
   integer,             intent(in)    :: is
   type(xc_oep_t),      intent(inout) :: oep
   FLOAT,               intent(inout) :: ex, ec
@@ -63,7 +64,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
       ec2  = M_ZERO
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
-      call xc_get_vxc(gr%fine%der, xcs, st, psolver, namespace, rho, SPIN_POLARIZED, vxc, ex=ex2, ec=ec2)
+      call xc_get_vxc(gr%fine%der, xcs, st, kpoints, psolver, namespace, rho, SPIN_POLARIZED, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2

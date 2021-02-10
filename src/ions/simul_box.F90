@@ -27,7 +27,6 @@ module simul_box_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
-  use kpoints_oct_m
   use lalg_basic_oct_m
   use lookup_oct_m
   use math_oct_m
@@ -60,7 +59,6 @@ module simul_box_oct_m
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
-    simul_box_symmetry_check,   &
     reciprocal_lattice
 
   integer, parameter, public :: &
@@ -102,8 +100,6 @@ module simul_box_oct_m
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
-    type(kpoints_t) :: kpoints                   !< the k-points
-
     integer :: periodic_dim
 
     !> for the box defined through an image
@@ -126,7 +122,6 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    logical :: only_gamma_kpoint
 
     PUSH_SUB(simul_box_init)
 
@@ -145,11 +140,7 @@ contains
 
     call symmetries_init(sb%symm, namespace, geo, sb%dim, space%periodic_dim, sb%rlattice, sb%klattice)
 
-    ! we need k-points for periodic systems
-    only_gamma_kpoint = (sb%periodic_dim == 0)
-    call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
-
-    call simul_box_symmetry_check(sb, geo, sb%dim, namespace)
+    call check_ions_compatible_with_symmetries(sb, geo, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -818,7 +809,6 @@ contains
     call symmetries_end(sb%symm)
 
     call lookup_end(sb%atom_lookup)
-    call kpoints_end(sb%kpoints)
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
@@ -1142,8 +1132,6 @@ contains
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
 
-    call kpoints_copy(sbin%kpoints, sbout%kpoints)
-
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 
     if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
@@ -1230,8 +1218,9 @@ contains
   end function simul_box_min_distance
 
 
-    ! ---------------------------------------------------------
-  subroutine simul_box_symmetry_check(this, geo, dim, namespace)
+  ! ---------------------------------------------------------
+  ! TODO : This routines should belong to geometry, once geo knows its box 
+  subroutine check_ions_compatible_with_symmetries(this, geo, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
     integer,            intent(in) :: dim
@@ -1240,7 +1229,7 @@ contains
     integer :: iop, iatom, iatom_symm
     FLOAT :: ratom(1:MAX_DIM)
 
-    PUSH_SUB(simul_box_symmetry_check)
+    PUSH_SUB(check_ions_compatible_with_symmetries)
 
     ! We want to use for instance that
     !
@@ -1278,8 +1267,8 @@ contains
       end do
     end do
 
-    POP_SUB(simul_box_symmetry_check)
-  end subroutine simul_box_symmetry_check
+    POP_SUB(check_ions_compatible_with_symmetries)
+  end subroutine check_ions_compatible_with_symmetries
 
 end module simul_box_oct_m
 

@@ -69,11 +69,12 @@ contains
     POP_SUB(singularity_nullify)
   end subroutine singularity_nullify
  
-  subroutine singularity_init(this, namespace, st, sb)
+  subroutine singularity_init(this, namespace, st, sb, kpoints)
     type(singularity_t),       intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
+    type(kpoints_t),           intent(in)    :: kpoints
 
     integer :: default
 
@@ -116,7 +117,7 @@ contains
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
-        call singularity_correction(this, namespace, st, sb)
+        call singularity_correction(this, namespace, st, sb, kpoints)
       end if
     end if
 
@@ -136,11 +137,12 @@ contains
 
   !This routine implements the general tratment of the singularity for periodic solids,
   !as described in Carrier et al. PRB 75, 205126 (2007)
-  subroutine singularity_correction(this, namespace, st, sb)
+  subroutine singularity_correction(this, namespace, st, sb, kpoints)
     type(singularity_t),       intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
+    type(kpoints_t),           intent(in)    :: kpoints
 
     integer :: ik, ik2, ikpoint, Nk, Nsteps
     integer :: ikx, iky, ikz, istep, kpt_start, kpt_end
@@ -172,17 +174,17 @@ contains
     do ik = kpt_start, kpt_end
       ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
       kpoint = M_ZERO
-      kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpoint, absolute_coordinates = .false.) 
+      kpoint(1:sb%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates = .false.) 
 
       this%Fk(ik) = M_ZERO
 
-      do ik2 = 1, sb%kpoints%full%npoints
+      do ik2 = 1, kpoints%full%npoints
         qpoint = M_ZERO
-        qpoint(1:sb%dim) = kpoint(1:sb%dim) - sb%kpoints%full%red_point(1:sb%dim, ik2)
+        qpoint(1:sb%dim) = kpoint(1:sb%dim) - kpoints%full%red_point(1:sb%dim, ik2)
  
         if(all(abs(qpoint(1:sb%dim))< CNST(1e-6))) cycle
 
-        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint) * sb%kpoints%full%weight(ik2)
+        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint) * kpoints%full%weight(ik2)
       end do
       this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume
     end do

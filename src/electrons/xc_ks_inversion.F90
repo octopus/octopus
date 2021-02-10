@@ -28,6 +28,7 @@ module xc_ks_inversion_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
+  use kpoints_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
@@ -91,7 +92,7 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc, space)
+  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc, space, kpoints)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),            intent(inout) :: gr
@@ -100,6 +101,7 @@ contains
     type(xc_t),              intent(in)    :: xc
     type(multicomm_t),       intent(in)    :: mc
     type(space_t),           intent(in)    :: space
+    type(kpoints_t),         intent(in)    :: kpoints
 
     PUSH_SUB(xc_ks_inversion_init)
 
@@ -165,11 +167,11 @@ contains
       
       ! initialize auxiliary random wavefunctions
       call states_elec_allocate_wfns(ks_inv%aux_st, gr%mesh)
-      call states_elec_generate_random(ks_inv%aux_st, gr%mesh, gr%sb)      
+      call states_elec_generate_random(ks_inv%aux_st, gr%mesh, kpoints)      
 
       ! initialize densities, hamiltonian and eigensolver
       call states_elec_densities_init(ks_inv%aux_st, gr)
-      call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
+      call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc, kpoints)
       call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, mc, space)
     end if
 

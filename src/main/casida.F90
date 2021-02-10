@@ -248,7 +248,7 @@ contains
       call messages_warning(1)
     end if
 
-    if(kpoints_number(sys%gr%sb%kpoints) > 1) then
+    if(kpoints_number(sys%kpoints) > 1) then
       ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
     end if
@@ -267,7 +267,7 @@ contains
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."

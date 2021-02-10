@@ -67,11 +67,12 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, namespace, st, gr, d, gap, mc)
+ subroutine scissor_init(this, namespace, st, gr, d, kpoints, gap, mc)
   type(scissor_t),          intent(inout) :: this
   type(namespace_t),        intent(in)    :: namespace
   type(states_elec_t),      intent(in)    :: st
   type(grid_t),             intent(in)    :: gr
+  type(kpoints_t),          intent(in)    :: kpoints
   type(states_elec_dim_t),  intent(in)    :: d
   FLOAT,                    intent(in)    :: gap
   type(multicomm_t),        intent(in)    :: mc
@@ -107,7 +108,7 @@ contains
      call messages_fatal(1, namespace=namespace)
   end if
 
-  call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
+  call states_elec_load(restart_gs, namespace, this%gs_st, gr, kpoints, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
     call messages_fatal(1, namespace=namespace)
@@ -115,7 +116,7 @@ contains
   call restart_end(restart_gs)
 
   if (simul_box_is_periodic(gr%sb) .and. &
-        .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
+        .not. (kpoints_number(kpoints) == 1 .and. kpoints_point_is_gamma(kpoints, 1))) then
 
     write(message(1),'(a)')    'Adding the phase for GS states.'
     call messages_info(1)
@@ -125,7 +126,7 @@ contains
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
 
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(d, ik))
       do ip = 1, gr%mesh%np
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
       end do

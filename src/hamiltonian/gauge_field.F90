@@ -24,6 +24,7 @@ module gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
   use iso_c_binding
+  use kpoints_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -91,10 +92,11 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, namespace, sb)
+  subroutine gauge_field_init(this, namespace, sb, kpoints)
     type(gauge_field_t),     intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
     type(simul_box_t),       intent(in)    :: sb
+    type(kpoints_t),         intent(in)    :: kpoints
 
     integer :: ii, iop
     type(block_t) :: blk
@@ -167,7 +169,7 @@ contains
         call messages_warning(1, namespace=namespace)
       end if
 
-      if(sb%kpoints%use_symmetries) then
+      if(kpoints%use_symmetries) then
         do iop = 1, symmetries_number(sb%symm)
           if(iop == symmetries_identity_index(sb%symm)) cycle
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot_kick, CNST(1e-5))) then

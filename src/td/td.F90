@@ -146,12 +146,12 @@ contains
 
     if (hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
 
-    if (gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
+    if (hm%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
 
     call ion_dynamics_init(td%ions, namespace, geo)
 
     if (ion_dynamics_ions_move(td%ions)) then
-      if (gr%sb%kpoints%use_symmetries) then
+      if (hm%kpoints%use_symmetries) then
         message(1) = "KPoints symmetries cannot be used with moving ions."
         message(2) = "Please set KPointsSymmetries = no."
         call messages_fatal(2, namespace=namespace)
@@ -423,7 +423,7 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
+        call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
@@ -477,7 +477,7 @@ contains
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, namespace, st, gr, hm%d, td%scissor, mc)
+      call scissor_init(hm%scissor, namespace, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
     if (td%iter == 0) call td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
@@ -738,7 +738,7 @@ contains
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
 
       if(.not. st%only_userdef_istates) then
-        if (ierr == 0) call states_elec_load(restart, namespace, st, gr, ierr, label = ": gs")
+        if (ierr == 0) call states_elec_load(restart, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
         if (ierr /= 0) then
           message(1) = 'Unable to read ground-state wavefunctions.'
           call messages_fatal(1, namespace=namespace)
@@ -752,7 +752,7 @@ contains
         call states_elec_read_user_def_orbitals(gr%mesh, namespace, st)
       end if
 
-      call states_elec_transform(st, namespace, restart, gr)
+      call states_elec_transform(st, namespace, restart, gr, hm%kpoints)
       call restart_end(restart)
     end if
 
@@ -775,7 +775,8 @@ contains
     if (freeze_orbitals > 0) then
       if (from_scratch) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-        call states_elec_freeze_orbitals(st, namespace, gr, mc, freeze_orbitals, family_is_mgga(ks%xc_family))
+        call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, &
+                   freeze_orbitals, family_is_mgga(ks%xc_family))
       else
         call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         if (ierr == 0) &
@@ -800,7 +801,7 @@ contains
       call messages_info(1)
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
       if (from_scratch) then
-        call states_elec_freeze_orbitals(st, namespace, gr, mc, st%nst-1, family_is_mgga(ks%xc_family))
+        call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, st%nst-1, family_is_mgga(ks%xc_family))
       else
         call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no", namespace=namespace)
       end if
@@ -1009,7 +1010,7 @@ contains
     end if
 
     ! first write resume file
-    call states_elec_dump(restart, st, gr, err, iter=iter)
+    call states_elec_dump(restart, st, gr, hm%kpoints, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
 
     call states_elec_dump_rho(restart, st, gr, ierr, iter=iter)
@@ -1075,7 +1076,7 @@ contains
     end if
 
     ! Read states
-    call states_elec_load(restart, namespace, st, gr, err, iter=td%iter, label = ": td")
+    call states_elec_load(restart, namespace, st, gr, hm%kpoints, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if

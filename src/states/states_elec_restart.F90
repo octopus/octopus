@@ -66,20 +66,21 @@ module states_elec_restart_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_elec_look_and_load(restart, namespace, st, gr, is_complex)
+  subroutine states_elec_look_and_load(restart, namespace, st, gr, kpoints, is_complex)
     type(restart_t),             intent(in)    :: restart
     type(namespace_t),           intent(in)    :: namespace
     type(states_elec_t), target, intent(inout) :: st
     type(grid_t),                intent(in)    :: gr
+    type(kpoints_t),             intent(in)    :: kpoints
     logical,           optional, intent(in)    :: is_complex
 
-    integer :: kpoints, dim, nst, ierr
+    integer :: nkpt, dim, nst, ierr
     FLOAT, allocatable :: new_occ(:,:)
 
     PUSH_SUB(states_elec_look_and_load)
 
     !check how many wfs we have
-    call states_elec_look(restart, kpoints, dim, nst, ierr)
+    call states_elec_look(restart, nkpt, dim, nst, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read states information."
       call messages_fatal(1, namespace=namespace)
@@ -130,7 +131,7 @@ contains
     end if
 
     ! load wavefunctions
-    call states_elec_load(restart, namespace, st, gr, ierr)
+    call states_elec_load(restart, namespace, st, gr, kpoints, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1, namespace=namespace)
@@ -141,10 +142,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
+  subroutine states_elec_dump(restart, st, gr, kpoints, ierr, iter, lr, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
     type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
+    type(kpoints_t),      intent(in)  :: kpoints
     integer,              intent(out) :: ierr
     integer,    optional, intent(in)  :: iter
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
@@ -230,7 +232,7 @@ contains
     do ik = 1, st%d%nik
       kpoint = M_ZERO
       kpoint(1:gr%sb%dim) = &
-        kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+        kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
@@ -329,11 +331,12 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_elec_load(restart, namespace, st, gr, ierr, iter, lr, lowest_missing, label, verbose, skip)
+  subroutine states_elec_load(restart, namespace, st, gr, kpoints, ierr, iter, lr, lowest_missing, label, verbose, skip)
     type(restart_t),            intent(in)    :: restart
     type(namespace_t),          intent(in)    :: namespace
     type(states_elec_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
+    type(kpoints_t),            intent(in)    :: kpoints
     integer,                    intent(out)   :: ierr
     integer,          optional, intent(out)   :: iter
     type(lr_t),       optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
@@ -551,7 +554,7 @@ contains
         end if
 
         kpoint(1:gr%sb%dim) = &
-          kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+          kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
         ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
         if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
           ! write only once for each k-point so as not to be too verbose
@@ -586,7 +589,7 @@ contains
 
     if (st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
-      call smear_init(st%smear, namespace, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
+      call smear_init(st%smear, namespace, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = kpoints)
     end if
 
 
@@ -734,7 +737,7 @@ contains
           do idim = 1, st%d%dim
             if(filled(idim, ist, ik)) cycle
 
-            call states_elec_generate_random(st, gr%mesh, gr%sb, ist, ist, ik, ik)
+            call states_elec_generate_random(st, gr%mesh, kpoints, ist, ist, ik, ik)
           end do
         end do
       end do
@@ -1405,11 +1408,12 @@ contains
   end subroutine states_elec_load_spin
 
   ! ---------------------------------------------------------
-  subroutine states_elec_transform(st, namespace, restart, gr, prefix)
+  subroutine states_elec_transform(st, namespace, restart, gr, kpoints, prefix)
     type(states_elec_t),        intent(inout) :: st
     type(namespace_t),          intent(in)    :: namespace
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
+    type(kpoints_t),            intent(in)    :: kpoints
     character(len=*), optional, intent(in)    :: prefix
 
     type(states_elec_t) :: stin
@@ -1456,7 +1460,7 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
         call states_elec_copy(stin, st, exclude_wfns = .true.)
-        call states_elec_look_and_load(restart, namespace, stin, gr)
+        call states_elec_look_and_load(restart, namespace, stin, gr, kpoints)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))

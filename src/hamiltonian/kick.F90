@@ -121,10 +121,11 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, namespace, sb, nspin)
+  subroutine kick_init(kick, namespace, sb, kpoints, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
+    type(kpoints_t),   intent(in)  :: kpoints
     integer,           intent(in)  :: nspin
 
     type(block_t) :: blk
@@ -463,7 +464,7 @@ contains
 
       call parse_block_end(blk)
 
-      if(sb%kpoints%use_symmetries) then
+      if(kpoints%use_symmetries) then
         do iop = 1, symmetries_number(sb%symm)
           if(iop == symmetries_identity_index(sb%symm)) cycle
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
@@ -584,7 +585,7 @@ contains
               call kpoints_to_absolute(sb%klattice, qtemp, kick%qvector(1:3, iq), 3)
 
               !Checking symmetries for all G vectors
-              if(sb%kpoints%use_symmetries) then
+              if(kpoints%use_symmetries) then
                 do iop = 1, symmetries_number(sb%symm)
                   if(iop == symmetries_identity_index(sb%symm)) cycle
                   if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then

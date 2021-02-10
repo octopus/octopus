@@ -271,7 +271,8 @@ program oct_unfold
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, global_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, label = ": unfold")
+    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                            ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
@@ -432,7 +433,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       iq = states_elec_dim_get_kpoint_index(st%d, ik) 
 
-      call fourier_shell_init(shell, zcube, gr%mesh, kk = sys%gr%sb%kpoints%reduced%red_point(:, iq))  
+      call fourier_shell_init(shell, zcube, gr%mesh, kk = sys%kpoints%reduced%red_point(:, iq))  
 
       gmin = minval(shell%red_gvec(:,:))
       gmax = maxval(shell%red_gvec(:,:))

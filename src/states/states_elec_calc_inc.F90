@@ -1006,10 +1006,11 @@ end function X(states_elec_residue)
 !! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
 !!
 ! ---------------------------------------------------------
-subroutine X(states_elec_calc_momentum)(st, der, momentum)
-  type(states_elec_t),      intent(in)  :: st
-  type(derivatives_t), intent(in)  :: der
-  FLOAT,               intent(out) :: momentum(:,:,:)
+subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
+  type(states_elec_t),  intent(in)  :: st
+  type(derivatives_t),  intent(in)  :: der
+  type(kpoints_t),      intent(in)  :: kpoints
+  FLOAT,                intent(out) :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
@@ -1054,7 +1055,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
       do idir = 1, der%mesh%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
@@ -1287,17 +1288,17 @@ end subroutine X(states_elec_matrix)
 
 ! -----------------------------------------------------------
 
-subroutine X(states_elec_calc_orth_test)(st, namespace, mesh, sb)
+subroutine X(states_elec_calc_orth_test)(st, namespace, mesh, kpoints)
   type(states_elec_t),    intent(inout) :: st
   type(namespace_t),      intent(in)    :: namespace
   type(mesh_t),           intent(in)    :: mesh
-  type(simul_box_t),      intent(in)    :: sb
+  type(kpoints_t),        intent(in)    :: kpoints
   
   PUSH_SUB(X(states_elec_calc_orth_test))
 
   call states_elec_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
 
-  call states_elec_generate_random(st, mesh, sb)
+  call states_elec_generate_random(st, mesh, kpoints)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''
@@ -1836,11 +1837,12 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
+subroutine X(states_elec_me_two_body) (st, namespace, gr, kpoints, psolver, st_min, st_max, iindex, &
                                          jindex, kindex, lindex, twoint, phase, singularity, exc_k)
   type(states_elec_t), target,   intent(inout) :: st
   type(namespace_t),             intent(in)    :: namespace
   type(grid_t),                  intent(in)    :: gr
+  type(kpoints_t),               intent(in)    :: kpoints
   type(poisson_t),               intent(inout) :: psolver
   integer,                       intent(in)    :: st_min, st_max
   integer,                       intent(out)   :: iindex(:,:)
@@ -1881,7 +1883,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   ASSERT(present(phase))
 #endif
 
-  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
+  npath = kpoints_nkpt_in_path(kpoints)
 
   if(st%are_packed()) call st%unpack()
 
@@ -1922,12 +1924,12 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
       if(exc_k_ .and. ist /= jst) cycle
 
       if(present(singularity)) then
-        qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
-                         - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
+        qq(1:gr%der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.) &
+                         - kpoints_get_point(kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &
-                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+                  -(kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
 #ifndef R_TCOMPLEX

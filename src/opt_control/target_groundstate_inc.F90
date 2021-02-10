@@ -19,12 +19,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_groundstate(gr, namespace, tg, td, restart)
+  subroutine target_init_groundstate(gr, namespace, tg, td, restart, kpoints)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(in)    :: restart
+    type(kpoints_t),   intent(in)    :: kpoints
 
     integer :: ierr
 
@@ -33,7 +34,7 @@
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
 
-    call states_elec_load(restart, namespace, tg%st, gr, ierr)
+    call states_elec_load(restart, namespace, tg%st, gr, kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)

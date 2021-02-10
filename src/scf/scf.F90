@@ -900,7 +900,7 @@ contains
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
-          call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, st, gr, hm%kpoints, ierr, iter=iter) 
           if (ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
@@ -1039,7 +1039,7 @@ contains
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
       call states_elec_fermi(st, namespace, gr%mesh)
-      call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
+      call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints)
     end if
 
     if(gs_run_) then 
@@ -1049,9 +1049,9 @@ contains
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
-      if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
+      if(bitand(hm%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
-          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+          geo, gr%mesh, hm%kpoints, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
@@ -1088,9 +1088,9 @@ contains
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call messages_info(2)
-          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints, scf%eigens%diff, compact = .true.)
         else
-          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints, compact = .true.)
         end if
 
         if (allocated(hm%vberry)) then
@@ -1149,7 +1149,7 @@ contains
         call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%sb%kpoints, namespace, iunit)
+          call kpoints_write_info(hm%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -1167,7 +1167,7 @@ contains
           write(iunit,'(a)') 'Some of the states are not fully converged!'
         end if
 
-        call states_elec_write_eigenvalues(iunit, st%nst, st, gr%sb)
+        call states_elec_write_eigenvalues(iunit, st%nst, st, gr%sb, hm%kpoints)
         write(iunit, '(1x)')
 
         if(simul_box_is_periodic(gr%sb)) then
@@ -1279,7 +1279,7 @@ contains
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
-          if (gr%sb%kpoints%full%npoints > 1) then
+          if (hm%kpoints%full%npoints > 1) then
             write(iunit, '(a)') &
               "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
             write(iunit, '(a)') &

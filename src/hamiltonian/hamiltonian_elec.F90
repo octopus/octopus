@@ -176,6 +176,8 @@ module hamiltonian_elec_oct_m
 
     type(exchange_operator_t), public :: exxop
 
+    type(kpoints_t), pointer, public :: kpoints => null()
+
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
 
@@ -205,7 +207,7 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
+  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, kpoints, need_exchange)
     type(hamiltonian_elec_t),           target, intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
@@ -214,6 +216,7 @@ contains
     integer,                                    intent(in)    :: theory_level
     type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
+    type(kpoints_t),                    target, intent(in)    :: kpoints
     logical, optional,                          intent(in)    :: need_exchange
 
     integer :: iline, icol, il
@@ -231,6 +234,8 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
+
+    hm%kpoints => kpoints
 
     !%Variable ParticleMass
     !%Type float
@@ -317,10 +322,10 @@ contains
     end if
   
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc)
+    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
+    call gauge_field_init(hm%ep%gfield, namespace, gr%sb, hm%kpoints)
 
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (parse_is_defined(namespace, 'StaticMagneticField') .or. gauge_field_is_applied(hm%ep%gfield) .or. &
@@ -417,7 +422,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
+      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
 
       !In the present implementation of DFT+U, in case of spinors, we have off-diagonal terms
       !in spin space which break the assumption of the generalized Bloch theorem
@@ -426,7 +431,7 @@ contains
       end if 
     end if
  
-    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
+    if (.not. kpoints_gamma_only(hm%kpoints)) then
       call init_phase()
     end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
@@ -493,7 +498,7 @@ contains
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, M_ONE, M_ZERO, M_ZERO)
+      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
@@ -608,7 +613,7 @@ contains
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(hm%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
         do ip = 1, gr%mesh%np_part
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end do
@@ -640,7 +645,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%sb, hm%d, gr%der%boundaries, namespace )
+        call lda_u_build_phase_correction(hm%lda_u, gr%sb%dim, hm%d, gr%der%boundaries, namespace, hm%kpoints)
       end if
 
       POP_SUB(hamiltonian_elec_init.init_phase)
@@ -1067,12 +1072,12 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
-      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(this%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb%dim, this%d, this%der%boundaries, this%kpoints, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -1094,7 +1099,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(this%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
           !We add the vector potential
           kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
@@ -1132,7 +1137,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, this%der%boundaries, namespace, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb%dim, this%d, this%der%boundaries, namespace, this%kpoints,  &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
@@ -1305,7 +1310,8 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, allocated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, this%kpoints, &
+                                allocated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_elec_epot_generate)
   end subroutine hamiltonian_elec_epot_generate
@@ -1643,12 +1649,12 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
 
-      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(this%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb%dim, this%d, this%der%boundaries, this%kpoints,  &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -1665,7 +1671,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(this%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
 
           !$omp parallel do schedule(static)
           do ip = 1, mesh%np_part
