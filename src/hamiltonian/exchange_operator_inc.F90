@@ -139,8 +139,8 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoin
       !Down-sampling and q-grid
       if(st_d%nik > st_d%spin_channels) then
         if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
-        qq(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.) &
-                      - kpoints_get_point(kpoints, ikpoint2, absolute_coordinates=.false.)
+        qq(1:der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.) &
+                      - kpoints%get_point(ikpoint2, absolute_coordinates=.false.)
       end if
       ! Updating of the poisson solver
       ! In case of k-points, the poisson solver must contains k-q
@@ -616,10 +616,10 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
 
       if(kpoints%use_symmetries) then
         !We apply the symmetry
-        kpt2(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.)
+        kpt2(1:der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.)
         call symmetries_apply_kpoint_red(sb%symm, iop, kpt2, kpt1)
       else
-        kpt1(1:der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.)
+        kpt1(1:der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.)
       end if
 
       !Local contribution
@@ -631,7 +631,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
         if(use_external_kernel) then
           if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
 
-          kpt2(1:der%dim) = kpoints_get_point(kpoints, ikpoint2, absolute_coordinates=.false.)
+          kpt2(1:der%dim) = kpoints%get_point(ikpoint2, absolute_coordinates=.false.)
           qq(1:der%dim) = kpt1(1:der%dim)-kpt2(1:der%dim)
         end if
         ! Updating of the poisson solver

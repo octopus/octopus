@@ -40,7 +40,7 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krn
     call pes_flux_pmesh_sph(this, dim, pmesh, idxZero, krng, Lp)
   
   case (PES_CARTESIAN)
-    if (kpoints_have_zero_weight_path(kpoints)) then
+    if (kpoints%have_zero_weight_path()) then
       call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     else
       call pes_flux_pmesh_cub(this, dim, pmesh, idxZero, krng, Lp, Ekin)
@@ -198,7 +198,7 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   nk(kpth_dir) = nkpt
   do ik = 1 , nkpt
     Lkpt(krng(1)+ik-1,kpth_dir) = ik
-    kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+    kpt(1:dim) = kpoints%get_point(krng(1) + ik -1) 
   end do
         
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)), 1:3))

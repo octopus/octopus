@@ -201,7 +201,7 @@ contains
 
     do iq = 1, dd%nik
       ik = states_elec_dim_get_kpoint_index(dd, iq)
-      dd%kweights(iq) = kpoints_get_weight(kpoints, ik)
+      dd%kweights(iq) = kpoints%get_weight(ik)
     end do
 
     if(debug%info) call print_kpoints_debug
@@ -215,7 +215,7 @@ contains
       
       call io_mkdir('debug/', namespace)
       iunit = io_open('debug/kpoints', namespace, action = 'write')
-      call kpoints_write_info(kpoints, namespace, iunit, absolute_coordinates = .true.)      
+      call kpoints%write_info(namespace, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)
 
       POP_SUB(states_elec_choose_kpoints.print_kpoints_debug)

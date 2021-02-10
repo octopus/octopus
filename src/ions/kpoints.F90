@@ -45,17 +45,12 @@ module kpoints_oct_m
     kpoints_end,                  &
     kpoints_copy,                 &
     kpoints_number,               &
-    kpoints_get_weight,           &
-    kpoints_get_point,            &
-    kpoints_write_info,           &
     kpoints_point_is_gamma,       &
     kpoints_get_symmetry_ops,     &
     kpoints_get_num_symmetry_ops, &
     kpoints_kweight_denominator,  &
     kpoints_grid_generate,        &
-    kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
-    kpoints_get_kpoint_method,    &
     kpoints_get_path_coord,       &
     kpoints_grid_init,            &
     kpoints_path_generate,        &
@@ -64,8 +59,7 @@ module kpoints_oct_m
     kpoints_is_compatible_downsampling, &
     kpoints_is_valid_symmetry,    &
     kpoints_grid_end,             & 
-    kpoints_nkpt_in_path,         &
-    kpoints_gamma_only
+    kpoints_nkpt_in_path
 
   type kpoints_grid_t
     ! Components are public by default
@@ -100,6 +94,14 @@ module kpoints_oct_m
     FLOAT, allocatable            :: coord_along_path(:)
 
     integer              :: downsampling(MAX_DIM) !< downsampling coefficients
+
+  contains
+    procedure :: have_zero_weight_path => kpoints_have_zero_weight_path
+    procedure :: get_kpoint_method => kpoints_get_kpoint_method
+    procedure :: gamma_only => kpoints_gamma_only
+    procedure :: get_weight => kpoints_get_weight
+    procedure :: get_point =>  kpoints_get_point
+    procedure :: write_info =>  kpoints_write_info
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -1018,7 +1020,7 @@ contains
 
   ! ----------------------------------------------------------
   pure function kpoints_get_point(this, ik, absolute_coordinates) result(point)
-    type(kpoints_t),   intent(in) :: this
+    class(kpoints_t),  intent(in) :: this
     integer,           intent(in) :: ik
     logical, optional, intent(in) :: absolute_coordinates    !< .true. by default
     FLOAT                         :: point(1:this%full%dim)
@@ -1034,8 +1036,8 @@ contains
 
   ! ----------------------------------------------------------
   FLOAT pure function kpoints_get_weight(this, ik) result(weight)
-    type(kpoints_t), intent(in) :: this
-    integer,         intent(in) :: ik
+    class(kpoints_t), intent(in) :: this
+    integer,          intent(in) :: ik
 
     weight = this%reduced%weight(ik)
 
@@ -1393,7 +1395,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kpoints_write_info(this, namespace, iunit, absolute_coordinates)
-    type(kpoints_t),    intent(in) :: this
+    class(kpoints_t),   intent(in) :: this
     type(namespace_t),  intent(in) :: namespace
     integer,            intent(in) :: iunit
     logical, optional,  intent(in) :: absolute_coordinates
@@ -1480,7 +1482,7 @@ contains
 
   ! ---------------------------------------------------------
   logical pure function kpoints_point_is_gamma(this, ik) result(is_gamma)
-    type(kpoints_t),    intent(in) :: this
+    class(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: ik
     
     is_gamma = (maxval(abs(kpoints_get_point(this, ik))) < M_EPSILON)
@@ -1568,7 +1570,7 @@ contains
 
   !--------------------------------------------------------
   logical  pure function kpoints_have_zero_weight_path(this) result(have_zerow)
-    type(kpoints_t),    intent(in) :: this
+    class(kpoints_t),    intent(in) :: this
     
     if (this%nik_skip > 0) then
       have_zerow = .true.
@@ -1580,7 +1582,7 @@ contains
  
   !--------------------------------------------------------
   integer pure function kpoints_get_kpoint_method(this) 
-    type(kpoints_t),    intent(in) :: this
+    class(kpoints_t),    intent(in) :: this
 
     kpoints_get_kpoint_method = this%method
   end function kpoints_get_kpoint_method
@@ -1736,7 +1738,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function kpoints_gamma_only(this) result(gamma_only)
-    type(kpoints_t), intent(in) :: this
+    class(kpoints_t), intent(in) :: this
 
     PUSH_SUB(kpoints_gamma_only)
 

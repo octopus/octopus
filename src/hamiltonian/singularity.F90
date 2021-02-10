@@ -174,7 +174,7 @@ contains
     do ik = kpt_start, kpt_end
       ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
       kpoint = M_ZERO
-      kpoint(1:sb%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates = .false.) 
+      kpoint(1:sb%dim) = kpoints%get_point(ikpoint, absolute_coordinates = .false.) 
 
       this%Fk(ik) = M_ZERO
 

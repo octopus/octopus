@@ -1149,7 +1149,7 @@ contains
         call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(hm%kpoints, namespace, iunit)
+          call hm%kpoints%write_info(namespace, iunit)
           write(iunit,'(1x)')
         end if
 

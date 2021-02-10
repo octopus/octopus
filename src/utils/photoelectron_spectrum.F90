@@ -193,7 +193,7 @@ program photoelectron_spectrum
   what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
 
-  have_zweight_path = kpoints_have_zero_weight_path(kpoints)
+  have_zweight_path = kpoints%have_zero_weight_path()
   use_zweight_path  = have_zweight_path
 
   call get_laser_polarization(pol)
@@ -736,7 +736,7 @@ program photoelectron_spectrum
 
       do ik = ikstart, ikend
         write(message(1),'(i8,1x)') ik
-        write(str_tmp,'(f12.6)') kpoints_get_weight(kpoints, ik)
+        write(str_tmp,'(f12.6)') kpoints%get_weight(ik)
         message(1) = trim(message(1)) // trim(str_tmp)//' |'
         do idir = 1, kpoints%full%dim
           write(str_tmp,'(f12.6)') kpoints%reduced%red_point(idir, ik)

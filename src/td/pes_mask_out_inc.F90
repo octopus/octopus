@@ -99,7 +99,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
       
   zero_thr = M_EPSILON    
       
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
+  if ( kpoints%have_zero_weight_path()) then 
     ! supporting paths only along the kx and ky directions in 
     ! reciprocal space
     kpth_dir = -1 
@@ -111,7 +111,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
     nk(kpth_dir) = nkpt
     do ik = 1 , nkpt
       Lkpt(krng(1)+ik-1,kpth_dir) = ik
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+      kpt(1:dim) = kpoints%get_point(krng(1) + ik -1) 
     end do
         
   else  
@@ -134,7 +134,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   if (debug%info) then
     print *,"reordered"
     do ik = krng(1),krng(2)
-      kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.)
+      kpt(1:dim) = kpoints%get_point(ik, absolute_coordinates = .false.)
       print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),"] -- kpt= ",kpt(1)
     end do
 
@@ -187,7 +187,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   ! The lower left corner correspond to the minimum value of p and the lowest 
   ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
   do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
+    kpt(1:dim) = kpoints%get_point(ik) 
     do j1 = 1, ll(1) 
       do j2 = 1, ll(2) 
         do j3 = 1, ll(3) 
@@ -239,7 +239,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
 !         print *,ip1, "Pmesh", pmesh(ip1, 1, 1, 1)
 !       end do
 
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
+  if (kpoints%have_zero_weight_path()) then 
   ! With a path we just need to get the correct the zero index on the in-plane direction  
   ! perpendicular to the path since is along this direction that we are going 
   ! to slice with pes_mask_output_full_mapM_cut. Since on this direction we only 

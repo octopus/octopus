@@ -431,7 +431,7 @@ contains
       end if 
     end if
  
-    if (.not. kpoints_gamma_only(hm%kpoints)) then
+    if (.not. hm%kpoints%gamma_only()) then
       call init_phase()
     end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
@@ -613,7 +613,7 @@ contains
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint(1:gr%sb%dim) = kpoints_get_point(hm%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
+        kpoint(1:gr%sb%dim) = hm%kpoints%get_point(states_elec_dim_get_kpoint_index(hm%d, ik))
         do ip = 1, gr%mesh%np_part
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end do
@@ -1072,7 +1072,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
-      if ((.not. kpoints_gamma_only(this%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. this%kpoints%gamma_only()) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1099,7 +1099,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(this%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(states_elec_dim_get_kpoint_index(this%d, ik))
           !We add the vector potential
           kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
@@ -1649,7 +1649,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
 
-      if ((.not. kpoints_gamma_only(this%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. this%kpoints%gamma_only()) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1671,7 +1671,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(this%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(states_elec_dim_get_kpoint_index(this%d, ik))
 
           !$omp parallel do schedule(static)
           do ip = 1, mesh%np_part

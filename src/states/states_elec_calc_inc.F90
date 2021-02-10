@@ -1055,7 +1055,7 @@ subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
       do idir = 1, der%mesh%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
@@ -1924,8 +1924,8 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, kpoints, psolver, st_m
       if(exc_k_ .and. ist /= jst) cycle
 
       if(present(singularity)) then
-        qq(1:gr%der%dim) = kpoints_get_point(kpoints, ikpoint, absolute_coordinates=.false.) &
-                         - kpoints_get_point(kpoints, jkpoint, absolute_coordinates=.false.)
+        qq(1:gr%der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.) &
+                         - kpoints%get_point(jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &

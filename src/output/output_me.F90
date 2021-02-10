@@ -448,7 +448,7 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
@@ -588,7 +588,7 @@ contains
       if(st%d%nik > ns) then
 
         kpoint = M_ZERO
-        kpoint(1:gr%sb%dim) = kpoints_get_point(kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
         
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
         do idir = 1, gr%sb%dim
