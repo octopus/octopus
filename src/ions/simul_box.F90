@@ -22,6 +22,9 @@
 module simul_box_oct_m
   use atom_oct_m
   use box_oct_m
+  use box_cylinder_oct_m
+  use box_parallelepiped_oct_m
+  use box_sphere_oct_m
   use iso_c_binding
   use gdlib_oct_m
   use geometry_oct_m
@@ -72,6 +75,14 @@ module simul_box_oct_m
 
   type, extends(box_t) :: simul_box_t
     ! Components are public by default
+
+    class(box_t), pointer :: box => NULL() !< This is a temporary placeholder
+                                           !! for storing the boxes making up
+                                           !! the simulation box, until we can
+                                           !! make simul_box_t an extension of a
+                                           !! multibox_t (and thus store this in
+                                           !! a list).
+
     type(symmetries_t) :: symm
     !> 1->sphere, 2->cylinder, 3->sphere around each atom,
     !! 4->parallelepiped (orthonormal, up to now).
@@ -124,7 +135,7 @@ contains
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
-    FLOAT :: def_h, def_rsize
+    FLOAT :: def_h, def_rsize, center(space%dim)
 
     PUSH_SUB(simul_box_init)
 
@@ -134,7 +145,20 @@ contains
     sb%periodic_dim = space%periodic_dim
 
     call read_box()                        ! Parameters defining the simulation box.
+
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
+
+    center = M_ZERO ! Currently all the boxes have to be centered at the origin.
+    select case (sb%box_shape)
+    case (SPHERE)
+      sb%box => box_sphere_t(space%dim, center, sb%rsize)
+    case (CYLINDER)
+      sb%box => box_cylinder_t(space%dim, center, sb%rsize, 1, M_TWO*sb%xsize, namespace, &
+        periodic_boundaries=(sb%periodic_dim > 0))
+    case (PARALLELEPIPED)
+      sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+    end select
+
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb, namespace)
@@ -217,8 +241,9 @@ contains
       end select
 
       ! ignore box_shape in 1D
-      if(sb%dim == 1 .and. sb%box_shape /= PARALLELEPIPED .and. sb%box_shape /= HYPERCUBE) &
+      if (sb%dim == 1 .and. sb%box_shape /= PARALLELEPIPED .and. sb%box_shape /= HYPERCUBE) then
         sb%box_shape = SPHERE
+      end if
 
       ! Cannot use images in 1D or 3D
       if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error(namespace, 'BoxShape')
@@ -797,6 +822,8 @@ contains
   subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
 
+    class(box_t), pointer :: box
+
     PUSH_SUB(simul_box_end)
 
     call symmetries_end(sb%symm)
@@ -807,6 +834,11 @@ contains
     if(sb%box_shape == BOX_IMAGE) &
       call gdlib_imagedestroy(sb%image)
 #endif
+
+    ! We first need to bet a pointer to the box to deallocated it because of a
+    ! bug in gfortran.
+    box => sb%box
+    SAFE_DEALLOCATE_P(box)
 
     POP_SUB(simul_box_end)
   end subroutine simul_box_end
@@ -984,22 +1016,8 @@ contains
     end if
 
     select case(this%box_shape)
-    case(SPHERE)
-      do ip = 1, nn
-        contained(ip) = sum(xx_red(ip, 1:this%dim)**2) <= (this%rsize + DELTA)**2
-      end do
-
-    case(CYLINDER)
-      do ip = 1, nn
-        rr = sqrt(sum(xx_red(ip, 2:this%dim)**2))
-        contained(ip) = rr <= this%rsize + DELTA
-        if(this%periodic_dim >= 1) then
-          contained(ip) = contained(ip) .and. xx_red(ip, 1) >= -this%xsize - DELTA
-          contained(ip) = contained(ip) .and. xx_red(ip, 1) <=  this%xsize - DELTA
-        else
-          contained(ip) = contained(ip) .and. abs(xx_red(ip, 1)) <= this%xsize + DELTA
-        end if
-      end do
+    case(SPHERE, CYLINDER, PARALLELEPIPED)
+      contained = this%box%contains_points(nn, xx_red)
 
     case(MINIMUM)
 
@@ -1034,7 +1052,7 @@ contains
       SAFE_DEALLOCATE_A(nlist)
       SAFE_DEALLOCATE_A(list)
 
-    case(PARALLELEPIPED, HYPERCUBE) 
+    case (HYPERCUBE) 
       llimit(1:this%dim) = -this%lsize(1:this%dim) - DELTA
       ulimit(1:this%dim) =  this%lsize(1:this%dim) + DELTA
       ulimit(1:this%periodic_dim)  = this%lsize(1:this%periodic_dim) - DELTA
