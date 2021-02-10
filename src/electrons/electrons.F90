@@ -23,6 +23,7 @@
 module electrons_oct_m
   use accel_oct_m
   use algorithm_oct_m
+  use boundary_op_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use density_oct_m
@@ -34,6 +35,9 @@ module electrons_oct_m
   use hamiltonian_elec_oct_m
   use interaction_oct_m
   use kpoints_oct_m
+  use ion_dynamics_oct_m
+  use kick_oct_m
+  use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -42,8 +46,12 @@ module electrons_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
+  use pes_oct_m
   use poisson_oct_m
+  use propagator_elec_oct_m
+  use propagator_exp_mid_oct_m
   use profiling_oct_m
+  use scdm_oct_m
   use space_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
@@ -52,6 +60,7 @@ module electrons_oct_m
   use sort_oct_m
   use system_oct_m
   use td_oct_m
+  use td_write_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -138,7 +147,7 @@ contains
     call v_ks_nullify(sys%ks)
     call elf_init(sys%namespace)
 
-    sys%generate_epot = optional_default(generate_epot, .false.)
+    sys%generate_epot = optional_default(generate_epot, .true.)
 
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
@@ -265,7 +274,18 @@ contains
     class(electrons_t), intent(inout) :: this
     logical,            intent(in)    :: from_scratch
 
+    logical :: fromScratch
+
     PUSH_SUB(electrons_initial_conditions)
+
+    call td_init(this%td, this%namespace, this%gr, &
+      this%geo, this%st, this%ks, this%hm, &
+      this%outp)
+    fromScratch = from_scratch
+    call td_init_run(this%td, this%namespace, this%mc, &
+      this%gr, this%geo, this%st, this%ks, &
+      this%hm, this%outp, this%space, fromScratch)
+    this%td%iter = this%td%iter - 1
 
     POP_SUB(electrons_initial_conditions)
   end subroutine electrons_initial_conditions
@@ -275,7 +295,59 @@ contains
     class(electrons_t),             intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
+    integer :: iter, scsteps
+    logical :: stopping
+
     PUSH_SUB(electrons_do_td_operation)
+
+    select case (operation%id)
+    case(EXPMID_PREDICT_DT)
+      scsteps = 1
+      stopping = .false.
+
+      this%td%iter = this%td%iter + 1
+      iter = this%td%iter
+
+      ! this is copied over from td_run and needs to be split
+      if (iter > 1) then
+        if (((iter-1)*this%td%dt <= this%hm%ep%kick%time) .and. (iter*this%td%dt > this%hm%ep%kick%time)) then
+          if (.not. this%hm%pcm%localf) then
+            call kick_apply(this%gr%mesh, this%st, this%td%ions, this%geo, &
+              this%hm%ep%kick, this%hm%psolver)
+          else
+            call kick_apply(this%gr%mesh, this%st, this%td%ions, this%geo, &
+              this%hm%ep%kick, this%hm%psolver, pcm = this%hm%pcm)
+          end if
+          call td_write_kick(this%outp, this%namespace, this%gr%mesh, this%hm%ep%kick, this%geo, iter)
+          !We activate the sprial BC only after the kick,
+          !to be sure that the first iteration corresponds to the ground state
+          if (this%gr%der%boundaries%spiralBC) this%gr%der%boundaries%spiral = .true.
+        end if
+      end if
+
+      ! in case use scdm localized states for exact exchange and request a new localization
+      if (this%hm%scdm_EXX) scdm_is_local = .false.
+
+      ! time iterate the system, one time step.
+      select case(this%td%dynamics)
+      case(EHRENFEST)
+        call propagator_elec_dt(this%ks, this%namespace, this%hm, this%gr, this%st, &
+          this%td%tr, iter*this%td%dt, this%td%dt, this%td%mu, iter, this%td%ions, &
+          this%geo, this%outp, scsteps = scsteps, &
+          update_energy = (mod(iter, this%td%energy_update_iter) == 0) .or. (iter == this%td%max_iter),  &
+          move_ions = ion_dynamics_ions_move(this%td%ions) )
+      case(BO)
+        call propagator_elec_dt_bo(this%td%scf, this%namespace, this%gr, this%ks, this%st, &
+          this%hm, this%geo, this%mc, this%outp, iter, this%td%dt, this%td%ions, scsteps)
+      end select
+      !Apply mask absorbing boundaries
+      if (this%hm%bc%abtype == MASK_ABSORBING) call zvmask(this%gr%mesh, this%hm, this%st)
+
+      !Photoelectron stuff
+      if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
+        call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, iter, this%gr, this%hm, stopping)
+      end if
+    end select
 
     POP_SUB(electrons_do_td_operation)
   end subroutine electrons_do_td_operation
@@ -368,7 +440,25 @@ contains
   subroutine electrons_output_write(this)
     class(electrons_t), intent(inout) :: this
 
+    integer :: iter, scsteps
+    logical :: fromScratch
+    FLOAT :: etime
+    logical :: stopping
+
     PUSH_SUB(electrons_output_write)
+
+    iter = this%td%iter
+    scsteps = 1
+    fromScratch = .true.
+    stopping = .false.
+    etime = loct_clock()
+
+    call td_write_iter(this%td%write_handler, this%namespace, this%outp, this%gr, &
+      this%st, this%hm, this%geo, this%hm%ep%kick, this%td%dt, iter)
+
+    ! write down data
+    call td_check_point(this%td, this%namespace, this%mc, this%gr, this%geo, &
+      this%st, this%ks, this%hm, this%outp, this%space, iter, scsteps, etime, stopping, fromScratch)
 
     POP_SUB(electrons_output_write)
   end subroutine electrons_output_write
@@ -407,6 +497,9 @@ contains
     type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(electrons_finalize)
+
+    call td_end_run(sys%td, sys%st, sys%hm)
+    call td_end(sys%td)
 
     if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
       call poisson_async_end(sys%hm%psolver, sys%mc)
