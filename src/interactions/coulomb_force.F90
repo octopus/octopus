@@ -37,9 +37,6 @@ module coulomb_force_oct_m
   !> Coulomb interaction between two systems of particles.
   type, extends(force_interaction_t) :: coulomb_force_t
     private
-    integer :: dim = 0
-
-    integer :: system_np = 0 !< number of particles in the system
     FLOAT, pointer :: system_charge(:) !< pointer to array storing the charges of the particles
     FLOAT, pointer :: system_pos(:,:) !< pointer to array storing the positions of the particles
 

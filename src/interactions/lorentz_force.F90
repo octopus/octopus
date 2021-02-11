@@ -37,9 +37,6 @@ module lorentz_force_oct_m
   !> Lorenz force between a systems of particles and an electromagnetic field.
   type, extends(force_interaction_t) :: lorentz_force_t
     private
-    integer :: dim = 0
-
-    integer, public :: system_np = 0 !< number of particles in the system
     FLOAT, pointer :: system_charge(:) !< pointer to array storing the charges of the particles
     FLOAT, pointer, public :: system_pos(:,:) !< pointer to array storing the positions of the particles
     FLOAT, pointer :: system_vel(:,:) !< pointer to array storing the velocities of the particles

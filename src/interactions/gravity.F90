@@ -39,9 +39,6 @@ module gravity_oct_m
   !! quantities are in S.I. units instead of atomic units.
   type, extends(force_interaction_t) :: gravity_t
     private
-    integer :: dim = 0
-
-    integer :: system_np = 0 !< number of particles in the system
     FLOAT, pointer :: system_mass(:) !< pointer to array storing the masses of the particles
     FLOAT, pointer :: system_pos(:,:) !< pointer to array storing the positions of the particles
 
