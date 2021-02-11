@@ -498,8 +498,10 @@ contains
 
     PUSH_SUB(electrons_finalize)
 
-    call td_end_run(sys%td, sys%st, sys%hm)
-    call td_end(sys%td)
+    if(associated(sys%prop)) then
+      call td_end_run(sys%td, sys%st, sys%hm)
+      call td_end(sys%td)
+    end if
 
     if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
       call poisson_async_end(sys%hm%psolver, sys%mc)
