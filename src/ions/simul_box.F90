@@ -61,7 +61,8 @@ module simul_box_oct_m
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
-    reciprocal_lattice
+    reciprocal_lattice,         &
+    check_ions_compatible_with_symmetries 
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -83,7 +84,6 @@ module simul_box_oct_m
                                            !! multibox_t (and thus store this in
                                            !! a list).
 
-    type(symmetries_t) :: symm
     !> 1->sphere, 2->cylinder, 3->sphere around each atom,
     !! 4->parallelepiped (orthonormal, up to now).
     integer  :: box_shape   
@@ -162,10 +162,6 @@ contains
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb, namespace)
-
-    call symmetries_init(sb%symm, namespace, geo, sb%dim, space%periodic_dim, sb%rlattice, sb%klattice)
-
-    call check_ions_compatible_with_symmetries(sb, geo, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -826,8 +822,6 @@ contains
 
     PUSH_SUB(simul_box_end)
 
-    call symmetries_end(sb%symm)
-
     call lookup_end(sb%atom_lookup)
 
 #ifdef HAVE_GDLIB
@@ -1135,8 +1129,6 @@ contains
 
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 
-    if(simul_box_is_periodic(sbin)) call symmetries_copy(sbin%symm, sbout%symm)
-
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
 
@@ -1221,8 +1213,9 @@ contains
 
   ! ---------------------------------------------------------
   ! TODO : This routines should belong to geometry, once geo knows its box 
-  subroutine check_ions_compatible_with_symmetries(this, geo, dim, namespace)
+  subroutine check_ions_compatible_with_symmetries(this, symm, geo, dim, namespace)
     type(simul_box_t),  intent(in) :: this
+    type(symmetries_t), intent(in) :: symm
     type(geometry_t),   intent(in) :: geo
     integer,            intent(in) :: dim
     type(namespace_t),  intent(in) :: namespace
@@ -1241,15 +1234,15 @@ contains
     !
     ! V_iatom(R*r) = V_iatom_symm(r)
     !
-    do iop = 1, symmetries_number(this%symm)
-      if(iop == symmetries_identity_index(this%symm)) cycle
+    do iop = 1, symmetries_number(symm)
+      if(iop == symmetries_identity_index(symm)) cycle
 
       do iatom = 1, geo%natoms
         ratom = M_ZERO
         if(geo%reduced_coordinates) then
-          ratom(1:this%dim) = symm_op_apply_red(this%symm%ops(iop), geo%atom(iatom)%x)
+          ratom(1:this%dim) = symm_op_apply_red(symm%ops(iop), geo%atom(iatom)%x)
         else
-          ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
+          ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
         end if
      
         call simul_box_periodic_atom_in_box(this, geo, ratom)

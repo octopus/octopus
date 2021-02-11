@@ -478,10 +478,10 @@ contains
     end if
 
     if(kpoints%use_symmetries) then
-      do iop = 1, symmetries_number(mesh%sb%symm)
-        if(iop == symmetries_identity_index(mesh%sb%symm)) cycle
+      do iop = 1, symmetries_number(kpoints%symm)
+        if(iop == symmetries_identity_index(kpoints%symm)) cycle
         do il = 1, no_l
-          if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
+          if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
             message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
             call messages_fatal(2, namespace=namespace)

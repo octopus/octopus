@@ -38,6 +38,7 @@ module grid_oct_m
   use simul_box_oct_m
   use stencil_oct_m
   use stencil_cube_oct_m
+  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -60,6 +61,8 @@ module grid_oct_m
     type(curvilinear_t)         :: cv
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
+
+    type(symmetries_t)          :: symm
   end type grid_t
 
 
@@ -82,6 +85,12 @@ contains
     PUSH_SUB(grid_init_stage_1)
 
     call simul_box_init(gr%sb, namespace, geo, space)
+
+    call symmetries_init(gr%symm, namespace, geo, space%dim, space%periodic_dim, &
+                             gr%sb%rlattice, gr%sb%klattice)
+
+    call check_ions_compatible_with_symmetries(gr%sb, gr%symm, geo, space%dim, namespace)
+
 
     !%Variable UseFineMesh
     !%Type logical
@@ -303,6 +312,8 @@ contains
     call derivatives_end(gr%der)
     call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
+
+    call symmetries_end(gr%symm)
 
     call stencil_end(gr%stencil)
 

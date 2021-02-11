@@ -41,6 +41,7 @@ program photoelectron_spectrum
   use string_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -116,8 +117,11 @@ program photoelectron_spectrum
   call geometry_init(geo, global_namespace, space)
   call simul_box_init(sb, global_namespace, geo, space)
   gr%sb = sb
+  call symmetries_init(gr%symm, global_namespace, geo, space%dim, space%periodic_dim, &
+                             sb%rlattice, sb%klattice)
+
   ! we need k-points for periodic systems
-  call kpoints_init(kpoints, global_namespace, sb%symm, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
+  call kpoints_init(kpoints, global_namespace, gr%symm, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
   call states_elec_init(st, global_namespace, gr, geo, kpoints)
   !*
 

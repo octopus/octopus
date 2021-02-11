@@ -95,6 +95,8 @@ module kpoints_oct_m
 
     integer              :: downsampling(MAX_DIM) !< downsampling coefficients
 
+    type(symmetries_t), pointer :: symm => null()
+
   contains
     procedure :: have_zero_weight_path => kpoints_have_zero_weight_path
     procedure :: get_kpoint_method => kpoints_get_kpoint_method
@@ -244,12 +246,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kpoints_init(this, namespace, symm, dim, periodic_dim, rlattice, klattice)
-    type(kpoints_t),    intent(out) :: this
-    type(namespace_t),  intent(in)  :: namespace
-    type(symmetries_t), intent(in)  :: symm
-    integer,            intent(in)  :: dim
-    integer,            intent(in)  :: periodic_dim
-    FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
+    type(kpoints_t),            intent(out) :: this
+    type(namespace_t),          intent(in)  :: namespace
+    type(symmetries_t), target, intent(in)  :: symm
+    integer,                    intent(in)  :: dim
+    integer,                    intent(in)  :: periodic_dim
+    FLOAT,                      intent(in)  :: rlattice(:,:), klattice(:,:)
 
     integer :: ik, idir, is
     character(len=100) :: str_tmp
@@ -264,6 +266,8 @@ contains
     this%nik_axis(1:MAX_DIM) = 1
 
     only_gamma = (periodic_dim == 0)
+
+    this%symm => symm
 
     !%Variable KPointsUseSymmetries
     !%Type logical

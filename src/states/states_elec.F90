@@ -1999,28 +1999,28 @@ contains
     ! This must be done before compute the gauge-invariant kinetic energy density 
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
+      call symmetrizer_init(symmetrizer, der%mesh, kpoints%symm)
       do is = 1, st%d%nspin
         if(associated(tau)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = tau(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field = tau(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(present(density_laplacian)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = density_laplacian(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field = density_laplacian(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(associated(jp)) then 
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field_vector = jp(:, :, is), symmfield_vector = symm, &
             suppress_warning = .true.)
           jp(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if
  
         if(present(density_gradient)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field_vector = density_gradient(:, :, is), &
             symmfield_vector = symm, suppress_warning = .true.)
           density_gradient(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if   

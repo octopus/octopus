@@ -1292,10 +1292,10 @@ contains
     call messages_info(1)
 
     if(st%symmetrize_density) then
-      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+      call symmetrizer_init(symmetrizer, gr%fine%mesh, gr%symm)
 
       do is = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, gr%fine%mesh%np, field = rho(:, is), &
+        call dsymmetrizer_apply(symmetrizer, gr%fine%mesh, field = rho(:, is), &
                                  symmfield = atom_rho(:, 1))
         rho(1:gr%fine%mesh%np, is) = atom_rho(1:gr%fine%mesh%np, 1)
       end do
