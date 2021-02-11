@@ -393,7 +393,6 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
     logical, allocatable :: in_box(:)

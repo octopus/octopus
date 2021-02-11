@@ -69,6 +69,7 @@ module ion_electron_local_potential_oct_m
   contains
     procedure :: init => ion_electron_local_potential_init
     procedure :: calculate => ion_electron_local_potential_calculate
+    procedure :: end => ion_electron_local_potential_end
     final :: ion_electron_local_potential_finalize
   end type ion_electron_local_potential_t
 
@@ -236,16 +237,28 @@ contains
   end subroutine ion_electron_local_potential_calculate
 
   ! ---------------------------------------------------------
-  subroutine ion_electron_local_potential_finalize(this)
-    type(ion_electron_local_potential_t), intent(inout) :: this
+  subroutine ion_electron_local_potential_end(this)
+    class(ion_electron_local_potential_t), intent(inout) :: this
 
-    PUSH_SUB(ion_electron_local_potential_finalize)
+    PUSH_SUB(ion_electron_local_potential_end)
 
     SAFE_DEALLOCATE_A(this%potential)
     nullify(this%mesh)
     nullify(this%psolver)
 
     call interaction_with_partner_end(this)
+
+    POP_SUB(ion_electron_local_potential_end)
+  end subroutine ion_electron_local_potential_end
+
+
+  ! ---------------------------------------------------------
+  subroutine ion_electron_local_potential_finalize(this)
+    type(ion_electron_local_potential_t), intent(inout) :: this
+
+    PUSH_SUB(ion_electron_local_potential_finalize)
+
+    call ion_electron_local_potential_end(this)
 
     POP_SUB(ion_electron_local_potential_finalize)
   end subroutine ion_electron_local_potential_finalize

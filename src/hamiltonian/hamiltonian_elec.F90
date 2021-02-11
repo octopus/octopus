@@ -847,6 +847,8 @@ contains
 
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
+    call hm%v_ie_loc%end()   
+
     call iter%start(hm%external_potentials)
     do while (iter%has_next())
       potential => iter%get_next()
