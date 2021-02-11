@@ -28,7 +28,7 @@ module force_interaction_oct_m
     force_interaction_t
 
   type, extends(interaction_with_partner_t), abstract :: force_interaction_t
-    FLOAT, public :: force(MAX_DIM)
+    FLOAT, allocatable, public :: force(:,:)
   end type force_interaction_t
 
 end module force_interaction_oct_m

@@ -34,18 +34,20 @@ module gravity_oct_m
   public ::                &
     gravity_t
 
-  !> Gravity interaction between two particles. This should be used
+  !> Gravity interaction between two systems of particles. This should be used
   !! for testing purposes only. Note that this interaction assumes all
   !! quantities are in S.I. units instead of atomic units.
   type, extends(force_interaction_t) :: gravity_t
     private
-    integer :: dim
+    integer :: dim = 0
 
-    FLOAT, pointer :: system_mass
-    FLOAT, pointer :: system_pos(:)
+    integer :: system_np = 0 !< number of particles in the system
+    FLOAT, pointer :: system_mass(:) !< pointer to array storing the masses of the particles
+    FLOAT, pointer :: system_pos(:,:) !< pointer to array storing the positions of the particles
 
-    FLOAT, public :: partner_mass
-    FLOAT, allocatable, public :: partner_pos(:)
+    integer, public :: partner_np = 0 !< number of particles in the partner system
+    FLOAT, allocatable, public :: partner_mass(:) !< array storing a copy of the masses of the partner particles
+    FLOAT, allocatable, public :: partner_pos(:,:) !< array storing a copy of the positions of the partner particles
 
   contains
     procedure :: init => gravity_init
@@ -92,17 +94,19 @@ contains
   end function gravity_constructor
 
   ! ---------------------------------------------------------
-  subroutine gravity_init(this, dim, system_quantities, system_mass, system_pos)
+  subroutine gravity_init(this, dim, system_np, system_quantities, system_mass, system_pos)
     class(gravity_t),                     intent(inout) :: this
-    integer,                              intent(in)    :: dim
+    integer,                              intent(in)    :: dim !< number of dimensions in space
+    integer,                              intent(in)    :: system_np  !< number of particles in the system that owns this interaction
     type(quantity_t),                     intent(inout) :: system_quantities(:)
-    FLOAT,                        target, intent(in)    :: system_mass
-    FLOAT,                        target, intent(in)    :: system_pos(:)
+    FLOAT,                        target, intent(in)    :: system_mass(:)
+    FLOAT,                        target, intent(in)    :: system_pos(:,:)
 
     PUSH_SUB(gravity_init)
 
     this%dim = dim
-    SAFE_ALLOCATE(this%partner_pos(dim))
+    this%system_np = system_np
+    SAFE_ALLOCATE(this%force(dim, system_np))
 
     system_quantities(POSITION)%required = .true.
     system_quantities(MASS)%required = .true.
@@ -116,15 +120,24 @@ contains
   subroutine gravity_calculate(this)
     class(gravity_t),             intent(inout) :: this
 
+    integer :: ip, jp
     FLOAT, parameter :: GG = CNST(6.67430e-11) ! In S.I. units!
     FLOAT :: dist3
 
     PUSH_SUB(gravity_calculate)
 
-    dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
+    ASSERT(allocated(this%partner_mass))
+    ASSERT(allocated(this%partner_pos))
 
-    this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-      / (dist3 + M_EPSILON) * (GG * this%system_mass * this%partner_mass)
+    do ip = 1, this%system_np
+      do jp = 1, this%partner_np
+
+        dist3 = sum((this%partner_pos(1:this%dim, jp) - this%system_pos(1:this%dim, ip))**2)**(M_THREE/M_TWO)
+
+        this%force(1:this%dim, ip) = (this%partner_pos(1:this%dim, jp) - this%system_pos(1:this%dim, ip)) &
+          / (dist3 + M_EPSILON) * (GG * this%system_mass(ip) * this%partner_mass(jp))
+      end do
+    end do
 
     POP_SUB(gravity_calculate)
   end subroutine gravity_calculate
@@ -139,6 +152,8 @@ contains
     nullify(this%system_mass)
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
+    SAFE_DEALLOCATE_A(this%partner_mass)
+    SAFE_DEALLOCATE_A(this%force)
 
     call interaction_with_partner_end(this)
 

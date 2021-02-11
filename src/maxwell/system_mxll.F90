@@ -546,9 +546,8 @@ contains
     class(system_mxll_t),       intent(inout) :: partner
     class(interaction_t),       intent(inout) :: interaction
 
+    integer :: ip
     CMPLX :: interpolated_value(3)
-    FLOAT :: e_field(3)
-    FLOAT :: b_field(3)
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
@@ -557,16 +556,17 @@ contains
 
     select type (interaction)
     type is (lorentz_force_t)
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
-        interaction%system_pos, interpolated_value(1))
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
-        interaction%system_pos, interpolated_value(2))
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
-        interaction%system_pos, interpolated_value(3))
-      call get_electric_field_vector(interpolated_value, e_field)
-      call get_magnetic_field_vector(interpolated_value, 1, b_field)
-      interaction%partner_E_field = e_field
-      interaction%partner_B_field = b_field
+      do ip = 1, interaction%system_np
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
+          interaction%system_pos(:, ip), interpolated_value(1))
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
+          interaction%system_pos(:, ip), interpolated_value(2))
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
+          interaction%system_pos(:, ip), interpolated_value(3))
+        call get_electric_field_vector(interpolated_value, interaction%partner_E_field(:, ip))
+        call get_magnetic_field_vector(interpolated_value, 1, interaction%partner_B_field(:, ip))
+      end do
+
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
