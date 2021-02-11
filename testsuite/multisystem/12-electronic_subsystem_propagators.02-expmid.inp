@@ -4,9 +4,9 @@ FromScratch = yes
 
 bond_length = 2.8
 
-#%Systems
-# 'test_electrons' | electronic
-#%
+%Systems
+ 'test_electrons' | electronic
+%
 
 %Coordinates
 "C" |  -bond_length/2 |  0.0 |  0.0
@@ -27,12 +27,12 @@ MoveIons = no
 
 TDPropagator = exp_mid
 
-TDMaxSteps = 20
+#TDMaxSteps = 20
 TDTimeStep = 0.1
 
-#TDPropagationTime = 2
-#TDSystemPropagator = exp_mid
-#ExperimentalFeatures = yes
+TDPropagationTime = 2
+TDSystemPropagator = exp_mid
+ExperimentalFeatures = yes
 
 TDDeltaStrength = 0.01
 TDPolarizationDirection = 1

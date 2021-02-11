@@ -2,6 +2,10 @@ CalculationMode = gs
 
 FromScratch = yes
 
+%RestartOptions
+  restart_gs | "test_electrons/restart"
+%
+
 bond_length = 2.8
 
 %Coordinates
