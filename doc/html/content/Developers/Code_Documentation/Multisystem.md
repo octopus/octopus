@@ -3,6 +3,10 @@ Title: "Multisystem support"
 Weight: 1
 ---
 
+{{< notice warning >}}
+Work in progress!
+{{< /notice >}}
+
 ### Introduction
 
 Support for multisystem in {{< octopus >}} is implemented through an object-oriented framework.
@@ -35,8 +39,11 @@ Therefore, it is the base class of all possible systems and multisystems.
 ```
 {{% /expand %}}
 
-Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions).
+Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions) and a list
+or quantities, which it exposes to the interactions.
 
+It also provides the basic functions to update exposed quantities, and copy them to the interaction. More details about this mechanism are described in the section on 
+{{< developers "code_documentation/interactions" "interactions" >}}.
 
 #### {{< code system_t >}}
 
@@ -66,7 +73,7 @@ The {{< code type >}} to be used for combined systems is {{< code multisystem_ba
 
 
 
-### concrete classes
+### Specific classes
 
 #### {{< code multisystem_basic_t >}}
 
