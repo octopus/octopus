@@ -37,6 +37,7 @@ module electrons_oct_m
   use kpoints_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -48,8 +49,10 @@ module electrons_oct_m
   use parser_oct_m
   use pes_oct_m
   use poisson_oct_m
+  use propagator_oct_m
   use propagator_elec_oct_m
   use propagator_exp_mid_oct_m
+  use propagation_ops_elec_oct_m
   use profiling_oct_m
   use scdm_oct_m
   use space_oct_m
@@ -86,6 +89,8 @@ module electrons_oct_m
     type(kpoints_t) :: kpoints                   !< the k-points
 
     logical :: generate_epot
+
+    type(states_elec_t)          :: st_copy  !< copy of the states
   contains
     procedure :: init_interaction => electrons_init_interaction
     procedure :: init_parallelization => electrons_init_parallelization
@@ -297,11 +302,51 @@ contains
 
     integer :: iter, scsteps
     logical :: stopping
+    logical :: update_energy_
 
     PUSH_SUB(electrons_do_td_operation)
 
+    update_energy_ = .true.
+
     select case (operation%id)
-    case(EXPMID_PREDICT_DT)
+    case (STORE_CURRENT_STATUS)
+      ! store states at t
+      call states_elec_copy(this%st_copy, this%st)
+
+    case (EXPMID_PREDICT_DT_2)
+      ! predict states at t + dt/2 from states at t
+      call propagation_ops_elec_fuse_density_exp_apply(this%td%tr%te, this%namespace, &
+        this%st, this%gr, this%hm, this%prop%dt*M_HALF)
+
+    case (EXPMID_PREDICT_DT)
+      ! predict states at t + dt from states at t, using H at t + dt/2
+      ! restore states from t to st object
+      call states_elec_end(this%st)
+      call states_elec_copy(this%st, this%st_copy)
+      call states_elec_end(this%st_copy)
+      call propagation_ops_elec_fuse_density_exp_apply(this%td%tr%te, this%namespace, &
+        this%st, this%gr, this%hm, this%prop%dt)
+      this%td%iter = this%td%iter + 1
+
+    case (UPDATE_HAMILTONIAN)
+      ! get potential from the updated density
+      call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, &
+        calc_eigenval = update_energy_, time = abs(this%prop%clock%time()), calc_energy = update_energy_)
+      if(update_energy_) call energy_calc_total(this%namespace, this%hm, this%gr, this%st, iunit = -1)
+      ! update the occupation matrices
+      call lda_u_update_occ_matrices(this%hm%lda_u, this%namespace, this%gr%mesh, &
+        this%st, this%hm%hm_base, this%hm%energy)
+
+    case (EXPMID_START)
+    case (EXPMID_FINISH)
+    case default
+      message(1) = "Unsupported TD operation."
+      write(message(2), '(A,A,A)') trim(operation%id), ": ", trim(operation%label)
+      call messages_fatal(2, namespace=this%namespace)
+    end select
+
+
+    if (.false.) then
       scsteps = 1
       stopping = .false.
 
@@ -347,7 +392,7 @@ contains
       if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
         call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, iter, this%gr, this%hm, stopping)
       end if
-    end select
+    end if
 
     POP_SUB(electrons_do_td_operation)
   end subroutine electrons_do_td_operation
