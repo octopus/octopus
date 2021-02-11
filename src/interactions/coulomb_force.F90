@@ -34,15 +34,15 @@ module coulomb_force_oct_m
   public ::                &
     coulomb_force_t
 
+  !> Coulomb interaction between two systems of particles.
   type, extends(force_interaction_t) :: coulomb_force_t
     private
-    integer :: dim
+    FLOAT, pointer :: system_charge(:) !< pointer to array storing the charges of the particles
+    FLOAT, pointer :: system_pos(:,:) !< pointer to array storing the positions of the particles
 
-    FLOAT, pointer :: system_charge
-    FLOAT, pointer :: system_pos(:)
-
-    FLOAT, public :: partner_charge
-    FLOAT, allocatable, public :: partner_pos(:)
+    integer, public :: partner_np = 0 !< number of particles in the partner system
+    FLOAT, allocatable, public :: partner_charge(:) !< array storing a copy of the masses of the partner particles
+    FLOAT, allocatable, public :: partner_pos(:,:) !< array storing a copy of the positions of the partner particles
 
   contains
     procedure :: init => coulomb_force_init
@@ -89,17 +89,19 @@ contains
   end function coulomb_force_constructor
 
   ! ---------------------------------------------------------
-  subroutine coulomb_force_init(this, dim, system_quantities, system_charge, system_pos)
+  subroutine coulomb_force_init(this, dim, system_np, system_quantities, system_charge, system_pos)
     class(coulomb_force_t),             intent(inout) :: this
-    integer,                            intent(in)    :: dim
+    integer,                            intent(in)    :: dim !< number of dimensions in space
+    integer,                            intent(in)    :: system_np  !< number of particles in the system that owns this interaction
     type(quantity_t),                   intent(inout) :: system_quantities(:)
-    FLOAT,                      target, intent(in)    :: system_charge
-    FLOAT,                      target, intent(in)    :: system_pos(:)
+    FLOAT,                      target, intent(in)    :: system_charge(:)
+    FLOAT,                      target, intent(in)    :: system_pos(:,:)
 
     PUSH_SUB(coulomb_force_init)
 
     this%dim = dim
-    SAFE_ALLOCATE(this%partner_pos(dim))
+    this%system_np = system_np
+    SAFE_ALLOCATE(this%force(dim, system_np))
 
     system_quantities(POSITION)%required = .true.
     system_quantities(CHARGE)%required = .true.
@@ -113,16 +115,23 @@ contains
   subroutine coulomb_force_calculate(this)
     class(coulomb_force_t),             intent(inout) :: this
 
+    integer :: ip, jp
     FLOAT, parameter :: COULCONST = M_ONE ! Coulomb constant in atomic units
     FLOAT :: dist3
 
     PUSH_SUB(coulomb_force_calculate)
 
-    dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
+    ASSERT(allocated(this%partner_charge))
+    ASSERT(allocated(this%partner_pos))
 
-    this%force(1:this%dim) = -(this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-      / (dist3 + M_EPSILON) * (COULCONST * this%system_charge * this%partner_charge)
+    do ip = 1, this%system_np
+      do jp = 1, this%partner_np
+        dist3 = sum((this%partner_pos(1:this%dim, jp) - this%system_pos(1:this%dim, ip))**2)**(M_THREE/M_TWO)
 
+        this%force(1:this%dim, ip) = -(this%partner_pos(1:this%dim, jp) - this%system_pos(1:this%dim, ip)) &
+          / (dist3 + M_EPSILON) * (COULCONST * this%system_charge(ip) * this%partner_charge(jp))
+      end do
+    end do
 
     POP_SUB(coulomb_force_calculate)
   end subroutine coulomb_force_calculate
@@ -137,6 +146,8 @@ contains
     nullify(this%system_charge)
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
+    SAFE_DEALLOCATE_A(this%partner_charge)
+    SAFE_DEALLOCATE_A(this%force)
 
     call interaction_with_partner_end(this)
 

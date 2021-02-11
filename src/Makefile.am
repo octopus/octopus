@@ -506,6 +506,7 @@ interactions_srcs = $(interactions_f_srcs)
 # Sources in classical
 classical_f_srcs =                                 \
 	classical/charged_particle.F90             \
+	classical/classical_particles.F90          \
 	classical/classical_particle.F90
 
 classical_srcs = $(classical_f_srcs)

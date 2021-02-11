@@ -28,7 +28,10 @@ module force_interaction_oct_m
     force_interaction_t
 
   type, extends(interaction_with_partner_t), abstract :: force_interaction_t
-    FLOAT, public :: force(MAX_DIM)
+    integer :: dim = 0       !< spatial dimensions
+    integer :: system_np = 0 !< number of particles in the system that the forces are acting on
+
+    FLOAT, allocatable, public :: force(:,:)
   end type force_interaction_t
 
 end module force_interaction_oct_m

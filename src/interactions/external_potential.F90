@@ -208,16 +208,22 @@ contains
     class(external_potential_t),     intent(inout) :: partner
     class(interaction_t),            intent(inout) :: interaction
 
+    integer :: ip
+
     PUSH_SUB(external_potential_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (lorentz_force_t)
-      if(partner%type == EXTERNAL_POT_STATIC_EFIELD) then
-        interaction%partner_E_field = partner%E_field
-        interaction%partner_B_field = M_ZERO
-      else if(partner%type == EXTERNAL_POT_STATIC_BFIELD) then 
-        interaction%partner_E_field = M_ZERO
-        interaction%partner_B_field = partner%B_field
+      if (partner%type == EXTERNAL_POT_STATIC_EFIELD) then
+        do ip = 1, interaction%system_np
+          interaction%partner_E_field(:, ip) = partner%E_field
+          interaction%partner_B_field(:, ip) = M_ZERO
+        end do
+      else if (partner%type == EXTERNAL_POT_STATIC_BFIELD) then 
+        do ip = 1, interaction%system_np
+          interaction%partner_E_field(:, ip) = M_ZERO
+          interaction%partner_B_field(:, ip) = partner%B_field
+        end do
       else
         ASSERT(.false.) !This should never occur.
       end if 
@@ -228,7 +234,6 @@ contains
     end select
 
     POP_SUB(external_potential_copy_quantities_to_interaction)
-
   end subroutine external_potential_copy_quantities_to_interaction
 
 
