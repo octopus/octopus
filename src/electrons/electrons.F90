@@ -308,6 +308,8 @@ contains
 
     update_energy_ = .true.
 
+    ! kick at t > 0 still missing!
+
     select case (operation%id)
     case (STORE_CURRENT_STATUS)
       ! store states at t
@@ -345,54 +347,6 @@ contains
       call messages_fatal(2, namespace=this%namespace)
     end select
 
-
-    if (.false.) then
-      scsteps = 1
-      stopping = .false.
-
-      this%td%iter = this%td%iter + 1
-      iter = this%td%iter
-
-      ! this is copied over from td_run and needs to be split
-      if (iter > 1) then
-        if (((iter-1)*this%td%dt <= this%hm%ep%kick%time) .and. (iter*this%td%dt > this%hm%ep%kick%time)) then
-          if (.not. this%hm%pcm%localf) then
-            call kick_apply(this%gr%mesh, this%st, this%td%ions, this%geo, &
-              this%hm%ep%kick, this%hm%psolver)
-          else
-            call kick_apply(this%gr%mesh, this%st, this%td%ions, this%geo, &
-              this%hm%ep%kick, this%hm%psolver, pcm = this%hm%pcm)
-          end if
-          call td_write_kick(this%outp, this%namespace, this%gr%mesh, this%hm%ep%kick, this%geo, iter)
-          !We activate the sprial BC only after the kick,
-          !to be sure that the first iteration corresponds to the ground state
-          if (this%gr%der%boundaries%spiralBC) this%gr%der%boundaries%spiral = .true.
-        end if
-      end if
-
-      ! in case use scdm localized states for exact exchange and request a new localization
-      if (this%hm%scdm_EXX) scdm_is_local = .false.
-
-      ! time iterate the system, one time step.
-      select case(this%td%dynamics)
-      case(EHRENFEST)
-        call propagator_elec_dt(this%ks, this%namespace, this%hm, this%gr, this%st, &
-          this%td%tr, iter*this%td%dt, this%td%dt, this%td%mu, iter, this%td%ions, &
-          this%geo, this%outp, scsteps = scsteps, &
-          update_energy = (mod(iter, this%td%energy_update_iter) == 0) .or. (iter == this%td%max_iter),  &
-          move_ions = ion_dynamics_ions_move(this%td%ions) )
-      case(BO)
-        call propagator_elec_dt_bo(this%td%scf, this%namespace, this%gr, this%ks, this%st, &
-          this%hm, this%geo, this%mc, this%outp, iter, this%td%dt, this%td%ions, scsteps)
-      end select
-      !Apply mask absorbing boundaries
-      if (this%hm%bc%abtype == MASK_ABSORBING) call zvmask(this%gr%mesh, this%hm, this%st)
-
-      !Photoelectron stuff
-      if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
-        call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, iter, this%gr, this%hm, stopping)
-      end if
-    end if
 
     POP_SUB(electrons_do_td_operation)
   end subroutine electrons_do_td_operation
@@ -531,8 +485,19 @@ contains
   ! ---------------------------------------------------------
   subroutine electrons_exec_end_of_timestep_tasks(this)
     class(electrons_t), intent(inout) :: this
+    logical :: stopping
 
     PUSH_SUB(electrons_exec_end_of_timestep_tasks)
+
+    stopping = .false.
+
+    !Apply mask absorbing boundaries
+    if (this%hm%bc%abtype == MASK_ABSORBING) call zvmask(this%gr%mesh, this%hm, this%st)
+
+    !Photoelectron stuff
+    if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
+      call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, this%td%iter, this%gr, this%hm, stopping)
+    end if
 
     POP_SUB(electrons_exec_end_of_timestep_tasks)
   end subroutine electrons_exec_end_of_timestep_tasks
