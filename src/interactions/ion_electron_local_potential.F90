@@ -60,6 +60,9 @@ module ion_electron_local_potential_oct_m
     type(distributed_t), pointer, public :: atoms_dist
     type(atom_t), pointer, public :: atom(:)
 
+    ! Temporary pointer to namespace
+    type(namespace_t), pointer :: namespace
+
     logical :: have_density
     logical, public :: ignore_external_ions
 
@@ -98,11 +101,12 @@ contains
   end function ion_electron_local_potential_constructor
 
   ! ---------------------------------------------------------
-  subroutine ion_electron_local_potential_init(this, mesh, psolver, geo)
+  subroutine ion_electron_local_potential_init(this, mesh, psolver, geo, namespace)
     class(ion_electron_local_potential_t),    intent(inout) :: this
     type(mesh_t),                     target, intent(in)    :: mesh
     type(poisson_t),                  target, intent(in)    :: psolver
     type(geometry_t),                 target, intent(in)    :: geo
+    type(namespace_t),                target, intent(in)    :: namespace
 
     integer :: ia
 
@@ -125,6 +129,8 @@ contains
     this%atom => geo%atom
     this%ignore_external_ions = geo%ignore_external_ions
     this%space = geo%space
+
+    this%namespace => namespace
 
     POP_SUB(ion_electron_local_potential_init)
   end subroutine ion_electron_local_potential_init
@@ -164,7 +170,7 @@ contains
       if(local_potential_has_density(this%mesh%sb, this%atom(ia))) then
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
-        call species_get_long_range_density(this%atom(ia)%species, this%space, this%partner%namespace, &
+        call species_get_long_range_density(this%atom(ia)%species, this%space, this%namespace, &
                                                this%atom(ia)%x, this%mesh, rho)
         call lalg_axpy(this%mesh%np, M_ONE, rho, density)
         SAFE_DEALLOCATE_A(rho)
@@ -172,7 +178,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:this%mesh%np))
-        call species_get_local(this%atom(ia)%species, this%space, this%mesh, this%partner%namespace, &
+        call species_get_local(this%atom(ia)%species, this%space, this%mesh, this%namespace, &
                                                this%atom(ia)%x(1:this%mesh%sb%dim), vl)
         call lalg_axpy(this%mesh%np, M_ONE, vl, this%potential(:,1))
         SAFE_DEALLOCATE_A(vl)

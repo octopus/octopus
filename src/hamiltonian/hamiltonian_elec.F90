@@ -332,7 +332,7 @@ contains
     call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     !Temporary construction of the ion-electron local potential interaction
-    call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo)
+    call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo, namespace)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb, hm%kpoints)
