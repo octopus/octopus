@@ -20,9 +20,28 @@ At the time of writing (Feb. 2021), electrons and ions are not yet available as 
 
 In the new multisystem mode, from the user perspective, the highest level system is a ''multisystem''. Multisystems are containers which can host other system types, including other multisystems. From the code perspective, the {{< code multisystem_t >}} type is a special case of the {{< code system_t >}} type (i.e. it {{< emph extends >}}  {{< code system_t >}}).
 
+### Abstract classes
+
+
+#### {{< code interaction_partner_t >}}
+
+An interaction_partner in {{< octopus >}} is anything, which can have an interaction with any other system.
+For instance electrons and ions are interaction partners, but also the photonic system described by the Maxwell system, or external potentials.
+Therefore, it is the base class of all possible systems and multisystems.
+
+{{% expand "Definition of interaction_partner_t" %}}
+```Fortran
+#include_type_def interaction_partner_t
+```
+{{% /expand %}}
+
+Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions).
+
+
 #### {{< code system_t >}}
 
 The {{< code system_t >}} type is the abstract type for all systems. 
+As all possible systems are potential partners of some interaction, the {{< code system_t >}} type itself extends the abstract {{< code interaction_partner_t >}} type.
 
 {{% expand "Definition of system_t" %}}
 ```Fortran
@@ -32,12 +51,30 @@ The {{< code system_t >}} type is the abstract type for all systems.
 
 #### {{< code multisystem_t >}}
 
+
 {{% expand "Definition of multisystem_t" %}}
 ```Fortran
 #include_type_def multisystem_t
 ```
 {{% /expand %}}
 
+{{< notice note >}}
+{{< code multisystem_t >}} is an abstract class and cannot be used as such to describe a set of systems in the code.
+The {{< code type >}} to be used for combined systems is {{< code multisystem_basic_t >}}, which extends {{< code multisystem_t >}}.
+{{< /notice >}}
+
+
+
+
+### concrete classes
+
+#### {{< code multisystem_basic_t >}}
+
+{{% expand "Definition of multisystem_basic_t" %}}
+```Fortran
+#include_type_def multisystem_basic_t
+```
+{{% /expand %}}
 
 <!--
 {{< mermaid >}}
