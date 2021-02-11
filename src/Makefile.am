@@ -501,6 +501,7 @@ interactions_f_srcs =                                 \
         interactions/potential_interaction.F90        \
 	interactions/gravity.F90                      \
 	interactions/lorentz_force.F90                \
+        interactions/ion_electron_local_potential.F90 \
 	interactions/interactions_factory.F90
 
 interactions_srcs = $(interactions_f_srcs)

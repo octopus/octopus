@@ -40,6 +40,7 @@ module hamiltonian_elec_oct_m
   use hamiltonian_abst_oct_m
   use interaction_oct_m
   use interaction_partner_oct_m
+  use ion_electron_local_potential_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -182,6 +183,8 @@ module hamiltonian_elec_oct_m
 
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
+    
+    type(ion_electron_local_potential_t) :: v_ie_loc !< Ion-electron local potential interaction
 
   contains
     procedure :: update_span => hamiltonian_elec_span
@@ -327,6 +330,9 @@ contains
   
     !Initialize external potential
     call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
+
+    !Temporary construction of the ion-electron local potential interaction
+    call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb, hm%kpoints)
@@ -1260,6 +1266,17 @@ contains
 
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, st)
+    
+    ! Here we need to pass this again, else test are failing.
+    ! This is not a real problem, as the multisystem framework will indeed to this anyway
+    this%v_ie_loc%atoms_dist => geo%atoms_dist
+    this%v_ie_loc%atom => geo%atom
+    this%v_ie_loc%ignore_external_ions = geo%ignore_external_ions
+
+    call this%v_ie_loc%calculate()
+    ! At the moment we need to add this to ep%vpsl, to keep the behavior of the code
+    call lalg_axpy(gr%mesh%np, M_ONE, this%v_ie_loc%potential(:,1), this%ep%vpsl)
+
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, time)
 

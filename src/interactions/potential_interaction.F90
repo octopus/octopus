@@ -30,7 +30,7 @@ module potential_interaction_oct_m
   type, extends(interaction_with_partner_t), abstract :: potential_interaction_t
     ! Although the potential should be a rank 1 object in the generic case,
     ! we make it of rank 2 to be able to treat spin and spinor cases for electrons
-    FLOAT, allocatable :: potential(:,:)
+    FLOAT, allocatable, public :: potential(:,:)
   end type potential_interaction_t
 
 end module potential_interaction_oct_m
