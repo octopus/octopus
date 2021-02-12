@@ -41,6 +41,12 @@ As all possible systems are potential partners of some interaction, the {{< code
 ```
 {{% /expand %}}
 
+{{% expand "Definition of system_dt_operation" %}}
+```Fortran
+#include_subroutine system_dt_operation
+```
+{{% /expand %}}
+
 #### {{< code multisystem_t >}}
 
 
@@ -67,6 +73,22 @@ The {{< code type >}} to be used for combined systems is {{< code multisystem_ba
 #include_type_def multisystem_basic_t
 ```
 {{% /expand %}}
+
+{{< code "multisystem_basic_t" >}} is a specific (i.e. non-abstract) container type, which can host other systems. Its propagator
+
+{{% expand "Definition of classical_particles_t" %}}
+```Fortran
+#include_type_def classical_particles_t
+```
+{{% /expand %}}
+
+{{% expand "Definition of electrons_t" %}}
+```Fortran
+#include_type_def electrons_t
+```
+{{% /expand %}}
+
+
 
 <!--
 {{< mermaid >}}
