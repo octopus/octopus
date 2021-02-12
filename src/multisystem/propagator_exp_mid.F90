@@ -41,6 +41,7 @@ module propagator_exp_mid_oct_m
     procedure propagator_exp_mid_constructor
   end interface propagator_exp_mid_t
 
+  !# doc_start exp_mid_propagation_operations
   ! Specific exponential mid-point propagation operations identifiers
   character(len=ALGO_LABEL_LEN), public, parameter :: &
     EXPMID_START        = 'EXPMID_START',             &
@@ -58,6 +59,7 @@ module propagator_exp_mid_oct_m
     OP_EXPMID_PREDICT_DT   = algorithmic_operation_t(EXPMID_PREDICT_DT,   'Prediction step - Predicting state at dt'),    &
     OP_EXPMID_CORRECT_DT_2 = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correction step - Correcting state at dt/2'),  &
     OP_UPDATE_HAMILTONIAN  = algorithmic_operation_t(UPDATE_HAMILTONIAN,  'Updating Hamiltonian')
+  !# doc_end
 
 contains
 

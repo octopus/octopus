@@ -69,6 +69,7 @@ module propagator_oct_m
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
   end type propagator_t
 
+  !# doc_start general_propagation_operations
   ! Known propagation operations
   character(len=ALGO_LABEL_LEN), public, parameter ::   &
     SKIP                 = 'SKIP',                      &
@@ -85,7 +86,7 @@ module propagator_oct_m
     OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP,       'Starting SCF loop'),         &
     OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP,         'End of SCF iteration'),      &
     OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, '')
-
+  !# doc_end
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
