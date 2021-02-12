@@ -122,8 +122,7 @@ contains
         species_type(geo%atom(iatom)%species) == SPECIES_USDEF          .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE      .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_FROZEN
+        species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE  
       if(this%any_non_spherical)exit
     end do
 
