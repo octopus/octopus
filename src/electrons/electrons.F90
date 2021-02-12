@@ -23,6 +23,7 @@
 module electrons_oct_m
   use accel_oct_m
   use algorithm_oct_m
+  use boundary_op_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use density_oct_m
@@ -34,6 +35,10 @@ module electrons_oct_m
   use hamiltonian_elec_oct_m
   use interaction_oct_m
   use kpoints_oct_m
+  use ion_dynamics_oct_m
+  use kick_oct_m
+  use lda_u_oct_m
+  use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -42,8 +47,14 @@ module electrons_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
+  use pes_oct_m
   use poisson_oct_m
+  use propagator_oct_m
+  use propagator_elec_oct_m
+  use propagator_exp_mid_oct_m
+  use propagation_ops_elec_oct_m
   use profiling_oct_m
+  use scdm_oct_m
   use space_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
@@ -52,6 +63,7 @@ module electrons_oct_m
   use sort_oct_m
   use system_oct_m
   use td_oct_m
+  use td_write_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -77,6 +89,8 @@ module electrons_oct_m
     type(kpoints_t) :: kpoints                   !< the k-points
 
     logical :: generate_epot
+
+    type(states_elec_t)          :: st_copy  !< copy of the states
   contains
     procedure :: init_interaction => electrons_init_interaction
     procedure :: init_parallelization => electrons_init_parallelization
@@ -138,7 +152,7 @@ contains
     call v_ks_nullify(sys%ks)
     call elf_init(sys%namespace)
 
-    sys%generate_epot = optional_default(generate_epot, .false.)
+    sys%generate_epot = optional_default(generate_epot, .true.)
 
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
@@ -265,7 +279,18 @@ contains
     class(electrons_t), intent(inout) :: this
     logical,            intent(in)    :: from_scratch
 
+    logical :: fromScratch
+
     PUSH_SUB(electrons_initial_conditions)
+
+    call td_init(this%td, this%namespace, this%gr, &
+      this%geo, this%st, this%ks, this%hm, &
+      this%outp)
+    fromScratch = from_scratch
+    call td_init_run(this%td, this%namespace, this%mc, &
+      this%gr, this%geo, this%st, this%ks, &
+      this%hm, this%outp, this%space, fromScratch)
+    this%td%iter = this%td%iter - 1
 
     POP_SUB(electrons_initial_conditions)
   end subroutine electrons_initial_conditions
@@ -275,7 +300,51 @@ contains
     class(electrons_t),             intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
+    logical :: update_energy_
+
     PUSH_SUB(electrons_do_td_operation)
+
+    update_energy_ = .true.
+
+    ! kick at t > 0 still missing!
+
+    select case (operation%id)
+    case (STORE_CURRENT_STATUS)
+      ! store states at t
+      call states_elec_copy(this%st_copy, this%st)
+
+    case (EXPMID_PREDICT_DT_2)
+      ! predict states at t + dt/2 from states at t
+      call propagation_ops_elec_fuse_density_exp_apply(this%td%tr%te, this%namespace, &
+        this%st, this%gr, this%hm, this%prop%dt*M_HALF)
+
+    case (EXPMID_PREDICT_DT)
+      ! predict states at t + dt from states at t, using H at t + dt/2
+      ! restore states from t to st object
+      call states_elec_end(this%st)
+      call states_elec_copy(this%st, this%st_copy)
+      call states_elec_end(this%st_copy)
+      call propagation_ops_elec_fuse_density_exp_apply(this%td%tr%te, this%namespace, &
+        this%st, this%gr, this%hm, this%prop%dt)
+      this%td%iter = this%td%iter + 1
+
+    case (UPDATE_HAMILTONIAN)
+      ! get potential from the updated density
+      call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, &
+        calc_eigenval = update_energy_, time = abs(this%prop%clock%time()), calc_energy = update_energy_)
+      if(update_energy_) call energy_calc_total(this%namespace, this%hm, this%gr, this%st, iunit = -1)
+      ! update the occupation matrices
+      call lda_u_update_occ_matrices(this%hm%lda_u, this%namespace, this%gr%mesh, &
+        this%st, this%hm%hm_base, this%hm%energy)
+
+    case (EXPMID_START)
+    case (EXPMID_FINISH)
+    case default
+      message(1) = "Unsupported TD operation."
+      write(message(2), '(A,A,A)') trim(operation%id), ": ", trim(operation%label)
+      call messages_fatal(2, namespace=this%namespace)
+    end select
+
 
     POP_SUB(electrons_do_td_operation)
   end subroutine electrons_do_td_operation
@@ -368,7 +437,25 @@ contains
   subroutine electrons_output_write(this)
     class(electrons_t), intent(inout) :: this
 
+    integer :: iter, scsteps
+    logical :: fromScratch
+    FLOAT :: etime
+    logical :: stopping
+
     PUSH_SUB(electrons_output_write)
+
+    iter = this%td%iter
+    scsteps = 1
+    fromScratch = .true.
+    stopping = .false.
+    etime = loct_clock()
+
+    call td_write_iter(this%td%write_handler, this%namespace, this%outp, this%gr, &
+      this%st, this%hm, this%geo, this%hm%ep%kick, this%td%dt, iter)
+
+    ! write down data
+    call td_check_point(this%td, this%namespace, this%mc, this%gr, this%geo, &
+      this%st, this%ks, this%hm, this%outp, this%space, iter, scsteps, etime, stopping, fromScratch)
 
     POP_SUB(electrons_output_write)
   end subroutine electrons_output_write
@@ -396,8 +483,19 @@ contains
   ! ---------------------------------------------------------
   subroutine electrons_exec_end_of_timestep_tasks(this)
     class(electrons_t), intent(inout) :: this
+    logical :: stopping
 
     PUSH_SUB(electrons_exec_end_of_timestep_tasks)
+
+    stopping = .false.
+
+    !Apply mask absorbing boundaries
+    if (this%hm%bc%abtype == MASK_ABSORBING) call zvmask(this%gr%mesh, this%hm, this%st)
+
+    !Photoelectron stuff
+    if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
+      call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, this%td%iter, this%gr, this%hm, stopping)
+    end if
 
     POP_SUB(electrons_exec_end_of_timestep_tasks)
   end subroutine electrons_exec_end_of_timestep_tasks
@@ -407,6 +505,11 @@ contains
     type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(electrons_finalize)
+
+    if(associated(sys%prop)) then
+      call td_end_run(sys%td, sys%st, sys%hm)
+      call td_end(sys%td)
+    end if
 
     if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
       call poisson_async_end(sys%hm%psolver, sys%mc)
