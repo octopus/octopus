@@ -1,28 +1,13 @@
 ---
-Title: "Multisystem support"
-Weight: 1
+Title: "Multisystem classes"
+Weight: 5
 ---
 
 {{< notice warning >}}
 Work in progress!
 {{< /notice >}}
 
-### Introduction
 
-Support for multisystem in {{< octopus >}} is implemented through an object-oriented framework.
-
-Currently, two major modes are implemented: 
-
-1. The legacy mode, which only allows for one ''matter'' system, consisting of electrons, ions and external fields.
-2. The new multisystem framework, which allows for several coupled systems, e.g. maxwell, charged particles, etc. 
-
-At the time of writing (Feb. 2021), electrons and ions are not yet available as separate systems.
-
-### Legacy mode
-
-### Multisystem mode
-
-In the new multisystem mode, from the user perspective, the highest level system is a ''multisystem''. Multisystems are containers which can host other system types, including other multisystems. From the code perspective, the {{< code multisystem_t >}} type is a special case of the {{< code system_t >}} type (i.e. it {{< emph extends >}}  {{< code system_t >}}).
 
 ### Abstract classes
 
@@ -39,11 +24,11 @@ Therefore, it is the base class of all possible systems and multisystems.
 ```
 {{% /expand %}}
 
-Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions) and a list
+Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/multisystems/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions) and a list
 or quantities, which it exposes to the interactions.
 
 It also provides the basic functions to update exposed quantities, and copy them to the interaction. More details about this mechanism are described in the section on 
-{{< developers "code_documentation/interactions" "interactions" >}}.
+{{< developers "code_documentation/multisystems/interactions" "interactions" >}}.
 
 #### {{< code system_t >}}
 
