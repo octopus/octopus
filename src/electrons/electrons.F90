@@ -300,8 +300,6 @@ contains
     class(electrons_t),             intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    integer :: iter, scsteps
-    logical :: stopping
     logical :: update_energy_
 
     PUSH_SUB(electrons_do_td_operation)
