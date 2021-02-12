@@ -97,7 +97,6 @@ module species_oct_m
     SPECIES_JELLIUM        = 3,             & !< jellium sphere.
     SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
     SPECIES_JELLIUM_CHARGE_DENSITY = 129,   & !< jellium volume read from file
-    SPECIES_FROZEN         = 5,             & !< frozen species.
     SPECIES_PSEUDO         = 7,             & !< pseudopotential
     SPECIES_PSPIO          = 110,           & !< pseudopotential parsed by pspio library
     SPECIES_USDEF          = 123,           & !< user-defined function for local potential
