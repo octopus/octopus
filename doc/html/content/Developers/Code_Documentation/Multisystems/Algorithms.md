@@ -1,6 +1,6 @@
 ---
 Title: "Algorithms"
-Weight: 10
+Weight: 3
 ---
 
 {{< notice warning >}}
