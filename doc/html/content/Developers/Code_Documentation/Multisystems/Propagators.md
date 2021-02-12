@@ -30,6 +30,7 @@ Note, that at this level, progators are independent of the actual implementation
 
 ### Example: the Verlet propagator
 
+
 The Verlet operator is represented by the type {{< code "propagator_verlet_t" >}} which extends {{< code "propagator_t" >}}:
 
 
@@ -39,7 +40,13 @@ The Verlet operator is represented by the type {{< code "propagator_verlet_t" >}
 ```
 {{% /expand %}}
 
-Fort the Verlet propagator, we define the following operations:
+According to [Wikipedia](https://en.wikipedia.org/wiki/Verlet_integration), the Verlet algorithm is defined as:
+
+- Calculate $\vec{x}(t + \Delta t) = \vec{x}(t) + \vec{v}(t)\,\Delta t + \tfrac12 \,\vec{a}(t)\,\Delta t^2$.
+- Derive $\vec{a}(t + \Delta t)$ from the interaction potential using $\vec{x}(t + \Delta t)$.
+- Calculate $\vec{v}(t + \Delta t) = \vec{v}(t) + \tfrac12\,\big(\vec{a}(t) + \vec{a}(t + \Delta t)\big)\Delta t$.
+
+For the that propagator, we need to define the following operations:
 ```Fortran
 #include_code_doc verlet_propagation_operations
 ```
