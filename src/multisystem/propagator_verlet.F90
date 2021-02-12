@@ -41,6 +41,7 @@ module propagator_verlet_oct_m
     procedure propagator_verlet_constructor
   end interface propagator_verlet_t
 
+  !# doc_start verlet_propagation_operations
   ! Specific verlet propagation operations identifiers
   character(len=30), public, parameter ::      &
     VERLET_START       = 'VERLET_START',       &
@@ -56,7 +57,8 @@ module propagator_verlet_oct_m
     OP_VERLET_UPDATE_POS  = algorithmic_operation_t(VERLET_UPDATE_POS,  'Propagation step - Updating positions'),     &
     OP_VERLET_COMPUTE_ACC = algorithmic_operation_t(VERLET_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
     OP_VERLET_COMPUTE_VEL = algorithmic_operation_t(VERLET_COMPUTE_VEL, 'Propagation step - Computing velocity')
-
+  !# doc_end
+    
 contains
 
   ! ---------------------------------------------------------
