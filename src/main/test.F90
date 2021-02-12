@@ -260,7 +260,7 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
@@ -284,7 +284,7 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     ! We need to set up some auxiliary quantities called by the linear solver
@@ -402,7 +402,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
@@ -456,7 +456,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -566,7 +566,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -628,7 +628,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -666,7 +666,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -704,7 +704,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
@@ -753,7 +753,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -835,7 +835,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
@@ -1018,7 +1018,7 @@ contains
 
     PUSH_SUB(test_derivatives)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
@@ -1052,7 +1052,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing orthogonalization.'
@@ -1090,7 +1090,7 @@ contains
 
     PUSH_SUB(test_interpolation)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
@@ -1127,7 +1127,7 @@ contains
 
     PUSH_SUB(test_ion_interaction)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
