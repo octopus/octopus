@@ -37,6 +37,8 @@ module box_intersection_oct_m
     private
   contains
     procedure :: contains_points => box_intersection_contains_points
+    procedure :: write_info => box_intersection_write_info
+    procedure :: write_short_info => box_intersection_write_short_info
     final     :: box_intersection_finalize
   end type box_intersection_t
 
@@ -101,6 +103,30 @@ contains
     end do
 
   end function box_intersection_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_intersection_write_info(this, iunit)
+    class(box_intersection_t), intent(in) :: this
+    integer,                   intent(in) :: iunit
+
+    PUSH_SUB(box_intersection_write_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the intersection
+
+    POP_SUB(box_intersection_write_info)
+  end subroutine box_intersection_write_info
+
+  !--------------------------------------------------------------
+  subroutine box_intersection_write_short_info(this, iunit)
+    class(box_intersection_t), intent(in) :: this
+    integer,                   intent(in) :: iunit
+
+    PUSH_SUB(box_intersection_write_short_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the intersection
+
+    POP_SUB(box_intersection_write_short_info)
+  end subroutine box_intersection_write_short_info
 
 end module box_intersection_oct_m
 

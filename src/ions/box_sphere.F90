@@ -24,6 +24,8 @@ module box_sphere_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -35,6 +37,8 @@ module box_sphere_oct_m
     FLOAT   :: radius !< the radius of the sphere
   contains
     procedure :: contains_points => box_sphere_contains_points
+    procedure :: write_info => box_sphere_write_info
+    procedure :: write_short_info => box_sphere_write_short_info
     final     :: box_sphere_finalize
   end type box_sphere_t
 
@@ -89,6 +93,32 @@ contains
     end do
 
   end function box_sphere_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_sphere_write_info(this, iunit)
+    class(box_sphere_t), intent(in) :: this
+    integer,             intent(in) :: iunit
+
+    PUSH_SUB(box_sphere_write_info)
+
+    write(iunit,'(2x,a)') 'Type = sphere'
+    write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+      units_from_atomic(units_out%length, this%radius)
+
+    POP_SUB(box_sphere_write_info)
+  end subroutine box_sphere_write_info
+
+  !--------------------------------------------------------------
+  subroutine box_sphere_write_short_info(this, iunit)
+    class(box_sphere_t), intent(in) :: this
+    integer,             intent(in) :: iunit
+
+    PUSH_SUB(box_sphere_write_short_info)
+
+    write(iunit,'(a,f11.6,a)') 'BoxShape = sphere; Radius =', units_from_atomic(unit_angstrom, this%radius), ' Ang'
+
+    POP_SUB(box_sphere_write_short_info)
+  end subroutine box_sphere_write_short_info
 
 end module box_sphere_oct_m
 

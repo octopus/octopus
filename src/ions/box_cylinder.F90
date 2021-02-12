@@ -24,6 +24,8 @@ module box_cylinder_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -42,6 +44,8 @@ module box_cylinder_oct_m
     logical :: periodic_boundaries = .false. !< are the bases of the cylinder to be treated as periodic?
   contains
     procedure :: contains_points => box_cylinder_contains_points
+    procedure :: write_info => box_cylinder_write_info
+    procedure :: write_short_info => box_cylinder_write_short_info
     final     :: box_cylinder_finalize
   end type box_cylinder_t
 
@@ -141,6 +145,35 @@ contains
     end do
 
   end function box_cylinder_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_cylinder_write_info(this, iunit)
+    class(box_cylinder_t), intent(in) :: this
+    integer,               intent(in) :: iunit
+
+    PUSH_SUB(box_cylinder_write_info)
+
+    write(iunit,'(2x,a)') 'Type = cylinder'
+    write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+      units_from_atomic(units_out%length, this%radius)
+    write(iunit,'(2x,3a,f7.3)') 'Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
+      units_from_atomic(units_out%length, this%half_length)
+
+      POP_SUB(box_cylinder_write_info)
+  end subroutine box_cylinder_write_info
+
+  !--------------------------------------------------------------
+  subroutine box_cylinder_write_short_info(this, iunit)
+    class(box_cylinder_t), intent(in) :: this
+    integer,               intent(in) :: iunit
+
+    PUSH_SUB(box_cylinder_write_short_info)
+
+    write(iunit, '(a,f11.6,a,f11.6,a)') 'BoxShape = cylinder, Radius =', units_from_atomic(unit_angstrom, this%radius), &
+      ' Ang; Xlength =', units_from_atomic(unit_angstrom, this%half_length), ' Ang'
+
+    POP_SUB(box_cylinder_write_short_info)
+  end subroutine box_cylinder_write_short_info
 
 end module box_cylinder_oct_m
 

@@ -54,8 +54,6 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_write_info,       &
-    simul_box_write_short_info, &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
     simul_box_atoms_in_box,     &
@@ -123,6 +121,8 @@ module simul_box_oct_m
 
   contains
     procedure :: contains_points => simul_box_contains_points
+    procedure :: write_info => simul_box_write_info
+    procedure :: write_short_info => simul_box_write_short_info
   end type simul_box_t
 
 contains
@@ -839,9 +839,9 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_write_info(sb, iunit)
-    type(simul_box_t), intent(in) :: sb
-    integer,           intent(in) :: iunit
+  recursive subroutine simul_box_write_info(this, iunit)
+    class(simul_box_t), intent(in) :: this
+    integer,            intent(in) :: iunit
 
     character(len=15), parameter :: bs(6) = (/ &
       'sphere        ', &
@@ -855,77 +855,63 @@ contains
 
     PUSH_SUB(simul_box_write_info)
 
-    write(message(1),'(a)') 'Simulation Box:'
-    if(sb%box_shape  ==  BOX_USDEF) then
-      write(message(2), '(a)') '  Type = user-defined'
-    else if(sb%box_shape == BOX_IMAGE) then
-      write(message(2), '(3a,i6,a,i6)') '  Type = defined by image "', trim(sb%filename), '", ', &
-        sb%image_size(1), ' x ', sb%image_size(2)
-    else
-      write(message(2), '(2a)') '  Type = ', trim(bs(sb%box_shape))
-    end if
-    call messages_info(2, iunit)
+    write(iunit,'(a)') 'Simulation Box:'
 
-    if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER &
-      .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
-      write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
-        units_from_atomic(units_out%length, sb%rsize)
-      call messages_info(1, iunit)
-    end if
+    select case (this%box_shape)
+    case (SPHERE, CYLINDER, PARALLELEPIPED)
+      call this%box%write_info(iunit)
 
-    if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      do ispec = 1, sb%n_site_types
-        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(sb%site_type_label(ispec)), 'Radius = ', &
-          units_from_atomic(units_out%length, sb%site_type_radius(ispec)), ' ', trim(units_abbrev(units_out%length))
-        call messages_info(1, iunit)
-      end do
-    end if
+    case (BOX_USDEF)
+      write(iunit,'(2x,a)') 'Type = user-defined'
 
-    if(sb%box_shape == CYLINDER) then
-      write(message(1), '(3a,f7.3)') '  Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
-        units_from_atomic(units_out%length, sb%xsize)
-      call messages_info(1, iunit)
-    end if
+    case (BOX_IMAGE)
+      write(iunit,'(2x,3a,i6,a,i6)') 'Type = defined by image "', trim(this%filename), '", ', &
+        this%image_size(1), ' x ', this%image_size(2)
 
-    if(sb%box_shape == PARALLELEPIPED) then
-      write(message(1),'(3a, 99(a, f8.3), a)')     &
-        '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
-        '(', (units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
-        units_from_atomic(units_out%length, M_TWO*sb%lsize(sb%dim)), ')'
-      call messages_info(1, iunit)
-    end if
+    case (MINIMUM)
+      write(iunit, '(2x,a)') 'Type = minimum'
+      if (this%rsize > M_ZERO) then
+        write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+          units_from_atomic(units_out%length, this%rsize)
+      else
+        do ispec = 1, this%n_site_types
+          write(iunit,'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(ispec)), 'Radius = ', &
+            units_from_atomic(units_out%length, this%site_type_radius(ispec)), ' ', trim(units_abbrev(units_out%length))
+        end do
+      end if
+    end select
 
-    write(message(1), '(a,i1,a)') '  Octopus will run in ', sb%dim, ' dimension(s).'
+    write(message(1), '(a,i1,a)') '  Octopus will run in ', this%dim, ' dimension(s).'
     write(message(2), '(a,i1,a)') '  Octopus will treat the system as periodic in ', &
-      sb%periodic_dim, ' dimension(s).'
+      this%periodic_dim, ' dimension(s).'
     call messages_info(2, iunit)
 
-    if(sb%periodic_dim > 0 .or. sb%box_shape == PARALLELEPIPED) then
+    if(this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
-      do idir = 1, sb%dim
-        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)), &
-          idir2 = 1, sb%dim) 
+      do idir = 1, this%dim
+        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
+          idir2 = 1, this%dim) 
       end do
-      call messages_info(2+sb%dim, iunit)
+      call messages_info(2+this%dim, iunit)
 
       write(message(1),'(a,f18.4,3a,i1.1,a)') &
-        '  Cell volume = ', units_from_atomic(units_out%length**sb%dim, sb%rcell_volume), &
-        ' [', trim(units_abbrev(units_out%length**sb%dim)), ']'
+        '  Cell volume = ', units_from_atomic(units_out%length**this%dim, this%rcell_volume), &
+        ' [', trim(units_abbrev(units_out%length**this%dim)), ']'
       call messages_info(1, iunit)
 
       write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
-      do idir = 1, sb%dim
-        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), &
-          idir2 = 1, sb%dim)
+      do idir = 1, this%dim
+        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, this%klattice(idir2, idir)), &
+          idir2 = 1, this%dim)
       end do
-      call messages_info(1+sb%dim, iunit)
+      call messages_info(1+this%dim, iunit)
 
-      if(sb%dim == 3) then
+      if(this%dim == 3) then
         write(message(1),'(a)') '  Cell angles [degree]'
-        write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
-        write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
-        write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+        write(message(2),'(a, f8.3)') '    alpha = ', this%alpha
+        write(message(3),'(a, f8.3)') '    beta  = ', this%beta
+        write(message(4),'(a, f8.3)') '    gamma = ', this%gamma
         call messages_info(4, iunit)
       end if
     end if
@@ -933,49 +919,53 @@ contains
     POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
 
-  subroutine simul_box_write_short_info(sb, iunit)
-    type(simul_box_t), intent(in) :: sb
-    integer,           intent(in) :: iunit
+  subroutine simul_box_write_short_info(this, iunit)
+    class(simul_box_t), intent(in) :: this
+    integer,            intent(in) :: iunit
 
     integer :: idir1, idir2
 
     PUSH_SUB(simul_box_write_short_info)
 
-    write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', sb%dim, '; '
-    write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', sb%periodic_dim, '; '
+    write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
+    write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
+    select case (this%box_shape)
+    case(SPHERE, CYLINDER)
+      call this%box%write_short_info(iunit)
 
-    write(iunit, '(a)', advance='no') 'BoxShape = '
-    select case(sb%box_shape)
-    case(SPHERE)
-      write(iunit, '(a,f11.6,a)', advance='no') 'sphere; Radius =', units_from_atomic(unit_angstrom, sb%rsize), ' Ang'
-    case(CYLINDER)
-      write(iunit, '(a,f11.6,a,f11.6,a)', advance='no') 'cylinder, Radius =', units_from_atomic(unit_angstrom, sb%rsize), &
-        ' Ang; Xlength =', units_from_atomic(unit_angstrom, sb%xsize), ' Ang'
     case(MINIMUM)
-      write(iunit, '(a,f11.6,a)', advance='no') 'minimum; Radius =', units_from_atomic(unit_angstrom, sb%rsize), ' Ang'
+      write(iunit, '(a,f11.6,a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_angstrom, this%rsize), ' Ang'
+
     case(PARALLELEPIPED)
-      write(iunit, '(a)', advance='no') 'parallelepiped; LatticeVectors[Ang] = '
-      do idir1 = 1, sb%dim
-        write(iunit, '(a)', advance='no') '['
-        do idir2 = 1, sb%dim
-          write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, sb%rlattice(idir2, idir1))
+      if (this%periodic_dim > 0) then
+        write(iunit, '(a)', advance='no') 'BoxShape = parallelepiped; LatticeVectors[Ang] = '
+        do idir1 = 1, this%dim
+          write(iunit, '(a)', advance='no') '['
+          do idir2 = 1, this%dim
+            write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, this%rlattice(idir2, idir1))
+          end do
+          write(iunit, '(a)', advance='no') ']'
+          if(idir1 < this%dim) then
+            write(iunit, '(a)', advance='no') ', '
+          end if
         end do
-        write(iunit, '(a)', advance='no') ']'
-        if(idir1 < sb%dim) then
-          write(iunit, '(a)', advance='no') ', '
-        end if
-      end do
+        write(iunit,'()')
+      else
+        call this%box%write_short_info(iunit)
+      end if
+
     case(BOX_IMAGE)
-      write(iunit, '(a)', advance='no') 'box_image; BoxShapeImage = '//trim(sb%filename)
+      write(iunit, '(a)') 'BoxShape = box_image; BoxShapeImage = '//trim(this%filename)
+
     case(HYPERCUBE)
-      write(iunit, '(a)', advance='no') 'hypercube'  ! add parameters?
+      write(iunit, '(a)') 'BoxShape = hypercube'  ! add parameters?
+
     case(BOX_USDEF)
-      write(iunit, '(a)', advance='no') 'user_defined; BoxShapeUsDef = "'//trim(sb%user_def)//'"'
+      write(iunit, '(a)') 'BoxShape = user_defined; BoxShapeUsDef = "'//trim(this%user_def)//'"'
+
     end select
 
-    write(iunit, '()')
     POP_SUB(simul_box_write_short_info)
-
   end subroutine simul_box_write_short_info
 
   !--------------------------------------------------------------

@@ -335,7 +335,7 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, iunit)
+    call gr%sb%write_info(iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"
