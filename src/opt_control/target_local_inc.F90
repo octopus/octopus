@@ -89,8 +89,9 @@
     PUSH_SUB(target_output_local)
     
     call io_mkdir(trim(dir), namespace)
-    if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'local_target', namespace, space, mesh, &
+    if(any(outp%how /= 0)) then
+      ! MFT: TODO: which how should be passed here?
+      call dio_function_output(outp%how(1), trim(dir), 'local_target', namespace, space, mesh, &
         tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
 

@@ -559,7 +559,7 @@ contains
       if(generate) call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = abs(nt*dt))
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
     else
-      if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(outp%what(OPTION__OUTPUT__FORCES)) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, t = abs(nt*dt), dt = dt)
       end if
     end if

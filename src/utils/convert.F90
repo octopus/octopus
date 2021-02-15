@@ -326,7 +326,7 @@ contains
     ! Initialize the restart directory from <tt>ConvertFolder</tt> value.
     ! This directory has to have the files 'grid' and 'lxyz.obf'
     ! and the files that are going to be converged, must be inside this folder
-    if (iterate_folder) then
+    if(iterate_folder) then
       ! Delete the last / and find the previous /, if any
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
@@ -345,7 +345,7 @@ contains
         out_name = trim(basename)
       else
         folder = ""
-        if ( c_start /= c_end ) then
+        if(c_start /= c_end) then
           ! Here, we are only considering 10 character long filenames.
           ! Subtract the initial part given at 'ConvertFilename' from the format and pad
           ! with zeros.
@@ -365,7 +365,7 @@ contains
         call drestart_read_mesh_function(restart, space, trim(filename), mesh, read_ff, ierr)
       end if
 
-      if (ierr /= 0) then
+      if(ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
         write(message(2), '(a,i4)') "Error code: ",ierr
         write(message(3), '(a)') "Skipping...."
@@ -376,14 +376,15 @@ contains
         read_ff(:) = read_ff(:) - read_rff(:) 
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
+      !MFT: TODO: which how should be passed here?
       ! Write the corresponding output
-      call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
+      call dio_function_output(outp%how(1), trim(restart_folder)//trim(folder), & 
            trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
       
-      if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
+      if(outp%what(OPTION__OUTPUT__POTENTIAL)) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
-        call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
+        call dio_function_output(outp%how(OPTION__OUTPUT__POTENTIAL), trim(restart_folder)//trim(folder), &
              trim(out_name), namespace, space, mesh, pot, units_out%energy, ierr, ions = ions)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
@@ -725,18 +726,20 @@ contains
     if(mesh%parallel_in_domains) then
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
-        call dio_function_output(outp%how, trim(filename), & 
+        ! MFT: TODO: which how should be passed here?
+        call dio_function_output(outp%how(1), trim(filename), & 
            trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
            units_out%length**(-space%dim), ierr, ions = ions)
       end do
       call restart_end(restart)
     else
+      ! MFT: TODO: which how should be compared/passed here?
       ! write the output files
-      if (outp%how /= OPTION__OUTPUTFORMAT__BINARY ) then
+      if (outp%how(1) /= OPTION__OUTPUTFORMAT__BINARY ) then
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
-          call dio_function_output(outp%how, trim(filename), & 
+          call dio_function_output(outp%how(1), trim(filename), & 
              trim('density'), namespace, space, mesh, read_rff, &
              units_out%length**(-space%dim), ierr, ions = ions)
         end do
@@ -875,7 +878,8 @@ contains
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-space%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, space, mesh, & 
+    ! MFT: TODO: which how should be passed here?
+    call dio_function_output(outp%how(1), trim(out_folder), trim(out_filename), namespace, space, mesh, & 
       scalar_ff, units, ierr, ions = ions)
 
     SAFE_DEALLOCATE_A(tmp_ff)

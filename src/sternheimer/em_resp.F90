@@ -1389,7 +1389,7 @@ contains
       do idir = 1, space%dim
         if(states_are_complex(st)) then 
 
-          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(space%dim == 3 .and. outp%what(OPTION__OUTPUT__ELF)) then
             if(em_vars%nsigma == 1) then
               call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
@@ -1402,7 +1402,7 @@ contains
           end do
         else
 
-          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(space%dim == 3 .and. outp%what(OPTION__OUTPUT__ELF)) then
             if(em_vars%nsigma == 1) then
               call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else

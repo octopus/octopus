@@ -506,7 +506,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, converged_current, converged_last, gs_run_
-    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
+    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn, what_i
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
@@ -603,7 +603,7 @@ contains
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
+    if(scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
       vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
@@ -666,7 +666,7 @@ contains
       end do
 
       !Used for computing the imperfect convegence contribution to the forces
-      if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
+      if(scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       end if
       
@@ -721,9 +721,9 @@ contains
       call energy_calc_total(namespace, space, hm, gr, st, iunit = 0)
 
       ! compute forces only if requested
-      if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
-         .and. outp%output_interval /= 0 &
-         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
+      if(outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES) &
+         .and. outp%output_interval(OPTION__OUTPUT__FORCES) /= 0 &
+         .and. gs_run_ .and. mod(iter, outp%output_interval(OPTION__OUTPUT__FORCES)) == 0) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
@@ -862,10 +862,14 @@ contains
         exit
       end if
 
-      if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, space, dirname, gr, ions, st, hm, ks)
+      if(any(outp%what /=0) .and. (outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf &
+        .and. gs_run_) then
+          do what_i = 1, size(outp%what) 
+            if (outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
+              write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
+              call output_all(outp, namespace, space, dirname, gr, ions, iter, st, hm, ks)
+            end if
+          end do
       end if
 
       ! save information for the next iteration
@@ -949,7 +953,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, space, STATIC_DIR, gr, ions, st, hm, ks)
+      call output_all(outp, namespace, space, STATIC_DIR, gr, ions, -1, st, hm, ks)
     end if
 
     if (space%is_periodic() .and. st%d%nik > st%d%nspin) then

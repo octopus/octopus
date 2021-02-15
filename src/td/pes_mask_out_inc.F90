@@ -495,7 +495,7 @@ subroutine pes_mask_output_states(namespace, space, st, gr, ions, dir, outp, mas
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__PES_DENSITY)) then
     fn_unit = units_out%length**(-space%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -503,13 +503,13 @@ subroutine pes_mask_output_states(namespace, space, st, gr, ions, dir, outp, mas
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, &
+      call dio_function_output(outp%how(OPTION__OUTPUT__PES_DENSITY), dir, fname, namespace, space, gr%mesh, &
         RhoAB(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
 
-  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__PES_WFS)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -529,7 +529,7 @@ subroutine pes_mask_output_states(namespace, space, st, gr, ions, dir, outp, mas
               end if
             end if
               
-            call zio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, &
+            call zio_function_output(outp%how(OPTION__OUTPUT__PES_WFS), dir, fname, namespace, space, gr%mesh, &
               PsiAB(1:, idim, ist, ik), fn_unit, ierr, ions = ions)
 
           end do
@@ -1901,7 +1901,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, ion
  
 
   !Photoelectron wavefunction and density in real space
-  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
+  if(outp%what(OPTION__OUTPUT__PES_WFS) .or. outp%what(OPTION__OUTPUT__PES_DENSITY)) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(namespace, space, st, gr, ions, dir, outp, mask)
   end if
@@ -1916,7 +1916,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, ion
 
   !Write the output in the td.00iter directories
   dir = file 
-  if(bitand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
+  if(outp%what(OPTION__OUTPUT__PES)) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 

@@ -36,7 +36,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
 
   PUSH_SUB(output_states)
 
-  if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__DENSITY)) then
     fn_unit = units_out%length**(-space%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -44,12 +44,12 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, &
+      call dio_function_output(outp%how(OPTION__OUTPUT__DENSITY), dir, fname, namespace, space, gr%mesh, &
         st%rho(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__POL_DENSITY)) then
     fn_unit = units_out%length**(1 - space%dim)
     SAFE_ALLOCATE(polarization(1:gr%mesh%np, 1:space%dim))
 
@@ -65,14 +65,14 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
-      call io_function_output_vector(outp%how, dir, fname, namespace, space, gr%mesh, polarization, fn_unit, ierr, &
-        ions = ions, grp = st%dom_st_kpt_mpi_grp)
+      call io_function_output_vector(outp%how(OPTION__OUTPUT__POL_DENSITY), dir, fname, namespace, space, &
+        gr%mesh, polarization, fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(polarization)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
 
     if (states_are_real(st)) then
@@ -101,11 +101,11 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
 
             if (states_are_real(st)) then
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
-              call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, dtmp, &
+              call dio_function_output(outp%how(OPTION__OUTPUT__WFS), dir, fname, namespace, space, gr%mesh, dtmp, &
                 fn_unit, ierr, ions = ions)
             else
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
-              call zio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, ztmp, &
+              call zio_function_output(outp%how(OPTION__OUTPUT__WFS), dir, fname, namespace, space, gr%mesh, ztmp, &
                 fn_unit, ierr, ions = ions)
             end if
           end do
@@ -117,7 +117,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
@@ -148,7 +148,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
-            call dio_function_output (outp%how, dir, fname, namespace, space, gr%mesh, &
+            call dio_function_output (outp%how(OPTION__OUTPUT__WFS_SQMOD), dir, fname, namespace, space, gr%mesh, &
               dtmp, fn_unit, ierr, ions = ions)
           end do
         end do
@@ -158,35 +158,35 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY)) then
     fn_unit = units_out%energy * units_out%length**(-space%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
-      call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
-        elf(:,1), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+      call dio_function_output(outp%how(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY), dir, trim(fname), namespace, space, &
+        gr%mesh, elf(:,1), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'tau-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
-          elf(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+        call dio_function_output(outp%how(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY), dir, trim(fname), namespace, space, &
+          gr%mesh, elf(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__DOS)) then
     call dos_init(dos, namespace, st, hm%kpoints)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, ions, gr%mesh, hm, namespace)
+    call dos_write_dos(dos, trim(dir), st, gr%sb, ions, gr%mesh, hm, namespace)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
+  if(outp%what(OPTION__OUTPUT__TPA)) then
     call states_elec_write_tpa(trim(dir), namespace, gr, st)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__MMB_DEN) .or. outp%what(OPTION__OUTPUT__MMB_WFS)) then
     if (states_are_real(st)) then
       call doutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     else
@@ -214,7 +214,7 @@ subroutine output_current_flow(outp, namespace, dir, gr, st, kpoints)
 
   PUSH_SUB(output_current_flow)
 
-  if(bitand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
+  if(outp%what(OPTION__OUTPUT__J_FLOW)) then
     POP_SUB(output_current_flow)
     return
   end if

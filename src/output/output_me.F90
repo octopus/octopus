@@ -75,6 +75,7 @@ module output_me_oct_m
     integer :: nst      !Number of states computed
   end type output_me_t
 
+  !MFT: TODO: Should this also replaced?
   integer, parameter, public :: &
     OUTPUT_ME_MOMENTUM       =   1, &
     OUTPUT_ME_ANG_MOMENTUM   =   2, &

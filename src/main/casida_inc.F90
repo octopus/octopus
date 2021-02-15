@@ -301,7 +301,8 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i5)') ia
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
-      call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
+      ! MFT: TODO: which how should be passed here?
+      call X(io_function_output)(sys%outp%how(1), CASIDA_DIR, trim(filename), &
         sys%namespace, sys%space, sys%gr%mesh, n0I, fn_unit, ierr, ions = sys%ions)
     end if
   end do

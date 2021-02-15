@@ -238,11 +238,12 @@ contains
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm, sys%ions, sys%hm%ep%kick, &
+        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm,  sys%ions, sys%hm%ep%kick, &
           td%dt, istep)
-        ii = ii + 1 
-        if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
-          if(istep == td%max_iter) sys%outp%output_interval = ii - 1
+        ii = ii + 1
+        ! MFT: TODO: which output interval?
+        if(ii == sys%outp%output_interval(1)+1 .or. istep == td%max_iter) then ! output
+          if(istep == td%max_iter) sys%outp%output_interval(1) = ii - 1
           ii = istep
           call td_write_data(write_handler) 
         end if

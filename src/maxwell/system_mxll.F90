@@ -635,7 +635,8 @@ contains
 
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
 
-    if ((this%outp%output_interval > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval) == 0) .or. stopping) then
+    ! MFT: TODO: which output interval should be passed here?
+    if ((this%outp%output_interval(1) > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval(1)) == 0) .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%space, this%gr, this%st, this%hm, this%ions, &
         this%outp, this%clock)
     end if

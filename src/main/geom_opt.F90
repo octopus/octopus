@@ -711,9 +711,9 @@ contains
     call g_opt%ions%write_xyz('geom/'//trim(c_geom_iter), comment = trim(title))
     call g_opt%ions%write_xyz('./last')
 
-    if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+    if(g_opt%syst%outp%what(OPTION__OUTPUT__FORCES)) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
-      if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+      if(bitand(g_opt%syst%outp%how(OPTION__OUTPUT__FORCES), OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%ions, g_opt%syst%namespace)
       else
         call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%ions, g_opt%syst%gr%mesh, &

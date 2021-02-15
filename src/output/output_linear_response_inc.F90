@@ -47,7 +47,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
-    if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+    if(outp%what(OPTION__OUTPUT__DENSITY)) then
       fn_unit = units_out%length**(-space%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -55,12 +55,12 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
         else
           write(fname, '(a,i1,2a)') 'lr_density-sp', is, '-', index2axis(idir)
         end if
-        call X(io_function_output)(outp%how, dir, fname, namespace, space, mesh, lr%X(dl_rho)(:, is), &
-          fn_unit / pert_unit, ierr, ions = ions)
+        call X(io_function_output)(outp%how(OPTION__OUTPUT__DENSITY), dir, fname, namespace, space, &
+          mesh, lr%X(dl_rho)(:, is), fn_unit / pert_unit, ierr, ions = ions)
       end do
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+    if(outp%what(OPTION__OUTPUT__POL_DENSITY)) then
       fn_unit = units_out%length**(1 - space%dim)
       SAFE_ALLOCATE(tmp(1:mesh%np))
       do is = 1, st%d%nspin
@@ -71,13 +71,14 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
           else
             write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(idir2), '-', index2axis(idir)
           end if
-          call X(io_function_output)(outp%how, dir, fname, namespace, space, mesh, tmp, fn_unit / pert_unit, ierr, ions = ions)
+          call X(io_function_output)(outp%how(OPTION__OUTPUT__POL_DENSITY), dir, fname, namespace, space, &
+            mesh, tmp, fn_unit / pert_unit, ierr, ions = ions)
         end do
       end do
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(outp%what(OPTION__OUTPUT__CURRENT)) then
       if(states_are_complex(st)) then
         fn_unit = units_out%time**(-1) * units_out%length**(-space%dim)
         do is = 1, st%d%nspin
@@ -87,7 +88,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
             else
               write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
             end if
-            call zio_function_output(outp%how, dir, fname, namespace, space, &
+            call zio_function_output(outp%how(OPTION__OUTPUT__CURRENT), dir, fname, namespace, space &
               mesh, lr%dl_j(:, idir2, is), fn_unit / pert_unit, ierr, ions = ions)
           end do
         end do
@@ -97,14 +98,14 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
       end if
     end if
 
-    if (space%dim==3) then
-      if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) call lr_elf('lr_elf_D','lr_elf')
+    if(space%dim==3) then
+      if(outp%what(OPTION__OUTPUT__ELF)) call lr_elf('lr_elf_D','lr_elf')
     end if
 
   end if ! isigma == 1
 
 
-  if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -127,15 +128,15 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
                   'lr_wf-st', ist, '-', index2axis(idir), sigma
               end if
             end if
-            call X(io_function_output) (outp%how, dir, fname, namespace, space, mesh, &
-              lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, ions = ions)
+            call X(io_function_output) (outp%how(OPTION__OUTPUT__WFS), dir, fname, namespace, space, &
+              mesh, lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, ions = ions)
           end do
         end do
       end if
     end do
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:mesh%np_part))
     do ist = st%st_start, st%st_end
@@ -161,8 +162,8 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
             end if
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
-            call dio_function_output (outp%how, dir, fname, namespace, space, mesh, dtmp, &
-              fn_unit / pert_unit, ierr, ions = ions)
+            call dio_function_output (outp%how(OPTION__OUTPUT__WFS_SQMOD), dir, fname, namespace, space, &
+              mesh, dtmp, fn_unit / pert_unit, ierr, ions = ions)
           end do
         end do
       end if
@@ -190,7 +191,8 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
       end if
-      call X(io_function_output)(outp%how, dir, trim(fname), namespace, space, &
+      !MFT: TODO: which how should be passed here?
+      call X(io_function_output)(outp%how(1), dir, trim(fname), namespace, space, &
         mesh, lr%X(dl_de)(1:mesh%np,is), unit_one / pert_unit, ierr, ions = ions)
     end do
 
@@ -200,7 +202,8 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
       end if
-      call X(io_function_output)(outp%how, dir, trim(fname), namespace, space, &
+      !MFT: TODO: which how should be passed here?
+      call X(io_function_output)(outp%how(1), dir, trim(fname), namespace, space &
         mesh, lr%X(dl_elf)(1:mesh%np,is), unit_one / pert_unit, ierr, ions = ions)
     end do
 

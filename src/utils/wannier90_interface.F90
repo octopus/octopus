@@ -1220,7 +1220,9 @@ contains
 
     integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
-    integer(8) :: how
+    logical :: what(40)
+    integer(8) :: how(40)
+    integer :: output_interval(40) 
     FLOAT, allocatable :: centers(:,:), dwn(:)
     CMPLX, allocatable :: Umnk(:,:,:)
     CMPLX, allocatable :: zwn(:), psi(:,:)
@@ -1290,7 +1292,7 @@ contains
     call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
-    call io_function_read_how(global_namespace, space, how)
+    call io_function_read_what_how_when(global_namespace, space, what, how, output_interval)
 
     call io_mkdir('wannier', global_namespace)
 
@@ -1341,9 +1343,9 @@ contains
       do ip = 1, mesh%np
         dwn(ip) = TOFLOAT(zwn(ip))
       end do
-        
-      call dio_function_output(how, 'wannier', trim(fname), global_namespace, space, mesh, &
-          dwn,  unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+        !MFT: TODO: which how should be passed here?
+      call dio_function_output(how(1), 'wannier', trim(fname), global_namespace, space, mesh, &
+          dwn, unit_one, ierr,ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(Umnk)
