@@ -196,15 +196,15 @@ module parser_oct_m
       integer,       intent(in)  :: l, c
       integer,       intent(out) :: res
     end subroutine oct_parse_block_int
-  end interface parse_block_integer
 
-  subroutine oct_parse_block_int8(blk, l, c, res)
-    import block_t
-    implicit none
-    type(block_t), intent(in)    :: blk
-    integer, intent(in)          :: l, c
-    integer(8), intent(out)      :: res
-  end subroutine oct_parse_block_int8
+    subroutine oct_parse_block_int8(blk, l, c, res)
+      import block_t
+      implicit none
+      type(block_t), intent(in)    :: blk
+      integer, intent(in)          :: l, c
+      integer(8), intent(out)      :: res
+    end subroutine oct_parse_block_int8
+  end interface parse_block_integer
 
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
