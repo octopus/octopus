@@ -23,6 +23,7 @@ module simul_box_oct_m
   use atom_oct_m
   use box_oct_m
   use box_cylinder_oct_m
+  use box_minimum_oct_m
   use box_parallelepiped_oct_m
   use box_sphere_oct_m
   use iso_c_binding
@@ -31,7 +32,6 @@ module simul_box_oct_m
   use global_oct_m
   use io_oct_m
   use lalg_basic_oct_m
-  use lookup_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -90,15 +90,6 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    type(lookup_t), private :: atom_lookup
-
-    integer, private :: n_site_types
-    character(len=LABEL_LEN), allocatable, private :: site_type_label(:)
-    FLOAT,   allocatable, private :: site_type_radius(:)
-    integer, private :: n_sites
-    integer, allocatable, private :: site_type(:)
-    FLOAT,   allocatable, private :: site_position(:,:)
-
     character(len=1024), private :: user_def !< for the user-defined box
 
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
@@ -136,6 +127,10 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize, center(space%dim)
+    integer :: n_site_types, n_sites
+    integer, allocatable :: site_type(:)
+    FLOAT,   allocatable :: site_type_radius(:), site_position(:,:)
+    character(len=LABEL_LEN), allocatable :: site_type_label(:)
 
     PUSH_SUB(simul_box_init)
 
@@ -157,6 +152,13 @@ contains
         periodic_boundaries=(sb%periodic_dim > 0))
     case (PARALLELEPIPED)
       sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+
+    case (MINIMUM)
+      sb%box => box_minimum_t(space%dim, n_site_types, site_type_label, site_type_radius, n_sites, site_type, site_position)
+      SAFE_DEALLOCATE_A(site_type_label)
+      SAFE_DEALLOCATE_A(site_type_radius)
+      SAFE_DEALLOCATE_A(site_type)
+      SAFE_DEALLOCATE_A(site_position)
     end select
 
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
@@ -164,7 +166,6 @@ contains
     call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
     POP_SUB(simul_box_init)
-
   contains
 
     !--------------------------------------------------------------
@@ -281,15 +282,14 @@ contains
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
 
-
-        sb%n_site_types = geo%nspecies
-        SAFE_ALLOCATE(sb%site_type_label(1:sb%n_site_types))
-        SAFE_ALLOCATE(sb%site_type_radius(1:sb%n_site_types))
+        n_site_types = geo%nspecies
+        SAFE_ALLOCATE(site_type_label(1:geo%nspecies))
+        SAFE_ALLOCATE(site_type_radius(1:geo%nspecies))
 
         do ispec = 1, geo%nspecies
-          sb%site_type_label(ispec) = species_label(geo%species(ispec))
+          site_type_label(ispec) = species_label(geo%species(ispec))
           if (sb%rsize > M_ZERO) then
-            sb%site_type_radius(ispec) = sb%rsize
+            site_type_radius(ispec) = sb%rsize
           else
             if (species_def_rsize(geo%species(ispec)) < -M_EPSILON) then
               write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
@@ -297,25 +297,23 @@ contains
               message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
               call messages_fatal(2, namespace=namespace)
             else
-              sb%site_type_radius(ispec) = species_def_rsize(geo%species(ispec))
+              site_type_radius(ispec) = species_def_rsize(geo%species(ispec))
             end if
           end if
         end do
 
-        sb%n_sites = geo%natoms
-        SAFE_ALLOCATE(sb%site_position(1:sb%dim, 1:sb%n_sites))
-        SAFE_ALLOCATE(sb%site_type(1:sb%n_sites))
+        n_sites = geo%natoms
+        SAFE_ALLOCATE(site_position(1:sb%dim, 1:geo%natoms))
+        SAFE_ALLOCATE(site_type(1:geo%natoms))
         do iatom = 1, geo%natoms
-          sb%site_position(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
-          do ispec = 1, sb%n_site_types
-            if (geo%atom(iatom)%label == sb%site_type_label(ispec)) then
-              sb%site_type(iatom) = ispec
+          site_position(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
+          do ispec = 1, geo%nspecies
+            if (geo%atom(iatom)%label == site_type_label(ispec)) then
+              site_type(iatom) = ispec
             end if
           end do
         end do
 
-        call lookup_init(sb%atom_lookup, sb%dim, sb%n_sites, sb%site_position)
-        
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -822,8 +820,6 @@ contains
 
     PUSH_SUB(simul_box_end)
 
-    call lookup_end(sb%atom_lookup)
-
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
       call gdlib_imagedestroy(sb%image)
@@ -851,14 +847,14 @@ contains
       'image-defined ', &
       'hypercube     '/)
 
-    integer :: idir, idir2, ispec
+    integer :: idir, idir2
 
     PUSH_SUB(simul_box_write_info)
 
     write(iunit,'(a)') 'Simulation Box:'
 
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED)
+    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM)
       call this%box%write_info(iunit)
 
     case (BOX_USDEF)
@@ -868,17 +864,6 @@ contains
       write(iunit,'(2x,3a,i6,a,i6)') 'Type = defined by image "', trim(this%filename), '", ', &
         this%image_size(1), ' x ', this%image_size(2)
 
-    case (MINIMUM)
-      write(iunit, '(2x,a)') 'Type = minimum'
-      if (this%rsize > M_ZERO) then
-        write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
-          units_from_atomic(units_out%length, this%rsize)
-      else
-        do ispec = 1, this%n_site_types
-          write(iunit,'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(ispec)), 'Radius = ', &
-            units_from_atomic(units_out%length, this%site_type_radius(ispec)), ' ', trim(units_abbrev(units_out%length))
-        end do
-      end if
     end select
 
     write(message(1), '(a,i1,a)') '  Octopus will run in ', this%dim, ' dimension(s).'
@@ -930,11 +915,8 @@ contains
     write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
     write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
     select case (this%box_shape)
-    case(SPHERE, CYLINDER)
+    case (SPHERE, CYLINDER, MINIMUM)
       call this%box%write_short_info(iunit)
-
-    case(MINIMUM)
-      write(iunit, '(a,f11.6,a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_angstrom, this%rsize), ' Ang'
 
     case(PARALLELEPIPED)
       if (this%periodic_dim > 0) then
@@ -977,12 +959,10 @@ contains
     logical :: contained(1:nn)
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
-    FLOAT :: rr, re, im, dist2, radius
+    FLOAT :: rr, re, im
     FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx_red(:, :)
-    integer :: ip, idir, site, ilist
-    integer, allocatable :: nlist(:)
-    integer, allocatable :: list(:, :)
+    integer :: ip, idir
 
 #if defined(HAVE_GDLIB)
     integer :: red, green, blue, ix, iy
@@ -1000,41 +980,8 @@ contains
     end if
 
     select case(this%box_shape)
-    case(SPHERE, CYLINDER, PARALLELEPIPED)
+    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM)
       contained = this%box%contains_points(nn, xx_red)
-
-    case(MINIMUM)
-
-      radius = maxval(this%site_type_radius) + DELTA
-
-      SAFE_ALLOCATE(nlist(1:nn))
-
-      if (this%rsize > M_ZERO) then
-        call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist)
-      else
-        call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist, list = list)
-      end if
-
-      if(this%rsize > M_ZERO) then
-        do ip = 1, nn
-          contained(ip) = (nlist(ip) /= 0)
-        end do
-      else
-        do ip = 1, nn
-          contained(ip) = .false.
-          do ilist = 1, nlist(ip)
-            site = list(ilist, ip)
-            dist2 = sum((xx_red(ip, 1:this%dim) - this%site_position(1:this%dim, site))**2)
-            if(dist2 < this%site_type_radius(this%site_type(site))**2) then
-              contained(ip) = .true.
-              exit
-            end if
-          end do
-        end do
-      end if
-
-      SAFE_DEALLOCATE_A(nlist)
-      SAFE_DEALLOCATE_A(list)
 
     case (HYPERCUBE) 
       llimit(1:this%dim) = -this%lsize(1:this%dim) - DELTA
@@ -1116,8 +1063,6 @@ contains
     sbout%klattice_primitive      = sbin%klattice_primitive
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
-
-    call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
