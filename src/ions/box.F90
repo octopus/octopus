@@ -40,7 +40,9 @@ module box_oct_m
     integer, public :: dim                    !< dimensions of the space the box lives in
     logical :: inside_out = .false.           !< if the box is inside out or not
   contains
-    procedure(box_contains_points), deferred :: contains_points
+    procedure(box_contains_points),  deferred :: contains_points
+    procedure(box_write_info),       deferred :: write_info
+    procedure(box_write_short_info), deferred :: write_short_info
     procedure, non_overridable :: contains_point => box_contains_point
     procedure, non_overridable :: is_inside_out => box_is_inside_out
     procedure, non_overridable :: turn_inside_out => box_turn_inside_out
@@ -60,6 +62,20 @@ module box_oct_m
                                           !! checking.
       logical :: contained(1:nn)
     end function box_contains_points
+
+    !> Write the complete information about the box to a file.
+    subroutine box_write_info(this, iunit)
+      import :: box_t
+      class(box_t), intent(in) :: this
+      integer,      intent(in) :: iunit
+    end subroutine box_write_info
+
+    !> Write a only line description of the box to a file.
+    subroutine box_write_short_info(this, iunit)
+      import :: box_t
+      class(box_t), intent(in) :: this
+      integer,      intent(in) :: iunit
+    end subroutine box_write_short_info
   end interface
 
   !> These classes extends the list and list iterator to create a box list.

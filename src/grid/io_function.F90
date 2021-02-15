@@ -391,7 +391,7 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', namespace, action='write', position='asis')
 
     write(iunit, '(i6)') geo%natoms
-    call simul_box_write_short_info(sb, iunit)
+    call sb%write_short_info(iunit)
 
     ! xyz-style labels and positions:
     do iatom = 1, geo%natoms
