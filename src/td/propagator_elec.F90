@@ -592,7 +592,7 @@ contains
       if(generate) call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(outp%what(OPTION__OUTPUT__FORCES)) then
         call forces_calculate(gr, namespace, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       end if
     end if

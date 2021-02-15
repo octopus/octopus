@@ -49,14 +49,16 @@ program photoelectron_spectrum
   implicit none
 
   type pesoutput_t
-    integer     :: what  
+    logical              :: what(40)
+    integer(8)           :: how(40)
+    integer              :: output_interval(40)   
     FLOAT       :: pol(3)
     FLOAT       :: pvec(3)        
   end type pesoutput_t  
 
   integer              :: ierr, integrate
   integer              :: dim, dir, idim, pdim
-  integer(8)           :: how
+  logical              :: what(40)
   integer              :: llp(3), llpp(3)  !< The size of the p-point cubic grids 
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
@@ -91,7 +93,7 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
-  integer              :: index_range(4), what
+  integer              :: index_range(4)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -128,7 +130,7 @@ program photoelectron_spectrum
 
   call messages_print_stress(stdout,"Postprocessing")  
   
-  !Figure out wich method has been used to calculate the photoelectron data  
+  !Figure out which method has been used to calculate the photoelectron data  
   call parse_variable(global_namespace, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
   
   select case (pes_method)
@@ -187,7 +189,7 @@ program photoelectron_spectrum
   center  = (/0,0,0/)
   pvec    = (/1,0,0/)
 
-  what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
+  what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT) = .true.
   pesout%pvec = pvec
 
   have_zweight_path = kpoints_have_zero_weight_path(sb%kpoints)
@@ -205,7 +207,7 @@ program photoelectron_spectrum
       pol  = (/0,1,0/) 
       pvec = (/0,0,1/)
       
-      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
+      what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT) = .true.
       pesout%pol  = (/0,1,0/) 
       pesout%pvec = (/0,0,1/)
     end if
@@ -214,7 +216,7 @@ program photoelectron_spectrum
       ! write the full ARPES in vtk format (this could be a big file)
       pol = (/0,0,1/) 
       
-      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
+      what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) = .true.
       pesout%pol = (/0,0,1/) 
     end if
     
@@ -224,7 +226,7 @@ program photoelectron_spectrum
       pol  = (/0,0,1/) 
       pvec = (/0,1,0/)
 
-      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
+      what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) = .true.
       pesout%pol  = (/0,0,1/) 
       pesout%pvec = (/0,1,0/)
     end if 
@@ -256,29 +258,31 @@ program photoelectron_spectrum
   !% vec (from 0 to \pi), and phi is the azimuthal angle on a plane perpendicular to 
   !% vec (from 0 to 2\pi).
   !% Example: <tt>energy_tot + velocity_map</tt>
-  !%Option energy_tot bit(1)
+  !%Option energy_tot 1
   !% Output the energy-resolved photoelectron spectrum: E.
-  !%Option energy_angle bit(2)
+  !%Option energy_angle 2
   !% Output the energy and angle resolved spectrum: (theta, E)
   !% The result is integrated over phi.
-  !%Option velocity_map_cut bit(3)
+  !%Option velocity_map_cut 3
   !% Velocity map on a plane orthogonal to pvec: (px, py). The allowed cutting planes 
   !% (pvec) can only be parallel to the x,y,z=0 planes. 
   !% Space is oriented so that the z-axis is along vec. Supports the -I option.
-  !%Option energy_xy bit(4)  
+  !%Option energy_xy 4
   !% Angle and energy-resolved spectrum on the inclination plane: (Ex, Ey).
   !% The result is integrated over ph;
-  !%Option energy_th_ph bit(5)  
+  !%Option energy_th_ph 5
   !% Ionization probability integrated on spherical cuts: (theta, phi).
-  !%Option velocity_map bit(6)
+  !%Option velocity_map 6
   !% Full momentum-resolved ionization probability: (px, py, pz).     
   !% The output format can be controlled with <tt>OutputHow<\tt> and can be vtk, ncdf or ascii.  
-  !%Option arpes bit(7)
+  !%Option arpes 7
   !% Full ARPES for semi-periodic systems (vtk).
-  !%Option arpes_cut bit(8)
+  !%Option arpes_cut 8
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', what, pesout%what)
+  pesout%what = what
+  call io_function_read_what_how_when(sb, global_namespace, pesout%what, pesout%how, pesout%output_interval, &
+    what_tag_in = 'PhotoelectronSpectrumOutput',  ignore_error = .true.)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep
@@ -329,9 +333,9 @@ program photoelectron_spectrum
   krng(1) = 1
   krng(2) = kpoints_number(sb%kpoints)
   
-  if (have_zweight_path) then 
+  if(have_zweight_path) then 
     
-    if (bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) /= 0) then
+    if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT)) then
       !Use the path only when asked for ARPES on a cutting curve in reciprocal space(the path)
       use_zweight_path  = .true.
     
@@ -378,11 +382,11 @@ program photoelectron_spectrum
   SAFE_ALLOCATE( pesP(1:llp(1), 1:llp(2), 1:llp(3), 1:st%d%nspin))
 
   select case (pes_method)
-  case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+  case(OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
     SAFE_ALLOCATE(Lp(1:llpp(1), 1:llpp(2), 1:llpp(3), krng(1):krng(2), 1:3))
     call pes_mask_pmesh(global_namespace, dim, sb%kpoints, llpp, Lg, pmesh, idxZero, krng, Lp)
 
-  case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
+  case(OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
     ! Lp is allocated inside pes_flux_pmesh to comply with the 
     ! declinations of the different surfaces
     SAFE_ALLOCATE(Ekin(1:llp(1), 1:llp(2), 1:llp(3)))
@@ -553,7 +557,7 @@ program photoelectron_spectrum
         end if
       end if
       
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT)) then
         call messages_print_stress(stdout, "Energy-resolved PES")
 
         select case (pes_method)
@@ -566,7 +570,7 @@ program photoelectron_spectrum
         
       end if
       
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_ANGLE) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_ANGLE)) then
         call messages_print_stress(stdout, "Angle- and energy-resolved PES")
         
         select case (pes_method)
@@ -580,7 +584,7 @@ program photoelectron_spectrum
                                           
       end if
 
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT)) then
         call messages_print_stress(stdout, "Velocity map on a plane")
         dir = -1
         if(sum((pvec-(/1 ,0 ,0/))**2)  <= M_EPSILON  )  dir = 1
@@ -616,7 +620,7 @@ program photoelectron_spectrum
         end if
       end if
 
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_XY) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_XY)) then
         call messages_print_stress(stdout, "Angle and energy-resolved on a plane")
         if(uEstep >  0 .and. uEstep > Estep) then
           Estep = uEstep
@@ -634,7 +638,7 @@ program photoelectron_spectrum
                                         
       end if
 
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TH_PH) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TH_PH)) then
         call messages_print_stress(stdout, "PES on spherical cuts")
 
         write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
@@ -659,14 +663,13 @@ program photoelectron_spectrum
 
       end if
 
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP)) then
         
-        call io_function_read_how(sb, global_namespace, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
-        if ( .not. (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) .and. &
-             .not. (bitand(how, OPTION__OUTPUTFORMAT__VTK)    /= 0) .and. &
-             .not. (bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) ) then
+        if ( .not. (bitand(pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), OPTION__OUTPUTFORMAT__NETCDF) /= 0) .and. &
+             .not. (bitand(pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), OPTION__OUTPUTFORMAT__VTK)    /= 0) .and. &
+             .not. (bitand(pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), OPTION__OUTPUTFORMAT__ASCII)  /= 0) ) then
              message(1) = 'User must specify the format with "OutputFormat".'
              message(2) = 'Available options are: necdf, vtk, ascii.'
              call messages_fatal(2)
@@ -677,19 +680,18 @@ program photoelectron_spectrum
         if (need_pmesh) then
           !force vtk output
 !           how = io_function_fill_how("VTK")
-          
-          if(bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) then
+          if(bitand(pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), OPTION__OUTPUTFORMAT__ASCII)  /= 0) then
              call pes_flux_out_vmap(pflux, pesP_out, filename, global_namespace, llp, pmesh, sb%dim)
           else            
-            call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb, pmesh)
+            call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), sb, pmesh)
           end if
         else
-          call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb)
+          call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP), sb)
         end if
         
       end if
 
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES)) then
         call messages_print_stress(stdout, "ARPES")
 
         do i3 = 1, llp(3)
@@ -701,14 +703,14 @@ program photoelectron_spectrum
           end do
         end do
 
-        how = io_function_fill_how("VTK")
+        pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) = io_function_fill_how("VTK")
 
         call pes_out_velocity_map(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-                                  global_namespace, Lg, llp, how, sb, pmesh)
+                                  global_namespace, Lg, llp, pesout%how(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES), sb, pmesh)
       end if
       
       
-      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) /= 0) then
+      if(pesout%what(OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT)) then
         call messages_print_stress(stdout, "ARPES cut on reciprocal space path")
         
         filename = outfile('./PES_ARPES', ist, ispin, "path")

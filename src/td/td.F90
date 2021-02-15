@@ -466,7 +466,7 @@ contains
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if (bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if (outp%what(OPTION__OUTPUT__FORCES)) then
         call forces_calculate(gr, namespace, geo, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
       end if
     end if
@@ -615,7 +615,7 @@ contains
     call messages_info(1)
     etime = loct_clock()
 
-    if ((outp%output_interval > 0 .and. mod(iter, outp%output_interval) == 0) .or. iter == td%max_iter .or. stopping) then ! output
+    if ((any(outp%output_interval > 0) .and. any(mod(iter, outp%output_interval) == 0)) .or. iter == td%max_iter .or. stopping) then ! output
       ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
       if (st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
@@ -922,7 +922,7 @@ contains
       end if
     end if
     call propagator_elec_run_zero_iter(hm, gr, td%tr)
-    if (outp%output_interval > 0) then
+    if(any(outp%output_interval > 0)) then
       call td_write_data(td%write_handler)
       call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
     end if

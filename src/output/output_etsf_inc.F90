@@ -28,13 +28,14 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, dir, st, gr, geo)
+subroutine output_etsf(outp, namespace, dir, st, gr, geo, iter)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
   character(len=*),       intent(in) :: dir
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
+  integer,                intent(in) :: iter
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
@@ -66,7 +67,8 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
 
   ! geometry
-  if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__GEOMETRY) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__GEOMETRY))) &
+    .and. bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__ETSF)) then
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
@@ -77,12 +79,13 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
       call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data, namespace)
+      if(.not. lstat) call output_etsf_error(error_data, namespace)
     end if
   end if
 
   ! density
-  if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if(outp%what(OPTION__OUTPUT__DENSITY) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__DENSITY))) &
+  .and. bitand(outp%how(OPTION__OUTPUT__DENSITY), OPTION__OUTPUTFORMAT__ETSF)) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
@@ -97,14 +100,15 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
       call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data, namespace)
+      if(.not. lstat) call output_etsf_error(error_data, namespace)
     end if
 
     call dcube_function_free_rs(dcube, cf)
   end if
 
   ! wave-functions
-  if (bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__WFS))) &
+  .and. bitand(outp%how(OPTION__OUTPUT__WFS), OPTION__OUTPUTFORMAT__ETSF)) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states", namespace=namespace)
@@ -137,7 +141,8 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   end if
 
   ! wave-functions in fourier space
-  if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+  if(outp%what(OPTION__OUTPUT__WFS_FOURIER) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__WFS_FOURIER))) &
+  .and. bitand(outp%how(OPTION__OUTPUT__WFS_FOURIER), OPTION__OUTPUTFORMAT__ETSF)) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)

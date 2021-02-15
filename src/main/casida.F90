@@ -385,7 +385,7 @@ contains
     !%End
     call parse_variable(sys%namespace, 'CasidaTransitionDensities', "0", cas%trandens)
 
-    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%namespace, sys%outp%how)
+    if(cas%trandens /= "0") call io_function_read_what_how_when(sys%gr%sb, sys%namespace, sys%outp%what, sys%outp%how, sys%outp%output_interval)
 
     !%Variable CasidaMomentumTransfer
     !%Type block

@@ -82,8 +82,9 @@
     
     call io_mkdir(trim(dir), namespace)
     call target_build_tdlocal(tg, gr, M_ZERO)
-    if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', namespace, gr%mesh, &
+    if(any(outp%how /= 0)) then
+      ! MFT: TODO: which how should be passed here?
+      call dio_function_output(outp%how(1), trim(dir), 'td_local_target', namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 

@@ -52,36 +52,36 @@ module io_function_oct_m
   implicit none
 
   private
-  public ::                       &
-    io_function_read_how,         &
-    io_function_fill_how,         &
-    write_bild_forces_file,       &
-    write_canonicalized_xyz_file, &
-    write_xsf_geometry,           &
-    write_xsf_geometry_file,      &
-    dio_function_input,           &
-    zio_function_input,           &
-    dio_function_output,          &
-    zio_function_output,          &
-    io_function_output_vector,    &
-    dio_function_output_global,   &
-    zio_function_output_global,   &
-    io_function_output_vector_BZ, &
+  public ::                         &
+    io_function_read_what_how_when, &
+    io_function_fill_how,           &
+    write_bild_forces_file,         &
+    write_canonicalized_xyz_file,   &
+    write_xsf_geometry,             &
+    write_xsf_geometry_file,        &
+    dio_function_input,             &
+    zio_function_input,             &
+    dio_function_output,            &
+    zio_function_output,            &
+    io_function_output_vector,      &
+    dio_function_output_global,     &
+    zio_function_output_global,     &
+    io_function_output_vector_BZ,   &
     io_function_output_global_BZ
 
 #if defined(HAVE_NETCDF)
- public ::                        &
-    dout_cf_netcdf,               &
+ public ::                          &
+    dout_cf_netcdf,                 &
     zout_cf_netcdf
 #endif
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
-  integer, parameter, private ::  &
-    DOUTPUT_KIND      =    1,     &
+  integer, parameter, private ::    &
+    DOUTPUT_KIND      =    1,       &
     ZOUTPUT_KIND      =   -1
 
   !> index to label mapping
-  character(len=3), parameter ::  &
+  character(len=3), parameter ::    &
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type(profile_t), save :: read_prof, write_prof
@@ -102,15 +102,34 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, namespace, how, ignore_error)
+  subroutine io_function_read_what_how_when(sb, namespace, what, how, output_interval, &
+    what_tag_in, how_tag_in, output_interval_tag_in, ignore_error)
     type(simul_box_t), intent(in)  :: sb
     type(namespace_t), intent(in)  :: namespace
-    integer(8),        intent(out) :: how
+    logical,           intent(out) :: what(40)
+    integer(8),        intent(out) :: how(40)
+    integer,           intent(out) :: output_interval(40) 
+    character(len=*), optional, intent(in):: what_tag_in
+    character(len=*), optional, intent(in):: how_tag_in
+    character(len=*), optional, intent(in):: output_interval_tag_in
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
-    PUSH_SUB(io_function_read_how)
+    integer(8) :: what_i
+    type(block_t) :: blk
+    integer :: ncols, nrows, iout
+    integer(8) :: what_no_how(6)       !> these kinds of Output do not have a how
+    character(len=80) :: what_tag
+    character(len=80) :: how_tag
+    character(len=80) :: output_interval_tag
+
+    PUSH_SUB(io_function_read_what_how_when)
 
     how = 0_8
+    output_interval = 0_8
+    what = .false.
+    what_tag = optional_default(what_tag_in, 'Output')
+    how_tag = optional_default(how_tag_in, 'OutputFormat')
+    output_interval_tag = optional_default(output_interval_tag_in, 'OutputInterval')
     
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
     
@@ -121,44 +140,44 @@ contains
     !%Description
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% Example: <tt>axis_x + plane_x + dx</tt>
-    !%Option axis_x bit(0) 
+    !%Option axis_x 1 
     !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
-    !%Option axis_y bit(1)
+    !%Option axis_y 2
     !% The values of the function on the <i>y</i> axis are printed. The string <tt>.x=0,z=0</tt> is appended
     !% to previous file names.
-    !%Option axis_z bit(2)
+    !%Option axis_z 3
     !% The values of the function on the <i>z</i> axis are printed. The string <tt>.x=0,y=0</tt> is appended
     !% to previous file names.
-    !%Option plane_x bit(3)
+    !%Option plane_x 4
     !% A plane slice at <i>x</i> = 0 is printed. The string <tt>.x=0</tt> is appended
     !% to previous file names.
-    !%Option plane_y bit(4)
+    !%Option plane_y 5
     !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.y=0</tt> is appended
     !% to previous file names.
-    !%Option plane_z bit(5)
+    !%Option plane_z 6
     !% A plane slice at <i>z</i> = 0 is printed. The string <tt>.z=0</tt> is appended to
     !% previous file names.
-    !%Option dx bit(6)
+    !%Option dx 7
     !% For printing three-dimensional information, the open-source program
     !% visualization tool <a href=http://www.opendx.org>OpenDX</a> can be used. The string
     !% <tt>.dx</tt> is appended to previous file names. Available only in 3D.
-    !%Option netcdf bit(7)
+    !%Option netcdf 8
     !% Outputs in <a href=http://www.unidata.ucar.edu/packages/netcdf>NetCDF</a> format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library. Only writes the real part of complex functions.
-    !%Option mesh_index bit(8)
+    !%Option mesh_index 9
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A Gnuplot script for mesh visualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
-    !%Option xcrysden bit(9)
+    !%Option xcrysden 10
     !% A format for printing structures and three-dimensional information, which can be visualized by
     !% the free open-source program <a href=http://www.xcrysden.org>XCrySDen</a> and others. The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by <tt>UnitsOutput</tt>. Available in 2D and 3D.
-    !%Option matlab bit(10)
+    !%Option matlab 11
     !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and
     !% <tt>plane_z</tt>, this option produces output files which are
     !% suitable for 2D Matlab functions like <tt>mesh()</tt>,
@@ -168,121 +187,191 @@ contains
     !%   >> density = load('static/density-1.x=0.matlab.abs');
     !%   >> mesh(density);
     !%</tt>
-    !%Option meshgrid bit(11)
+    !%Option meshgrid 12
     !% Outputs in Matlab mode the internal mesh in a format similar to
     !%<tt>
     !%   >> [x,y] = meshgrid(-2:.2:2,-1:.15:1)
     !%</tt>
     !% The <i>x</i> meshgrid is contained in a file <tt>*.meshgrid.x</tt> and the <i>y</i>-grid can be found in
     !% <tt>*.meshgrid.y</tt>.
-    !%Option boundary_points bit(12)
+    !%Option boundary_points 13
     !% This option includes the output of the mesh enlargement. Default is without.
     !% Supported only by <tt>binary</tt>, <tt>axis</tt>, <tt>plane</tt>, <tt>mesh_index</tt>,
     !% and <tt>matlab</tt> formats.
     !% Not all types of <tt>Output</tt> will have this information available. Not supported when parallel in domains.
-    !%Option binary bit(13)
+    !%Option binary 14
     !% Plain binary, new format.
-    !%Option etsf bit(14)
+    !%Option etsf 15
     !% <a href=http://www.etsf.eu/resources/software/standardization_project>ETSF file format</a>.
     !% Requires the ETSF_IO library. Applies only to <tt>Output = density</tt>, <tt>geometry</tt>,
     !% <tt>wfs</tt>, and/or <tt>wfs_fourier</tt>.
-    !%Option xyz bit(15)
+    !%Option xyz 16
     !% Geometry will be output in XYZ format. Does not affect other outputs.
-    !%Option cube bit(16)
+    !%Option cube 17
     !% Generates output in the <a href=http://paulbourke.net/dataformats/cube>cube file format</a>.
     !% Available only in 3D. Only writes the real part of complex functions.
-    !%Option bild bit(19)
+    !%Option bild 18
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
-    !%Option vtk bit(20)
+    !%Option vtk 19
     !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
-    !%Option integrate_xy bit(21)
+    !%Option integrate_xy 20
     !% Integrates the function in the x-y plane and the result on the <i>z</i> axis is printed.
-    !%Option integrate_xz bit(22)
+    !%Option integrate_xz 21
     !% Integrates the function in the x-z plane and the result on the <i>y</i> axis is printed
-    !%Option integrate_yz bit(23)
+    !%Option integrate_yz 22
     !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
-    !%Option ascii bit(24)
+    !%Option ascii 23
     !% Plain text format regardless of dimensionality. For the moment only employed by the oct-phototoelectron_spectrum
     !% post-processing utility.
     !%End
-    call parse_variable(namespace, 'OutputFormat', 0, how)
-    if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-      call messages_input_error(namespace, 'OutputFormat')
-    end if
 
-    if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
-      write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
-      call messages_fatal(1, only_root_writes = .true.)
-     end if
 
-    ! some modes are not available in some circumstances
-    if(sb%dim == 1) then
-      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
-        message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
-        message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
-        message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-    end if
+    what_no_how = (/ OPTION__OUTPUT__MATRIX_ELEMENTS, OPTION__OUTPUT__BERKELEYGW, OPTION__OUTPUT__DOS, &
+      OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW /)
 
-    if(sb%dim <= 2) then
-      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
-        message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
-        message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
-        message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
-        message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
-        message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
-        message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
-        message(1) = "OutputFormat = dx not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__CUBE) /= 0) then
-        message(1) = "OutputFormat = cube not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-    end if
+    if(parse_block(namespace, what_tag, blk) == 0) then
+      ncols = parse_block_cols(blk, 0)
+      nrows = parse_block_n(blk)
+      if(ncols == 2) then
+        !new format, Type 1
+        !%Output
+        !  density | cube + axis_z
+        !  wfs     | cube
+        !%
 
-#if !defined(HAVE_NETCDF)
-    if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
-      message(1) = 'Octopus was compiled without NetCDF support.'
-      message(2) = 'It is not possible to write output in NetCDF format.'
-      call messages_fatal(2)
-    end if
-#endif
-#if !defined(HAVE_ETSF_IO)
-    if (bitand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      message(1) = 'Octopus was compiled without ETSF_IO support.'
-      message(2) = 'It is not possible to write output in ETSF format.'
-      call messages_fatal(2)
-    end if
-#endif
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          what(what_i) = .true.
+          if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
+            call parse_block_integer(blk, iout - 1, 1, how(what_i))
+          end if
+        end do
 
-    POP_SUB(io_function_read_how)
-  end subroutine io_function_read_how
+      else if(ncols == 5) then
+        !new format, Type 2
+        !%Output
+        !  density | output_interval | 10 | output_format | cube + axis_z
+        !  wfs     | output_interval | 50 | output_format | cube       
+        !%
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          what(what_i) = .true.
+          call parse_block_integer(blk, iout - 1, 2, output_interval(what_i))
+          if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
+            call parse_block_integer(blk, iout - 1, 4, how(what_i))
+          end if
+        end do
+      endif
+      call parse_block_end(blk)
+    else
+      !old format
+      write(*,*) '***MFT DBG*** # old format'
+      call parse_variable(namespace, what_tag, 0, what_i)
+      if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
+        call messages_input_error(namespace, what_tag)
+      end if
+      what(what_i) = .true.
+      if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
+        call parse_variable(namespace, how_tag, 0, how(what_i))
+      end if
+      call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+    endif
+
+
+    if(what_tag == 'Output') then
+      do what_i = 1, size(what)
+        if (what(what_i)) then
+          if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+            call messages_input_error(namespace, how_tag)
+          end if
+
+          if(how(what_i) == 0 .and. .not. optional_default(ignore_error, .false.)) then
+            write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
+            call messages_fatal(1, only_root_writes = .true.)
+          end if
+
+          ! some modes are not available in some circumstances
+          if(sb%dim == 1) then
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
+              message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
+              message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
+              message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+          end if
+
+          if(sb%dim <= 2) then
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
+              message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
+              message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
+              message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+              message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+              message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+              message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__DX) /= 0) then
+              message(1) = "OutputFormat = dx not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__CUBE) /= 0) then
+              message(1) = "OutputFormat = cube not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+          end if
+
+  #if !defined(HAVE_NETCDF)
+          if (bitand(how(what_i), OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+            message(1) = 'Octopus was compiled without NetCDF support.'
+            message(2) = 'It is not possible to write output in NetCDF format.'
+            call messages_fatal(2)
+          end if
+  #endif
+  #if !defined(HAVE_ETSF_IO)
+          if (bitand(how(what_i), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+            message(1) = 'Octopus was compiled without ETSF_IO support.'
+            message(2) = 'It is not possible to write output in ETSF format.'
+            call messages_fatal(2)
+          end if
+  #endif
+
+
+          if(output_interval(what_i) < 0) then
+            message(1) = "OutputInterval must be >= 0."
+            call messages_fatal(1, namespace=namespace)
+          end if
+        end if
+      end do
+    end if
+    POP_SUB(io_function_read_what_how_when)
+  end subroutine io_function_read_what_how_when
 
   ! -------------------------------------------------------------------
   !> Use this function to quickly plot functions for debugging purposes:
@@ -330,7 +419,7 @@ contains
     FLOAT, allocatable :: forces(:,:), center(:,:)
     character(len=20) frmt
 
-    if( .not. mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_bild_forces_file)
 
@@ -424,7 +513,7 @@ contains
     FLOAT, allocatable :: forces(:,:)
     logical :: write_forces_
 
-    if( .not. mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_xsf_geometry_file)
 
