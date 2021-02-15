@@ -40,6 +40,7 @@ module propagator_beeman_oct_m
     procedure propagator_beeman_constructor
   end interface propagator_beeman_t
 
+  !# doc_start beeman_propagation_operations
   ! Specific beeman propagation operations identifiers
   character(len=ALGO_LABEL_LEN), public, parameter ::  &
     BEEMAN_START       = 'BEEMAN_START',               &
@@ -59,7 +60,8 @@ module propagator_beeman_oct_m
     OP_BEEMAN_PREDICT_VEL = algorithmic_operation_t(BEEMAN_PREDICT_VEL, 'Prediction step  - Computing velocity'),     &
     OP_BEEMAN_CORRECT_POS = algorithmic_operation_t(BEEMAN_CORRECT_POS, 'Correction step  - Computing position'),     &
     OP_BEEMAN_CORRECT_VEL = algorithmic_operation_t(BEEMAN_CORRECT_VEL, 'Correction step  - Computing velocity')
-
+  !# doc_end
+    
 contains
 
   ! ---------------------------------------------------------
