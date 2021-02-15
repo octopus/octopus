@@ -237,8 +237,8 @@ subroutine X(run_sternheimer)()
     do idir = 1, sys%space%dim 
       message(1)="Info: Calculating response for B-perturbation"
       call messages_info(1)
-      call X(inhomog_B)(sh, sys, magn_dir(idir,1), magn_dir(idir,2), &
-        kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1),inhomog) 
+      call X(inhomog_B)(sh, sys%namespace, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, &
+        magn_dir(idir,1), magn_dir(idir,2), kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
       call X(sternheimer_set_inhomog)(sh, inhomog)   
       call X(sternheimer_solve)(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
         em_vars%lr(idir, 1:1, ifactor), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, &
@@ -252,7 +252,8 @@ subroutine X(run_sternheimer)()
       do idir2 = 1, idir
         message(1)="Info: Calculating response for K2-perturbation"
         call messages_info(1)
-        call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
+        call X(inhomog_k2_tot)(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, idir, idir2, kdotp_lr(idir, 1:1), &
+          kdotp_lr(idir2, 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
         call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
           k2_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
@@ -266,8 +267,8 @@ subroutine X(run_sternheimer)()
       do idir2 = 1, sys%space%dim    
         message(1)="Info: Calculating response for KB-perturbation"
         call messages_info(1)
-        call X(inhomog_kB_tot)(sh, sys, idir, magn_dir(idir2, 1), magn_dir(idir2, 2), & 
-          kdotp_lr(idir, 1:1), em_vars%lr(idir2, 1:1, ifactor), kdotp_lr(magn_dir(idir2, 1), 1:1), &
+        call X(inhomog_kB_tot)(sh, sys%namespace, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, idir, magn_dir(idir2, 1), &
+          magn_dir(idir2, 2), kdotp_lr(idir, 1:1), em_vars%lr(idir2, 1:1, ifactor), kdotp_lr(magn_dir(idir2, 1), 1:1), &
           kdotp_lr(magn_dir(idir2, 2), 1:1), & 
           k2_lr(max(magn_dir(idir2, 1), idir), min(magn_dir(idir2,1), idir), 1:1),&
           k2_lr(max(magn_dir(idir2, 2), idir), min(magn_dir(idir2,2), idir), 1:1), inhomog)
@@ -326,7 +327,7 @@ subroutine X(run_sternheimer)()
       end if
   
       if(em_vars%calc_hyperpol .and. use_kdotp) then
-        call X(em_resp_calc_eigenvalues)(sys, dl_eig)
+        call X(em_resp_calc_eigenvalues)(sys%space, sys%gr%mesh, sys%gr%sb, sys%st, dl_eig)
 
         call restart_init(kdotp_restart, sys%namespace, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
@@ -382,8 +383,8 @@ subroutine X(run_sternheimer)()
         do idir = 1, gr%sb%dim
           message(1) = "Info: Calculating response for B-perturbation"
           call messages_info(1)  
-          call X(inhomog_B)(sh_mo, sys, magn_dir(idir, 1), magn_dir(idir, 2),&
-            kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
+          call X(inhomog_B)(sh_mo, sys%namespace, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, magn_dir(idir, 1), &
+            magn_dir(idir, 2), kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
           call X(sternheimer_set_inhomog)(sh_mo, inhomog)   
           call X(sternheimer_solve)(sh_mo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
             b_lr(idir, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
@@ -402,7 +403,8 @@ subroutine X(run_sternheimer)()
                   if(idir2 <= idir) then
                     message(1) = "Info: Calculating response for K2-perturbation"
                     call messages_info(1)
-                    call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
+                    call X(inhomog_k2_tot)(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, idir, idir2, &
+                      kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
                     call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
                     call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
                       sys%geo, k2_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), &
@@ -417,8 +419,8 @@ subroutine X(run_sternheimer)()
                 if(iomega == 1 .and. ifactor == 1) then
                   message(1) = "Info: Calculating response for KB-perturbation"
                   call messages_info(1) 
-                  call X(inhomog_kB_tot)(sh_mo, sys, idir, magn_dir(idir2, 1), magn_dir(idir2, 2), &
-                    kdotp_lr(idir, 1:1), b_lr(idir2, 1:1), &
+                  call X(inhomog_kB_tot)(sh_mo, sys%namespace, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, idir, magn_dir(idir2, 1), &
+                    magn_dir(idir2, 2), kdotp_lr(idir, 1:1), b_lr(idir2, 1:1), &
                     kdotp_lr(magn_dir(idir2, 1), 1:1), kdotp_lr(magn_dir(idir2, 2), 1:1), &
                     k2_lr(max(magn_dir(idir2, 1), idir),min(magn_dir(idir2, 1), idir), 1:1),& 
                     k2_lr(max(magn_dir(idir2, 2), idir),min(magn_dir(idir2, 2), idir), 1:1), inhomog)
@@ -435,8 +437,8 @@ subroutine X(run_sternheimer)()
                 if(ifactor .le. nfactor_ke) then
                   message(1) = "Info: Calculating response for KE-perturbation"
                   call messages_info(1) 
-                  call X(inhomog_kE_tot)(sh, sys, idir, nsigma_eff, kdotp_lr(idir, 1:1), &
-                    em_vars%lr(idir2, :, ifactor),k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
+                  call X(inhomog_kE_tot)(sh, sys%namespace, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, idir, nsigma_eff, &
+                    kdotp_lr(idir, 1:1), em_vars%lr(idir2, :, ifactor),k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
                   call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
                   call X(sternheimer_solve)(sh_kmo, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
                     sys%geo, ke_lr(idir, idir2, 1:nsigma_eff, ifactor), nsigma_eff, &
@@ -488,11 +490,11 @@ subroutine X(calc_properties_linear)()
     
       if(use_kdotp) then
         if(.not. em_vars%kpt_output) then
-        call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-          em_vars%nsigma, em_vars%alpha(:, :, ifactor))
+        call X(calc_polarizability_periodic)(sys%space, sys%gr%mesh, sys%gr%symm, sys%st, em_vars%lr(:, :, ifactor), &
+          kdotp_lr(:, 1), em_vars%nsigma, em_vars%alpha(:, :, ifactor))
         else
-          call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-            em_vars%nsigma, em_vars%alpha(:, :, ifactor), zpol_k = em_vars%alpha_k(:, :, ifactor, :))
+          call X(calc_polarizability_periodic)(sys%space, sys%gr%mesh, sys%gr%symm, sys%st, em_vars%lr(:, :, ifactor), &
+            kdotp_lr(:, 1), em_vars%nsigma, em_vars%alpha(:, :, ifactor), zpol_k = em_vars%alpha_k(:, :, ifactor, :))
         end if
         if(em_vars%lrc_kernel) then
           do idir = 1, gr%sb%dim
@@ -510,8 +512,8 @@ subroutine X(calc_properties_linear)()
         end if
       end if
 
-      call X(calc_polarizability_finite)(sys, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-        em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
+      call X(calc_polarizability_finite)(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, em_vars%lr(:, :, ifactor), &
+        em_vars%nsigma, em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
     
       if(em_vars%calc_Born) then
         ! calculate Born effective charges
@@ -534,13 +536,13 @@ subroutine X(calc_properties_linear)()
       if(use_kdotp) then
         if(abs(frequency) > M_EPSILON) then
           if(.not. em_vars%kpt_output) then
-            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, nfactor_ke, &
-              em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), &
-              -frequency_eta, em_vars%alpha_be(:, :, :))   
+            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, &
+              sys%geo, em_vars%nsigma, em_vars%nfactor, nfactor_ke, em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), &
+              kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), -frequency_eta, em_vars%alpha_be(:, :, :))
           else
-            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, nfactor_ke, &
-              em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), &
-              -frequency_eta, em_vars%alpha_be(:, :, :), &
+            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, &
+              sys%geo, em_vars%nsigma, em_vars%nfactor, nfactor_ke, em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), &
+              kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), -frequency_eta, em_vars%alpha_be(:, :, :), &
               zpol_kout = em_vars%alpha_be_k(:, :, :, :))
           end if
           if(em_vars%lrc_kernel) then
@@ -557,15 +559,16 @@ subroutine X(calc_properties_linear)()
         if(iomega == 1) then
           message(1) = "Info: Calculating magnetic susceptibilities."
           call messages_info(1)
-          call X(lr_calc_susceptibility_periodic)(sys, kdotp_lr(:, 1), b_lr(:, 1), k2_lr(:, :, 1), kb_lr(:, :, 1), &
-            em_vars%chi_dia(:, :))
+          call X(lr_calc_susceptibility_periodic)(sys%namespace, sys%space, sys%gr%symm, sys%gr%mesh, sys%st, sys%hm, &
+            kdotp_lr(:, 1), b_lr(:, 1), k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
           em_vars%chi_para(:, :) = M_ZERO  
-          call X(lr_calc_magnetization_periodic)(sys, kdotp_lr(:, 1), em_vars%magn(:))
+          call X(lr_calc_magnetization_periodic)(sys%namespace, sys%space, sys%gr%mesh, sys%st, sys%hm, kdotp_lr(:, 1), &
+            em_vars%magn(:))
         end if
       else
-        call X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, em_vars%nsigma, &
-          em_vars%nfactor, em_vars%lr(:, :, :), b_lr(:, :), em_vars%alpha_be(:, :, :))
-        call X(lr_calc_susceptibility)(sys, b_lr(:, :), 1, pert_b, &
+        call X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, &
+          em_vars%nsigma, em_vars%nfactor, em_vars%lr(:, :, :), b_lr(:, :), em_vars%alpha_be(:, :, :))
+        call X(lr_calc_susceptibility)(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, b_lr(:, :), 1, pert_b, &
           em_vars%chi_para(: ,:), em_vars%chi_dia(:, :))
       end if
     end if
@@ -575,13 +578,13 @@ subroutine X(calc_properties_linear)()
     call messages_info(1)
   
     if(use_kdotp) then
-      call X(lr_calc_susceptibility_periodic)(sys, kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor), k2_lr(:, :, 1), kb_lr(:, :, 1), &
-        em_vars%chi_dia(:, :))
+      call X(lr_calc_susceptibility_periodic)(sys%namespace, sys%space, sys%gr%symm, sys%gr%mesh, sys%st, sys%hm, &
+        kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor), k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
         em_vars%chi_para(:, :) = M_ZERO
-      call X(lr_calc_magnetization_periodic)(sys, kdotp_lr(:, 1), em_vars%magn(:))
+      call X(lr_calc_magnetization_periodic)(sys%namespace, sys%space, sys%gr%mesh, sys%st, sys%hm, kdotp_lr(:, 1), em_vars%magn(:))
     else
-      call X(lr_calc_susceptibility)(sys, em_vars%lr(:, :, ifactor), em_vars%nsigma, em_vars%perturbation, &
-        em_vars%chi_para(:, :), em_vars%chi_dia(:, :))
+      call X(lr_calc_susceptibility)(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, em_vars%lr(:, :, ifactor), &
+        em_vars%nsigma, em_vars%perturbation, em_vars%chi_para(:, :), em_vars%chi_dia(:, :))
     end if
   end if
   
@@ -601,12 +604,14 @@ subroutine X(calc_properties_nonlinear)()
     call messages_info(1)
     
     if(use_kdotp) then
-      call X(post_orthogonalize)(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
+      call X(post_orthogonalize)(sys%space, sys%gr%mesh, sys%st, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
         em_vars%omega(iomega), em_vars%eta, em_vars%lr, kdotp_em_lr2)
-      call X(lr_calc_beta)(sh, sys, em_vars%lr, em_vars%perturbation, em_vars%beta, &
-        kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, dl_eig = dl_eig, occ_response = .false.)
+      call X(lr_calc_beta)(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, em_vars%lr, &
+        em_vars%perturbation, em_vars%beta, kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, dl_eig = dl_eig, &
+        occ_response = .false.)
     else
-      call X(lr_calc_beta)(sh, sys, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+      call X(lr_calc_beta)(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo, em_vars%lr, &
+        em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
     end if
     
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))

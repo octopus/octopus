@@ -321,7 +321,8 @@ contains
           1, omega, perturbation, restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
+      call zcalc_polarizability_finite(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, lr(:,:), 1, perturbation, &
+        alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir
