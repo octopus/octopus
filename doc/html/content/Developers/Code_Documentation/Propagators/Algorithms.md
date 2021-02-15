@@ -46,7 +46,7 @@ Some global algorithmic steps are defined in {{< source "multisystem/propagator.
 #include_code_doc general_propagation_operations
 ```
 
-Derived propagators can then add their own steps, such as e.g. in {{< source "multisystem/propagator_exp_mid.F90" >}}:
+Derived propagators can then add their own steps, such as e.g. in {{< source "multisystem/propagator_verlet.F90" >}}:
 ```Fortran
-#include_code_doc exp_mid_propagation_operations
+#include_code_doc verlet_propagation_operations
 ```
