@@ -10,6 +10,8 @@ Work in progress!
 
 In the new multisystem framework, the time propagation is handled by the routine {{< code "time_dependent_run_multisystem()" >}}
 
+### The main loop
+
 {{% expand "Expand for the source" %}}
 ```Fortran
 #include_subroutine time_dependent_run_multisystem
@@ -26,6 +28,8 @@ Note, that propagators in general will need several calls of this to finish one 
 In the multisystem framework, the highest level system is of type {{< code "multisystem_basic_t" >}}, which inherits the {{< code "dt_operation()" >}} routine from 
 the abstract {{< code "multisystem_t" >}} type.
   
+### Updating the system
+
 {{% expand "Implementation of multisystem_dt_operation" %}}
 ```Fortran
 #include_subroutine multisystem_dt_operation
@@ -60,6 +64,8 @@ All remaining operations are passed down to the system specific routine {{< code
 ```
 {{% /expand %}}
 
+### Updating the interactions
+
 This routine is triggering the update of the interactions, via the call to {{< code "system%update_interations()" >}},
 which loops over the interactions associated with the system, and all required exposed quantities.
 
@@ -69,6 +75,18 @@ which loops over the interactions associated with the system, and all required e
 ```
 {{% /expand %}}
 
+The first part makes sure that the {{< code "update_interactions_start()" >}} routine is only called when no interaction has been updated yet in this time step, iu.e. if their clocks are behind the system clock.
 
+{{< notice note >}}
+Note, that it is assumed that the interaction can never be ahead of time, compared to the propagator. It is therefore sufficient to ask whether the interaction time equals the propagator time to determine whether an interaction is up-to-date.
+{{< /notice >}}
+
+In the second part, the interactions are actually updated, if needed. If an interaction is *not* up-to-date, it first needs to be ensured that the quantities, on which the interaction depends, are up-to-date. Once all quantities are updated, the {{< code "update()" >}} routine of the interaction can be called. It is, however, possible that 
+an interaction cannot be updated at a given time. This can be the case when the interaction also depends on quantities of the other interaction partner, and that partner is not yet at the requested time.
+
+{{< notice warning >}}
+It is easy to generate a deadlock with this mechanism. It is the responsibility of the propagation algorithm to ensure that this will not happen.
+{{< /notice >}}
+ 
 Other extensions of the {{< code "system_t" >}} class might overload that routine in order to implement their system-specific steps.
 The routine {{< code "system%do_dt_operation()" >}} is where the actual algorithm operations for that system have to be implemented.

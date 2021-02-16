@@ -1,6 +1,6 @@
 ---
 Title: "Multisystem classes"
-Weight: 5
+Weight: 1
 ---
 
 {{< notice warning >}}
@@ -24,8 +24,7 @@ Therefore, it is the base class of all possible systems and multisystems.
 ```
 {{% /expand %}}
 
-Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/multisystems/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which are exposed to other systems (through the interactions) and a list
-or quantities, which it exposes to the interactions.
+Each {{< name interaction_partner >}} is associated with a {{< name namespace >}}, owns a {{< name clock >}}, as well as a list of {{< developers "code_documentation/multisystems/interactions" "interactions" >}} in which it can be a partner, and a list of physical quantities, which can be exposed to other systems (through the interactions). See {{< developers "Code_Documentation:Multisystems:quantity" "here" >}} for the list of possible quantities.
 
 It also provides the basic functions to update exposed quantities, and copy them to the interaction. More details about this mechanism are described in the section on 
 {{< developers "code_documentation/multisystems/interactions" "interactions" >}}.
@@ -46,6 +45,14 @@ As all possible systems are potential partners of some interaction, the {{< code
 #include_subroutine system_dt_operation
 ```
 {{% /expand %}}
+
+{{% expand "Definition of system_update_exposed_quantities" %}}
+```Fortran
+#include_function system_update_exposed_quantities
+```
+{{% /expand %}}
+
+
 
 #### {{< code multisystem_t >}}
 
