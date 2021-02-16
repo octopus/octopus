@@ -22,7 +22,7 @@
 ! to include temperature in linear response
 subroutine X(lr_calc_elf)(st, gr, kpoints, lr, lr_m)
   type(states_elec_t),  intent(inout) :: st
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(kpoints_t),      intent(in)    :: kpoints
   type(lr_t),           intent(inout) :: lr
   type(lr_t), optional, intent(inout) :: lr_m !< when this argument is present, we are doing dynamical response

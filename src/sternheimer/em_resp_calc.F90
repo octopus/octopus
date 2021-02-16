@@ -103,7 +103,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lr_calc_current(st, gr, lr, lr_m)
     type(states_elec_t),  intent(inout) :: st
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(lr_t),           intent(inout) :: lr
     type(lr_t), optional, intent(inout) :: lr_m
 
