@@ -1,7 +1,7 @@
 ---
 Title: Interactions
 section: Developers
-Weight: 3
+Weight: 2
 ---
 
 {{< notice warning >}}
@@ -34,7 +34,7 @@ An interaction ''belongs'' to partner A and acts on partner B.
 
 ### Abstract classes
 
-#### {{< code interaction_t >}}
+#### The abstract class {{< code interaction_t >}}
 
 {{% expand "Definition of interaction_t" %}}
 ```Fortran
@@ -44,16 +44,14 @@ An interaction ''belongs'' to partner A and acts on partner B.
 
 This is the minimal data structure for interactions, which only contains information relating to partner A, who owns the interacion.
 In particular, the interaction has a list of quantities, which partner A needs to expose, so that the interaction can be calculated.
-Furthermore, this abstract type already contains the clock for the interaction, and defines the interfaces for the {{< code "update()" >}} 
+The IDs for the exposed quantities are defined in the section {{< developers "Code_Documentation:Multisystems:quantity" "Exposed Quantities" >}}.
+
+Furthermore, this abstract type already contains the clock for the interaction, and defines the interfaces for the deferred {{< code "update()" >}} 
 and {{< code "calculate()" >}} routines.
 
-The purpose of the {{< code "update()" >}} routine is to perform the checks *whether* any quantities need to be updated, and is implemented on a high level (in {{< code interaction_with_partner_t >}}) while {{< code "calculate()" >}} is specific to the interactions and will perform the update of the quantities.
+#### The abstract class {{< code interaction_with_partner_t >}}
 
-Currently, there is no interaction type directly derived from {{< code interaction_t >}}. This type was mainly introduced for clarity, and also in order to break the problem of a circular dependency, which would have occurred otherwise.
-
-#### {{< code interaction_with_partner_t >}}
-
-Curretly, all interactions are derived from {{< code interaction_with_partner_t >}}, which extends {{< code interaction_t >}} and adds the information about partner B, fron here on only called ''partner''.
+Curretly, all interactions are derived from {{< code interaction_with_partner_t >}}, which extends {{< code interaction_t >}} and adds the information about partner B, from here on only called ''partner''.
 
 {{% expand "Definition of interaction_with_partner_t" %}}
 ```Fortran
@@ -61,9 +59,21 @@ Curretly, all interactions are derived from {{< code interaction_with_partner_t 
 ```
 {{% /expand %}}
 
-This adds a list of IDs of the quantities, the partner exposes to the interaction.
-
+This type adds a pointer to the interaction partner and a list of IDs of the quantities, the partner exposes to the interaction.
 Furthermore, at this level, we can implement the {{< code "update()" >}} procedure.
+{{% expand "Implementation of interaction_with_partner_update()" %}}
+```Fortran
+#include_function interaction_with_partner_update
+```
+{{% /expand %}}
+This function is to be called with for a specific {{< code requested_time >}}, which is the time at which the interaction is needed.
+{{< notice note >}}
+Note, that the function cannot be called for the {{< code requested_time >}} being equal to the current time of its own clock.
+{{< /notice >}}
+The function first tries to update the exposed quantities of the partner. If this is successfull, the function calls the {{< code "calculate()" >}} routine of the interaction, sets the interaction clock to the requested time and returns with the result {{< code ".true." >}}, indicating a successful update. In case the function was blocked by one of the exposed quantities, the interaction is not calculated and the function returns {{< code ".false." >}}.
+
+
+
 
 #### {{< code force_interaction_t >}}
 

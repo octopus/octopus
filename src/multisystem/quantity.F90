@@ -26,6 +26,7 @@ module quantity_oct_m
   public ::                   &
      quantity_t
 
+  !# doc_start quantity
   integer, public, parameter ::         &
     POSITION                     =  1,  &
     VELOCITY                     =  2,  &
@@ -38,6 +39,7 @@ module quantity_oct_m
     MASS                         =  9,  &
     CHARGE                       = 10,  &
     MAX_QUANTITIES               = 10
+  !# doc_end
 
   character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &
     "position        ", &
@@ -51,7 +53,7 @@ module quantity_oct_m
     "mass            ", &
     "charge          "  &
     /)
-
+    
   !> Systems can expose quantities that can be used to calculate interactions
   !! with other systems.
   !!
