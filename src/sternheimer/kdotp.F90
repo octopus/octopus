@@ -197,7 +197,8 @@ contains
     SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     kdotp_vars%velocity(:,:,:) = M_ZERO
     if(states_are_complex(sys%st)) then
-      call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+      call zcalc_band_velocity(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+        kdotp_vars%velocity(:,:,:))
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -276,14 +277,16 @@ contains
           kdotp_vars%lr(1:1, idir), 1, M_ZERO, kdotp_vars%perturbation, restart_dump, "", kdotp_wfs_tag(idir), &
           have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
-          call dkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call dkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+            kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
         end if
       else
         call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
           kdotp_vars%lr(1:1, idir), 1, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, "", &
           kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
-          call zkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call zkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), &
+            kdotp_vars%degen_thres)
         end if
       end if
 
@@ -348,11 +351,11 @@ contains
 
 
       if(states_are_real(sys%st)) then
-        call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
+        call dcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+          kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
-        call zcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
+        call zcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+          kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)

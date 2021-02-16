@@ -20,18 +20,21 @@
 
 module kdotp_calc_oct_m
   use comm_oct_m
+  use geometry_oct_m
   use global_oct_m
+  use grid_oct_m
   use hamiltonian_elec_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use pert_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
-  use electrons_oct_m
   use utils_oct_m
 
   implicit none
@@ -66,10 +69,15 @@ contains
 ! ---------------------------------------------------------
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
-subroutine zcalc_band_velocity(sys, pert, velocity)
-  type(electrons_t),   intent(inout) :: sys
-  type(pert_t),        intent(inout) :: pert
-  FLOAT,               intent(out)   :: velocity(:,:,:)
+subroutine zcalc_band_velocity(namespace, space, gr, st, hm, geo, pert, velocity)
+  type(namespace_t),        intent(in)    :: namespace
+  type(space_t),            intent(in)    :: space
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(geometry_t),         intent(in)    :: geo
+  type(pert_t),             intent(inout) :: pert
+  FLOAT,                    intent(out)   :: velocity(:,:,:)
 
   integer :: ik, ist, idir
   CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
@@ -79,20 +87,20 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
 
   call profiling_in(prof, "CALC_BAND_VELOCITY")
 
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-  SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(pertpsi(1:gr%mesh%np, 1:st%d%dim))
 
   velocity(:, :, :) = M_ZERO
 
-  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-    do ist = sys%st%st_start, sys%st%st_end
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
 
-      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
-      do idir = 1, sys%space%periodic_dim
+      do idir = 1, space%periodic_dim
         call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
-        velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+        call zpert_apply(pert, namespace, gr, geo, hm, ik, psi, pertpsi)
+        velocity(idir, ist, ik) = -aimag(zmf_dotp(gr%mesh, st%d%dim, psi, pertpsi))
       end do
     end do
   end do
@@ -100,7 +108,7 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(pertpsi)
 
-  call comm_allreduce(sys%st%st_kpt_mpi_grp%comm, velocity)
+  call comm_allreduce(st%st_kpt_mpi_grp%comm, velocity)
 
   call profiling_out(prof)
 
