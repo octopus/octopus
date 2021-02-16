@@ -237,7 +237,7 @@ contains
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
-        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%nonorthogonal) then
+        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%latt%nonorthogonal) then
           message(1) = "Maxwell propagation does not work for non-orthogonal cells in periodic systems"
           call messages_fatal(1, namespace=namespace)
         end if

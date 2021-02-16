@@ -262,7 +262,7 @@ contains
 
     sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
-    call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
+    call poisson_test(sys%hm%psolver, sys%space, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
@@ -1130,7 +1130,9 @@ contains
     sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
+    call ion_interaction_test(sys%space, sys%gr%sb%latt, sys%gr%sb%rcell_volume, &
+             sys%geo%atom, sys%geo%natoms, sys%geo%catom, sys%geo%ncatoms, sys%gr%sb%lsize, &
+             namespace, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 

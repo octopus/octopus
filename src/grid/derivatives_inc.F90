@@ -212,9 +212,9 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
     do ip = 1, der%mesh%np
-      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
+      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
     end do
   end if
 
@@ -242,10 +242,10 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
   ! div_xyw (F)= div_uvw (BF), where B
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
     do ip = 1, der%mesh%np_part
-      ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
+      ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
     end do
   else
     ff_uvw => ff
@@ -264,7 +264,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
-  if(simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if(simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_DEALLOCATE_P(ff_uvw)
   else
     nullify(ff_uvw)
@@ -298,7 +298,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
 
-  ASSERT(.not.der%mesh%sb%nonorthogonal)
+  ASSERT(.not.der%mesh%sb%latt%nonorthogonal)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
@@ -678,7 +678,7 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
     ghost_update_ = .false. ! the boundary or ghost points
   end do
 
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
     call X(batch_vector_uvw_to_xyz)(der, opffb)
   end if
 
@@ -720,7 +720,7 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_linear)(ip, ist)
+              der%mesh%sb%latt%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_linear)(ip, ist)
           end do
         end do
         do idim1 = 1, der%dim
@@ -737,7 +737,7 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
+              der%mesh%sb%latt%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
           end do
         end do
         do idim1 = 1, der%dim
@@ -761,7 +761,7 @@ contains
     PUSH_SUB(uvw_to_xyz_opencl)
 
     call accel_create_buffer(matrix_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, der%dim**2)
-    call accel_write_buffer(matrix_buffer, der%dim**2, der%mesh%sb%klattice_primitive)
+    call accel_write_buffer(matrix_buffer, der%dim**2, der%mesh%sb%latt%klattice_primitive)
 
     call accel_set_kernel_arg(kernel_uvw_xyz, 0, der%mesh%np)
     call accel_set_kernel_arg(kernel_uvw_xyz, 1, matrix_buffer)

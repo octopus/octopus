@@ -343,7 +343,7 @@ contains
 
     PUSH_SUB(berry_potential)
 
-    if(mesh%sb%nonorthogonal) then
+    if(mesh%sb%latt%nonorthogonal) then
       call messages_not_implemented("Berry phase for non-orthogonal cells.")
     end if
   

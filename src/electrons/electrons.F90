@@ -142,7 +142,7 @@ contains
 
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
-             sys%space%periodic_dim, sys%gr%sb%rlattice, sys%gr%sb%klattice)
+             sys%space%periodic_dim, sys%gr%sb%latt)
 
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo, sys%kpoints)
     call sys%st%write_info(sys%namespace)

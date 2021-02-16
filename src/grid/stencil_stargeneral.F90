@@ -66,8 +66,8 @@ contains
     end if   
     
     if(dim == 2) then
-      vec1(1:dim)=sb%rlattice_primitive(1:dim, 1)
-      vec2(1:dim)=sb%rlattice_primitive(1:dim, 2)
+      vec1(1:dim)=sb%latt%rlattice_primitive(1:dim, 1)
+      vec2(1:dim)=sb%latt%rlattice_primitive(1:dim, 2)
       !get the angle between the primitive vectors
       theta(1) = acos(dot_product(vec1(1:dim),vec2(1:dim)))
     
@@ -92,18 +92,18 @@ contains
     ! dim>2
 
     !We first count how many arms we need
-    vec1(1:dim)=sb%rlattice_primitive(1:dim, 1)
-    vec2(1:dim)=sb%rlattice_primitive(1:dim, 2)
+    vec1(1:dim)=sb%latt%rlattice_primitive(1:dim, 1)
+    vec2(1:dim)=sb%latt%rlattice_primitive(1:dim, 2)
     theta(1) = acos(dot_product(vec1(1:dim),vec2(1:dim)))
     if (abs(theta(1) - M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
-    vec1(1:dim) = sb%rlattice_primitive(1:dim, 2)
-    vec2(1:dim) = sb%rlattice_primitive(1:dim, 3)
+    vec1(1:dim) = sb%latt%rlattice_primitive(1:dim, 2)
+    vec2(1:dim) = sb%latt%rlattice_primitive(1:dim, 3)
     theta(2) = acos(dot_product(vec1(1:dim), vec2(1:dim)))
     if (abs(theta(2)-M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
-    vec1(1:dim) = sb%rlattice_primitive(1:dim, 3)
-    vec2(1:dim) = sb%rlattice_primitive(1:dim, 1)
+    vec1(1:dim) = sb%latt%rlattice_primitive(1:dim, 3)
+    vec2(1:dim) = sb%latt%rlattice_primitive(1:dim, 1)
     theta(3) = acos(dot_product(vec1(1:dim), vec2(1:dim)))
     if (abs(theta(3) - M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
@@ -130,9 +130,9 @@ contains
           if (abs(theta(2) - M_PI*M_HALF) <= CNST(1e-8) .and. ii == 0) cycle
           if (abs(theta(3) - M_PI*M_HALF) <= CNST(1e-8) .and. jj == 0) cycle
 
-          vec1(1:3) =   ii*sb%rlattice_primitive(1:3, 1) &
-                      + jj*sb%rlattice_primitive(1:3, 2) &
-                      + kk*sb%rlattice_primitive(1:3, 3)
+          vec1(1:3) =   ii*sb%latt%rlattice_primitive(1:3, 1) &
+                      + jj*sb%latt%rlattice_primitive(1:3, 2) &
+                      + kk*sb%latt%rlattice_primitive(1:3, 3)
           norm = sum(vec1(1:3)**2)
 
           if (norm < min_norm(1)) then

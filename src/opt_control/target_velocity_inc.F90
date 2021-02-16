@@ -133,7 +133,7 @@
       do iatom = 1, geo%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, namespace, gr%mesh, geo%atom(iatom), iatom, vl)
+        call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         do ist = 1, gr%mesh%np
           do jst=1, gr%sb%dim

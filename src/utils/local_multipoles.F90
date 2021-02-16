@@ -789,7 +789,7 @@ contains
     ! Add long range density from atoms
     SAFE_ALLOCATE(ffs(1:mesh%np))
     do ia = 1, geo%natoms
-      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, mesh, ffs)
+      call species_get_long_range_density(geo%atom(ia)%species, geo%space, namespace, geo%atom(ia)%x, mesh, ffs)
       do is = 1, ubound(ff2, dim=2)
         ff2(1:mesh%np, is) = ff2(1:mesh%np, is) - ffs(1:mesh%np)
       end do

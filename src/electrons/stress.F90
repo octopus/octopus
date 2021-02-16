@@ -231,10 +231,10 @@ contains
       case(FFTLIB_FFTW)
          if (allocated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+            xx(1:3) = matmul(gr%sb%latt%rlattice(1:3,1:3),xx)
          else
             xx(1:3) = -TOFLOAT(cube%rs_n_global(1:3)/2 )/TOFLOAT(cube%rs_n_global(1:3))
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+            xx(1:3) = matmul(gr%sb%latt%rlattice(1:3,1:3),xx)
          end if
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
@@ -715,7 +715,7 @@ contains
 
        radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + der%mesh%spacing(1)
 
-       call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
+       call submesh_init(sphere, geo%space, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
 
        do ip = 1, sphere%np
@@ -758,7 +758,7 @@ contains
     gg(1:3) = gg_in(1:3)
     gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
-    gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
+    gg(1:3) = matmul(sb%latt%klattice_primitive(1:3,1:3),gg(1:3))
 ! MJV 27 jan 2015 this should not be necessary
 !    do idir = 1, 3
 !      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
@@ -793,7 +793,7 @@ contains
     PUSH_SUB(stress_from_Ewald_sum)
 
 
-    alpha = hm%ep%ion_interaction%alpha
+    alpha = geo%ion_interaction%alpha
     sb   => gr%sb
 
     rcut = CNST(6.0)/alpha
@@ -803,10 +803,10 @@ contains
        if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
        zi = species_zval(geo%atom(iatom)%species)
 
-       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
+       call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, geo%atom(iatom)%x, rcut)
       
        do icopy = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
+          xi(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, icopy)
         
           do jatom = 1,  geo%natoms
              zj = species_zval(geo%atom(jatom)%species)
@@ -850,7 +850,7 @@ contains
 ! get a converged value for the cutoff in g
     rcut = huge(rcut)
     do idim = 1, sb%dim
-      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim)**2))
+      rcut = min(rcut, sum(sb%latt%klattice(1:sb%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -865,7 +865,8 @@ contains
           
              if(ss == 0 .or. ss > isph**2) cycle
 
-             gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+             gg(1:sb%dim) = ix*sb%latt%klattice(1:sb%dim, 1) + iy*sb%latt%klattice(1:sb%dim, 2)&
+                          + iz*sb%latt%klattice(1:sb%dim, 3)
              gg2 = sum(gg(1:sb%dim)**2)
 
           ! g=0 must be removed from the sum

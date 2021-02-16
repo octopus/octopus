@@ -86,8 +86,7 @@ contains
 
     call simul_box_init(gr%sb, namespace, geo, space)
 
-    call symmetries_init(gr%symm, namespace, geo, space%dim, space%periodic_dim, &
-                             gr%sb%rlattice, gr%sb%klattice)
+    call symmetries_init(gr%symm, namespace, geo, space, gr%sb%latt)
 
     call check_ions_compatible_with_symmetries(gr%sb, gr%symm, geo, space%dim, namespace)
 

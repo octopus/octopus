@@ -287,7 +287,7 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim = 1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%latt%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
@@ -295,7 +295,7 @@ contains
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
        write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+         matmul(geo%atom(ia)%x(1:3), sb%latt%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -488,7 +488,7 @@ contains
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
-      call create_wannier90_amn(sys%gr%mesh, sys%gr%sb, sys%st, sys%kpoints)
+      call create_wannier90_amn(sys%space, sys%gr%mesh, sys%gr%sb, sys%st, sys%kpoints)
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
@@ -771,7 +771,7 @@ contains
        G(1:3) = w90_nnk_list(3:5, ii)
        if(mpi_grp_is_root(mpi_world)) write(w90_mmn, '(I10,2x,I10,2x,I3,2x,I3,2x,I3)') ik, iknn, G(1:3)
 
-       Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
+       Gr(1:3) = matmul(G(1:3), sys%gr%sb%latt%klattice(1:3,1:3))
 
        do ip = 1, mesh%np
          phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3), Gr(1:3)))
@@ -951,7 +951,8 @@ contains
 
   end subroutine write_unk
 
-  subroutine create_wannier90_amn(mesh, sb, st, kpoints)
+  subroutine create_wannier90_amn(space, mesh, sb, st, kpoints)
+    type(space_t),        intent(in) :: space
     type(mesh_t),         intent(in) :: mesh
     type(simul_box_t),    intent(in) :: sb 
     type(states_elec_t),  intent(in) :: st
@@ -1021,8 +1022,8 @@ contains
         orbitals(iw)%submesh = .false.
       
         ! cartesian coordinate of orbital center
-        center(1:3) =  matmul(sb%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
-        call submesh_init(orbitals(iw)%sphere, sb, mesh, center, orbitals(iw)%radius)
+        center(1:3) =  matmul(sb%latt%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
+        call submesh_init(orbitals(iw)%sphere, space, sb, mesh, center, orbitals(iw)%radius)
       
         ! make transpose table of submesh points for use in pwscf routine
         SAFE_ALLOCATE(rr(1:3,orbitals(iw)%sphere%np))

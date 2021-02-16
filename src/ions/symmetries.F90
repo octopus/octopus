@@ -22,11 +22,13 @@ module symmetries_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
   use species_oct_m
   use spglib_f08
   use symm_op_oct_m
@@ -89,14 +91,12 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, namespace, geo, dim, periodic_dim, rlattice, klattice)
-    type(symmetries_t),  intent(out) :: this
-    type(namespace_t),   intent(in)  :: namespace
-    type(geometry_t),    intent(in)  :: geo
-    integer,             intent(in)  :: dim
-    integer,             intent(in)  :: periodic_dim
-    FLOAT,               intent(in)  :: rlattice(:, :)
-    FLOAT,               intent(in)  :: klattice(:, :)
+  subroutine symmetries_init(this, namespace, geo, space, latt)
+    type(symmetries_t),     intent(out) :: this
+    type(namespace_t),      intent(in)  :: namespace
+    type(geometry_t),       intent(in)  :: geo
+    type(space_t),          intent(in)  :: space
+    type(lattice_vectors_t),intent(in)  :: latt
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
@@ -126,10 +126,10 @@ contains
       if(this%any_non_spherical)exit
     end do
 
-    dim4syms = min(3,dim)
+    dim4syms = min(3, space%dim)
 
-    def_sym_comp = (geo%natoms < 100) .or. periodic_dim > 0
-    def_sym_comp = def_sym_comp .and. dim == 3
+    def_sym_comp = (geo%natoms < 100) .or. space%periodic_dim > 0
+    def_sym_comp = def_sym_comp .and. space%dim == 3
     
     !%Variable SymmetriesCompute
     !%Type logical
@@ -144,7 +144,7 @@ contains
     !%End
     call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
-    if(this%symmetries_compute .and. dim /= 3) then
+    if(this%symmetries_compute .and. space%dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')
     end if
     
@@ -157,7 +157,7 @@ contains
 
     ! In all cases, we must check that the grid respects the symmetries. --DAS
 
-    if (periodic_dim == 0) then
+    if (space%periodic_dim == 0) then
 
       call init_identity()
 
@@ -197,7 +197,8 @@ contains
 
         if(.not. geo%reduced_coordinates) then
           ! Transform atomic positions to reduced coordinates
-          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
+          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms), &
+                                           latt%klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
         else
           position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
         end if
@@ -213,11 +214,11 @@ contains
       lattice = M_ZERO
       !NOTE: Why "inverse matrix" ? (NTD)
       ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:dim, 1:dim) = rlattice(1:dim, 1:dim)
+      lattice(1:space%dim, 1:space%dim) = latt%rlattice(1:space%dim, 1:space%dim)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
-      do idir = dim + 1, 3
+      do idir = space%dim + 1, 3
         lattice(idir, idir) = M_ONE
       end do
 
@@ -320,8 +321,8 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
-                              klattice(1:dim4syms,1:dim4syms), dim4syms, &
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), latt%rlattice(1:dim4syms,1:dim4syms), &
+                              latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
                               TOFLOAT(translation(1:3, iop)))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
@@ -338,7 +339,7 @@ contains
 
     end if
 
-    call symmetries_write_info(this, namespace, dim, periodic_dim, stdout)
+    call symmetries_write_info(this, namespace, space%dim, space%periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -351,7 +352,7 @@ contains
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  rlattice, klattice, dim4syms)
+                  latt%rlattice, latt%klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       
@@ -493,7 +494,7 @@ contains
     call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
-      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
+      message(1) = "Symmetries are disabled since non-spherically symlatt species may be present."
       call messages_info(1,iunit = iunit)
       call messages_print_stress(iunit, namespace=namespace)
     end if

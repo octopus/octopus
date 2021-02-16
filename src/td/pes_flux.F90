@@ -1367,7 +1367,7 @@ contains
               
               do ik1 = 1, this%ll(1)
                 kvec(1) = this%klinear(ik1,1)
-                kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
+                kvec(1:pdim) = matmul(sb%latt%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                 call fill_non_periodic_dimension(this)               
               end do
 
@@ -1376,7 +1376,7 @@ contains
               do ik2 = 1, this%ll(2)
                 do ik1 = 1, this%ll(1)
                   kvec(1:2) = (/this%klinear(ik1,1), this%klinear(ik2,2)/)
-                  kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
+                  kvec(1:pdim) = matmul(sb%latt%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                   call fill_non_periodic_dimension(this)
                   
                   this%Lkpuvz_inv(ik1, ik2, ikk - nkmin + 1) = ikp
@@ -1729,7 +1729,7 @@ contains
       fdim = mdim - 1
       ! This is not general but should work in the specific case where it is relevant
       !i.e. when the system is semiperiodic in <=2 dimensions
-      Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
+      Jac(1:fdim, 1:fdim) = mesh%sb%latt%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
       jdet = lalg_determinant(fdim, Jac, preserve_mat = .false.)
 
 !   Keep this because is useful for debug but not enough to bother having it polished out        
@@ -1823,7 +1823,7 @@ contains
           do j1 = 0, kpoints%nik_axis(1) - 1
             do j2 = 0, kpoints%nik_axis(2) - 1
               jvec(1:2)=(/j1, j2/)
-              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim, 1:2), jvec(1:2))
+              lvec(1:pdim)=matmul(mesh%sb%latt%rlattice(1:pdim, 1:2), jvec(1:2))
               tmp = sum(lvec(1:pdim) * vec(1:pdim))
               this%bvk_phase(ikp, ik) =  this%bvk_phase(ikp,ik) &
                                      +  exp(M_zI * tmp)
@@ -2511,7 +2511,7 @@ contains
       end do
       
       do isp = 1, this%nsrfcpnts
-        xx(1:mdim) = matmul(mesh%sb%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
+        xx(1:mdim) = matmul(mesh%sb%latt%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
         this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       
@@ -2643,7 +2643,7 @@ contains
         RSmax = M_ZERO
         do isp = isp_start, isp_end
           !measure in reduced coordinates 
-          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%klattice_primitive(1:mdim, 1:mdim))
+          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%latt%klattice_primitive(1:mdim, 1:mdim))
           idim = 1
           do idir = 1, mdim 
             if (idir == n_dir ) cycle

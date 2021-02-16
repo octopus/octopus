@@ -180,7 +180,7 @@ contains
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
-      call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
+      call submesh_init(sphere, geo%space, mesh%sb, mesh, geo%atom(ia)%x, rr)
 
       if(boundaries%spiral) then 
         SAFE_ALLOCATE(phase_spiral(1:sphere%np))

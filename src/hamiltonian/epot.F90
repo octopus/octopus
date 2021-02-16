@@ -42,6 +42,7 @@ module epot_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use species_pot_oct_m
   use splines_oct_m
@@ -65,7 +66,6 @@ module epot_oct_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_global_force,             &
     epot_have_lasers,              &
     epot_have_kick,                &
     epot_have_external_potentials
@@ -122,17 +122,8 @@ module epot_oct_m
     FLOAT, allocatable, private :: local_potential(:,:)
     logical,            private :: local_potential_precalculated
 
-    logical          :: ignore_external_ions
     logical,                  private :: have_density
     type(poisson_t), pointer, private :: poisson_solver
-
-    logical :: force_total_enforce
-
-    type(ion_interaction_t) :: ion_interaction
-
-    !> variables for external forces over the ions
-    logical,     private :: global_force
-    type(tdf_t), private :: global_force_function
 
     logical              :: nlcc = .false.   !< does any species have non-local core corrections?
   end type epot_t
@@ -153,9 +144,8 @@ contains
     type(kpoints_t),                    intent(in)    :: kpoints
 
 
-    integer :: ispec, ia, ierr
+    integer :: ispec, ia
     integer :: filter
-    character(len=100)  :: function_name
 
     PUSH_SUB(epot_init)
 
@@ -293,34 +283,6 @@ contains
       ep%so_strength = M_ONE
     end if
 
-    !%Variable IgnoreExternalIons
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% If this variable is set to "yes", then the ions that are outside the simulation box do not feel any
-    !% external force (and therefore progress at constant velocity), and do not originate any force on other
-    !% ions, or any potential on the electronic system.
-    !%
-    !% This feature is only available for finite systems; if the system is periodic in any dimension, 
-    !% this variable cannot be set to "yes".
-    !%End
-    call parse_variable(namespace, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
-    if(ep%ignore_external_ions) then
-      if(gr%sb%periodic_dim > 0) call messages_input_error(namespace, 'IgnoreExternalIons')
-    end if
-
-    !%Variable ForceTotalEnforce
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% (Experimental) If this variable is set to "yes", then the sum
-    !% of the total forces will be enforced to be zero.
-    !%End
-    call parse_variable(namespace, 'ForceTotalEnforce', .false., ep%force_total_enforce)
-    if(ep%force_total_enforce) call messages_experimental('ForceTotalEnforce')
-
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
     do ia = 1, geo%natoms
       call projector_null(ep%proj(ia))
@@ -355,38 +317,6 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction, namespace, geo, mc)
-
-    !%Variable TDGlobalForce
-    !%Type string
-    !%Section Time-Dependent
-    !%Description
-    !% If this variable is set, a global time-dependent force will be
-    !% applied to the ions in the x direction during a time-dependent
-    !% run. This variable defines the base name of the force, that
-    !% should be defined in the <tt>TDFunctions</tt> block. This force
-    !% does not affect the electrons directly.
-    !%End
-
-    if(parse_is_defined(namespace, 'TDGlobalForce')) then
-
-      ep%global_force = .true.
-
-      call parse_variable(namespace, 'TDGlobalForce', 'none', function_name)
-      call tdf_read(ep%global_force_function, namespace, trim(function_name), ierr)
-
-      if(ierr /= 0) then
-        call messages_write("You have enabled the GlobalForce option but Octopus could not find")
-        call messages_write("the '"//trim(function_name)//"' function in the TDFunctions block.")
-        call messages_fatal(namespace=namespace)
-      end if
-
-    else
-
-      ep%global_force = .false.
-
-    end if
-    
     ! find out if we need non-local core corrections
     ep%nlcc = .false.
     do ia = 1, geo%nspecies
@@ -409,8 +339,6 @@ contains
 
     PUSH_SUB(epot_end)
 
-    call ion_interaction_end(ep%ion_interaction)
-    
     if(ep%have_density) then
       nullify(ep%poisson_solver)
     end if
@@ -457,7 +385,7 @@ contains
     type(epot_t),             intent(inout) :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(in)    :: gr
-    type(geometry_t), target, intent(in)    :: geo
+    type(geometry_t), target, intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
 
     integer :: ia
@@ -468,6 +396,7 @@ contains
     FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
+    logical, allocatable :: in_box(:)
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -483,12 +412,12 @@ contains
     if(ep%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
 
-      call epot_local_potential(ep, namespace, gr%mesh, geo%atom(ia), ia, ep%vpsl, density = density)
+      call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(ia), ia, ep%vpsl, density = density)
 
       if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
-        call species_get_nlcc(geo%atom(ia)%species, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
+        call species_get_nlcc(geo%atom(ia)%species, geo%space, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
       endif
     end do
 
@@ -516,13 +445,28 @@ contains
     end if
     SAFE_DEALLOCATE_A(density)
 
+    !This needs to be done here at the moment, as ion_interaction cannot know simul_box
+    if(geo%ignore_external_ions) then
+      SAFE_ALLOCATE(in_box(1:geo%natoms+geo%ncatoms))
+      do ia = 1, geo%natoms
+        in_box(ia) = sb%contains_point(geo%atom(ia)%x)
+      end do
+      do ia = 1, geo%ncatoms
+        in_box(geo%natoms + ia) = sb%contains_point(geo%catom(ia)%x)
+      end do
+    end if
+
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
+    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%rcell_volume, &
+              geo%atom, geo%natoms, geo%catom, geo%ncatoms, sb%lsize, &
+              geo%ignore_external_ions, ep%eii, ep%fii, in_box=in_box)
+
+    SAFE_DEALLOCATE_A(in_box)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
       if (.not. species_is_ps(geo%atom(ia)%species)) cycle
-      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), geo%atom(ia), namespace, st%d%dim, ep%reltype)
     end do
@@ -530,7 +474,7 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(geo%atom(ia)%species)
-      call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
+      call submesh_init(ep%proj(ia)%sphere, geo%space, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
 
     if(geo%atoms_dist%parallel) then
@@ -572,9 +516,10 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, mesh, atom, iatom, vpsl, density)
+  subroutine epot_local_potential(ep, namespace, space, mesh, atom, iatom, vpsl, density)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
     type(atom_t),             intent(in)    :: atom
     integer,                  intent(in)    :: iatom
@@ -605,7 +550,7 @@ contains
       if(local_potential_has_density(mesh%sb, atom)) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
-        call species_get_long_range_density(atom%species, namespace, atom%x, mesh, rho)
+        call species_get_long_range_density(atom%species, space, namespace, atom%x, mesh, rho)
 
         !In this case, we want to treat this outside of this routine to 
         !avoid multiple calls to poisson_solve
@@ -629,7 +574,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:mesh%np))
-        call species_get_local(atom%species, mesh, namespace, atom%x(1:mesh%sb%dim), vl)
+        call species_get_local(atom%species, space, mesh, namespace, atom%x(1:mesh%sb%dim), vl)
 
       end if
 
@@ -645,7 +590,7 @@ contains
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-        call submesh_init(sphere, mesh%sb, mesh, atom%x, radius)
+        call submesh_init(sphere, space, mesh%sb, mesh, atom%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np
@@ -727,32 +672,13 @@ contains
 
     do iatom = 1, geo%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, gr%mesh, geo%atom(iatom), iatom, &
+      call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, &
                 ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
-
-  ! ---------------------------------------------------------
-  
-  subroutine epot_global_force(ep, geo, time, force)
-    type(epot_t),         intent(inout) :: ep
-    type(geometry_t),     intent(in)    :: geo
-    FLOAT,                intent(in)    :: time
-    FLOAT,                intent(out)   :: force(:)
-
-    PUSH_SUB(epot_global_force)
-
-    force(1:geo%space%dim) = CNST(0.0)
-
-    if(ep%global_force) then
-      force(1) = units_to_atomic(units_inp%force, tdf(ep%global_force_function, time))
-    end if
-
-    POP_SUB(epot_global_force)
-  end subroutine epot_global_force
 
   ! ---------------------------------------------------------
 
