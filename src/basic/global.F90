@@ -45,6 +45,7 @@ module global_oct_m
 
 
   integer, public, parameter :: MAX_PATH_LEN=256
+  integer, public, parameter :: MAX_OUTPUT_TYPES=40
 
   type conf_t
     ! Components are public by default

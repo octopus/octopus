@@ -49,16 +49,16 @@ program photoelectron_spectrum
   implicit none
 
   type pesoutput_t
-    logical              :: what(40)
-    integer(8)           :: how(40)
-    integer              :: output_interval(40)   
+    logical              :: what(MAX_OUTPUT_TYPES)
+    integer(8)           :: how(MAX_OUTPUT_TYPES)
+    integer              :: output_interval(MAX_OUTPUT_TYPES)   
     FLOAT       :: pol(3)
     FLOAT       :: pvec(3)        
   end type pesoutput_t  
 
   integer              :: ierr, integrate
   integer              :: dim, dir, idim, pdim
-  logical              :: what(40)
+  logical              :: what(MAX_OUTPUT_TYPES)
   integer              :: llp(3), llpp(3)  !< The size of the p-point cubic grids 
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)

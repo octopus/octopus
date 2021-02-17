@@ -131,15 +131,15 @@ module output_oct_m
   type output_t
     private
     !> General output variables:
-    logical, public    :: what(40)             !< what to output
+    logical, public    :: what(MAX_OUTPUT_TYPES)             !< what to output
     integer(8), public :: whatBZ              !< what to output - for k-point resolved output
     integer(8), public :: what_lda_u          !< what to output for the LDA+U part
-    integer(8), public :: how(40)              !< how to output
+    integer(8), public :: how(MAX_OUTPUT_TYPES)              !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer, public :: output_interval(40)     !< output every iter
+    integer, public :: output_interval(MAX_OUTPUT_TYPES)     !< output every iter
     integer, public :: restart_write_interval
     logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
