@@ -830,7 +830,7 @@ contains
 
   !> Given a _global_ point index, this function returns the set of
   !! integer coordinates of the point.
-  pure subroutine mesh_global_index_to_coords(mesh, ipg, ix)
+  subroutine mesh_global_index_to_coords(mesh, ipg, ix)
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ipg
     integer,       intent(out)   :: ix(:)
