@@ -254,7 +254,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
     call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
     chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
-    if(.not. simul_box_in_box(sb, pos, namespace)) cycle
+    if(.not. sb%contains_point(pos)) cycle
     mesh%idx%grid_to_hilbert(ip) = ihilbert
     ip = ip + 1
   end do
