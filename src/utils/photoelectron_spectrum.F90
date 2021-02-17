@@ -309,7 +309,7 @@ program photoelectron_spectrum
   !%Default 
   !%Section Utilities::oct-photoelectron_spectrum
   !%Description
-  !% If </tt>yes</tt> calculate the photoelectron spectrum resolved in each K.S. state. 
+  !% If <tt>yes</tt> calculate the photoelectron spectrum resolved in each K.S. state. 
   !% Optionally a range of states can be given as two slot block where the 
   !% first slot is the lower state index and the second is the highest one. 
   !% For example to calculate the spectra from state i to state j:

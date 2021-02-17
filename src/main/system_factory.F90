@@ -36,6 +36,7 @@ module system_factory_oct_m
   public ::                         &
     system_factory_t
 
+  !# doc_start system_types
   integer, parameter ::             &
     SYSTEM_ELECTRONIC         = 1,  &
     SYSTEM_MAXWELL            = 2,  &
@@ -43,7 +44,7 @@ module system_factory_oct_m
     SYSTEM_CHARGED_PARTICLE   = 4,  &
     SYSTEM_DFTBPLUS           = 5,  &
     SYSTEM_MULTISYSTEM        = 6
-
+  !# doc_end
 
   type, extends(system_factory_abst_t) :: system_factory_t
   contains
