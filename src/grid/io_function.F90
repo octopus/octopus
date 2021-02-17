@@ -110,9 +110,9 @@ contains
     what_tag_in, how_tag_in, output_interval_tag_in, ignore_error)
     type(namespace_t), intent(in)  :: namespace
     type(space_t),     intent(in)  :: space
-    logical,           intent(out) :: what(40)
-    integer(8),        intent(out) :: how(40)
-    integer,           intent(out) :: output_interval(40) 
+    logical,           intent(out) :: what(MAX_OUTPUT_TYPES)
+    integer(8),        intent(out) :: how(MAX_OUTPUT_TYPES)
+    integer,           intent(out) :: output_interval(MAX_OUTPUT_TYPES) 
     character(len=*), optional, intent(in):: what_tag_in
     character(len=*), optional, intent(in):: how_tag_in
     character(len=*), optional, intent(in):: output_interval_tag_in

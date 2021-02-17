@@ -1220,9 +1220,9 @@ contains
 
     integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
-    logical :: what(40)
-    integer(8) :: how(40)
-    integer :: output_interval(40) 
+    logical :: what(MAX_OUTPUT_TYPES)
+    integer(8) :: how(MAX_OUTPUT_TYPES)
+    integer :: output_interval(MAX_OUTPUT_TYPES) 
     FLOAT, allocatable :: centers(:,:), dwn(:)
     CMPLX, allocatable :: Umnk(:,:,:)
     CMPLX, allocatable :: zwn(:), psi(:,:)
