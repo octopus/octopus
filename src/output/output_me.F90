@@ -25,6 +25,7 @@ module output_me_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use io_function_oct_m
   use io_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
@@ -125,7 +126,7 @@ contains
 
     ! MFT: TODO: should I ignore the errors?
     call io_function_read_what_how_when(sb, namespace, this%what, how, output_interval, &
-    'OutputMatrixElements', ignore_error)
+    'OutputMatrixElements')
 
     if(st%parallel_in_states) then
       if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) &
@@ -379,7 +380,7 @@ contains
                      singularity = singul, exc_k = (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K))) 
         else
           call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, exc_k = (this%what(OOPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)))
+                     iindex, jindex, kindex, lindex, ztwoint, exc_k = (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)))
         end if
 
         if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
