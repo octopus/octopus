@@ -487,7 +487,7 @@ contains
     if(outp%what(OPTION__OUTPUT__MATRIX_ELEMENTS)) then
       call output_me_init(outp%me, namespace, space, st, nst)
     else
-      outp%me%what = 0
+      outp%me%what = .false.
     end if
 
     if(outp%what(OPTION__OUTPUT__BERKELEYGW)) then
@@ -1507,8 +1507,8 @@ contains
     type(output_t),         intent(in)    :: outp
 
     need_exx =(outp%what(OPTION__OUTPUT__BERKELEYGW) &
-      .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
-      .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+      .or. outp%me%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) &
+      .or. outp%me%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K))
   end function output_need_exchange
 
 
