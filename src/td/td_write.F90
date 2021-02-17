@@ -218,7 +218,7 @@ contains
     PUSH_SUB(td_write_init)
 
     !%Variable TDOutput
-    !%Type flag
+    !%Type integer
     !%Default multipoles + energy (+ others depending on other options)
     !%Section Time-Dependent::TD Output
     !%Description

@@ -170,7 +170,7 @@ contains
     PUSH_SUB(output_init)
 
     !%Variable Output
-    !%Type flag
+    !%Type integer
     !%Default none
     !%Section Output
     !%Description

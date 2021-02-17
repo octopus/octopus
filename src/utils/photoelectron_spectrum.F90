@@ -252,7 +252,7 @@ program photoelectron_spectrum
   end if
   
   !%Variable PhotoelectronSpectrumOutput
-  !%Type flag
+  !%Type integer
   !%Default none
   !%Section Utilities::oct-photoelectron_spectrum
   !%Description
