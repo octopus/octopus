@@ -40,22 +40,12 @@ As all possible systems are potential partners of some interaction, the {{< code
 ```
 {{% /expand %}}
 
-{{% expand "Definition of system_dt_operation" %}}
-```Fortran
-#include_subroutine system_dt_operation
-```
-{{% /expand %}}
-
-{{% expand "Definition of system_update_exposed_quantities" %}}
-```Fortran
-#include_function system_update_exposed_quantities
-```
-{{% /expand %}}
-
+The {{< code system_t >}} class adds information about the physical space in which the system exists, the propagator, and the list of interactions, which are owned by the system. (Check the section {{< developers "Code_Documentation:Multisystems/Interactions" "interactions" >}} for details on who owns an interaction.)
 
 
 #### {{< code multisystem_t >}}
 
+The {{< code multisystem_t >}}, finally adds a list of systems to the type definietion.
 
 {{% expand "Definition of multisystem_t" %}}
 ```Fortran
@@ -96,76 +86,78 @@ The {{< code type >}} to be used for combined systems is {{< code multisystem_ba
 {{% /expand %}}
 
 
+### Class hierarchy
+
+The following diagram represents the family tree of the system classes. Rounded boxes denote abstract classes, while rectangular boxes are normal classes, which can be instantiated.
+
+{{< mermaid >}}
+graph BT
+A([interaction_partner_t]) 
+B([system_t])
+C([multisystem_t]) 
+D[multisystem_basic_t]
+E([classical_particles_t])
+F[classical partcitle_t]
+G[matter_t]
+H[electrons_t]
+I[charged_particle_t]
+C ==> B ==> A
+D ==> C
+E ==> B
+G ==> C
+H ==> B
+F ==> E
+I ==> F
+{{< /mermaid >}}
 
 <!--
 {{< mermaid >}}
  classDiagram
-    class interaction_partner_t{
-    + namespace_t: namespace
-    + clock_t    : clock
-    + integer_list_t: supported_interactions_as_partner
-    + quantity_t   : quantities[MAX_QUANTITIES]
+    class interaction_partner_t
+    class system_t
+    class multisystem_t
+    class multisystem_basic_t
+    class classical_particles_t
 
-    + update_exposed_quantities()
-    + update_exposed_quantity()
-    + copy_quantities_to_interaction() 
-
-
-    }
-    
-    class system_t{
-    - integer : accumulated_loop_ticks
-    + space_t: space
-    + propagator_t: prop 
-    + integer : interaction_timing  
-    + integer_list_t: supported_interactions
-    + interaction_list_t: interactions 
-    + mpi_grp_t : grp  
-
-    + dt_operation()
-    + reset_clocks()
-    + update_exposed_quantities()
-    + init_propagator()
-    + init_all_interactions()
-    + init_parallelization()
-    + update_interactions()
-    + update_interactions_start()
-    + update_interactions_finish()
-    + propagation_start()
-    + propagation_finish()
-    + has_reached_final_propagation_time
-    + output_start()
-    + output_write()
-    + output_finish()
-    + process_is_slave()
-    + init_interaction()
-    + initial_conditions()
-    + do_td_operation()
-    + iteration_info()
-    + is_tolerance_reached()
-    + update_quantity()
-
-    }
-    
-    class multisystem_t {
-    }
-
-    class interaction_t{
-    - integer : n_system_quantities
-    - integer : system_quantities(:) 
-    + clock_t: clock 
-    + character(len=:) : label
-    }
-
-    class interaction_with_partner_t{
-    + interaction_partner_t: partner
-    + update(requested_time)
-    }
+    class interaction_t
+    class interaction_with_partner_t
 
     interaction_partner_t <|-- system_t
     system_t <|-- multisystem_t
+    multisystem_t <|-- multisystem_basic_t
+    multisystem_t <|-- classical_particles_t
 
     interaction_t <|-- interaction_with_partner_t
 {{< /mermaid >}}
 -->
 
+### System factory
+
+Instances of {{< code "system_t" >}} or derived types are generated using a so-called ["factory"](https://en.wikipedia.org/wiki/Factory_method_pattern).  
+
+{{% expand "Definition of system_factory_abst_t" %}}
+```Fortran
+#include_type_def system_factory_abst_t
+```
+{{% /expand %}}
+
+{{% expand "Definition of system_factory_t" %}}
+```Fortran
+#include_type_def system_factory_t
+```
+{{% /expand %}}
+
+The {{< code "system_factory_create()" >}} function calls the constructor of the requested type and returns a pointer to the created instance.
+{{% expand "Definition of systems_factory_create()" %}}
+```Fortran
+#include_function system_factory_create
+```
+{{% /expand %}}
+
+Currently, the following system types are defined:
+```Fortran
+#include_code_doc system_types
+```
+{{% notice note %}}
+When using these system types, **always** use the parameters, and not their numerical values, as they might change over time.
+{{% /notice %}}

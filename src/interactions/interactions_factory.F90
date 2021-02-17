@@ -32,10 +32,12 @@ module interactions_factory_oct_m
   private
   public :: interactions_factory_t
 
+  !# doc_start interaction_types
   integer, parameter, public :: &
     GRAVITY          = 1,       &
     LORENTZ_FORCE    = 2,       &
     COULOMB_FORCE    = 3
+  !# doc_end
 
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
@@ -63,13 +65,13 @@ contains
     !% allows to select which systems will interact with another system through
     !% a given interaction type. The format of the block is the following:
     !%
-    !%  <br>%</tt>Namespace.Interactions
+    !%  <br>%<tt>Namespace.Interactions
     !%   <br>&nbsp;&nbsp;interaction_type | interaction_mode | ...
     !%  <br>%</tt>
     !%
     !% Here is an example to better understand how this works:
     !%
-    !%  <br>%</tt>SystemA.Interactions
+    !%  <br>%<tt>SystemA.Interactions
     !%   <br>&nbsp;&nbsp;gravity | all_except | "SystemB"
     !%  <br>%</tt>
     !%

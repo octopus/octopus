@@ -7,6 +7,7 @@ Weight: 10
 Work in progress!
 {{< /notice >}}
 
+### The Verlet algorithm
 
 According to [Wikipedia](https://en.wikipedia.org/wiki/Verlet_integration), the Verlet algorithm is defined as:
 
@@ -45,6 +46,8 @@ while the latter generally denotes the end of a time step.
 
 As can be seen in this example, the definition of the propagator in terms of the algorithmic operations is a direct translation of the algorithm, shown above.
 
+### Implementation of the steps
+
 So far, the propagator is only defined in an abstract way. It is down to the individual systems (or better, their programmers) to implement the individual steps of the algorithm, in terms of the dynamic variables for that system. An easy examample to demonstrate this is the classical particle, as implemented in {{< code "classical_particles_t" >}}
 
 {{% expand "definition of classical_particles_t" %}}
@@ -63,3 +66,39 @@ One ''tick'' of the propagator is defined in the function {{< code "classical_pa
 ```
 {{% /expand %}}
 
+
+### The timeline explained
+
+The Verlet algorithm is a good (because simple) example to illustrate how the systems and the interaction are updated as the code progresses through the main loop.
+
+{{% mermaid %}}
+sequenceDiagram
+    participant A as system A
+    participant Iab as interaction A to B
+    participant Iba as interaction B to A
+    participant B as system B
+    %%
+    rect rgba(0,255,0,0.1)
+    Note left of A: OP_VERLET_UPDATE_POS
+    A ->> A: update positions
+    B ->> B: update positions
+    end
+    %%
+    rect rgba(0,255,0,0.1)
+    Note left of A: OP_UPDATE_INTERACTIONS
+    rect rgba(255,0,0,0.1)
+    A ->>+ Iab: update()
+        Iab ->>+ B: update_exposed_quantities()
+            B ->> B: update_exposed_quantity()
+        B ->>- Iab: 
+    Iab ->>- A: 
+    end
+    rect rgba(255,0,0,0.1)
+    B ->>+ Iba: update()
+        Iba ->>+ A: update_exposed_quantities()
+            A ->> A: update_exposed_quantity()
+        A ->>- Iba: 
+    Iba ->>- B: 
+    end
+    end
+{{% /mermaid %}}
