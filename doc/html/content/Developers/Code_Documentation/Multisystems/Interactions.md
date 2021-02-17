@@ -34,7 +34,7 @@ An interaction ''belongs'' to partner A and acts on partner B.
 
 ### Abstract classes
 
-#### The abstract class {{< code interaction_t >}}
+#### {{< code interaction_t >}}
 
 {{% expand "Definition of interaction_t" %}}
 ```Fortran
@@ -49,7 +49,7 @@ The IDs for the exposed quantities are defined in the section {{< developers "Co
 Furthermore, this abstract type already contains the clock for the interaction, and defines the interfaces for the deferred {{< code "update()" >}} 
 and {{< code "calculate()" >}} routines.
 
-#### The abstract class {{< code interaction_with_partner_t >}}
+#### {{< code interaction_with_partner_t >}}
 
 Curretly, all interactions are derived from {{< code interaction_with_partner_t >}}, which extends {{< code interaction_t >}} and adds the information about partner B, from here on only called ''partner''.
 
@@ -61,17 +61,6 @@ Curretly, all interactions are derived from {{< code interaction_with_partner_t 
 
 This type adds a pointer to the interaction partner and a list of IDs of the quantities, the partner exposes to the interaction.
 Furthermore, at this level, we can implement the {{< code "update()" >}} procedure.
-{{% expand "Implementation of interaction_with_partner_update()" %}}
-```Fortran
-#include_function interaction_with_partner_update
-```
-{{% /expand %}}
-This function is to be called with for a specific {{< code requested_time >}}, which is the time at which the interaction is needed.
-{{< notice note >}}
-Note, that the function cannot be called for the {{< code requested_time >}} being equal to the current time of its own clock.
-{{< /notice >}}
-The function first tries to update the exposed quantities of the partner. If this is successfull, the function calls the {{< code "calculate()" >}} routine of the interaction, sets the interaction clock to the requested time and returns with the result {{< code ".true." >}}, indicating a successful update. In case the function was blocked by one of the exposed quantities, the interaction is not calculated and the function returns {{< code ".false." >}}.
-
 
 
 
@@ -87,6 +76,11 @@ The next level of specialization of interaction, are all interactions which crea
 </br>
 
 ### Specific classes:
+
+Specific interaction classes extend the abstract ones. The most important element they add to the abstract classes is the information about the quantities, required to calculate the interaction. In case of the system. owning the interaction (system A), it is sufficient to keep pointers to the data, stored in the system itself. Thr reason is that the interaction is always updated by the propagator of the system A. For the partner system (system B), however, the interaction keeps a copy of the exposed quantities. This allows the partner system to continue the propagation beyond the time for which the quantities are requested, which might happen if the two systems are using different time steps.
+
+
+
 
 #### Ghost interaction
 
@@ -119,3 +113,34 @@ The next level of specialization of interaction, are all interactions which crea
 #include_type_def lorentz_force_t
 ```
 {{% /expand %}}
+
+
+### Interaction factory
+
+Instances of {{< code "interaction_t" >}} or derived types are, like systems, generated using a factory.
+
+{{% expand "Definition of interactions_factory_abst_t" %}}
+```Fortran
+#include_type_def interactions_factory_abst_t
+```
+{{% /expand %}}
+
+{{% expand "Definition of interactions_factory_t" %}}
+```Fortran
+#include_type_def interactions_factory_t
+```
+{{% /expand %}}
+
+The {{< code "interactions_factory_create()" >}} function calls the constructor of the requested type and returns a pointer to the created instance.
+{{% expand "Definition of interactions_factory_create()" %}}
+```Fortran
+#include_function interactions_factory_create
+```
+{{% /expand %}}
+Currently, the following interaction types are defined:
+```Fortran
+#include_code_doc interaction_types
+```
+{{% notice note %}}
+When using these system types, **always** use the parameters, and not their numerical values, as they might change over time.
+{{% /notice %}}
