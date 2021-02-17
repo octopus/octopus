@@ -245,12 +245,15 @@ contains
 
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
-          if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
+          if(.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
           what(what_i) = .true.
           if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
             call parse_block_integer(blk, iout - 1, 1, how(what_i))
+            if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+              call messages_input_error(namespace, how_tag)
+            end if
           end if
         end do
 
@@ -262,13 +265,16 @@ contains
         !%
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
-          if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
+          if(.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
           what(what_i) = .true.
           call parse_block_integer(blk, iout - 1, 2, output_interval(what_i))
           if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
             call parse_block_integer(blk, iout - 1, 4, how(what_i))
+            if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+              call messages_input_error(namespace, how_tag)
+            end if
           end if
         end do
       endif
