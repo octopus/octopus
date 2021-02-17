@@ -62,7 +62,7 @@ module output_me_oct_m
 
   type output_me_t
     private
-    integer, public :: what                !< what to output 
+    logical, public :: what(MAX_OUTPUT_TYPES)               !< what to output 
     !> If output_ksdipole, this number sets up which matrix elements will
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
@@ -74,16 +74,6 @@ module output_me_oct_m
     integer :: nst      !Number of states computed
   end type output_me_t
 
-  !MFT: TODO: Should this also replaced?
-  integer, parameter, public :: &
-    OUTPUT_ME_MOMENTUM       =   1, &
-    OUTPUT_ME_ANG_MOMENTUM   =   2, &
-    OUTPUT_ME_ONE_BODY       =   4, &
-    OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_TWO_BODY_EXC_K =  16, &
-    OUTPUT_ME_KS_MULTIPOLES  =  32, &
-    OUTPUT_ME_DIPOLE         =  64
-
 contains
   
   ! ---------------------------------------------------------
@@ -94,10 +84,13 @@ contains
     type(states_elec_t), intent(in)  :: st
     integer,             intent(in)  :: nst
 
+    integer(8) ::  how(MAX_OUTPUT_TYPES)
+    integer :: output_interval(MAX_OUTPUT_TYPES)
+
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
-    !%Type flag
+    !%Type integer
     !%Default none
     !%Section Output
     !%Description
@@ -112,41 +105,40 @@ contains
     !% Momentum. Filename: <tt>ks_me_momentum</tt>.
     !%Option ang_momentum 2
     !% Dimensionless angular momentum <math>\vec{r} \times \vec{k}</math>. Filename: <tt>ks_me_angular_momentum</tt>.
-    !%Option one_body 4
+    !%Option one_body 3
     !% <math>\left< i \left| \hat{T} + V_{ext} \right| j \right></math>. Not available with states parallelization.
-    !%Option two_body 8
+    !%Option two_body 4
     !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| kl \right></math>.
     !% Not available with states parallelization.
     !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
-    !%Option two_body_exc_k 16
+    !%Option two_body_exc_k 5
     !% <math>\left< n1-k1, n2-k2 \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| n2-k1 n1-k2 \right></math>.
     !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
-    !%Option ks_multipoles 32
+    !%Option ks_multipoles 6
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
-    !%Option dipole 64
+    !%Option dipole 7
     !% Prints the dipole matrix elements. Not available with states parallelization.
     !% For periodic systems, the intraband terms (dipole matrix elements between degenerated states)
     !% are set to zero, and only the absolute value of the dipole matrix element is printed.
     !% Not yet supported for spinors.
     !%End
 
-    call parse_variable(namespace, 'OutputMatrixElements', 0, this%what)
-    if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
-      call messages_input_error(namespace, 'OutputMatrixElements')
-    end if
+    ! MFT: TODO: should I ignore the errors?
+    call io_function_read_what_how_when(sb, namespace, this%what, how, output_interval, &
+    'OutputMatrixElements', ignore_error)
 
     if(st%parallel_in_states) then
-      if(bitand(this%what, OUTPUT_ME_TWO_BODY) /= 0) &
+      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) &
         call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.", &
         namespace=namespace)
-      if(bitand(this%what, OUTPUT_ME_DIPOLE) /= 0) &
+      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) &
         call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.", &
         namespace=namespace)
     end if
 
-    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
+    if(sb%dim /= 2 .and. sb%dim /= 3) this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM) = .false.
 
-    if(bitand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
@@ -217,17 +209,17 @@ contains
     
     PUSH_SUB(output_me)
 
-    if(bitand(this%what, output_me_momentum) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__MOMENTUM)) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr, namespace)
     end if
 
-    if(bitand(this%what, output_me_ang_momentum) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM)) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
       call output_me_out_ang_momentum(fname, st, gr, namespace)
     end if
 
-    if(bitand(this%what, output_me_ks_multipoles) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
@@ -275,7 +267,7 @@ contains
       end do
     end if
 
-    if(bitand(this%what, output_me_dipole) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) then
       ASSERT(.not. st%parallel_in_states)
       ! The content of each file should be clear from the header of each file.
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -290,7 +282,7 @@ contains
     end if
 
 
-    if(bitand(this%what, output_me_one_body) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__ONE_BODY)) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
@@ -330,12 +322,12 @@ contains
 
     end if
 
-    if(bitand(this%what, output_me_two_body) /= 0 .or. bitand(this%what, output_me_two_body_exc_k) /= 0) then
+    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) .or. this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-        if(bitand(this%what, output_me_two_body) /= 0) then
+        if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
         if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
         if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
         ! how to do this properly? states_matrix
@@ -350,7 +342,7 @@ contains
       end if
 
       call singularity_nullify(singul)
-      if(bitand(this%what, output_me_two_body) /= 0) then
+      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
         if(states_are_real(st)) then
           id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
         else
@@ -369,7 +361,7 @@ contains
       SAFE_ALLOCATE(kindex(1:2, 1:id))
       SAFE_ALLOCATE(lindex(1:2, 1:id))
 
-      if (states_are_real(st)) then
+      if(states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
         call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
           lindex, dtwoint)
@@ -384,13 +376,13 @@ contains
           ASSERT(.not.st%d%kpt%parallel) 
           call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, &
-                     singularity = singul, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0)) 
+                     singularity = singul, exc_k = (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K))) 
         else
           call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
+                     iindex, jindex, kindex, lindex, ztwoint, exc_k = (this%what(OOPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)))
         end if
 
-        if(bitand(this%what, output_me_two_body) /= 0) then
+        if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
           do ll = 1, id
             write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
           enddo
