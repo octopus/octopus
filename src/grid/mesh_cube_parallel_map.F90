@@ -107,17 +107,8 @@ contains
     ! We will work only with the local mesh points and we need to know the global index of those points.
     SAFE_ALLOCATE(cube_part_local(1:mesh%np))
     SAFE_ALLOCATE(global_index(1:mesh%np))
-    if (mesh%parallel_in_domains) then
-      do ip = 1, mesh%np
-        global_index(ip) = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-      end do
-    else
-      do ip = 1, mesh%np
-        global_index(ip) = ip
-      end do
-    end if
-      
     do ip = 1, mesh%np
+      global_index(ip) = mesh_local2global(mesh, ip)
       call mesh_global_index_to_coords(mesh, global_index(ip), ixyz)
       ixyz = ixyz + cube%center
       cube_part_local(ip) = cube_point_to_process(ixyz, part)
@@ -134,19 +125,14 @@ contains
     ! Initialize all to 0, to detect possible errors
     this%m2c_mf_order = 0
         
-    if (mesh%parallel_in_domains) then
-      do ip = 1, this%m2c_nsend
-        this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-        if (this%m2c_mf_order(ip) == 0) then
-          write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
-               mf_order(ip), " is not stored in partition ", mesh%vp%partno
-          call messages_fatal(1)
-        end if
-      end do
-    else
-      ! With no mesh parallelization the order is the returned one
-      this%m2c_mf_order(1:this%m2c_nsend) = mf_order(1:this%m2c_nsend)
-    end if
+    do ip = 1, this%m2c_nsend
+      this%m2c_mf_order(ip) = mesh_global2local(mesh, mf_order(ip))
+      if (this%m2c_mf_order(ip) == 0) then
+        write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
+             mf_order(ip), " is not stored in partition ", mesh%vp%partno
+        call messages_fatal(1)
+      end if
+    end do
    
     do ip = 1, this%m2c_nrec
       call mesh_global_index_to_coords(mesh, cf_order(ip), ixyz)
@@ -210,19 +196,14 @@ contains
 
       this%c2m_cf_order(ip, 1:3) = lxyz(1:3)
     end do
-    if (mesh%parallel_in_domains) then
-      do ip = 1, this%c2m_nrec
-        this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-        if (this%c2m_mf_order(ip) == 0) then
-          write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
-               mf_order(ip), " is not stored in partition ", mesh%vp%partno
-          call messages_fatal(1)
-        end if
-      end do
-    else
-      ! if there is not domain parallelization, all the points have the returned order
-      this%c2m_mf_order(1:this%c2m_nrec) = mf_order(1:this%c2m_nrec)
-    end if
+    do ip = 1, this%c2m_nrec
+      this%c2m_mf_order(ip) = mesh_global2local(mesh, mf_order(ip))
+      if (this%c2m_mf_order(ip) == 0) then
+        write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
+             mf_order(ip), " is not stored in partition ", mesh%vp%partno
+        call messages_fatal(1)
+      end if
+    end do
     
     SAFE_DEALLOCATE_A(mf_order)
     SAFE_DEALLOCATE_A(cf_order)

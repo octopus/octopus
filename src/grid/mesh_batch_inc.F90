@@ -761,7 +761,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       np_points  = 0
       do ip = 1, mesh%np
         ! Get the temporally global point
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
+        ipg = mesh_local2global(mesh, ip)
         ! Store the global point
         ! Global index can be either in the mesh or in the boundary.
         ! Different treatment is needed for each case.

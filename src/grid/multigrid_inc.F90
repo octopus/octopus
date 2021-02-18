@@ -26,7 +26,7 @@
     integer, optional,       intent(in)    :: order
 
     integer :: idir, order_, ii, ifactor
-    integer :: ipc, ipf, ipfg, xf(1:3), xc(1:3), dd(1:3)
+    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
     FLOAT, allocatable :: factor(:), points(:)
 
     PUSH_SUB(X(multigrid_coarse2fine))
@@ -57,13 +57,7 @@
 #endif
 
     do ipf = 1, fine_mesh%np
-      
-      ipfg = ipf
-#ifdef HAVE_MPI
-      ! translate to a global index
-      if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal)
-#endif 
-      call mesh_global_index_to_coords(fine_mesh, ipfg, xf)
+      call mesh_local_index_to_coords(fine_mesh, ipf, xf)
 
       dd = mod(xf, 2)
       
@@ -75,11 +69,7 @@
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = mesh_global_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
-#ifdef HAVE_MPI
-            ! translate to a local index
-          if(coarse_der%mesh%parallel_in_domains) ipc = vec_global2local(coarse_der%mesh%vp, ipc, coarse_der%mesh%vp%partno)
-#endif
+          ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
         end do
@@ -175,25 +165,15 @@
 
     do nn = 1, tt%n_coarse
       fn = tt%to_coarse(nn)
-#ifdef HAVE_MPI
-      ! translate to a global index
-      if(fine_der%mesh%parallel_in_domains) then
-        fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal)
-      end if
-#endif
-      call mesh_global_index_to_coords(fine_der%mesh, fn, fi)
+      call mesh_local_index_to_coords(fine_der%mesh, fn, fi)
 
       f_coarse(nn) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = mesh_global_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
+            fn = mesh_local_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
 
-#ifdef HAVE_MPI
-            ! translate to a local index
-            if(fine_der%mesh%parallel_in_domains) fn = vec_global2local(fine_der%mesh%vp, fn, fine_der%mesh%vp%partno)
-#endif
             if(fine_der%mesh%use_curvilinear) then
               f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
             else

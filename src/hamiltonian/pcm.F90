@@ -1693,7 +1693,7 @@ contains
         if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
           
           if (mesh%parallel_in_domains) then
-            pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
+            pt(ipt) = mesh_global2local(mesh, pt(ipt))
             boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
             inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
 
@@ -1732,6 +1732,7 @@ contains
         if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
         
           if (mesh%parallel_in_domains) then
+            pt(ipt) = mesh_global2local(mesh, pt(ipt))
             boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
             inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
             if(boundary_point .or. inner_point) rho(pt(ipt)) = rho(pt(ipt)) + lrho(ipt)

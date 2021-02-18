@@ -943,7 +943,11 @@ contains
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ipg
 
-    ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
+    if (.not. mesh%parallel_in_domains) then
+      ip = ipg
+    else
+      ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
+    end if
   end function mesh_global2local
 end module mesh_oct_m
 
