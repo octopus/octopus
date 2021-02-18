@@ -105,7 +105,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
     call vibrations_init(vib, sys%geo, "fd", sys%namespace)
 
@@ -198,10 +198,10 @@ contains
         ! first force
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (namespace, hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:space%dim) = geo%atom(jatom)%f(1:space%dim)
         end do
@@ -214,10 +214,10 @@ contains
         ! second force
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(namespace, hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:space%dim)
         end do

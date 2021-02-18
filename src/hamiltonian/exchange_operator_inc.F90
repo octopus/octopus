@@ -18,9 +18,10 @@
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(this, namespace, der, st_d, kpoints, ist, ik, psi, hpsi, rdmft)
+subroutine X(exchange_operator_single)(this, namespace, space, der, st_d, kpoints, ist, ik, psi, hpsi, rdmft)
   type(exchange_operator_t), intent(inout) :: this 
   type(namespace_t),         intent(in)    :: namespace
+  type(space_t),             intent(in)    :: space
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   type(kpoints_t),           intent(in)    :: kpoints
@@ -37,7 +38,7 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, kpoints, ist,
   call wfs_elec_init(psib, st_d%dim, ist, ist, psi, ik)
   call wfs_elec_init(hpsib, st_d%dim, ist, ist, hpsi, ik)
 
-  call X(exchange_operator_apply)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
+  call X(exchange_operator_apply)(this, namespace, space, der, st_d, kpoints, psib, hpsib, rdmft)
 
   call psib%end()
   call hpsib%end()
@@ -46,9 +47,10 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, kpoints, ist,
 end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_apply)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft) 
+subroutine X(exchange_operator_apply)(this, namespace, space, der, st_d, kpoints, psib, hpsib, rdmft) 
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
+  type(space_t),             intent(in)    :: space
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   type(kpoints_t),           intent(in)    :: kpoints
@@ -61,7 +63,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, kpoints, psib,
   if(this%useACE) then
     call X(exchange_operator_apply_ACE)(this, der, st_d, psib, hpsib)
   else
-    call X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
+    call X(exchange_operator_apply_standard)(this, namespace, space, der, st_d, kpoints, psib, hpsib, rdmft)
   end if
 
   POP_SUB(X(exchange_operator_apply))
@@ -70,9 +72,10 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoints, psib, hpsib, rdmft)
+subroutine X(exchange_operator_apply_standard)(this, namespace, space, der, st_d, kpoints, psib, hpsib, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
+  type(space_t),             intent(in)    :: space
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   type(kpoints_t),           intent(in)    :: kpoints
@@ -123,7 +126,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoin
   if(use_external_kernel) then
     call fourier_space_op_nullify(coulb)
     qq = M_ZERO
-    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega)
+    call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega)
   end if
 
 
@@ -146,7 +149,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, der, st_d, kpoin
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
-        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega, &
+        call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
                   -(kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if
@@ -283,9 +286,10 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st, kpoints)
+subroutine X(exchange_operator_compute_potentials)(this, namespace, space, der, sb, st, kpoints)
   type(exchange_operator_t), intent(inout) :: this
   type(namespace_t),         intent(in)    :: namespace
+  type(space_t),             intent(in)    :: space
   type(derivatives_t),       intent(in)    :: der
   type(simul_box_t),         intent(in)    :: sb
   type(states_elec_t),       intent(in)    :: st 
@@ -598,7 +602,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
     use_external_kernel = (st%d%nik > st%d%spin_channels .or. this%cam_omega > M_EPSILON)
     if(use_external_kernel) then
       call fourier_space_op_nullify(coulb)
-      call poisson_build_kernel(this%psolver, namespace, sb, coulb, qq, this%cam_omega)
+      call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega)
     end if
 
     SAFE_ALLOCATE(pot(der%mesh%np, maxval(st%group%block_size)))
@@ -638,7 +642,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st,
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
-          call poisson_build_kernel(this%psolver, namespace, sb, coulb, qq, this%cam_omega, &
+          call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
                   -(kpoints%full%npoints-npath)*sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if

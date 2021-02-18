@@ -41,6 +41,7 @@ module output_me_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use singularity_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -198,9 +199,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, namespace, dir, st, gr, geo, hm)
+  subroutine output_me(this, namespace, space, dir, st, gr, geo, hm)
     type(output_me_t),        intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
@@ -230,7 +232,7 @@ contains
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
-        select case(gr%sb%dim)
+        select case(space%dim)
         case(3)
           do ll = 1, this%ks_multipoles
             do mm = -ll, ll
@@ -370,7 +372,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
+        call dstates_elec_me_two_body(st, namespace, space, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
                 this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
@@ -381,11 +383,11 @@ contains
         if (allocated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
+          call zstates_elec_me_two_body(st, namespace, space, gr, hm%kpoints, hm%exxop%psolver, this%st_start, &
                      this%st_end, iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, &
                      singularity = singul, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0)) 
         else
-          call zstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, space, gr, hm%kpoints, hm%exxop%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if
 

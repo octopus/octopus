@@ -372,7 +372,7 @@ contains
       end if
 
       do id = 1, nd
-        call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_mask, &
+        call local_write_iter(loc_domains(id)%writ, global_namespace, sys%space, loc_domains(id)%lab, loc_domains(id)%ions_mask, &
           loc_domains(id)%mesh_mask, sys%gr%mesh, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 

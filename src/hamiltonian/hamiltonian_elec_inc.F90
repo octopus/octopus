@@ -215,11 +215,11 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
                                               epsib, hpsib, hm%exxop%cam_alpha, hm%theory_level == HARTREE)
       else
         ! standard HF 
-        call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, hm%kpoints, epsib, hpsib, .false.)
+        call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, hm%der, hm%d, hm%kpoints, epsib, hpsib, .false.)
       end if
 
     case(RDMFT)
-      call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, hm%kpoints, epsib, hpsib, .true.)
+      call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, hm%der, hm%d, hm%kpoints, epsib, hpsib, .true.)
     end select
     call profiling_out(prof_exx)
     

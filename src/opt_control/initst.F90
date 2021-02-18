@@ -232,14 +232,14 @@ contains
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
       call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, sys%kpoints, &
                    psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
@@ -247,7 +247,7 @@ contains
     else
       ! Normal run.
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

@@ -35,6 +35,7 @@ module local_write_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use space_oct_m
   use species_oct_m
   use states_elec_oct_m
   use unit_oct_m
@@ -223,10 +224,11 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, namespace, lab, ions_mask, mesh_mask, mesh, st, hm, ks, geo, kick, iter, l_start, &
+  subroutine local_write_iter(writ, namespace, space, lab, ions_mask, mesh_mask, mesh, st, hm, ks, geo, kick, iter, l_start, &
                               ldoverwrite)
     type(local_write_t),      intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: ions_mask(:)
     logical,                  intent(in)    :: mesh_mask(:)
@@ -254,12 +256,12 @@ contains
     end if
 
     if (writ%out(LOCAL_OUT_DENSITY)%write .or. writ%out(LOCAL_OUT_POTENTIAL)%write) then
-      call local_write_density(writ%out(LOCAL_OUT_DENSITY), namespace, writ%out(LOCAL_OUT_POTENTIAL), lab, mesh_mask, mesh, geo, &
-        st, hm, ks, iter, writ%how)
+      call local_write_density(writ%out(LOCAL_OUT_DENSITY), namespace, space, writ%out(LOCAL_OUT_POTENTIAL), lab, mesh_mask, &
+        mesh, geo, st, hm, ks, iter, writ%how)
     end if
 
     if (writ%out(LOCAL_OUT_ENERGY)%write) then
-      call local_write_energy(writ%out(LOCAL_OUT_ENERGY), namespace, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, &
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY), namespace, space, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, &
         ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         call write_iter_flush(writ%out(LOCAL_OUT_ENERGY)%handle)
@@ -271,9 +273,10 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
-  subroutine local_write_density(out_dens, namespace, out_pot, lab, mesh_mask, mesh, geo, st, hm, ks, iter, how)
+  subroutine local_write_density(out_dens, namespace, space, out_pot, lab, mesh_mask, mesh, geo, st, hm, ks, iter, how)
     type(local_write_prop_t), intent(inout) :: out_dens
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(local_write_prop_t), intent(inout) :: out_pot
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: mesh_mask(:)
@@ -325,7 +328,7 @@ contains
         elsewhere
           st%rho(:, is) = M_ZERO
         end where
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'//trim(lab)//'.potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'vxc.', is, '.', iter
         call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vxc(:,is), units_out%length, ierr, &
@@ -343,7 +346,7 @@ contains
         call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vhartree, units_out%length, ierr, &
           geo = geo)
         !Computes global XC potential
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'global-vxc.', is, '.', iter
         call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vxc(:,is), units_out%length, ierr, &
@@ -359,9 +362,10 @@ contains
   end subroutine local_write_density
 
   ! ---------------------------------------------------------
-  subroutine local_write_energy(out_energy, namespace, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, start)
+  subroutine local_write_energy(out_energy, namespace, space, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, start)
     type(local_write_prop_t), intent(inout) :: out_energy
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: mesh_mask(:)
     type(mesh_t),             intent(in)    :: mesh
@@ -435,7 +439,7 @@ contains
       ! Compute Hartree potential
       call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:mesh%np, is))
       ! Compute XC potential
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
 
       st_rho(:) = st%rho(:, is)
       hm_vxc(:) = hm%vxc(:, is)
@@ -459,7 +463,7 @@ contains
         st%rho(:, is) = M_ZERO
       end where
 
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
       tmp_rhoi(1:mesh%np) = st%rho(1:mesh%np, is)
       !eh = Int[n*v_h]
       leh = dmf_integrate(mesh, tmp_rhoi*hm%vhartree(1:mesh%np)) 

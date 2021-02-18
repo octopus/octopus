@@ -38,6 +38,7 @@ module derivatives_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use stencil_cube_oct_m
   use stencil_star_oct_m
   use stencil_starplus_oct_m
@@ -113,7 +114,7 @@ module derivatives_oct_m
     ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
-    integer               :: dim           !< dimensionality of the space (sb%dim)
+    integer               :: dim           !< dimensionality of the space (space%dim)
     integer               :: order         !< order of the discretization (value depends on stencil)
     integer               :: stencil_type  !< type of discretization
 
@@ -178,9 +179,10 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
+  subroutine derivatives_init(der, namespace, space, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(inout) :: der
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(simul_box_t),           intent(in)    :: sb
     logical,                     intent(in)    :: use_curvilinear
     integer, optional,           intent(in)    :: order
@@ -192,7 +194,7 @@ contains
     PUSH_SUB(derivatives_init)
 
     ! copy this value to my structure
-    der%dim = sb%dim
+    der%dim = space%dim
 
     !%Variable DerivativesStencil
     !%Type integer
@@ -427,9 +429,10 @@ contains
   end subroutine derivatives_get_stencil_grad
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, namespace, mesh)
+  subroutine derivatives_build(der, namespace, space, mesh)
     type(derivatives_t),    intent(inout) :: der
     type(namespace_t),      intent(in)    :: namespace
+    type(space_t),          intent(in)    :: space
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -442,7 +445,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, namespace, mesh)
+    call boundaries_init(der%boundaries, namespace, space, mesh)
 
     ASSERT(allocated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)

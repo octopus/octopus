@@ -1094,9 +1094,10 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
+subroutine X(compute_coulomb_integrals) (this, namespace, space, mesh, der, psolver)
   type(lda_u_t),       intent(inout)  :: this
   type(namespace_t),   intent(in)     :: namespace
+  type(space_t),       intent(in)     :: space
   type(mesh_t),        intent(in)     :: mesh
   type(derivatives_t), intent(in)     :: der
   type(poisson_t),     intent(in)     :: psolver
@@ -1138,13 +1139,13 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
 
     select case (this%sm_poisson)
     case(SM_POISSON_DIRECT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
     case(SM_POISSON_ISF)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_ISF)
     case(SM_POISSON_PSOLVER)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_PSOLVER)
     case(SM_POISSON_FFT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_FFT)
     end select
  
     ijst=0
@@ -1218,9 +1219,10 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
+subroutine X(compute_periodic_coulomb_integrals)(this, namespace, space, der, mc)
   type(lda_u_t),       intent(inout)  :: this
   type(namespace_t),   intent(in)     :: namespace
+  type(space_t),       intent(in)     :: space
   type(derivatives_t), intent(in)     :: der
   type(multicomm_t),   intent(in)     :: mc
 
@@ -1256,7 +1258,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, namespace, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, namespace, space, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs

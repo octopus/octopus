@@ -29,7 +29,7 @@
     PUSH_SUB(check_faulty_runmodes)
 
     ! No QOCT runs with periodic boundary conditions.
-    if(simul_box_is_periodic(sys%gr%sb)) then
+    if (sys%space%is_periodic()) then
       write(message(1), '(a)') 'No QOCT runs with periodic boundary conditions. '
       call messages_fatal(1)
     end if

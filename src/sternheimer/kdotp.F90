@@ -139,7 +139,7 @@ contains
 
     pdim = sys%space%periodic_dim
 
-    if(.not. simul_box_is_periodic(sys%gr%sb)) then
+    if(.not. sys%space%is_periodic()) then
        message(1) = "k.p perturbation cannot be used for a finite system."
        call messages_fatal(1)
     end if
@@ -182,7 +182,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'

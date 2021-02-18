@@ -147,12 +147,12 @@ contains
     call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
 
     if(fromScratch) then
-      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     end if
 
     !Initial point
@@ -616,12 +616,12 @@ contains
 
     call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
     call energy_calc_total(g_opt%syst%namespace, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &
-      g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
+    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
+      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
     if(getgrad  ==  1) call to_grad(g_opt, df)

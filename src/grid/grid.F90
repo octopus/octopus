@@ -202,7 +202,7 @@ contains
 
     ! initialize derivatives
     call derivatives_nullify(gr%der)
-    call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, space%dim, order = 2)
@@ -213,29 +213,30 @@ contains
     enlarge(1:space%dim) = 2
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    call mesh_init_stage_1(gr%mesh, namespace, gr%sb, gr%cv, grid_spacing, enlarge)
-    call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil)
+    call mesh_init_stage_1(gr%mesh, namespace, space, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_2(gr%mesh, space, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
   end subroutine grid_init_stage_1
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, namespace, mc)
+  subroutine grid_init_stage_2(gr, namespace, space, mc)
     type(grid_t), target, intent(inout) :: gr
     type(namespace_t),    intent(in)    :: namespace
+    type(space_t),        intent(in)    :: space
     type(multicomm_t),    intent(in)    :: mc
 
     PUSH_SUB(grid_init_stage_2)
 
-    call mesh_init_stage_3(gr%mesh, namespace, gr%stencil, mc)
+    call mesh_init_stage_3(gr%mesh, namespace, space, gr%stencil, mc)
 
     call nl_operator_global_init(namespace)
     if(gr%have_fine_mesh) then
       message(1) = "Info: coarse mesh"
       call messages_info(1)
     end if
-    call derivatives_build(gr%der, namespace, gr%mesh)
+    call derivatives_build(gr%der, namespace, space, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -264,18 +265,18 @@ contains
         SAFE_ALLOCATE(gr%fine%mesh)
         SAFE_ALLOCATE(gr%fine%der)
 
-        call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+        call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
         call derivatives_nullify(gr%fine%der)
-        call derivatives_init(gr%fine%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+        call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
-        call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+        call mesh_init_stage_3(gr%fine%mesh, namespace, space, gr%stencil, mc)
 
         call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
 
         message(1) = "Info: fine mesh"
         call messages_info(1)
-        call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
+        call derivatives_build(gr%fine%der, namespace, space, gr%fine%mesh)
 
         gr%fine%der%coarser => gr%der
         gr%der%finer =>  gr%fine%der

@@ -34,6 +34,7 @@ module pes_oct_m
   use pes_flux_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
     
@@ -73,16 +74,17 @@ module pes_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_init(pes, namespace, mesh, sb, st, save_iter, hm, max_iter, dt)
-    type(pes_t),         intent(out)   :: pes
-    type(namespace_t),   intent(in)    :: namespace
-    type(mesh_t),        intent(in)    :: mesh
-    type(simul_box_t),   intent(in)    :: sb
-    type(states_elec_t), intent(in)    :: st
-    integer,             intent(in)    :: save_iter
+  subroutine pes_init(pes, namespace, space, mesh, sb, st, save_iter, hm, max_iter, dt)
+    type(pes_t),              intent(out)   :: pes
+    type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
+    type(mesh_t),             intent(in)    :: mesh
+    type(simul_box_t),        intent(in)    :: sb
+    type(states_elec_t),      intent(in)    :: st
+    integer,                  intent(in)    :: save_iter
     type(hamiltonian_elec_t), intent(in)    :: hm
-    integer,             intent(in)    :: max_iter
-    FLOAT,               intent(in)    :: dt
+    integer,                  intent(in)    :: max_iter
+    FLOAT,                    intent(in)    :: dt
 
     character(len=50)    :: str
     integer :: photoelectron_flags
@@ -132,8 +134,8 @@ contains
 
     
     if(pes%calc_spm)  call pes_spm_init(pes%spm, namespace, mesh, st, save_iter)
-    if(pes%calc_mask) call pes_mask_init(pes%mask, namespace, mesh, sb, st, hm, max_iter,dt)
-    if(pes%calc_flux) call pes_flux_init(pes%flux, namespace, mesh, st, hm, save_iter, max_iter)
+    if(pes%calc_mask) call pes_mask_init(pes%mask, namespace, space, mesh, sb, st, hm, max_iter,dt)
+    if(pes%calc_flux) call pes_flux_init(pes%flux, namespace, space, mesh, st, hm, save_iter, max_iter)
 
 
     !Footer Photoelectron info
@@ -160,9 +162,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, namespace, mesh, st, dt, iter, gr, hm, stopping)
+  subroutine pes_calc(pes, namespace, space, mesh, st, dt, iter, gr, hm, stopping)
     type(pes_t),              intent(inout) :: pes
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
@@ -174,17 +177,18 @@ contains
     PUSH_SUB(pes_calc)
 
     if(pes%calc_spm)  call pes_spm_calc(pes%spm, st, mesh, dt, iter, hm)
-    if(pes%calc_mask) call pes_mask_calc(pes%mask, namespace, mesh, st, hm%kpoints, dt, iter)
-    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt, stopping)
+    if(pes%calc_mask) call pes_mask_calc(pes%mask, namespace, space, mesh, st, hm%kpoints, dt, iter)
+    if(pes%calc_flux) call pes_flux_calc(pes%flux, space, mesh, st, gr, hm, iter, dt, stopping)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc
 
 
   ! ---------------------------------------------------------
-  subroutine pes_output(pes, namespace, mesh, st, iter, outp, dt, gr, geo)
+  subroutine pes_output(pes, namespace, space, mesh, st, iter, outp, dt, gr, geo)
     type(pes_t),         intent(inout) :: pes
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     integer,             intent(in)    :: iter
@@ -197,7 +201,7 @@ contains
     
     if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, namespace, iter, dt)
 
-    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)
+    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, space, "td.general/PESM", gr, geo,iter)
 
     if(pes%calc_flux) call pes_flux_output(pes%flux, mesh%sb, st, namespace)
 

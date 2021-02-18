@@ -377,7 +377,7 @@ contains
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
       end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, allocated(hm%hm_base%phase))
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, space, st, gr%der, mc, allocated(hm%hm_base%phase))
     end if
 
     ! now the eigensolver stuff
@@ -483,7 +483,7 @@ contains
     !% periodic directions. Ref:
     !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
-    call parse_variable(namespace, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
+    call parse_variable(namespace, 'SCFCalculateDipole', .not. space%is_periodic(), scf%calc_dipole)
     if (allocated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
@@ -499,8 +499,8 @@ contains
 
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) then
-      if(simul_box_is_periodic(gr%sb)) then
-        rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
+      if (space%is_periodic()) then
+        rmin = minval(gr%sb%lsize(1:space%periodic_dim))
       else
         rmin = CNST(100.0)
       end if
@@ -559,10 +559,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, &
+  subroutine scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, &
     restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
     type(geometry_t),          intent(inout) :: geo !< geometry
@@ -605,7 +606,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, namespace, gr, geo, st)
+      call lcao_init(lcao, namespace, space, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
@@ -623,10 +624,10 @@ contains
           call messages_warning(1)
         else
           if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
-            call v_ks_calc(ks, namespace, hm, st, geo)
+            call v_ks_calc(ks, namespace, space, hm, st, geo)
           else
             if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= XC_OEP_FULL) then
-              call v_ks_calc(ks, namespace, hm, st, geo)
+              call v_ks_calc(ks, namespace, space, hm, st, geo)
             end if
           end if
         end if
@@ -644,7 +645,7 @@ contains
               do is = 1, st%d%nspin
                 ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
               end do
-              call v_ks_calc(ks, namespace, hm, st, geo)
+              call v_ks_calc(ks, namespace, space, hm, st, geo)
             end if
           end if
         end if
@@ -755,7 +756,7 @@ contains
           ! partners that require SCF
           ks%frozen_hxc = .true.
          ! call perform_scf_partners()
-          call berry_perform_internal_scf(scf%berry, namespace, scf%eigens, gr, st, hm, iter, ks, geo)
+          call berry_perform_internal_scf(scf%berry, namespace, space, scf%eigens, gr, st, hm, iter, ks, geo)
           !and we unfreeze the potential once finished
           ks%frozen_hxc = .false.
         else
@@ -775,7 +776,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -857,7 +858,7 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -875,10 +876,10 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
       end select
 
 
@@ -959,7 +960,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
+        call output_all(outp, namespace, space, dirname, gr, geo, st, hm, ks)
       end if
 
       ! save information for the next iteration
@@ -1000,7 +1001,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current=output_needs_current(outp, states_are_real(st)))
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=output_needs_current(outp, states_are_real(st)))
     end if
 
     select case(scf%mix_field)
@@ -1039,16 +1040,16 @@ contains
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
       call states_elec_fermi(st, namespace, gr%mesh)
-      call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints)
+      call states_elec_write_eigenvalues(stdout, st%nst, st, space, hm%kpoints)
     end if
 
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
+      call output_all(outp, namespace, space, STATIC_DIR, gr, geo, st, hm, ks)
     end if
 
-    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
+    if (space%is_periodic() .and. st%d%nik > st%d%nspin) then
       if(bitand(hm%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
           geo, gr%mesh, hm%kpoints, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
@@ -1088,13 +1089,13 @@ contains
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call messages_info(2)
-          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints, scf%eigens%diff, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, space, hm%kpoints, scf%eigens%diff, compact = .true.)
         else
-          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, hm%kpoints, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, space, hm%kpoints, compact = .true.)
         end if
 
         if (allocated(hm%vberry)) then
-          call calc_dipole(dipole, gr, st, geo)
+          call calc_dipole(dipole, space, gr, st, geo)
           call write_dipole(stdout, dipole)
         end if
 
@@ -1146,9 +1147,9 @@ contains
 
         call grid_write_info(gr, iunit)
  
-        call symmetries_write_info(gr%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%symm, namespace, space%dim, space%periodic_dim, iunit)
 
-        if(simul_box_is_periodic(gr%sb)) then
+        if (space%is_periodic()) then
           call hm%kpoints%write_info(namespace, iunit)
           write(iunit,'(1x)')
         end if
@@ -1167,11 +1168,11 @@ contains
           write(iunit,'(a)') 'Some of the states are not fully converged!'
         end if
 
-        call states_elec_write_eigenvalues(iunit, st%nst, st, gr%sb, hm%kpoints)
+        call states_elec_write_eigenvalues(iunit, st%nst, st, space, hm%kpoints)
         write(iunit, '(1x)')
 
-        if(simul_box_is_periodic(gr%sb)) then
-          call states_elec_write_gaps(iunit, st, gr%sb)
+        if (space%is_periodic()) then
+          call states_elec_write_gaps(iunit, st, space)
           write(iunit, '(1x)')
         end if
 
@@ -1195,7 +1196,7 @@ contains
         end if 
 
       if(scf%calc_dipole) then
-        call calc_dipole(dipole, gr, st, geo)
+        call calc_dipole(dipole, space, gr, st, geo)
         call write_dipole(iunit, dipole)
       end if
 
@@ -1273,9 +1274,9 @@ contains
       PUSH_SUB(scf_run.write_dipole)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call output_dipole(iunit, dipole, gr%sb%dim)
+        call output_dipole(iunit, dipole, space%dim)
 
-        if (simul_box_is_periodic(gr%sb)) then
+        if (space%is_periodic()) then
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 

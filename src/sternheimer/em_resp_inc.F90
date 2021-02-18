@@ -609,7 +609,7 @@ subroutine X(calc_properties_linear)(em_vars, namespace, space, gr, kpoints, st,
     end if
   end if
   
-  call em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  call em_resp_output(st, namespace, space, gr, hm, geo, outp, em_vars, iomega, ifactor)
   
   POP_SUB(em_resp_run_legacy.X(calc_properties_linear))
 end subroutine X(calc_properties_linear)

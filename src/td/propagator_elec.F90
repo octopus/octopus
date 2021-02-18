@@ -49,6 +49,7 @@ module propagator_elec_oct_m
   use scdm_oct_m
   use scf_oct_m
   use sparskit_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
@@ -456,10 +457,11 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_elec_dt(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
+  subroutine propagator_elec_dt(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi, move_ions)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
+    type(space_t),                               intent(in)    :: space
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
     type(grid_t),                        target, intent(inout) :: gr
     type(states_elec_t),                 target, intent(inout) :: st
@@ -504,23 +506,23 @@ contains
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
-        call td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_, &
+        call td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_, &
           tr%scf_threshold, scsteps)
       else
-        call td_etrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
+        call td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
       end if
     case(PROP_AETRS)
       call td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
     case(PROP_CAETRS)
-      call td_caetrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
+      call td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
     case(PROP_EXPONENTIAL_MIDPOINT)
       call exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions_)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
-      call td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta4(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
-      call td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta2(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
@@ -529,12 +531,12 @@ contains
       call td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
+        call td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions, geo, qcchi)
       else
-        call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
+        call td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions, geo)
       end if
     case(PROP_CFMAGNUS4)
-      call td_cfmagnus4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo, nt)
+      call td_cfmagnus4(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -553,7 +555,8 @@ contains
       call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = abs(nt*dt))
     end if
 
-    call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
+    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), &
+      calc_energy = update_energy_)
     if(update_energy_) call energy_calc_total(namespace, hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
@@ -610,9 +613,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine propagator_elec_dt_bo(scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
+  subroutine propagator_elec_dt_bo(scf, namespace, space, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
     type(scf_t),              intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(v_ks_t),             intent(inout) :: ks
     type(states_elec_t),      intent(inout) :: st
@@ -631,7 +635,7 @@ contains
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt, namespace)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
-    call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, &
+    call scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -646,7 +650,7 @@ contains
     call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
-    call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
+    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
     call energy_calc_total(namespace, hm, gr, st, iunit = -1)

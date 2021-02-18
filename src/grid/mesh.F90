@@ -37,6 +37,7 @@ module mesh_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use species_oct_m
@@ -165,8 +166,9 @@ contains
 
 ! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(sb, mesh, alpha, db)
+  subroutine mesh_double_box(sb, space, mesh, alpha, db)
     type(simul_box_t), intent(in)  :: sb
+    type(space_t),     intent(in)  :: space
     type(mesh_t),      intent(in)  :: mesh
     FLOAT,             intent(in)  :: alpha !< enlargement factor for double box
     integer,           intent(out) :: db(MAX_DIM)
@@ -178,10 +180,10 @@ contains
     db = 1
     
     ! double mesh with 2n points
-    do idir = 1, sb%periodic_dim
+    do idir = 1, space%periodic_dim
       db(idir) = mesh%idx%ll(idir)
     end do
-    do idir = sb%periodic_dim + 1, sb%dim
+    do idir = space%periodic_dim + 1, space%dim
       db(idir) = nint(alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
@@ -635,9 +637,10 @@ contains
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
   ! ---------------------------------------------------------  
-  integer function mesh_periodic_point(mesh, ip_global, ip_local) result(ipp)
-    type(mesh_t), intent(in)    :: mesh
-    integer,      intent(in)    :: ip_global, ip_local
+  integer function mesh_periodic_point(mesh, space, ip_global, ip_local) result(ipp)
+    type(mesh_t),  intent(in)    :: mesh
+    type(space_t), intent(in)    :: space
+    integer,       intent(in)    :: ip_global, ip_local
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
@@ -648,7 +651,7 @@ contains
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
-    do idim = 1, mesh%sb%periodic_dim
+    do idim = 1, space%periodic_dim
       if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + mesh%idx%ll(idim)
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
@@ -657,7 +660,7 @@ contains
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip_local, rr, coords = xx)
-      call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
+      call parse_expression(ufn_re, ufn_im, space%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
       if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
     end if 
     

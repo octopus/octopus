@@ -218,13 +218,13 @@ contains
 
         select case (sm_poisson)
         case(SM_POISSON_DIRECT)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_DIRECT_SUM)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_DIRECT_SUM)
         case(SM_POISSON_ISF)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_ISF)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_ISF)
         case(SM_POISSON_PSOLVER)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_PSOLVER)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_PSOLVER)
         case(SM_POISSON_FFT)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_FFT)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_FFT)
         end select
  
         np_sphere = sm%np

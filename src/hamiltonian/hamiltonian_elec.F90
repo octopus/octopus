@@ -114,6 +114,7 @@ module hamiltonian_elec_oct_m
 
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
+    type(space_t), private :: space
     type(states_elec_dim_t)  :: d
     type(hamiltonian_elec_base_t) :: hm_base
     type(energy_t), allocatable  :: energy
@@ -208,9 +209,10 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, kpoints, need_exchange)
+  subroutine hamiltonian_elec_init(hm, namespace, space, gr, geo, st, theory_level, xc, mc, kpoints, need_exchange)
     type(hamiltonian_elec_t),           target, intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
+    type(space_t),                              intent(in)    :: space
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -233,6 +235,7 @@ contains
     call profiling_in(prof, 'HAMILTONIAN_ELEC_INIT')
     
     ! make a couple of local copies
+    hm%space = space
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
 
@@ -306,18 +309,18 @@ contains
     end if
 
     !Initialize Poisson solvers
-    call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
+    call poisson_init(hm%psolver, namespace, space, gr%der, mc, st%qtot)
 
     if(poisson_is_multigrid(hm%psolver)) then
       SAFE_ALLOCATE(hm%psolver%mgrid)
-      call multigrid_init(hm%psolver%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+      call multigrid_init(hm%psolver%mgrid, namespace, space, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
     end if
 
 
     nullify(hm%psolver_fine)
     if (gr%have_fine_mesh) then
       SAFE_ALLOCATE(hm%psolver_fine)
-      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, st%qtot, label = " (fine mesh)")
+      call poisson_init(hm%psolver_fine, namespace, space, gr%fine%der, mc, st%qtot, label = " (fine mesh)")
     else
       hm%psolver_fine => hm%psolver
     end if
@@ -423,7 +426,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
+      call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
 
       !In the present implementation of DFT+U, in case of spinors, we have off-diagonal terms
       !in spin space which break the assumption of the generalized Bloch theorem
@@ -499,7 +502,7 @@ contains
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
+      call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
@@ -528,7 +531,7 @@ contains
         end if
       end if
 
-      if (.not. simul_box_is_periodic(gr%sb)) then
+      if (.not. space%is_periodic()) then
         do il = 1, hm%ep%no_lasers
           if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
             if(accel_allow_CPU_only()) then
@@ -594,7 +597,7 @@ contains
           !translate to a global point
           ip_global = mesh_local2global(gr%mesh, ip)
           ! get corresponding inner point
-          ip_inner = mesh_periodic_point(gr%mesh, ip_global,ip)
+          ip_inner = mesh_periodic_point(gr%mesh, space, ip_global,ip)
           x_global = mesh_x_global(gr%mesh, ip_inner)
           hm%hm_base%phase_spiral(ip-sp, 1) = &
             exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
@@ -623,7 +626,7 @@ contains
           !translate to a global point
           ip_global = mesh_local2global(gr%mesh, ip)
           ! get corresponding inner point
-          ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
+          ip_inner = mesh_periodic_point(gr%mesh, space, ip_global, ip)
 
           ! compute phase correction from global coordinate (opposite sign!)
           x_global = mesh_x_global(gr%mesh, ip_inner)
@@ -750,10 +753,10 @@ contains
 
       PUSH_SUB(hamiltonian_elec_init.build_interactions)      
 
-      if (allocated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
+      if (allocated(hm%ep%E_field) .and. space%is_periodic() .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
         ! only need vberry if there is a field in a periodic direction
         ! and we are not setting a gauge field
-        if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
+        if (any(abs(hm%ep%E_field(1:space%periodic_dim)) > M_EPSILON)) then
           SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
           hm%vberry = M_ZERO
         end if
@@ -1112,7 +1115,7 @@ contains
             !translate to a global point
             ip_global = mesh_local2global(mesh, ip)
             ! get corresponding inner point
-            ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+            ip_inner = mesh_periodic_point(mesh, this%space, ip_global, ip)
 
             ! compute phase correction from global coordinate (opposite sign!)
             x_global = mesh_x_global(mesh, ip_inner)

@@ -121,12 +121,12 @@ contains
     end if
 
     if (fromScratch .and. ks%theory_level /= RDMFT) then
-      call lcao_run(namespace, gr, geo, st, ks, hm, lmm_r = scfv%lmm_r)
+      call lcao_run(namespace, space, gr, geo, st, ks, hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current = .false.)
+      call v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, namespace, RESTART_GS, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
@@ -141,14 +141,14 @@ contains
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if (ks%theory_level == RDMFT) then
       call rdmft_init(rdm, namespace, gr, st, mc, space, fromScratch)
-      call scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
+      call scf_rdmft(rdm, namespace, space, gr, geo, st, ks, hm, outp, restart_dump)
       call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
-        call scf_run(scfv, namespace, mc, gr, geo, st, ks, hm, outp, restart_load=restart_load, restart_dump=restart_dump)
+        call scf_run(scfv, namespace, space, mc, gr, geo, st, ks, hm, outp, restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
-        call scf_run(scfv, namespace, mc, gr, geo, st, ks, hm, outp, restart_dump=restart_dump)
+        call scf_run(scfv, namespace, space, mc, gr, geo, st, ks, hm, outp, restart_dump=restart_dump)
       end if
 
       call scf_end(scfv)

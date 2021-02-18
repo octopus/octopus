@@ -691,8 +691,9 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval, calc_current)
+  subroutine v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval, calc_current)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -713,7 +714,7 @@ contains
     calc_current_ = optional_default(calc_current, .true.)
     call states_elec_fermi(st, namespace, gr%mesh)
     call density_calc(st, gr, st%rho)
-    call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
+    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
 
     if (st%restart_reorder_occs .and. .not. st%fromScratch) then
       message(1) = "Reordering occupations for restart."
@@ -741,9 +742,10 @@ contains
   end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
     type(namespace_t),          intent(in)    :: namespace
+    type(space_t),              intent(in)    :: space
     type(hamiltonian_elec_t),   intent(inout) :: hm
     type(states_elec_t),        intent(inout) :: st
     type(geometry_t),           intent(in)    :: geo
@@ -759,7 +761,7 @@ contains
     calc_current_ = optional_default(calc_current, .true.)
 
     call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_)
-    call v_ks_calc_finish(ks, hm, namespace)
+    call v_ks_calc_finish(ks, hm, namespace, space)
 
     if(optional_default(calc_eigenval, .false.)) then
       call energy_calc_eigenvalues(namespace, hm, ks%gr%der, st)
@@ -1175,10 +1177,11 @@ contains
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
 
-  subroutine v_ks_calc_finish(ks, hm, namespace)
+  subroutine v_ks_calc_finish(ks, hm, namespace, space)
     type(v_ks_t),     target, intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
 
     integer                           :: ip, ispin
 
@@ -1197,8 +1200,8 @@ contains
     call move_alloc(ks%calc%energy, hm%energy)
 
     if(hm%self_induced_magnetic) then
-      hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
-      hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
+      hm%a_ind(1:ks%gr%mesh%np, 1:space%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:space%dim)
+      hm%b_ind(1:ks%gr%mesh%np, 1:space%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:space%dim)
 
       SAFE_DEALLOCATE_A(ks%calc%a_ind)
       SAFE_DEALLOCATE_A(ks%calc%b_ind)
@@ -1297,10 +1300,10 @@ contains
         !Maybe the parameters should be mixed too.
         if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
             call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
@@ -1323,7 +1326,7 @@ contains
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms)
+      hm%ep%vdw_forces(1:space%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:space%dim, 1:ks%calc%geo%natoms)
       SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
     else
       hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      

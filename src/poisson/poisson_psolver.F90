@@ -34,6 +34,7 @@ module poisson_psolver_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
   use submesh_oct_m
 
   !! Support for PSolver from BigDFT
@@ -110,9 +111,10 @@ module poisson_psolver_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_psolver_init(this, namespace, mesh, cube, mu, qq, force_isolated)
+  subroutine poisson_psolver_init(this, namespace, space, mesh, cube, mu, qq, force_isolated)
     type(poisson_psolver_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
+    type(space_t),           intent(in)    :: space
     type(mesh_t),            intent(inout) :: mesh
     type(cube_t),            intent(inout) :: cube
     FLOAT,                   intent(in)    :: mu
@@ -225,7 +227,7 @@ contains
     call pkernel_set(this%kernel, verbose=debug%info)
 
     !G=0 component
-    modq2 = sum(qq(1:mesh%sb%periodic_dim)**2)
+    modq2 = sum(qq(1:space%periodic_dim)**2)
     if (modq2 > M_EPSILON) then
       this%offset = M_ONE/modq2
     else

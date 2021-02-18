@@ -57,6 +57,7 @@ module td_write_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
@@ -185,9 +186,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, namespace, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
+  subroutine td_write_init(writ, namespace, space, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, &
+    dt, mc)
     type(td_write_t), target, intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(output_t),           intent(inout) :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -346,7 +349,7 @@ contains
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
     !See comment in zstates_elec_mpdotp
-    if(simul_box_is_periodic(gr%sb) .and. writ%out(OUT_POPULATIONS)%write) then
+    if (space%is_periodic() .and. writ%out(OUT_POPULATIONS)%write) then
       call messages_not_implemented("TDOutput populations for periodic systems", namespace=namespace)
     end if
 
@@ -401,7 +404,7 @@ contains
 
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) then 
-      if(simul_box_is_periodic(gr%sb)) then
+      if (space%is_periodic()) then
         rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
       else
         rmin = CNST(100.0)
@@ -761,7 +764,7 @@ contains
     if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       !TODO: we should only compute the current here, not v_ks
       call v_ks_calculate_current(ks, .true.)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt, calc_energy = .false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.false., time = iter*dt, calc_energy = .false.)
     end if
 
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
@@ -860,9 +863,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, namespace, outp, gr, st, hm, geo, kick, dt, iter)
+  subroutine td_write_iter(writ, namespace, space, outp, gr, st, hm, geo, kick, dt, iter)
     type(td_write_t),         intent(inout) :: writ !< Write object
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(output_t),           intent(in)    :: outp
     type(grid_t),             intent(in)    :: gr   !< The grid
     type(states_elec_t),      intent(inout) :: st   !< State object
@@ -900,7 +904,7 @@ contains
 
     if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
-      call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
+      call td_write_proj(writ%out(OUT_PROJ)%handle, space, gr, geo, st, writ%gs_st, kick, iter)
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
@@ -926,8 +930,7 @@ contains
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
 
     if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, namespace, gr%mesh, gr%sb, st, &
-        writ, dt, iter)
+      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, namespace, space, gr%mesh, st, writ, dt, iter)
 
     if (writ%out(OUT_ACC)%write) then
       call td_write_acc(writ%out(OUT_ACC)%handle, namespace, gr, geo, st, hm, dt, iter)
@@ -1015,8 +1018,9 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(namespace, gr, st, hm, ks, outp, geo, iter, dt)
+  subroutine td_write_output(namespace, space, gr, st, hm, ks, outp, geo, iter, dt)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -1035,7 +1039,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, namespace, filename, gr, geo, st, hm, ks)
+    call output_all(outp, namespace, space, filename, gr, geo, st, hm, ks)
     if(present(dt)) then
       call output_scalar_pot(outp, namespace, filename, gr, geo, hm, iter*dt)
     else
@@ -1738,11 +1742,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, namespace, mesh, sb, st, writ, dt, iter)
+  subroutine td_write_populations(out_populations, namespace, space, mesh, st, writ, dt, iter)
     type(c_ptr),            intent(inout) :: out_populations
     type(namespace_t),      intent(in)    :: namespace
+    type(space_t),          intent(in)    :: space
     type(mesh_t),           intent(in)    :: mesh
-    type(simul_box_t),      intent(in)    :: sb
     type(states_elec_t),    intent(inout) :: st
     type(td_write_t),       intent(in)    :: writ
     FLOAT,                  intent(in)    :: dt
@@ -1762,7 +1766,7 @@ contains
 
 
     !See comment in zstates_elec_mpdotp
-    ASSERT(.not. simul_box_is_periodic(sb))
+    ASSERT(.not. space%is_periodic())
 
     ! all processors calculate the projection
     gsp = zstates_elec_mpdotp(namespace, mesh, writ%gs_st, st, dotprodmatrix)
@@ -2278,8 +2282,9 @@ contains
   end subroutine td_write_ionch
 
   ! ---------------------------------------------------------
-  subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
+  subroutine td_write_proj(out_proj, space, gr, geo, st, gs_st, kick, iter)
     type(c_ptr),         intent(inout) :: out_proj
+    type(space_t),       intent(in)    :: space
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_elec_t), intent(inout) :: st
@@ -2341,7 +2346,7 @@ contains
       end if
 
       !The dipole matrix elements cannot be computed like that for solids
-      if(.not. simul_box_is_periodic(gr%sb)) then
+      if(.not. space%is_periodic()) then
 
         SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
         do idir = 1, geo%space%dim

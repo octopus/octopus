@@ -32,6 +32,7 @@ module multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
   use par_vec_oct_m
+  use space_oct_m
   use stencil_oct_m
   use transfer_table_oct_m
   use profiling_oct_m
@@ -90,9 +91,10 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, namespace, cv, mesh, der, stencil, mc, used_for_preconditioner)
+  subroutine multigrid_init(mgrid, namespace, space, cv, mesh, der, stencil, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
-    type(namespace_t),             intent(in)    :: namespace
+    type(namespace_t),             intent(in)  :: namespace
+    type(space_t),                 intent(in)  :: space
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
@@ -171,16 +173,16 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
-      call multigrid_mesh_half(cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
+      call multigrid_mesh_half(space, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
       call derivatives_nullify(mgrid%level(i)%der)
-      call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
+      call derivatives_init(mgrid%level(i)%der, namespace, space, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
-      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, stencil, mc, parent = mgrid%level(i - 1)%mesh)
+      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, space, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 
-      call derivatives_build(mgrid%level(i)%der, namespace, mgrid%level(i)%mesh)
+      call derivatives_build(mgrid%level(i)%der, namespace, space, mgrid%level(i)%mesh)
 
       call mesh_write_info(mgrid%level(i)%mesh, stdout)
       
@@ -324,7 +326,8 @@ contains
   !> Creates a mesh that has twice the spacing betwen the points than the in mesh.
   !! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_half(cv, mesh_in, mesh_out, stencil)
+  subroutine multigrid_mesh_half(space, cv, mesh_in, mesh_out, stencil)
+    type(space_t),              intent(in)    :: space
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -344,13 +347,14 @@ contains
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil)
+    call mesh_init_stage_2(mesh_out, space, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_double(cv, mesh_in, mesh_out, stencil)
+  subroutine multigrid_mesh_double(space, cv, mesh_in, mesh_out, stencil)
+    type(space_t),              intent(in)    :: space
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -370,7 +374,7 @@ contains
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil)
+    call mesh_init_stage_2(mesh_out, space, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_double)
   end subroutine multigrid_mesh_double

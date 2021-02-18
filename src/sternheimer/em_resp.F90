@@ -219,9 +219,9 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
-    use_kdotp = simul_box_is_periodic(sys%gr%sb) .and. .not. em_vars%force_no_kdotp
+    use_kdotp = sys%space%is_periodic() .and. .not. em_vars%force_no_kdotp
 
     if(use_kdotp .and. .not. smear_is_semiconducting(sys%st%smear)) then
       ! there needs to be a gap.
@@ -1015,9 +1015,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, namespace, space, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_elec_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
@@ -1033,7 +1034,7 @@ contains
 
     PUSH_SUB(em_resp_output)
 
-    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+    use_kdotp = space%is_periodic() .and. .not. em_vars%force_no_kdotp
 
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
@@ -1054,7 +1055,7 @@ contains
           call out_dielectric_constant()
         end if
 
-        if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
+        if ((.not. space%is_periodic() .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
           call out_circular_dichroism()
         end if
 
