@@ -70,7 +70,9 @@ module mesh_oct_m
     mesh_global_index_to_coords,   &
     mesh_global_index_from_coords, &
     mesh_local_index_to_coords,    &
-    mesh_local_index_from_coords
+    mesh_local_index_from_coords,  &
+    mesh_local2global,             &
+    mesh_global2local
 
   !> Describes mesh distribution to nodes.
   !!
@@ -883,38 +885,66 @@ contains
 
   !> Given a _global_ point index, this function returns the set of
   !! integer coordinates of the point.
-  pure subroutine mesh_global_index_to_coords(mesh, ip, ix)
+  pure subroutine mesh_global_index_to_coords(mesh, ipg, ix)
     type(mesh_t),  intent(in)    :: mesh
-    integer,       intent(in)    :: ip
+    integer,       intent(in)    :: ipg
     integer,       intent(out)   :: ix(:)
 
-    call index_to_coords(mesh%idx, ip, ix)
+    call index_to_coords(mesh%idx, ipg, ix)
   end subroutine mesh_global_index_to_coords
 
   !> This function returns the _local_ index of the point for a given
   !! vector of integer coordinates.
-  integer function mesh_local_index_from_coords(mesh, ix) result(index)
+  integer function mesh_local_index_from_coords(mesh, ix) result(ip)
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ix(:)
 
-    index = index_from_coords(mesh%idx, ix)
-    if(mesh%parallel_in_domains) index = vec_global2local(mesh%vp, index, mesh%vp%partno)
+    integer :: ipg
+
+    ipg = index_from_coords(mesh%idx, ix)
+    ip = mesh_global2local(mesh, ipg)
   end function mesh_local_index_from_coords
 
   !> Given a _local_ point index, this function returns the set of
   !! integer coordinates of the point.
-  pure subroutine mesh_local_index_to_coords(mesh, ip, ix)
+  subroutine mesh_local_index_to_coords(mesh, ip, ix)
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ip
     integer,       intent(out)   :: ix(:)
 
-    if(.not. mesh%parallel_in_domains) then
-      call index_to_coords(mesh%idx, ip, ix)
-    else
-      call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), ix)
-    end if
+    integer :: ipg
+
+    ipg = mesh_local2global(mesh, ip)
+    call index_to_coords(mesh%idx, ipg, ix)
   end subroutine mesh_local_index_to_coords
 
+  !> This function returns the global mesh index for a given local index
+  integer function mesh_local2global(mesh, ip) result(ipg)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ip
+
+    if (.not. mesh%parallel_in_domains) then
+      ipg = ip
+    else
+      if (ip <= mesh%np) then
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
+      else if (ip <= mesh%np + mesh%vp%np_ghost) then
+        ipg = mesh%vp%ghost(mesh%vp%xghost + ip - mesh%np - 1)
+      else if (ip <= mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry) then
+        ipg = mesh%vp%bndry(mesh%vp%xbndry + ip - mesh%np - mesh%vp%np_ghost - 1)
+      else
+        ipg = 0
+      end if
+    end if
+  end function mesh_local2global
+
+  !> This function returns the local mesh index for a given global index
+  integer function mesh_global2local(mesh, ipg) result(ip)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ipg
+
+    ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
+  end function mesh_global2local
 end module mesh_oct_m
 
 
