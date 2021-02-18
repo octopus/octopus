@@ -561,7 +561,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   integer, allocatable :: ghost_rdispls(:), ghost_rcounts(:), ghost_rindex(:)
   integer(8), allocatable :: ghost_sendpos(:), ghost_recvpos(:)
   integer :: size_send, size_recv
-  integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:)
+  integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:), ghost_remoteindex(:)
   type(lihash_t) :: hilbert_to_ghost
 
   PUSH_SUB(mesh_init_stage_3)
@@ -861,6 +861,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 
 
   SAFE_ALLOCATE(ghost_rankmap(1:nghost))
+  SAFE_ALLOCATE(ghost_remoteindex(1:nghost))
   ighost = 1
   iboundary = 1
   do ip = 1, size_send
@@ -871,7 +872,9 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     else
       mesh%idx%grid_to_hilbert(mesh%np+ighost) = ghost_to_hilbert(ip)
       call lihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+ighost)
+      ! save remote rank and remote index of ghost point
       ghost_rankmap(ighost) = ghost_boundary_rankmap(ip)
+      ghost_remoteindex(ighost) = ghost_sendpos(ip)
       ighost = ighost + 1
     end if
   end do
