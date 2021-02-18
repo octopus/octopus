@@ -271,11 +271,13 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
     bndry_end   = boundaries%mesh%np_part
   end if
     
-  if(boundaries%mesh%sb%periodic_dim < boundaries%mesh%sb%dim) call zero_boundaries()
+  if (.not. boundaries%fully_periodic) call zero_boundaries()
   if (multiresolution_use(boundaries%mesh%hr_area)) then
     call multiresolution()
   end if
-  if(boundaries%mesh%sb%periodic_dim > 0)     call periodic()
+  if (boundaries%periodic) then
+    call periodic()
+  end if
 
   call profiling_out(set_bc_prof)
   POP_SUB(X(boundaries_set_batch))

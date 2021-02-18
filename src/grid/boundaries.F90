@@ -48,6 +48,8 @@ module boundaries_oct_m
   type boundaries_t
     private
     type(mesh_t), pointer :: mesh
+    logical              :: periodic = .false.       !< some boundaries are to be treated periodic
+    logical              :: fully_periodic = .false. !< all boundaries are to be treated periodic
     integer              :: nper             !< the number of points that correspond to pbc
     integer, allocatable :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
     integer, allocatable :: per_send(:, :)
@@ -143,6 +145,9 @@ contains
     PUSH_SUB(boundaries_init)
 
     this%mesh => mesh
+
+    this%periodic = space%is_periodic()
+    this%fully_periodic = space%periodic_dim == space%dim
 
     if (space%is_periodic()) then
 
@@ -332,7 +337,7 @@ contains
 
     PUSH_SUB(boundaries_end)
 
-    if(simul_box_is_periodic(this%mesh%sb)) then
+    if (this%periodic) then
       if(this%mesh%parallel_in_domains) then    
         
         ASSERT(allocated(this%nsend))
