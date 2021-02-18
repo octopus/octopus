@@ -88,7 +88,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   if (mesh%parallel_in_domains .and. in_line) then
 #ifdef HAVE_MPI
     ! I have to broadcast the error code
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%vp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
     

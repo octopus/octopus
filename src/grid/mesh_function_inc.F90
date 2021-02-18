@@ -210,7 +210,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call comm_allreduce(mesh%mpi_grp%comm, dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -242,7 +242,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call comm_allreduce(mesh%mpi_grp%comm, dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -277,7 +277,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     nrm2 = nrm2**2
-    call comm_allreduce(mesh%vp%comm, nrm2)
+    call comm_allreduce(mesh%mpi_grp%comm, nrm2)
     nrm2 = sqrt(nrm2)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if

@@ -48,7 +48,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, res)
+    call comm_allreduce(mesh%mpi_grp%comm, res)
     call profiling_out(prof_sm_reduce)
   end if 
  
@@ -80,7 +80,7 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_MESH)))
-    call comm_allreduce(mesh%vp%comm, res)
+    call comm_allreduce(mesh%mpi_grp%comm, res)
     call profiling_out(prof_sm_reduce)
   end if
 
@@ -233,7 +233,7 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   if(sm%mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_NRM2)))
     nrm2 = nrm2**2
-    call comm_allreduce(sm%mesh%vp%comm, nrm2)
+    call comm_allreduce(sm%mesh%mpi_grp%comm, nrm2)
     nrm2 = sqrt(nrm2)
     call profiling_out(prof_sm_reduce)
   end if
@@ -279,7 +279,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, sphi, phi, reduce) result(dotp)
   end if
 
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) &
-    call comm_allreduce(this%mesh%vp%comm, dotp)
+    call comm_allreduce(this%mesh%mpi_grp%comm, dotp)
 
 
   POP_SUB(X(dsubmesh_to_mesh_dotp))

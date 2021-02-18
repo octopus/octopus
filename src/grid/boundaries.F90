@@ -267,7 +267,7 @@ contains
                 ! and where it is in the other partition
                 recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
 
-                ASSERT(mesh%vp%rank /= ipart - 1) ! if we are here, the point must be in another node
+                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
               
                 exit
               end if
@@ -293,7 +293,7 @@ contains
         ! We send the number of points we expect to receive.
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
-          call MPI_Bsend(this%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(this%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%mpi_grp%comm, mpi_err)
         end do
 
         ! And we receive it
@@ -301,13 +301,13 @@ contains
         this%nsend = 0
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
-          call MPI_Recv(this%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, status, mpi_err)
+          call MPI_Recv(this%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%mpi_grp%comm, status, mpi_err)
         end do
 
         ! Now we send the indices of the points
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nrecv(ipart) == 0) cycle
-          call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%mpi_grp%comm, mpi_err)
         end do
 
         SAFE_ALLOCATE(this%per_send(1:maxval(this%nsend), 1:mesh%vp%npart))
@@ -316,7 +316,7 @@ contains
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
           call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
-               ipart - 1, 1, mesh%vp%comm, status, mpi_err)
+               ipart - 1, 1, mesh%mpi_grp%comm, status, mpi_err)
         end do
 
         ! we no longer need this

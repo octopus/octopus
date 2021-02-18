@@ -735,7 +735,7 @@ contains
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
-      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call comm_allreduce(this%mesh%mpi_grp%comm, dotp)
       call profiling_out(prof_sm_reduce)
     end if 
  

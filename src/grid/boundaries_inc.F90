@@ -475,10 +475,10 @@ contains
       call profiling_in(set_bc_comm_prof, TOSTRING(X(SET_BC_COMM)))
 
 #ifdef HAVE_MPI
-      call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
+      call mpi_debug_in(boundaries%mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
-        recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%vp%comm, mpi_err)
-      call mpi_debug_out(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
+        recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(boundaries%mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
       
       call profiling_count_transfers(sum(boundaries%nsend(1:npart) + boundaries%nrecv(1:npart))*ffb%nst_linear, &
