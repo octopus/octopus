@@ -7,8 +7,6 @@ Weight: 1
 Work in progress!
 {{< /notice >}}
 
-
-
 ### Abstract classes
 
 
@@ -90,6 +88,7 @@ The {{< code type >}} to be used for combined systems is {{< code multisystem_ba
 
 The following diagram represents the family tree of the system classes. Rounded boxes denote abstract classes, while rectangular boxes are normal classes, which can be instantiated.
 
+<!--
 {{< mermaid >}}
 graph BT
 A([interaction_partner_t]) 
@@ -109,6 +108,30 @@ H ==> B
 F ==> E
 I ==> F
 {{< /mermaid >}}
+-->
+
+{{% graphviz %}}
+digraph  {
+rankdir=BT;
+node [shape="rect", fillcolor=yellow, style="filled", tooltip=" "]
+A[label="interaction_partner_t", style="rounded, filled"]
+B[label="system_t", style="rounded, filled"]
+C[label="multisystem_t", style="rounded, filled"]
+D[label="multisystem_basic_t"]
+E[label="classical_particles_t", style="rounded, filled"]
+F[label="classical_particle_t"]
+G[label="matter_t"]
+H[label="electrons_t"]
+I[label="charged_particle_t"]
+C -> B -> A
+D -> C 
+E -> B
+G -> C
+H -> B
+I -> F -> E
+}
+{{% /graphviz %}}
+
 
 <!--
 {{< mermaid >}}

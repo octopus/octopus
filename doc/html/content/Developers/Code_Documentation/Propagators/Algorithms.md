@@ -50,3 +50,7 @@ Derived propagators can then add their own steps, such as e.g. in {{< source "mu
 ```Fortran
 #include_code_doc verlet_propagation_operations
 ```
+
+{{% notice note %}}
+It is important to stress here, that one algorithmic step, in general, does not advance any clock. Clocks are only advanced in steps which update the corresponding entity, which could be a system, an exposed quantity or an interaction. It is therefore quite common, that at a specific state of the algorithm, clocks or different entities have different values.
+{{% /expand %}}
