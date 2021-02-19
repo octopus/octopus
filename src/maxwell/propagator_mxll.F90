@@ -1323,11 +1323,11 @@ contains
     np_part = gr%mesh%np_part
     rs_sign = hm%rs_sign
 
-    SAFE_ALLOCATE(gradb(1:hm%der%dim))
-    do idir = 1, hm%der%dim
+    SAFE_ALLOCATE(gradb(1:gr%der%dim))
+    do idir = 1, gr%der%dim
       call ff_rs_state_pmlb%copy_to(gradb(idir))
     end do
-    call zderivatives_batch_grad(hm%der, ff_rs_state_pmlb, gradb)
+    call zderivatives_batch_grad(gr%der, ff_rs_state_pmlb, gradb)
 
     with_medium = hm%dim == 6
 
@@ -1380,7 +1380,7 @@ contains
       end select
     end do
 
-    do idir = 1, hm%der%dim
+    do idir = 1, gr%der%dim
       call gradb(idir)%end()
     end do
     SAFE_DEALLOCATE_A(gradb)
