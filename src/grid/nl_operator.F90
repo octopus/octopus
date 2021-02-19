@@ -650,7 +650,7 @@ contains
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
         do ip = 1, mesh%np_part
-          call mesh_global_index_to_coords(op%mesh, ip, idx)
+          call mesh_local_index_to_coords(op%mesh, ip, idx)
           do jj = 1, op%mesh%sb%dim
             stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
           end do

@@ -27,7 +27,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
   integer :: ii, jj, kk, ll, vv, count, ip, nval, info,i1, i2, i3, idim, j1, j2, j3
   integer, allocatable :: JPVT(:)
-  integer :: icenter(3), ind_center
+  integer :: icenter(3)
 
   integer :: nn(3)
   R_TYPE, allocatable :: SCDM_temp(:,:), Pcc(:,:), SCDM_matrix(:,:)
@@ -199,8 +199,6 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     do ii = 1, 3
       icenter(ii) = int(scdm%center(ii,vv)/mesh%spacing(ii))
     end do
-    ! find index of center in the mesh
-    ind_center = mesh_global_index_from_coords(mesh, [icenter(1),icenter(2),icenter(3)])
 
     ! make sure that box does not fall out of range of the index structure
     call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
@@ -278,7 +276,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
             j1 = i1 + scdm%box_size + 1
             j2 = i2 + scdm%box_size + 1
             j3 = i3 + scdm%box_size + 1
-            temp_box(j1,j2,j3) = mesh_global_index_from_coords(mesh, [ix(1),ix(2),ix(3)])
+            temp_box(j1,j2,j3) = mesh_global_index_from_coords(mesh, ix)
 
             !if(temp_box(j1,j2,j3) < 1 .or. temp_box(j1,j2,j3) > mesh%np_global) then
             !  print *, 'fail'
