@@ -182,20 +182,11 @@ contains
 #endif
       do ip = sp + 1, mesh%np_part
 
-        ip_global = ip
-
-#ifdef HAVE_MPI
-        !translate to a global point
-        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-#endif
+        ip_global = mesh_local2global(mesh, ip)
 
         ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner)
 
-#ifdef HAVE_MPI
-        !translate back to a local point
-        if(mesh%parallel_in_domains) ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
-#endif
-        
         ! If the point is the periodic of another point, is not zero
         ! (this might happen in the parallel case) and is inside the
         ! grid then we have to copy it from the grid points.  
@@ -228,23 +219,11 @@ contains
       iper = 0
       do ip = sp + 1, mesh%np_part
 
-        ip_global = ip
+        ip_global = mesh_local2global(mesh, ip)
 
-        !translate to a global point
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-#endif
-
-        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner_global)
         
-        !translate to local (and keep a copy of the global)
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) then
-          ip_inner_global = ip_inner
-          ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
-        end if
-#endif
-
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
           this%per_points(POINT_BOUNDARY, iper) = ip

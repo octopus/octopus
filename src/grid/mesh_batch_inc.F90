@@ -851,7 +851,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       recv_count = 0
       do ipg = 1, mesh%np_global
         if(mesh%vp%part_vec(forward_map(ipg)) == mesh%vp%partno) then
-          ip = vec_global2local(mesh%vp, forward_map(ipg), mesh%vp%partno)
+          ip = mesh_global2local(mesh, forward_map(ipg))
           ASSERT(ip /= 0)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)

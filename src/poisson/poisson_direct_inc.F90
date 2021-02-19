@@ -102,7 +102,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       xx(1:dim_ele) = xg(1:dim_ele)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
+          if (mesh_global2local(this%der%mesh, ip) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/dim_ele)
           else
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -111,7 +111,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         end do
       else
         do jp = 1, this%der%mesh%np
-          if (vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
+          if (mesh_global2local(this%der%mesh, ip) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor 
           else
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -124,10 +124,8 @@ subroutine poisson_solve_direct(this, pot, rho)
 
     call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
 
-    do ip = 1, this%der%mesh%np_global
-      if (part_v(ip) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
-      end if
+    do jp = 1, this%der%mesh%np
+      pot(jp) = tmp(mesh_local2global(this%der%mesh, jp))
     end do
 
     SAFE_DEALLOCATE_A(pvec)
