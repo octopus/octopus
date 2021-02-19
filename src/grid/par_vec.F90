@@ -98,7 +98,6 @@ module par_vec_oct_m
     pv_t,              & !< parallel information
     vec_init,          &
     vec_end,           &
-    vec_index2local,   &
     vec_scatter,       &
     vec_gather,        &
     vec_allgather,     &
@@ -875,40 +874,6 @@ contains
 
   end function vec_global2local
 
-  !> Change the value of one dimension (1=x, 2=y, 3=z) 
-  !! according to the given value and return the local point
-  !! \todo does not work if only one process is used
-  integer function vec_index2local(vp, idx, ix, dim_pad, pad)
-    type(pv_t),    intent(in) :: vp      !< All the required information
-    type(index_t), intent(in) :: idx     !< Index information
-    integer,       intent(in) :: ix(1:3) !< Global x,y,z indices
-    integer,       intent(in) :: dim_pad !< The dimension that has to be changed
-    integer,       intent(in) :: pad     !< How much we want to change that dimension
-
-    integer :: global_point, local_point
-    integer :: jx(1:3)
-
-    ! no PUSH_SUB, called too often
-    jx = ix
-    jx(dim_pad) = jx(dim_pad) + pad
-    global_point = index_from_coords(idx, jx)
-    
-    if (mpi_world%size == 1) then 
-      local_point = global_point
-    else
-      local_point = vec_global2local(vp, global_point, vp%partno)
-      if (local_point == 0) then
-        write(message(1), '(a)') "You are trying to access a neighbour that does not exist."
-        write(message(2), '(a, i5)') "Global point = ", global_point
-        write(message(3), '(a, 3i5)') "x,y,z point  = ", jx
-        call messages_warning(3)
-      end if
-    end if
-    
-    vec_index2local = local_point
-    
-  end function vec_index2local
-  
 
 #include "undef.F90"
 #include "complex.F90"
