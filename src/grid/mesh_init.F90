@@ -1000,10 +1000,6 @@ contains
     integer :: jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-#if defined(HAVE_MPI)
-    integer :: kk
-#endif
-
     PUSH_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
     np = 1
@@ -1017,25 +1013,14 @@ contains
 
     jj(sb%dim + 1:MAX_DIM) = 0
 
-    if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
+    if (multiresolution_use(mesh%hr_area)) then
+      call multiresolution_vol_pp(sb)
+    else
       do ip = 1, np
         call mesh_local_index_to_coords(mesh, ip, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
+        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
       end do
-#endif
-    else ! serial mode
-
-      if (multiresolution_use(mesh%hr_area)) then
-        call multiresolution_vol_pp(sb)
-      else
-        do ip = 1, np
-          call mesh_local_index_to_coords(mesh, ip, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
-        end do
-      end if
     end if
 
     if(mesh%use_curvilinear) then
