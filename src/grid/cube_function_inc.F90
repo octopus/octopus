@@ -305,9 +305,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   integer :: ip, ix, iy, iz
   integer :: im, ii, nn
-#ifdef HAVE_MPI
-  integer :: first, last
-#endif
   logical :: local_
   R_TYPE, pointer :: gmf(:)
   integer                    :: bsize

@@ -132,8 +132,8 @@ contains
     integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
-    integer, allocatable :: send_buffer(:)
 #ifdef HAVE_MPI
+    integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
     type(block_t) :: blk
