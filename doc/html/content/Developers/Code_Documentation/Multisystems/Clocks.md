@@ -1,6 +1,6 @@
 ---
 Title: "Clocks"
-Weigth: 4
+Weight: 4
 ---
 
 {{< notice warning >}}
