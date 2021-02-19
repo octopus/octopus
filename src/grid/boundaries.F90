@@ -129,11 +129,11 @@ contains
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
-#ifdef HAVE_MPI
     integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
     integer, allocatable :: send_buffer(:)
+#ifdef HAVE_MPI
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
     type(block_t) :: blk
@@ -177,9 +177,7 @@ contains
 
       !count the number of points that are periodic
       this%nper = 0
-#ifdef HAVE_MPI
       nper_recv = 0
-#endif
       do ip = sp + 1, mesh%np_part
 
         ip_global = mesh_local2global(mesh, ip)
@@ -198,23 +196,19 @@ contains
         !
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           this%nper = this%nper + 1
-#ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
           nper_recv = nper_recv + 1
-#endif
         end if
       end do
 
       SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
 
-#ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
         this%nrecv = 0
       end if
-#endif
 
       iper = 0
       do ip = sp + 1, mesh%np_part
@@ -229,7 +223,6 @@ contains
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
 
-#ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
           ! find in which paritition it is
           do ipart = 1, mesh%vp%npart
@@ -253,7 +246,6 @@ contains
             end if
             
           end do
-#endif
         end if
       end do
 
