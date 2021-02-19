@@ -177,7 +177,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call dos_init(dos, namespace, st, gr%sb, hm%kpoints)
+    call dos_init(dos, namespace, st, hm%kpoints)
     call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, namespace)
   end if
 

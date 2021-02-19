@@ -63,11 +63,10 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, namespace, st, sb, kpoints)
+  subroutine dos_init(this, namespace, st, kpoints)
     type(dos_t),         intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(in)    :: st
-    type(simul_box_t),   intent(in)    :: sb
     type(kpoints_t),     intent(in)    :: kpoints
 
     FLOAT :: evalmin, evalmax, eextend
