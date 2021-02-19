@@ -90,11 +90,16 @@
 
 #  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds) allocate(type::x bounds)
 
+#  define SAFE_ALLOCATE_SOURCE(x, y) \
+  allocate(x, source=y); CARDINAL \
+  CARDINAL
+
 #  define SAFE_ALLOCATE_SOURCE_A(x, y) \
   if(allocated(y)) then;   CARDINAL \
     allocate(x, source=y); CARDINAL \
   end if; \
   CARDINAL
+
 #  define SAFE_ALLOCATE_SOURCE_P(x, y) \
   if(associated(y)) then;  CARDINAL \
     allocate(x, source=y); CARDINAL \
@@ -160,6 +165,11 @@
     allocate( ACARDINAL x, ACARDINAL source=y, ACARDINAL stat=global_alloc_err); CARDINAL \
     SAFE_ALLOCATE_PROFILE(x); CARDINAL \
   end if; \
+  CARDINAL
+
+#  define SAFE_ALLOCATE_SOURCE(x, y) \
+  allocate( ACARDINAL x, ACARDINAL source=y, ACARDINAL stat=global_alloc_err); CARDINAL \
+  SAFE_ALLOCATE_PROFILE(x); CARDINAL \
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
