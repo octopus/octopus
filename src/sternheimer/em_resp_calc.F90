@@ -36,14 +36,17 @@ module em_resp_calc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use pert_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use sternheimer_oct_m
+  use symmetries_oct_m
   use symmetrizer_oct_m
-  use electrons_oct_m
   use utils_oct_m
   use xc_oct_m
 
@@ -100,7 +103,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lr_calc_current(st, gr, lr, lr_m)
     type(states_elec_t),  intent(inout) :: st
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(lr_t),           intent(inout) :: lr
     type(lr_t), optional, intent(inout) :: lr_m
 

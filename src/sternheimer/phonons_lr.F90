@@ -214,7 +214,8 @@ contains
     call messages_info(1)
 
     call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
-    call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
+    call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+      wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
@@ -284,11 +285,11 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(states_are_real(st)) then
-        call dsternheimer_solve(sh, sys, lr, 1, M_ZERO, ionic_pert, &
-          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, &
+          M_ZERO, ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        call zsternheimer_solve(sh, sys, lr, 1, M_z0, ionic_pert, &
-          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, M_z0, &
+          ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
       
       if(states_are_real(st)) then

@@ -197,7 +197,8 @@ contains
     SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     kdotp_vars%velocity(:,:,:) = M_ZERO
     if(states_are_complex(sys%st)) then
-      call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+      call zcalc_band_velocity(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+        kdotp_vars%velocity(:,:,:))
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -207,13 +208,13 @@ contains
     SAFE_DEALLOCATE_A(kdotp_vars%velocity)
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
-    call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
-      set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
-      occ_response_by_sternheimer = .true.)
+    call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, complex_response, &
+      set_ham_var = 0, set_occ_response = (kdotp_vars%occ_solution_method == 0), &
+      set_last_occ_response = (kdotp_vars%occ_solution_method == 0), occ_response_by_sternheimer = .true.)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
     if(calc_2nd_order) then
-      call sternheimer_init(sh2, sys, complex_response, set_ham_var = 0, &
-        set_occ_response = .false., set_last_occ_response = .false.)
+      call sternheimer_init(sh2, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, complex_response, &
+        set_ham_var = 0, set_occ_response = .false., set_last_occ_response = .false.)
     end if
 
     do idir = 1, pdim
@@ -272,17 +273,21 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
-          M_ZERO, kdotp_vars%perturbation, restart_dump, &
-          "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
-        if(kdotp_vars%occ_solution_method == 1) &
-          call dkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+          kdotp_vars%lr(1:1, idir), 1, M_ZERO, kdotp_vars%perturbation, restart_dump, "", kdotp_wfs_tag(idir), &
+          have_restart_rho = .false.)
+        if (kdotp_vars%occ_solution_method == 1) then
+          call dkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+            kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+        end if
       else
-        call zsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
-          M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, &
-          "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
-        if(kdotp_vars%occ_solution_method == 1) &
-          call zkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+          kdotp_vars%lr(1:1, idir), 1, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, "", &
+          kdotp_wfs_tag(idir), have_restart_rho = .false.)
+        if (kdotp_vars%occ_solution_method == 1) then
+          call zkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), &
+            kdotp_vars%degen_thres)
+        end if
       end if
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
@@ -317,12 +322,14 @@ contains
           call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
-            call dsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call dsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+              sys%geo, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
-            call zsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call zsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+              sys%geo, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
@@ -344,15 +351,15 @@ contains
 
 
       if(states_are_real(sys%st)) then
-        call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
+        call dcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+          kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
-        call zcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
-          kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
+        call zcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+          kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
-      call kdotp_write_eff_mass(sys%st, sys%gr, sys%kpoints, kdotp_vars, sys%namespace, sys%space%periodic_dim)
+      call kdotp_write_eff_mass(sys%st, sys%kpoints, kdotp_vars, sys%namespace, sys%space%periodic_dim)
 
       SAFE_DEALLOCATE_A(kdotp_vars%eff_mass_inv)
     end if
@@ -537,9 +544,8 @@ contains
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_eff_mass(st, gr, kpoints, kdotp_vars, namespace, periodic_dim)
+  subroutine kdotp_write_eff_mass(st, kpoints, kdotp_vars, namespace, periodic_dim)
     type(states_elec_t),  intent(inout) :: st
-    type(grid_t),         intent(inout) :: gr
     type(kpoints_t),      intent(in)    :: kpoints
     type(kdotp_t),        intent(inout) :: kdotp_vars
     type(namespace_t),    intent(in)    :: namespace

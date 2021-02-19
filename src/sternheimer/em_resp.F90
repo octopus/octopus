@@ -20,6 +20,7 @@
 
 module em_resp_oct_m
   use born_charges_oct_m
+  use electrons_oct_m
   use em_resp_calc_oct_m
   use forces_oct_m
   use geometry_oct_m
@@ -30,12 +31,14 @@ module em_resp_oct_m
   use io_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
+  use kpoints_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -46,18 +49,18 @@ module em_resp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
   use string_oct_m
-  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  use v_ks_oct_m  
+  use xc_oct_m
 
   implicit none
 
@@ -138,39 +141,34 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_run_legacy(sys, fromScratch)
-    type(electrons_t), target, intent(inout) :: sys
-    logical,                   intent(in)    :: fromScratch
+    type(electrons_t), intent(inout) :: sys
+    logical,           intent(in)    :: fromScratch
 
-    type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
     type(sternheimer_t)     :: sh, sh_kdotp, sh2, sh_kmo, sh_mo
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
-    type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(lr_t), allocatable :: b_lr(:, :)
     type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :)
     type(lr_t), allocatable :: ke_lr(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
-    integer :: sigma, sigma_alt, idir, idir1, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
+    integer :: sigma, idir, idir2, ierr, iomega, ifactor
     integer :: ierr_e(3), ierr_e2(3), nfactor_ke
-    character(len=100) :: dirname_output, str_tmp
+    character(len=100) :: str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
       exact_freq(3), complex_wfs, allocate_rho_em, allocate_rho_mo
 
-    FLOAT :: closest_omega, last_omega, frequency
+    FLOAT :: last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
     CMPLX :: frequency_eta, frequency_zero, lrc_coef(MAX_DIM, MAX_DIM)
-    type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
-    integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
+    type(restart_t) :: gs_restart, kdotp_restart
 
     PUSH_SUB(em_resp_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
-
-    gr => sys%gr
 
     if (sys%kpoints%use_symmetries) then
       call messages_experimental("em_resp with k-points symmetries")
@@ -190,7 +188,7 @@ contains
     em_vars%lrc_kernel = .false.
     if(abs(sys%ks%xc%kernel_lrc_alpha) > M_EPSILON) em_vars%lrc_kernel = .true.
 
-    if(em_vars%lrc_kernel .and. sys%space%periodic_dim < gr%sb%dim) then
+    if(em_vars%lrc_kernel .and. sys%space%periodic_dim < sys%space%dim) then
       message(1) = 'The use of the LRC kernel for non-periodic dimensions makes no sense.'
       call messages_warning(1)
     end if
@@ -223,7 +221,7 @@ contains
     call messages_info(1)
     call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
-    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+    use_kdotp = simul_box_is_periodic(sys%gr%sb) .and. .not. em_vars%force_no_kdotp
 
     if(use_kdotp .and. .not. smear_is_semiconducting(sys%st%smear)) then
       ! there needs to be a gap.
@@ -283,26 +281,23 @@ contains
       call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
-      SAFE_ALLOCATE(kdotp_em_lr2(1:sys%space%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
+      SAFE_ALLOCATE(kdotp_em_lr2(1:sys%space%periodic_dim, 1:sys%space%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
       do ifactor = 1, em_vars%nfactor
         do sigma = 1, em_vars%nsigma
           do idir = 1, sys%space%periodic_dim
-            do idir2 = 1, gr%sb%dim
+            do idir2 = 1, sys%space%dim
               call lr_init(kdotp_em_lr2(idir, idir2, sigma, ifactor))
               call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = .false.)
             end do
           end do
         end do
       end do
-      call sternheimer_init(sh2, sys, complex_response, set_ham_var = 0, set_last_occ_response = .false.)
-      call sternheimer_init(sh_kdotp, sys, complex_response, set_ham_var = 0, &
-        set_last_occ_response = .true.)
+      call sternheimer_init(sh2, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+        complex_response, set_ham_var = 0, set_last_occ_response = .false.)
+      call sternheimer_init(sh_kdotp, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+        complex_response, set_ham_var = 0, set_last_occ_response = .true.)
       em_vars%occ_response = .true.
       SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%space%periodic_dim))
-
-      call lr_init(kdotp_lr2)
-      call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh, allocate_rho = .false.)
-
     end if
 
     ! Hyperpolarizability requires full corrections to wavefunctions (with projections on occupied states).
@@ -334,10 +329,10 @@ contains
         call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
-        SAFE_ALLOCATE(k2_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
-        SAFE_ALLOCATE(kb_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
-        do idir = 1, gr%sb%dim
-          do idir2 = 1, gr%sb%dim
+        SAFE_ALLOCATE(k2_lr(1:sys%space%dim, 1:sys%space%dim, 1:1))
+        SAFE_ALLOCATE(kb_lr(1:sys%space%dim, 1:sys%space%dim, 1:1))
+        do idir = 1, sys%space%dim
+          do idir2 = 1, sys%space%dim
             call lr_init(kb_lr(idir, idir2, 1))
             call lr_allocate(kb_lr(idir, idir2, 1), sys%st, sys%gr%mesh, allocate_rho = .false.)
             if(idir2 <= idir) then
@@ -356,32 +351,33 @@ contains
           call messages_fatal(1)
         end if
         if(.not. complex_response) then
-          do idir = 1,gr%sb%dim
-            call dlr_orth_response(sys%gr%mesh, sys%st, &
-              kdotp_lr(idir, 1), M_ZERO)
+          do idir = 1, sys%space%dim
+            call dlr_orth_response(sys%gr%mesh, sys%st, kdotp_lr(idir, 1), M_ZERO)
           end do
         else
-          do idir = 1,gr%sb%dim
-            call zlr_orth_response(sys%gr%mesh, sys%st, &
-              kdotp_lr(idir, 1), frequency_zero)
+          do idir = 1, sys%space%dim
+            call zlr_orth_response(sys%gr%mesh, sys%st, kdotp_lr(idir, 1), frequency_zero)
           end do
         end if
-        call sternheimer_init(sh_kmo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
+        call sternheimer_init(sh_kmo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+          complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
       end if
     end if
 
-    SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
+    SAFE_ALLOCATE(em_vars%lr(1:sys%space%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
-      call born_charges_init(em_vars%Born_charges(ifactor), sys%namespace, sys%geo, sys%st, gr%sb%dim)
+      call born_charges_init(em_vars%Born_charges(ifactor), sys%namespace, sys%geo, sys%st, sys%space%dim)
     end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
       ! first-order response is zero if there is time-reversal symmetry. F Mauri and SG Louie, PRL 76, 4246 (1996)
-      call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+        complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonianVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, complex_response, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+        complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
     end if
 
@@ -416,15 +412,17 @@ contains
 
     if(em_vars%calc_magnetooptics) then
       if(em_vars%magnetooptics_nohvar) then
-        call sternheimer_init(sh_mo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
+        call sternheimer_init(sh_mo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+          complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
       else
-        call sternheimer_init(sh_mo, sys, complex_response, set_last_occ_response = em_vars%occ_response) 
-        call sternheimer_build_kxc(sh_mo, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
+        call sternheimer_init(sh_mo, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+          complex_response, set_last_occ_response = em_vars%occ_response) 
+        call sternheimer_build_kxc(sh_mo, sys%namespace, sys%gr%mesh, sys%st, sys%ks%xc)
       end if
       call messages_experimental("Magneto-optical response")
       allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
-      SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
-      do idir = 1, gr%sb%dim
+      SAFE_ALLOCATE(b_lr(1:sys%space%dim, 1:1))
+      do idir = 1, sys%space%dim
         call lr_init(b_lr(idir, 1))
         call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_mo)
       end do
@@ -435,9 +433,9 @@ contains
         end if
         nfactor_ke = 1
         if(sys%kpoints%use_time_reversal .and. sys%kpoints%full%npoints > 1) nfactor_ke = em_vars%nfactor
-        SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:nfactor_ke))
-        do idir = 1, gr%sb%dim
-          do idir2 = 1, gr%sb%dim
+        SAFE_ALLOCATE(ke_lr(1:sys%space%dim, 1:sys%space%dim, 1:em_vars%nsigma, 1:nfactor_ke))
+        do idir = 1, sys%space%dim
+          do idir2 = 1, sys%space%dim
             do sigma = 1, em_vars%nsigma
               do ifactor = 1, nfactor_ke              
                 call lr_init(ke_lr(idir, idir2, sigma, ifactor))
@@ -577,9 +575,11 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer()
+            call drun_sternheimer(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+              sys%geo)
           else
-            call zrun_sternheimer()
+            call zrun_sternheimer(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+              sys%geo)
           end if
 
         end if ! have_to_calculate
@@ -587,17 +587,19 @@ contains
         if(.not. have_to_calculate) cycle
 
         if(states_are_real(sys%st)) then
-          call dcalc_properties_linear()
+          call dcalc_properties_linear(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, &
+            sys%geo, sys%outp)
         else
-          call zcalc_properties_linear()
+          call zcalc_properties_linear(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, &
+            sys%geo, sys%outp)
         end if
 
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear()
+        call dcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo)
       else
-        call zcalc_properties_nonlinear()
+        call zcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -626,7 +628,6 @@ contains
       call sternheimer_end(sh2)
       call pert_end(pert_kdotp)
       call pert_end(pert2_none)
-      call lr_dealloc(kdotp_lr2)
       do idir = 1, sys%space%periodic_dim
         do idir2 = 1, sys%space%periodic_dim
           do sigma = 1, em_vars%nsigma
@@ -649,8 +650,8 @@ contains
       if(use_kdotp) then  
         call pert_end(pert2_none) 
         call sternheimer_end(sh_kmo)
-        do idir = 1, gr%sb%dim
-          do idir2 = 1, gr%sb%dim 
+        do idir = 1, sys%space%dim
+          do idir2 = 1, sys%space%dim 
             call lr_dealloc(kb_lr(idir, idir2, 1))
             if(idir2 <= idir) call lr_dealloc(k2_lr(idir, idir2, 1))
           end do
@@ -663,14 +664,14 @@ contains
     if(em_vars%calc_magnetooptics) then
       if(.not. em_vars%magnetooptics_nohvar) call sternheimer_unset_kxc(sh_mo)
       call sternheimer_end(sh_mo)
-      do idir = 1, gr%sb%dim
+      do idir = 1, sys%space%dim
         call lr_dealloc(b_lr(idir, 1))
       end do
       SAFE_DEALLOCATE_A(b_lr)
       
       if(use_kdotp) then
-        do idir = 1, gr%sb%dim 
-          do idir2 = 1, gr%sb%dim
+        do idir = 1, sys%space%dim 
+          do idir2 = 1, sys%space%dim
             do sigma = 1, em_vars%nsigma
               do ifactor = 1, nfactor_ke
                 call lr_dealloc(ke_lr(idir, idir2, sigma, ifactor))
@@ -1009,6 +1010,7 @@ contains
 #include "complex.F90"
 #include "em_resp_inc.F90"
 
+#include "undef.F90"
   end subroutine em_resp_run_legacy
 
 
@@ -1016,9 +1018,9 @@ contains
   subroutine em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_elec_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(inout) :: gr
+    type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(geometry_t),         intent(inout) :: geo
+    type(geometry_t),         intent(in)    :: geo
     type(output_t),           intent(in)    :: outp
     type(em_resp_t),          intent(inout) :: em_vars
     integer,                  intent(in)    :: iomega
@@ -1417,7 +1419,7 @@ contains
       integer :: idir
       FLOAT :: ff
       CMPLX :: dic
-      R_TYPE, allocatable :: psi(:, :, :, :)
+      CMPLX, allocatable :: psi(:, :, :, :)
   
       PUSH_SUB(em_resp_output.out_circular_dichroism)
 

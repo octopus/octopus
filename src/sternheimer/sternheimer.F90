@@ -22,9 +22,11 @@ module sternheimer_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use density_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
@@ -33,6 +35,7 @@ module sternheimer_oct_m
   use messages_oct_m
   use mix_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -43,15 +46,14 @@ module sternheimer_oct_m
   use restart_oct_m
   use scf_tol_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
-  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use types_oct_m
-  use v_ks_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
   use xc_f03_lib_m
@@ -115,15 +117,21 @@ module sternheimer_oct_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, wfs_are_cplx, set_ham_var, set_occ_response, set_last_occ_response, &
-    occ_response_by_sternheimer)
-    type(sternheimer_t),  intent(out)   :: this
-    type(electrons_t),    intent(inout) :: sys
-    logical,              intent(in)    :: wfs_are_cplx
-    integer,    optional, intent(in)    :: set_ham_var
-    logical,    optional, intent(in)    :: set_occ_response
-    logical,    optional, intent(in)    :: set_last_occ_response
-    logical,    optional, intent(in)    :: occ_response_by_sternheimer
+  subroutine sternheimer_init(this, namespace, space, gr, st, hm, xc, mc, wfs_are_cplx, set_ham_var, set_occ_response, &
+    set_last_occ_response, occ_response_by_sternheimer)
+    type(sternheimer_t),      intent(out)   :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
+    type(grid_t),             intent(inout) :: gr
+    type(states_elec_t),      intent(in)    :: st
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(xc_t),               intent(in)    :: xc
+    type(multicomm_t),        intent(in)    :: mc
+    logical,                  intent(in)    :: wfs_are_cplx
+    integer,        optional, intent(in)    :: set_ham_var
+    logical,        optional, intent(in)    :: set_occ_response
+    logical,        optional, intent(in)    :: set_last_occ_response
+    logical,        optional, intent(in)    :: occ_response_by_sternheimer
 
     integer :: ham_var
     logical :: default_preorthog
@@ -132,20 +140,20 @@ contains
 
     call sternheimer_nullify(this)
 
-    if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
+    if(st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
     end if
-    if(sys%st%smear%method  ==  SMEAR_SEMICONDUCTOR .and. &
-      (abs(sys%st%smear%ef_occ) > M_EPSILON) .and. abs(sys%st%smear%ef_occ - M_ONE) > M_EPSILON) then
-      write(message(1),'(a,f12.6)') 'Partial occupation at the Fermi level: ', sys%st%smear%ef_occ
+    if(st%smear%method  ==  SMEAR_SEMICONDUCTOR .and. &
+      (abs(st%smear%ef_occ) > M_EPSILON) .and. abs(st%smear%ef_occ - M_ONE) > M_EPSILON) then
+      write(message(1),'(a,f12.6)') 'Partial occupation at the Fermi level: ', st%smear%ef_occ
       message(2) = 'Semiconducting smearing cannot be used for Sternheimer in this situation.'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, sys%namespace, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
+      call mix_init(this%mixer, namespace, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, sys%namespace, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
+      call mix_init(this%mixer, namespace, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then
@@ -166,10 +174,10 @@ contains
     !% or if the <tt>Occupations</tt> block specifies all full or empty states,
     !% and we are not solving for linear response in the occupied subspace too.
     !%End 
-    default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
-      (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
+    default_preorthog = (st%smear%method == SMEAR_SEMICONDUCTOR .or. &
+      (st%smear%method == SMEAR_FIXED_OCC .and. st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    call parse_variable(sys%namespace, 'Preorthogonalization', default_preorthog, this%preorthogonalization) 
+    call parse_variable(namespace, 'Preorthogonalization', default_preorthog, this%preorthogonalization) 
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -196,13 +204,13 @@ contains
 
     if(present(set_ham_var)) then
       ham_var = set_ham_var
-    else if(sys%hm%theory_level /= INDEPENDENT_PARTICLES) then
-      call parse_variable(sys%namespace, 'HamiltonianVariation', 3, ham_var)
+    else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
+      call parse_variable(namespace, 'HamiltonianVariation', 3, ham_var)
     else
       ham_var = 0
     end if
 
-    if(sys%hm%theory_level /= INDEPENDENT_PARTICLES) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       this%add_fxc = ((ham_var / 2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else
@@ -235,16 +243,16 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%mc, sys%space)
+    call linear_solver_init(this%solver, namespace, gr, states_are_real(st), mc, space)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
-      call scf_tol_init(this%scf_tol, sys%namespace, sys%st%qtot, tol_scheme = 0) ! fixed
+      call scf_tol_init(this%scf_tol, namespace, st%qtot, tol_scheme = 0) ! fixed
     else
-      call scf_tol_init(this%scf_tol, sys%namespace, sys%st%qtot)
+      call scf_tol_init(this%scf_tol, namespace, st%qtot)
     end if
 
-    if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
+    if(this%add_fxc) call sternheimer_build_fxc(this, namespace, gr%mesh, st, xc)
 
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
@@ -280,12 +288,12 @@ contains
 
 
   !-----------------------------------------------------------
-  subroutine sternheimer_build_fxc(this, namespace, mesh, st, ks)
+  subroutine sternheimer_build_fxc(this, namespace, mesh, st, xc)
     type(sternheimer_t), intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
-    type(v_ks_t),        intent(in)    :: ks
+    type(xc_t),          intent(in)    :: xc
 
     FLOAT, allocatable :: rho(:, :)
 
@@ -296,7 +304,7 @@ contains
 
     SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
     call states_elec_total_density(st, mesh, rho)
-    call xc_get_fxc(ks%xc, mesh, namespace, rho, st%d%ispin, this%fxc)
+    call xc_get_fxc(xc, mesh, namespace, rho, st%d%ispin, this%fxc)
     SAFE_DEALLOCATE_A(rho)
 
     POP_SUB(sternheimer_build_fxc)
@@ -305,12 +313,12 @@ contains
 
 
   !-----------------------------------------------------------
-  subroutine sternheimer_build_kxc(this, namespace, mesh, st, ks)
+  subroutine sternheimer_build_kxc(this, namespace, mesh, st, xc)
     type(sternheimer_t), intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
-    type(v_ks_t),        intent(in)    :: ks
+    type(xc_t),          intent(in)    :: xc
 
     FLOAT, allocatable :: rho(:, :)
 
@@ -322,7 +330,7 @@ contains
 
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       call states_elec_total_density(st, mesh, rho)
-      call xc_get_kxc(ks%xc, mesh, namespace, rho, st%d%ispin, this%kxc)
+      call xc_get_kxc(xc, mesh, namespace, rho, st%d%ispin, this%kxc)
       SAFE_DEALLOCATE_A(rho)
     end if
 

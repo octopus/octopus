@@ -1137,7 +1137,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   call pert_setup_dir(ionic_pert, idir)
 
   SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
-  call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
+  call dcalc_hvar(.true., sys%gr%mesh, sys%st, sys%hm, sys%ks%xc, dl_rho, 1, hvar, fxc = cas%fxc)
 
   ! FIXME: do this only for states called for in CasidaKohnShamStates
   do ik = 1, cas%nik
