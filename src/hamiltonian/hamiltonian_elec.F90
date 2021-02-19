@@ -694,7 +694,7 @@ contains
             hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
 
             !In the fully periodic case, we use Berry phases
-            if(gr%sb%periodic_dim < gr%sb%dim) then
+            if (space%periodic_dim < space%dim) then
               if (.not. allocated(hm%ep%v_static)) then
                 SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
                 hm%ep%v_static(1:gr%mesh%np) = M_ZERO

@@ -1300,15 +1300,15 @@ contains
         !Maybe the parameters should be mixed too.
         if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
-            call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%der, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
-              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
             else
-              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
             end if
           end if
         end if
