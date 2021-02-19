@@ -953,7 +953,7 @@ contains
     end if
 
     call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-         space%dim, space%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
+         space, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
 
     ! check the number of ghost neighbours in parallel
     nnb = 0
