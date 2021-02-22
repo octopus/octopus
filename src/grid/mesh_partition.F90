@@ -727,8 +727,7 @@ contains
     integer :: num_ghost, num_bound, num_local, num_neigh
     FLOAT :: quality
 
-    integer :: ip, ipcoords(1:MAX_DIM)
-    integer :: ipart, jpart
+    integer :: ipart
     type(profile_t), save :: prof
     logical, allocatable :: is_a_neigh(:)
     FLOAT :: scal
