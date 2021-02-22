@@ -724,6 +724,7 @@ contains
 
     integer :: npart, npoints
     integer, allocatable :: nghost(:), nbound(:), nlocal(:), nneigh(:)
+    integer :: num_ghost, num_bound, num_local, num_neigh
     FLOAT :: quality
 
     integer :: ip, ipcoords(1:MAX_DIM)
@@ -746,28 +747,22 @@ contains
     SAFE_ALLOCATE(nneigh(1:npart))
     SAFE_ALLOCATE(is_a_neigh(1:npart))
 
-    is_a_neigh = .false.
-    nghost = 0
-    nbound = 0
-    nlocal = 0
-    nneigh = 0
-
     ipart = mesh%mpi_grp%rank + 1
 
-    nlocal(ipart) = mesh%np
-    nghost(ipart) = mesh%vp%np_ghost
-    nbound(ipart) = mesh%vp%np_bndry
+    num_local = mesh%np
+    num_ghost = mesh%vp%np_ghost
+    num_bound = mesh%vp%np_bndry
 
     is_a_neigh = mesh%vp%ghost_rcounts > 0
-    nneigh(ipart) = count(is_a_neigh(1:npart))
+    num_neigh = count(is_a_neigh(1:npart))
 
     SAFE_DEALLOCATE_A(is_a_neigh)
 
 #ifdef HAVE_MPI
-    call MPI_Allgather(MPI_IN_PLACE, 1, MPI_INTEGER, nneigh(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-    call MPI_Allgather(MPI_IN_PLACE, 1, MPI_INTEGER, nlocal(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-    call MPI_Allgather(MPI_IN_PLACE, 1, MPI_INTEGER, nghost(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-    call MPI_Allgather(MPI_IN_PLACE, 1, MPI_INTEGER, nbound(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Gather(num_neigh, 1, MPI_INTEGER, nneigh(1), 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Gather(num_local, 1, MPI_INTEGER, nlocal(1), 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Gather(num_ghost, 1, MPI_INTEGER, nghost(1), 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Gather(num_bound, 1, MPI_INTEGER, nbound(1), 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
     ! Calculate partition quality
