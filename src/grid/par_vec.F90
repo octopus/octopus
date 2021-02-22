@@ -124,7 +124,6 @@ module par_vec_oct_m
     integer                 :: npart                !< Number of partitions.
     integer                 :: comm                 !< MPI communicator to use.
     integer                 :: np_global            !< Number of points in mesh.
-    integer, allocatable    :: part_vec(:)          !< Global point        -> partition.
     integer, allocatable    :: part_local(:)        !< Local point         -> partition
     integer, allocatable    :: part_local_rev(:)    !< Local point`s value -> partition
 
@@ -815,7 +814,6 @@ contains
     SAFE_DEALLOCATE_A(vp%ghost_sendpos)    
     SAFE_DEALLOCATE_A(vp%send_disp)
     SAFE_DEALLOCATE_A(vp%recv_disp)
-    SAFE_DEALLOCATE_A(vp%part_vec)
     SAFE_DEALLOCATE_A(vp%part_local)
     SAFE_DEALLOCATE_A(vp%part_local_rev)
     SAFE_DEALLOCATE_A(vp%np_local_vec)

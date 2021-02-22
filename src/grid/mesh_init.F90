@@ -824,6 +824,7 @@ contains
     logical :: has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
     type(restart_t) :: restart_load, restart_dump
+    integer, allocatable :: part_vec(:)
     
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
@@ -869,11 +870,6 @@ contains
       call restart_end(restart_dump)
     end if
 
-    !At the moment we still need the global partition. This will be removed in near future.
-    SAFE_ALLOCATE(mesh%vp%part_vec(1:mesh%np_part_global))
-    call partition_get_global(mesh%inner_partition, mesh%vp%part_vec(1:mesh%np_global))
-    call partition_get_global(mesh%bndry_partition, mesh%vp%part_vec(mesh%np_global+1:mesh%np_part_global))      
-
     if (has_virtual_partition) then
       call profiling_end(namespace)
       call print_date("Calculation ended on ")
@@ -897,7 +893,11 @@ contains
     call parse_variable(namespace, 'MeshUseTopology', .false., use_topo)
 
     if(use_topo) then
-      ! this should be integrated in vec_init
+      ! At the moment we still need the global partition. This will be removed in near future.
+      SAFE_ALLOCATE(part_vec(1:mesh%np_part_global))
+      call partition_get_global(mesh%inner_partition, part_vec(1:mesh%np_global))
+      call partition_get_global(mesh%bndry_partition, part_vec(mesh%np_global+1:mesh%np_part_global))
+
 
       ! generate a table of neighbours
 
@@ -905,16 +905,17 @@ contains
       nb = .false.
 
       do ip = 1, mesh%np_global
-        ipart = mesh%vp%part_vec(ip)
+        ipart = part_vec(ip)
         call mesh_global_index_to_coords(mesh, ip, idx)
         do jj = 1, stencil%size
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-            jpart = mesh%vp%part_vec(mesh_global_index_from_coords(mesh, jx))
+            jpart = part_vec(mesh_global_index_from_coords(mesh, jx))
             if(ipart /= jpart ) nb(ipart, jpart) = .true.
           end if
         end do
       end do
+      SAFE_DEALLOCATE_A(part_vec)
 
       ! now generate the information of the graph 
 
@@ -983,7 +984,7 @@ contains
     call parse_variable(namespace, 'PartitionPrint', .true., partition_print)
     
     if (partition_print) then
-      call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
+      call mesh_partition_write_info(mesh)
       call mesh_partition_messages_debug(mesh, namespace)
     end if   
 #endif
