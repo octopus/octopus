@@ -64,8 +64,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   ! loop over the points of psi we have locally
   do ip = 1, mesh%np
     ! find global index
-    ip_global = ip
-    if (mesh%parallel_in_domains) ip_global = mesh%vp%local(ip + mesh%vp%xlocal - 1)
+    ip_global = mesh_local2global(mesh, ip)
 
     ! find coordinates of present point in full MAX_DIM space
     call mesh_global_index_to_coords(mesh, ip_global, ix)

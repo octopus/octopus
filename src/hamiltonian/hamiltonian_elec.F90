@@ -591,10 +591,7 @@ contains
         ! loop over boundary points
         do ip = sp + 1, gr%mesh%np_part
           !translate to a global point
-          ip_global = ip
-#ifdef HAVE_MPI
-          if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
-#endif
+          ip_global = mesh_local2global(gr%mesh, ip)
           ! get corresponding inner point
           ip_inner = mesh_periodic_point(gr%mesh, ip_global,ip)
           x_global = mesh_x_global(gr%mesh, ip_inner)
@@ -623,10 +620,7 @@ contains
         if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
         do ip = sp + 1, gr%mesh%np_part
           !translate to a global point
-          ip_global = ip
-#ifdef HAVE_MPI
-          if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
-#endif
+          ip_global = mesh_local2global(gr%mesh, ip)
           ! get corresponding inner point
           ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
 
@@ -1115,10 +1109,7 @@ contains
           !$omp parallel do schedule(static) private(ip_global, ip_inner, x_global)
           do ip = sp + 1, mesh%np_part
             !translate to a global point
-            ip_global = ip
-#ifdef HAVE_MPI
-            if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-#endif
+            ip_global = mesh_local2global(mesh, ip)
             ! get corresponding inner point
             ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 

@@ -160,7 +160,7 @@ contains
 
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
         in_points = in_points_red
       end if
 #endif
@@ -198,7 +198,7 @@ contains
 
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
         in_points = in_points_red
       end if
 #endif

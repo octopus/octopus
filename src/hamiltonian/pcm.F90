@@ -1676,7 +1676,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt(ipt) = mesh_global_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
+            pt(ipt) = mesh_local_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
           end do
         end do
       end do
@@ -1690,10 +1690,9 @@ contains
       do ipt = 1, npt
         
         ! Check the point is inside the mesh skip otherwise
-        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
+        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part) then
           
           if (mesh%parallel_in_domains) then
-            pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
             boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
             inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
 

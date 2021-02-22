@@ -141,7 +141,7 @@ contains
 
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
-      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%vp%comm, mpi_err)
+      call MPI_Allreduce(uvpsi, uvpsi_tmp, 4, MPI_CMPLX, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
       uvpsi = uvpsi_tmp
     end if
 #endif

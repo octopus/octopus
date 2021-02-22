@@ -398,30 +398,17 @@ contains
       st2 = 0
       do ii = 1, np
         p1 = 0
-        if(mesh%parallel_in_domains) then
-          ! When running in parallel, get global number of
-          ! point ii.
-          call mesh_global_index_to_coords(mesh, &
-            mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
-        else
-          call mesh_global_index_to_coords(mesh, ii, p1)
-        end if
+        call mesh_local_index_to_coords(mesh, ii, p1)
 
         do jj = 1, op%stencil%size
-          ! Get global index of p1 plus current stencil point.
+          ! Get local index of p1 plus current stencil point.
           if (multiresolution_use(mesh%hr_area)) then
-            st1(jj) = mesh_global_index_from_coords(mesh, &
+            st1(jj) = mesh_local_index_from_coords(mesh, &
                  p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else
-            st1(jj) = mesh_global_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+            st1(jj) = mesh_local_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
-          
-          if(mesh%parallel_in_domains) then
-            ! When running parallel, translate this global
-            ! number back to a local number.
-            st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
-          end if
-          
+
           ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
@@ -663,7 +650,7 @@ contains
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
         do ip = 1, mesh%np_part
-          call mesh_global_index_to_coords(op%mesh, ip, idx)
+          call mesh_local_index_to_coords(op%mesh, ip, idx)
           do jj = 1, op%mesh%sb%dim
             stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
           end do
@@ -762,8 +749,8 @@ contains
 
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local
-        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+      do ip = 1, mesh%np
+        opt%w(:, ip) = opgt%w(:, mesh_local2global(mesh, ip))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -827,8 +814,8 @@ contains
 
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local
-        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+      do ip = 1, mesh%np
+        opt%w(:, ip) = opgt%w(:, mesh_local2global(mesh, ip))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)

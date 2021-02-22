@@ -947,7 +947,7 @@ contains
 
     end if
 
-    call vec_init(mesh%mpi_grp%comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
+    call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
          mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
 
     ! check the number of ghost neighbours in parallel
@@ -964,25 +964,11 @@ contains
     mesh%np_part = mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry
 
     ! Compute mesh%x as it is done in the serial case but only for local points.
-    ! x consists of three parts: the local points, the
-    ! ghost points, and the boundary points; in this order
-    ! (just as for any other vector, which is distributed).
     SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:mesh%sb%dim))
     mesh%x(:, :) = M_ZERO
-    ! Do the inner points
-    do ii = 1, mesh%np
-      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
+    do ii = 1, mesh%np_part
+      jj = mesh_local2global(mesh, ii)
       mesh%x(ii, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
-    end do
-    ! Do the ghost points
-    do ii = 1, mesh%vp%np_ghost
-      jj = mesh%vp%ghost(mesh%vp%xghost + ii - 1) 
-      mesh%x(ii+mesh%np, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
-    end do
-    ! Do the boundary points
-    do ii = 1, mesh%vp%np_bndry
-      jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
-      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
 
     !%Variable PartitionPrint
@@ -1014,10 +1000,6 @@ contains
     integer :: jj(1:MAX_DIM), ip, np
     FLOAT   :: chi(MAX_DIM)
 
-#if defined(HAVE_MPI)
-    integer :: kk
-#endif
-
     PUSH_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
     np = 1
@@ -1031,47 +1013,14 @@ contains
 
     jj(sb%dim + 1:MAX_DIM) = 0
 
-    if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-      ! Do the inner points.
-      do ip = 1, min(np, mesh%np)
-        kk = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        call mesh_global_index_to_coords(mesh, kk, jj)
+    if (multiresolution_use(mesh%hr_area)) then
+      call multiresolution_vol_pp(sb)
+    else
+      do ip = 1, np
+        call mesh_local_index_to_coords(mesh, ip, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
+        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
       end do
-
-      if(mesh%use_curvilinear) then
-        ! Do the ghost points.
-        do ip = 1, mesh%vp%np_ghost
-          kk = mesh%vp%ghost(mesh%vp%xghost + ip - 1)
-          call mesh_global_index_to_coords(mesh, kk, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip + mesh%np) = &
-            mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
-        end do
-        ! Do the boundary points.
-        do ip = 1, mesh%vp%np_bndry
-          kk = mesh%vp%bndry(mesh%vp%xbndry + ip - 1)
-          call mesh_global_index_to_coords(mesh, kk, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &
-            mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) &
-            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost, :), chi(1:sb%dim))
-        end do
-      end if
-#endif
-    else ! serial mode
-
-      if (multiresolution_use(mesh%hr_area)) then
-        call multiresolution_vol_pp(sb)
-      else
-        do ip = 1, np
-          call mesh_global_index_to_coords(mesh, ip, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
-        end do
-      end if
     end if
 
     if(mesh%use_curvilinear) then

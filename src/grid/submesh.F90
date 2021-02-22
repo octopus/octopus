@@ -195,9 +195,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh_global_index_from_coords(mesh, [ix, iy, iz])
-            if(ip == 0) cycle
-            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
+            ip = mesh_local_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc2) then
@@ -223,9 +221,8 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh_global_index_from_coords(mesh, [ix, iy, iz])
+            ip = mesh_local_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
-            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
@@ -738,7 +735,7 @@ contains
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
-      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call comm_allreduce(this%mesh%mpi_grp%comm, dotp)
       call profiling_out(prof_sm_reduce)
     end if 
  

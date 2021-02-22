@@ -305,9 +305,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   integer :: ip, ix, iy, iz
   integer :: im, ii, nn
-#ifdef HAVE_MPI
-  integer :: first, last
-#endif
   logical :: local_
   R_TYPE, pointer :: gmf(:)
   integer                    :: bsize
@@ -378,10 +375,8 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   if(local_) then
 #ifdef HAVE_MPI
-    first = mesh%vp%xlocal
-    last = mesh%vp%np_local   
-    do ii = 1, last
-      mf(ii) = gmf(mesh%vp%local(ii+first-1))
+    do ip = 1, mesh%np
+      mf(ip) = gmf(mesh_local2global(mesh, ip))
     end do
 #endif
     SAFE_DEALLOCATE_P(gmf)

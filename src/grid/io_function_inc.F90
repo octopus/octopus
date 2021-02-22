@@ -66,15 +66,15 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
 
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
-    call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
+    call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_BCAST)
 #if defined(HAVE_MPI)
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
-    call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
+    call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call vec_scatter(mesh%vp, mesh%vp%root, ff, ff_global)
+      call vec_scatter(mesh%vp, 0, ff, ff_global)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
@@ -481,9 +481,9 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   root_ = optional_default(root, 0)
 
   if(mesh%parallel_in_domains) then
-    comm = mesh%vp%comm
+    comm = mesh%mpi_grp%comm
 
-    i_am_root = (mesh%vp%rank == root_)
+    i_am_root = (mesh%mpi_grp%rank == root_)
 
     if (.not. is_global_) then
       if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
@@ -730,8 +730,8 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   comm = MPI_COMM_NULL
   root_ = optional_default(root, 0)
   if(mesh%parallel_in_domains) then
-    comm = mesh%vp%comm
-    i_am_root = (mesh%vp%rank == root_)
+    comm = mesh%mpi_grp%comm
+    i_am_root = (mesh%mpi_grp%rank == root_)
     if (.not. is_global_) then
       if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
         call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")

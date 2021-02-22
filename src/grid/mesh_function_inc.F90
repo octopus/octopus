@@ -210,7 +210,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call comm_allreduce(mesh%mpi_grp%comm, dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -242,7 +242,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call comm_allreduce(mesh%mpi_grp%comm, dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -277,7 +277,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     nrm2 = nrm2**2
-    call comm_allreduce(mesh%vp%comm, nrm2)
+    call comm_allreduce(mesh%mpi_grp%comm, nrm2)
     nrm2 = sqrt(nrm2)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
@@ -453,7 +453,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: iu, iv, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(3)
   type(qshep_t) :: interp
   FLOAT, allocatable :: xglobal(:, :)
@@ -468,7 +468,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif
@@ -502,7 +502,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
   integer :: iu, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(2)
   type(qshep_t) :: interp
   FLOAT , allocatable :: xglobal(:, :)
@@ -517,7 +517,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif

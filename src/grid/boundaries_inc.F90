@@ -334,7 +334,7 @@ contains
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
       
       do ip = bndry_start, bndry_end
-        call mesh_global_index_to_coords(boundaries%mesh, ip, idx)
+        call mesh_local_index_to_coords(boundaries%mesh, ip, idx)
         ix = idx(1)
         iy = idx(2)
         iz = idx(3)
@@ -354,7 +354,7 @@ contains
                   boundaries%mesh%hr_area%interp%ww(jj) *        &
                   boundaries%mesh%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(mesh_global_index_from_coords(boundaries%mesh, [ &
+                ff(ip) = ff(ip) + weight * ff(mesh_local_index_from_coords(boundaries%mesh, [ &
                   ix + boundaries%mesh%hr_area%interp%posi(ii) * dx,   &
                   iy + boundaries%mesh%hr_area%interp%posi(jj) * dy,   &
                   iz + boundaries%mesh%hr_area%interp%posi(kk) * dz]))
@@ -475,10 +475,10 @@ contains
       call profiling_in(set_bc_comm_prof, TOSTRING(X(SET_BC_COMM)))
 
 #ifdef HAVE_MPI
-      call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
+      call mpi_debug_in(boundaries%mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
-        recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%vp%comm, mpi_err)
-      call mpi_debug_out(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
+        recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(boundaries%mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
       
       call profiling_count_transfers(sum(boundaries%nsend(1:npart) + boundaries%nrecv(1:npart))*ffb%nst_linear, &

@@ -2529,11 +2529,7 @@ contains
       ! get the surface points
       this%nsrfcpnts = 0
       do ip_local = 1, mesh%np
-        if(mesh%parallel_in_domains) then
-          ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
-        else
-          ip_global = ip_local
-        end if
+        ip_global = mesh_local2global(mesh, ip_local)
       
         nsurfaces = 0
 

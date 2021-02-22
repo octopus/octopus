@@ -887,7 +887,7 @@ contains
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
       namespace, action='write')
     do ii = 1, mesh%np
-      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
+      jj = mesh_local2global(mesh, ii)
       write(iunit, '(i8,99f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
@@ -895,12 +895,8 @@ contains
     ! with boundary included
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
       namespace, action='write')
-    do ii = 1, mesh%np
-      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
-      write(iunit, '(i8,99f18.8)') jj, mesh_x_global(mesh, jj)
-    end do
-    do ii = 1, mesh%vp%np_bndry
-      jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
+    do ii = 1, mesh%np_part
+      jj = mesh_local2global(mesh, ii)
       write(iunit, '(i8,99f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)

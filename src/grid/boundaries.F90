@@ -129,10 +129,10 @@ contains
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
-#ifdef HAVE_MPI
     integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
+#ifdef HAVE_MPI
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
@@ -177,25 +177,14 @@ contains
 
       !count the number of points that are periodic
       this%nper = 0
-#ifdef HAVE_MPI
       nper_recv = 0
-#endif
       do ip = sp + 1, mesh%np_part
 
-        ip_global = ip
-
-#ifdef HAVE_MPI
-        !translate to a global point
-        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-#endif
+        ip_global = mesh_local2global(mesh, ip)
 
         ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner)
 
-#ifdef HAVE_MPI
-        !translate back to a local point
-        if(mesh%parallel_in_domains) ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
-#endif
-        
         ! If the point is the periodic of another point, is not zero
         ! (this might happen in the parallel case) and is inside the
         ! grid then we have to copy it from the grid points.  
@@ -207,50 +196,33 @@ contains
         !
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
           this%nper = this%nper + 1
-#ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
           nper_recv = nper_recv + 1
-#endif
         end if
       end do
 
       SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
 
-#ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
         this%nrecv = 0
       end if
-#endif
 
       iper = 0
       do ip = sp + 1, mesh%np_part
 
-        ip_global = ip
+        ip_global = mesh_local2global(mesh, ip)
 
-        !translate to a global point
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-#endif
-
-        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner_global)
         
-        !translate to local (and keep a copy of the global)
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) then
-          ip_inner_global = ip_inner
-          ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
-        end if
-#endif
-
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
 
-#ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
           ! find in which paritition it is
           do ipart = 1, mesh%vp%npart
@@ -267,14 +239,13 @@ contains
                 ! and where it is in the other partition
                 recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
 
-                ASSERT(mesh%vp%rank /= ipart - 1) ! if we are here, the point must be in another node
+                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
               
                 exit
               end if
             end if
             
           end do
-#endif
         end if
       end do
 
@@ -293,7 +264,7 @@ contains
         ! We send the number of points we expect to receive.
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
-          call MPI_Bsend(this%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(this%nrecv(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%mpi_grp%comm, mpi_err)
         end do
 
         ! And we receive it
@@ -301,13 +272,13 @@ contains
         this%nsend = 0
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
-          call MPI_Recv(this%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, status, mpi_err)
+          call MPI_Recv(this%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%mpi_grp%comm, status, mpi_err)
         end do
 
         ! Now we send the indices of the points
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nrecv(ipart) == 0) cycle
-          call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
+          call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%mpi_grp%comm, mpi_err)
         end do
 
         SAFE_ALLOCATE(this%per_send(1:maxval(this%nsend), 1:mesh%vp%npart))
@@ -316,7 +287,7 @@ contains
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
           call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
-               ipart - 1, 1, mesh%vp%comm, status, mpi_err)
+               ipart - 1, 1, mesh%mpi_grp%comm, status, mpi_err)
         end do
 
         ! we no longer need this
