@@ -122,7 +122,6 @@ module par_vec_oct_m
 
     ! The following members are set independent of the processs.
     integer                 :: npart                !< Number of partitions.
-    integer                 :: root                 !< The master process.
     integer                 :: comm                 !< MPI communicator to use.
     integer                 :: np_global            !< Number of points in mesh.
     integer, allocatable    :: part_vec(:)          !< Global point        -> partition.
@@ -202,10 +201,9 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
+  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
        inner_partition, bndry_partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
-    integer,         intent(in)  :: root         !< The master process.
 
     !> The next seven entries come from the mesh.
     integer,          intent(in)    :: np_global      !< mesh%np_global
@@ -655,7 +653,6 @@ contains
     
     ! Complete entries in vp.
     vp%comm      = comm
-    vp%root      = root
     vp%np_global = np_global
     vp%npart     = npart
 

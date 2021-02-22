@@ -453,7 +453,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: iu, iv, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(3)
   type(qshep_t) :: interp
   FLOAT, allocatable :: xglobal(:, :)
@@ -468,7 +468,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif
@@ -502,7 +502,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
   integer :: iu, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(2)
   type(qshep_t) :: interp
   FLOAT , allocatable :: xglobal(:, :)
@@ -517,7 +517,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif

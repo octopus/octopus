@@ -68,13 +68,13 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     ! Now, it tells everybody else.
     call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_BCAST)
 #if defined(HAVE_MPI)
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
     call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call vec_scatter(mesh%vp, mesh%vp%root, ff, ff_global)
+      call vec_scatter(mesh%vp, 0, ff, ff_global)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
