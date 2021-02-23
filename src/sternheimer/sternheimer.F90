@@ -147,7 +147,7 @@ contains
     logical,        optional, intent(in)    :: set_last_occ_response
     logical,        optional, intent(in)    :: occ_response_by_sternheimer
 
-    integer :: np, nm, ii
+    integer :: ip, nm, ii
     integer :: ham_var, iunit
     logical :: default_preorthog
 
@@ -288,21 +288,17 @@ contains
       call photon_mode_write_info(this%pt_modes, iunit)
       SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes))
 
-      np = gr%mesh%np
       nm = this%pt_modes%nmodes
-      SAFE_ALLOCATE(this%omg2_lmda_r(1:np))
-      SAFE_ALLOCATE(this%lambda_dot_r(1:np))
+      SAFE_ALLOCATE(this%omg2_lmda_r(1:gr%mesh%np))
+      SAFE_ALLOCATE(this%lambda_dot_r(1:gr%mesh%np))
       do ii = 1, nm
-        this%omg2_lmda_r(1:np) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
-              (this%pt_modes%pol(ii, 1)*gr%mesh%x(1:np, 1) +  &
-               this%pt_modes%pol(ii, 2)*gr%mesh%x(1:np, 2) +  &
-               this%pt_modes%pol(ii, 3)*gr%mesh%x(1:np, 3))
-        this%lambda_dot_r(1:np) = this%pt_modes%lambda(ii) * &
-              (this%pt_modes%pol(ii, 1)*gr%mesh%x(1:np, 1) + &
-               this%pt_modes%pol(ii, 2)*gr%mesh%x(1:np, 2) + &
-               this%pt_modes%pol(ii, 3)*gr%mesh%x(1:np, 3))
+        do ip = 1, gr%mesh%np
+          this%omg2_lmda_r(ip) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
+            sum(this%pt_modes%pol(ii, 1:space%dim)*gr%mesh%x(ip, 1:space%dim))
+          this%lambda_dot_r(ip) = this%pt_modes%lambda(ii) * &
+            sum(this%pt_modes%pol(ii, 1:space%dim)*gr%mesh%x(ip, 1:space%dim))
+        end do
       end do
-
     end if
 
     !%Variable PhotonEta
