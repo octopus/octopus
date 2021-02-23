@@ -351,14 +351,7 @@ contains
       end if
     end if
 
-    !%Variable EnablePhotons
-    !%Type logical
-    !%Default .false.
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Enable photon modes for solving the Casida equation.
-    !% The implementation is described in ACS Photonics 2019, 6, 11, 2757-2778.
-    !%End
+    ! This variable is documented in xc_oep_init.
     call parse_variable(sys%namespace, 'EnablePhotons', .false., cas%has_photons)
     cas%pt_nmodes = 0
     if (cas%has_photons) then

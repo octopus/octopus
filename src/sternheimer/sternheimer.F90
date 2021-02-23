@@ -270,14 +270,7 @@ contains
     if(this%add_fxc) call sternheimer_build_fxc(this, namespace, gr%mesh, st, xc)
 
 
-    !%Variable EnablePhotons
-    !%Type logical
-    !%Default no
-    !%Section Linear Response::Sternheimer
-    !%Description
-    !% If set to yes, the photons are coupled to the electronic subsystem in the frequency-dependent
-    !% Sternheimer equation
-    !%End
+    ! This variable is documented in xc_oep_init.
     call parse_variable(namespace, 'EnablePhotons', .false., this%enable_el_pt_coupling)
     call messages_print_var_value(stdout, 'EnablePhotons', this%enable_el_pt_coupling)
 
