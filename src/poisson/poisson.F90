@@ -558,7 +558,7 @@ contains
       case (1)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box = der%mesh%idx%ll
         end select
@@ -566,10 +566,10 @@ contains
       case (2)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(1:2) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box(:) = der%mesh%idx%ll(:)
         end select
@@ -577,16 +577,16 @@ contains
       case (3)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(:) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(2) = maxval(box(2:3)) ! max of finite directions
           box(3) = maxval(box(2:3)) ! max of finite directions
         case(POISSON_FFT_KERNEL_CORRECTED)
           box(:) = der%mesh%idx%ll(:)
         case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
-          call mesh_double_box(der%mesh%sb, space, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         end select
 
       end select

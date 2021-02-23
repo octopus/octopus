@@ -487,7 +487,7 @@ contains
     end if
     
     do ia = 1, geo%natoms
-      call projector_build(ep%proj(ia), gr, geo%atom(ia), ep%so_strength)
+      call projector_build(ep%proj(ia), geo%atom(ia), ep%so_strength)
       if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
 

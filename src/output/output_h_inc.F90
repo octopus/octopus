@@ -288,8 +288,7 @@
         else
           write(fname, '(a,i1)') 'density_kpt-sp', is
         end if
-        call io_function_output_global_BZ(outp%how, dir, fname, namespace, &
-          gr%mesh, hm%kpoints, density_kpt(:, is), unit_one, err)
+        call io_function_output_global_BZ(outp%how, dir, fname, namespace, hm%kpoints, density_kpt(:, is), unit_one, err)
       end do
       SAFE_DEALLOCATE_A(density_tmp)
       SAFE_DEALLOCATE_A(density_kpt)

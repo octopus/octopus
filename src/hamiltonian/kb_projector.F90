@@ -57,10 +57,9 @@ module kb_projector_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
+  subroutine kb_projector_init(kb_p, sm, a, l, lm)
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
-    type(grid_t),         intent(in)    :: gr
     type(atom_t), target, intent(in)    :: a
     integer,              intent(in)    :: l, lm
 

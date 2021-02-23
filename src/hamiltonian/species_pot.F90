@@ -303,9 +303,8 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, space, atom, namespace, pos,  spin_channels, rho)
+ subroutine species_atom_density_np(mesh, atom, namespace, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
-    type(space_t),        intent(in)    :: space
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:) !< (Max dim)

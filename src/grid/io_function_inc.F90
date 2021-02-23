@@ -669,7 +669,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, kpoints, &
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, kpoints, &
           ff_global(:, ivd), unit, ierr)
       end do
     end if
@@ -1498,11 +1498,10 @@ end subroutine X(io_function_output_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, kpoints, ff, unit, ierr)
+subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, kpoints, ff, unit, ierr)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(namespace_t),          intent(in)  :: namespace
-  type(mesh_t),               intent(in)  :: mesh
   type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
   type(unit_t),               intent(in)  :: unit

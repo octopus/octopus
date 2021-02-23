@@ -257,9 +257,8 @@ contains
   end subroutine projector_init_phases
 
   !---------------------------------------------------------
-  subroutine projector_build(p, gr, a, so_strength)
+  subroutine projector_build(p, a, so_strength)
     type(projector_t), intent(inout) :: p
-    type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
     FLOAT,             intent(in)    :: so_strength
 
@@ -284,7 +283,7 @@ contains
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
-          call kb_projector_init(p%kb_p(ll, mm), p%sphere, gr, a, ll, mm)
+          call kb_projector_init(p%kb_p(ll, mm), p%sphere, a, ll, mm)
         end do
       end do
 
@@ -299,7 +298,7 @@ contains
       ! for rkb, l = 0 is a normal kb
       if(p%lloc /= 0) then
         SAFE_ALLOCATE(p%kb_p(1:1, 1:1))
-        call kb_projector_init(p%kb_p(1, 1), p%sphere, gr, a, 0, 0)
+        call kb_projector_init(p%kb_p(1, 1), p%sphere, a, 0, 0)
       end if
 
     end select
