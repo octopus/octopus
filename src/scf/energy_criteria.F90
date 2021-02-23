@@ -25,7 +25,6 @@ module energy_criteria_oct_m
   use profiling_oct_m
   use quantity_oct_m
   use unit_oct_m
-  use unit_system_oct_m 
 
   implicit none
 
@@ -37,7 +36,6 @@ module energy_criteria_oct_m
     private
 
   contains
-    procedure :: write_info   => criteria_write_info
     final     :: energy_criteria_end 
   end type energy_criteria_t
 
@@ -53,9 +51,10 @@ contains
   !! corresponding type and then calls the init routine which is a type-bound
   !! procedure of the corresponding type. With this design, also derived
   !! classes can use the init routine of the parent class.
-  function energy_criteria_constructor(tol_abs, tol_rel) result(crit)
+  function energy_criteria_constructor(tol_abs, tol_rel, unit) result(crit)
     FLOAT,                       intent(in) :: tol_abs
     FLOAT,                       intent(in) :: tol_rel
+    type(unit_t),        target, intent(in) :: unit
     class(energy_criteria_t),  pointer :: crit
 
     PUSH_SUB(energy_criteria_constructor)
@@ -65,26 +64,11 @@ contains
     crit%tol_abs = tol_abs
     crit%tol_rel = tol_rel
     crit%quantity = ENERGY
+    crit%unit => unit
+    crit%label = 'en'
 
     POP_SUB(energy_criteria_constructor)
   end function energy_criteria_constructor
-
-  ! ---------------------------------------------------------
-  subroutine criteria_write_info(this, iunit)
-    class(energy_criteria_t),  intent(inout) :: this
-    integer,                        intent(in)    :: iunit
-
-    PUSH_SUB(criteria_write_info)
-
-    write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_en = ', &
-                units_from_atomic(units_out%energy, this%val_abs), &
-          ' (', units_from_atomic(units_out%energy, this%tol_abs), ')', &
-          ' [',  trim(units_abbrev(units_out%energy)), ']'
-    write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_en = ', this%val_rel, ' (', this%tol_rel, ')'
-     
-    POP_SUB(criteria_write_info)
-  end subroutine criteria_write_info
-
 
   ! ---------------------------------------------------------
   subroutine energy_criteria_end(this) 

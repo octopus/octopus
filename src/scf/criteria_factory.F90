@@ -68,7 +68,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, conv_energy_diff, unit = units_inp%energy)
-    crit => energy_criteria_t(conv_energy_diff, M_ZERO)
+    crit => energy_criteria_t(conv_energy_diff, M_ZERO, units_out%energy)
     call list%add(crit)
 
     !%Variable ConvAbsDens
@@ -143,7 +143,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev)
-    crit => eigenval_criteria_t(conv_abs_ev, conv_rel_ev)
+    crit => eigenval_criteria_t(conv_abs_ev, conv_rel_ev, units_out%energy)
     call list%add(crit)
 
     call messages_obsolete_variable(namespace, 'ConvForce')

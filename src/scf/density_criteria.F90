@@ -35,7 +35,6 @@ module density_criteria_oct_m
     private
 
   contains
-    procedure :: write_info   => criteria_write_info
     final     :: density_criteria_end
   end type density_criteria_t
 
@@ -63,22 +62,10 @@ contains
     crit%tol_abs = tol_abs
     crit%tol_rel = tol_rel
     crit%quantity = DENSITY
+    crit%label = 'dens'
 
     POP_SUB(density_criteria_constructor)
   end function density_criteria_constructor
-
-  ! ---------------------------------------------------------
-  subroutine criteria_write_info(this, iunit)
-    class(density_criteria_t),  intent(inout) :: this
-    integer,                    intent(in)    :: iunit
-
-    PUSH_SUB(criteria_write_info)
-
-    write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', this%val_abs, ' (', this%tol_abs, ')'
-    write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', this%val_rel, ' (', this%tol_rel, ')'
-     
-    POP_SUB(criteria_write_info)
-  end subroutine criteria_write_info
 
   ! ---------------------------------------------------------
   subroutine density_criteria_end(this)

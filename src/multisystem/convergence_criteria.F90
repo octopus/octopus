@@ -23,6 +23,7 @@ module convergence_criteria_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use profiling_oct_m
+  use unit_oct_m
 
   implicit none
 
@@ -39,7 +40,9 @@ module convergence_criteria_oct_m
     integer, public :: type    !< Type of the quantity
     FLOAT,   public :: tol_abs !< Tolerance of the convergence criteria
     FLOAT,   public :: tol_rel !< Tolerance of the convergence criteria
-    
+    character(len=:), allocatable, public :: label
+    type(unit_t), pointer, public :: unit => null()
+
     integer, public :: quantity  !< The quantity that needs to be converged
   
     FLOAT, public   :: val_abs    !< Current value of the criteria
@@ -50,17 +53,8 @@ module convergence_criteria_oct_m
   contains
     procedure :: is_converged => convergence_criteria_is_converged
     procedure :: set_pointers => criteria_set_quantity_pointers
-    procedure(criteria_write_info), deferred :: write_info
+    procedure :: write_info => criteria_write_info
   end type convergence_criteria_t
-
-  abstract interface
-    ! ---------------------------------------------------------
-    subroutine criteria_write_info(this, iunit)
-      import convergence_criteria_t
-      class(convergence_criteria_t),  intent(inout) :: this
-      integer,                        intent(in)    :: iunit
-    end subroutine criteria_write_info
-  end interface
 
   !> These classes extend the list and list iterator to make a criteria list
   type, extends(linked_list_t) :: criteria_list_t
@@ -77,6 +71,27 @@ module convergence_criteria_oct_m
 
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine criteria_write_info(this, iunit)
+    class(convergence_criteria_t), intent(inout) :: this
+    integer,                       intent(in)    :: iunit
+
+    PUSH_SUB(criteria_write_info)
+
+    if (associated(this%unit)) then
+      write(iunit, '(6x,a,a,a,es15.8,a,es15.8,4a)') 'abs_', this%label, ' = ', &
+        units_from_atomic(this%unit, this%val_abs), &
+        ' (', units_from_atomic(this%unit, this%tol_abs), ')', &
+        ' [',  trim(units_abbrev(this%unit)), ']'
+    else
+      write(iunit, '(6x,a,a,a,es15.8,a,es15.8,a)') 'abs_', this%label, ' = ', this%val_abs, ' (', this%tol_abs, ')'
+    end if
+    write(iunit, '(6x,a,a,a,es15.8,a,es15.8,a)') 'rel_', this%label, ' = ', this%val_rel, ' (', this%tol_rel, ')'
+     
+    POP_SUB(criteria_write_info)
+  end subroutine criteria_write_info
+
   ! ---------------------------------------------------------
   subroutine criteria_list_add_node(this, criteria)
     class(criteria_list_t)                :: this
@@ -160,9 +175,13 @@ contains
 
     nullify(this%value_diff)
     nullify(this%norm)
+    nullify(this%unit)
+    if (allocated(this%label)) then
+      ! No safe_dealloate here, because it was not allocated with safe_allocate.
+      deallocate(this%label)
+    end if
 
     POP_SUB(convergence_criteria_end)
-
   end subroutine convergence_criteria_end
 
 end module convergence_criteria_oct_m
