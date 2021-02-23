@@ -66,13 +66,14 @@ module output_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use string_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
   use states_mxll_oct_m
+  use string_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
@@ -157,9 +158,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, sb, st, nst, ks)
+  subroutine output_init(outp, namespace, space, sb, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
@@ -481,7 +483,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, namespace, outp%bgw, sb%periodic_dim)
+      call output_berkeleygw_init(nst, namespace, outp%bgw, space%periodic_dim)
     end if
 
     !%Variable OutputLDA_U
@@ -641,9 +643,10 @@ contains
   end subroutine output_init
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
+  subroutine output_all(outp, namespace, space, dir, gr, geo, st, hm, ks)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
@@ -699,7 +702,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, namespace, dir, st, gr, geo, hm)
+      call output_me(outp%me, namespace, space, dir, st, gr, geo, hm)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
@@ -707,7 +710,7 @@ contains
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
+      call output_berkeleygw(outp%bgw, namespace, space, dir, st, gr, ks, hm, geo)
     end if
     
     call output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
@@ -1202,9 +1205,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, namespace, dir, st, gr, ks, hm, geo)
+  subroutine output_berkeleygw(bgw, namespace, space, dir, st, gr, ks, hm, geo)
     type(output_bgw_t),       intent(in)    :: bgw
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
     type(grid_t), target,     intent(in)    :: gr
@@ -1259,9 +1263,9 @@ contains
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
+      call dbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     else
-      call zbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
+      call zbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &

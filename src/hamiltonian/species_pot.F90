@@ -659,7 +659,7 @@ contains
     case(SPECIES_FULL_GAUSSIAN)
 
       ! periodic copies are not considered in this routine
-      if(simul_box_is_periodic(mesh%sb)) then
+      if (space%is_periodic()) then
         call messages_experimental("species_full_gaussian for periodic systems")
       end if
 
@@ -978,7 +978,7 @@ contains
 
       case(SPECIES_FROM_FILE)
 
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
         if(err /= 0) then
@@ -989,7 +989,7 @@ contains
 
       case(SPECIES_JELLIUM)
 
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
         a2 = species_z(species)/species_jradius(species)
@@ -1025,7 +1025,7 @@ contains
 
       case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         ps => species_ps(species)
 

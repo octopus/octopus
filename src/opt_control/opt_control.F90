@@ -130,7 +130,7 @@ contains
 
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".
-    call td_init(td, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp)
+    call td_init(td, sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp)
     if(sys%hm%theory_level /= INDEPENDENT_PARTICLES ) call propagator_elec_set_scf_prop(td%tr, threshold = CNST(1.0e-14))
 
     ! Read general information about how the OCT run will be made, from inp file. "oct_read_inp" is

@@ -42,8 +42,9 @@ module propagator_rk_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
-  use species_oct_m
+  use space_oct_m
   use sparskit_oct_m
+  use species_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
   use propagation_ops_elec_oct_m
@@ -70,9 +71,10 @@ module propagator_rk_oct_m
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
+  subroutine td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions, geo, qcchi)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
+    type(space_t),                               intent(in)    :: space
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
     type(grid_t),                        target, intent(inout) :: gr
     type(states_elec_t),                 target, intent(inout) :: st
@@ -361,7 +363,7 @@ contains
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+        call v_ks_calc(ks, namespace, space, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                  time = tau, calc_energy = .false., calc_eigenval = .false.)
       else
         call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
@@ -488,9 +490,10 @@ contains
   end subroutine td_explicit_runge_kutta4
 
 
-  subroutine td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta2(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),        target, intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -606,7 +609,7 @@ contains
           end do
         end do
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield),&
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield),&
                                         calc_energy = .false., calc_eigenval = .false.)
       end if
       if(ion_dynamics_ions_move(ions)) then
@@ -706,9 +709,10 @@ contains
 
   !----------------------------------------------------------------------------
 
-  subroutine td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta4(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),        target, intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -809,7 +813,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -850,7 +854,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)

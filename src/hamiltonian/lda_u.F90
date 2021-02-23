@@ -48,6 +48,7 @@ module lda_u_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -188,9 +189,10 @@ contains
   end subroutine lda_u_nullify
 
   ! ---------------------------------------------------------
-  subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver, kpoints)
+  subroutine lda_u_init(this, namespace, space, level, gr, geo, st, psolver, kpoints)
     type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     integer,                   intent(in)    :: level
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),  target, intent(in)    :: geo
@@ -387,7 +389,7 @@ contains
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace, gr%sb%periodic_dim)
+      call orbitalbasis_init(this%basis, namespace, space%periodic_dim)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -430,14 +432,14 @@ contains
         if(.not. complex_coulomb_integrals) then
           write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
           if (states_are_real(st)) then
-            call dcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+            call dcompute_coulomb_integrals(this, namespace, space, gr%mesh, gr%der, psolver)
           else
-            call zcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+            call zcompute_coulomb_integrals(this, namespace, space, gr%mesh, gr%der, psolver)
           end if
         else
           ASSERT(.not.states_are_real(st))
           write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-          call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace)
+          call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace, space)
         end if
       end if
 
@@ -687,9 +689,10 @@ contains
   end subroutine lda_u_build_phase_correction
 
   ! ---------------------------------------------------------
-  subroutine lda_u_periodic_coulomb_integrals(this, namespace, st, der, mc, has_phase)
+  subroutine lda_u_periodic_coulomb_integrals(this, namespace, space, st, der, mc, has_phase)
     type(lda_u_t),                 intent(inout) :: this
     type(namespace_t),             intent(in)    :: namespace
+    type(space_t)    ,             intent(in)    :: space
     type(states_elec_t),           intent(in)    :: st
     type(derivatives_t),           intent(in)    :: der
     type(multicomm_t),             intent(in)    :: mc
@@ -704,9 +707,9 @@ contains
     PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
     if(states_are_real(st)) then
-      call dcompute_periodic_coulomb_integrals(this, namespace, der, mc)
+      call dcompute_periodic_coulomb_integrals(this, namespace, space, der, mc)
     else
-      call zcompute_periodic_coulomb_integrals(this, namespace, der, mc)
+      call zcompute_periodic_coulomb_integrals(this, namespace, space, der, mc)
     end if
 
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials

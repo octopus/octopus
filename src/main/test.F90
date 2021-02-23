@@ -576,7 +576,7 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
@@ -714,7 +714,7 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call exponential_init(te, namespace)
 
@@ -762,7 +762,7 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call subspace_init(sdiag, sys%namespace, sys%st, no_sd = .false.)
 

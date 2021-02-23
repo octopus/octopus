@@ -213,9 +213,9 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-      wfs_are_cplx = states_are_complex(st))
+        wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)

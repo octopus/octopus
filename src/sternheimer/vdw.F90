@@ -247,7 +247,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))

@@ -200,18 +200,18 @@ contains
     call geometry_partition(this%geo, this%mc)
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
-    call grid_init_stage_2(this%gr, this%namespace, this%mc)
+    call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)
     if(this%st%symmetrize_density) then
       call mesh_check_symmetries(this%gr%mesh, this%gr%symm, this%geo%space%periodic_dim)
     end if
 
-    call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)
+    call output_init(this%outp, this%namespace, this%space, this%gr%sb, this%st, this%st%nst, this%ks)
     call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 
     call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc, this%space, this%kpoints)
 
-    call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, &
+    call hamiltonian_elec_init(this%hm, this%namespace, this%space, this%gr, this%geo, this%st, &
           this%ks%theory_level, this%ks%xc, this%mc, this%kpoints, &
           need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)
     
@@ -283,13 +283,10 @@ contains
 
     PUSH_SUB(electrons_initial_conditions)
 
-    call td_init(this%td, this%namespace, this%gr, &
-      this%geo, this%st, this%ks, this%hm, &
-      this%outp)
+    call td_init(this%td, this%namespace, this%space, this%gr, this%geo, this%st, this%ks, this%hm,  this%outp)
     fromScratch = from_scratch
-    call td_init_run(this%td, this%namespace, this%mc, &
-      this%gr, this%geo, this%st, this%ks, &
-      this%hm, this%outp, this%space, fromScratch)
+    call td_init_run(this%td, this%namespace, this%mc, this%gr, this%geo, this%st, this%ks, this%hm, this%outp, this%space, &
+      fromScratch)
     this%td%iter = this%td%iter - 1
 
     POP_SUB(electrons_initial_conditions)
@@ -330,7 +327,7 @@ contains
 
     case (UPDATE_HAMILTONIAN)
       ! get potential from the updated density
-      call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, &
+      call v_ks_calc(this%ks, this%namespace, this%space, this%hm, this%st, this%geo, &
         calc_eigenval = update_energy_, time = abs(this%prop%clock%time()), calc_energy = update_energy_)
       if(update_energy_) call energy_calc_total(this%namespace, this%hm, this%gr, this%st, iunit = -1)
       ! update the occupation matrices
@@ -450,7 +447,7 @@ contains
     stopping = .false.
     etime = loct_clock()
 
-    call td_write_iter(this%td%write_handler, this%namespace, this%outp, this%gr, &
+    call td_write_iter(this%td%write_handler, this%namespace, this%space, this%outp, this%gr, &
       this%st, this%hm, this%geo, this%hm%ep%kick, this%td%dt, iter)
 
     ! write down data
@@ -494,7 +491,8 @@ contains
 
     !Photoelectron stuff
     if (this%td%pesv%calc_spm .or. this%td%pesv%calc_mask .or. this%td%pesv%calc_flux) then
-      call pes_calc(this%td%pesv, this%namespace, this%gr%mesh, this%st, this%td%dt, this%td%iter, this%gr, this%hm, stopping)
+      call pes_calc(this%td%pesv, this%namespace, this%space, this%gr%mesh, this%st, this%td%dt, this%td%iter, this%gr, this%hm, &
+        stopping)
     end if
 
     POP_SUB(electrons_exec_end_of_timestep_tasks)

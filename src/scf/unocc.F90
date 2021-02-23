@@ -241,10 +241,10 @@ contains
         nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
-      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, st_start = showstart)
+      call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
 
@@ -310,7 +310,7 @@ contains
         end if
         write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
         write(iunit,'(1x)')
-        call states_elec_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, sys%kpoints, eigens%diff)
+        call states_elec_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%space, sys%kpoints, eigens%diff)
         call io_close(iunit)
       end if
 
@@ -331,7 +331,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%namespace, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
+        call output_all(sys%outp, sys%namespace, sys%space, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
       end if
      
       if(converged .or. forced_finish) exit
@@ -365,7 +365,7 @@ contains
     end if
  
 
-    call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
+    call output_all(sys%outp, sys%namespace, sys%space, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
 
     call end_()
     POP_SUB(unocc_run_legacy)
@@ -419,7 +419,7 @@ contains
       write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
       call messages_info(1)
 
-      call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, sys%kpoints, &
+      call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%space, sys%kpoints, &
                 eigens%diff, st_start = showstart, compact = .true.)
 
       call scf_print_mem_use()

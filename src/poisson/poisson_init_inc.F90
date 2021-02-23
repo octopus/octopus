@@ -17,9 +17,10 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
+subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
   type(poisson_t),   intent(inout) :: this
   type(namespace_t), intent(in)    :: namespace
+  type(space_t),     intent(in)    :: space
   integer,           intent(in)    :: all_nodes_comm
 
   integer :: maxl, iter, dim_electronic
@@ -170,7 +171,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
       this%cube%mpi_grp = this%der%mesh%mpi_grp
     end if
     qq(1:MAX_DIM) = M_ZERO
-    call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube, M_ZERO, qq)
+    call poisson_psolver_init(this%psolver_solver, namespace, space, this%der%mesh, this%cube, M_ZERO, qq)
     call poisson_psolver_get_dims(this%psolver_solver, this%cube)
     this%cube%parallel_in_domains = this%psolver_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then

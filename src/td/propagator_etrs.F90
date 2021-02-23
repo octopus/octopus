@@ -40,6 +40,7 @@ module propagator_etrs_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
+  use space_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
   use types_oct_m
@@ -62,9 +63,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -88,7 +90,7 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt, dt)
 
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -127,9 +129,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
+  subroutine td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -165,7 +168,7 @@ contains
     !Propagate the states to t+dt/2 and compute the density at t+dt
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt, dt)
 
-    call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
+    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -201,7 +204,7 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
 
-      call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false., &
+      call v_ks_calc(ks, namespace, space, hm, st, geo, time = time, calc_current = .false., &
                                            calc_energy = .false., calc_eigenval = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -295,9 +298,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_caetrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -338,7 +342,7 @@ contains
     ! propagate half of the time step with H(time - dt)
     call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
-    call v_ks_calc_finish(ks, hm, namespace)
+    call v_ks_calc_finish(ks, hm, namespace, space)
 
     if (family_is_mgga_with_exc(hm%xc)) then 
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)

@@ -27,6 +27,7 @@ module symmetrizer_oct_m
   use mpi_oct_m
   use par_vec_oct_m
   use profiling_oct_m
+  use space_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
 
@@ -113,7 +114,7 @@ contains
         srcpoint_inv = srcpoint_inv + TOFLOAT(int(lsize)/2)
 
         ! apply periodic boundary conditions in periodic directions
-        do idir = 1, mesh%sb%periodic_dim
+        do idir = 1, symm%periodic_dim
           if(srcpoint(idir) < M_ZERO .or. srcpoint(idir) + M_HALF*SYMPREC >= lsize(idir)) then
             srcpoint(idir) = modulo(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
           end if

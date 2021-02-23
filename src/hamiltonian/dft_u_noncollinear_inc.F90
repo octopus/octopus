@@ -18,13 +18,14 @@
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, namespace)
+subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, namespace, space)
   type(lda_u_t),       intent(inout) :: this
   type(mesh_t),        intent(in)    :: mesh
   type(derivatives_t), intent(in)    :: der
   type(states_elec_t), intent(in)    :: st
   type(poisson_t),     intent(in)    :: psolver
   type(namespace_t),   intent(in)    :: namespace
+  type(space_t),       intent(in)    :: space
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: is1, is2
@@ -69,13 +70,13 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
 
     select case (this%sm_poisson)
     case(SM_POISSON_DIRECT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_DIRECT_SUM)
     case(SM_POISSON_ISF)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_ISF)
     case(SM_POISSON_PSOLVER)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_PSOLVER)
     case(SM_POISSON_FFT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT, force_cmplx=.true.)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_FFT, force_cmplx=.true.)
     end select
 
     ijst=0

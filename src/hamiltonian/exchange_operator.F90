@@ -42,6 +42,7 @@ module exchange_operator_oct_m
   use scdm_oct_m
   use simul_box_oct_m
   use singularity_oct_m
+  use space_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
   use states_abst_oct_m
@@ -120,9 +121,10 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, st, sb, der, mc, kpoints, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, space, st, sb, der, mc, kpoints, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
-    type(namespace_t), target, intent(in)    :: namespace
+    type(namespace_t),          intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
     type(derivatives_t),       intent(in)    :: der
@@ -154,10 +156,10 @@ contains
 
     call singularity_init(this%singul, namespace, st, sb, kpoints)
     if(states_are_real(st)) then
-      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+      call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false.)
     else
-      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+      call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false., force_cmplx = .true.)
     end if
 

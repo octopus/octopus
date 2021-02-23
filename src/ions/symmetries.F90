@@ -54,6 +54,7 @@ module symmetries_oct_m
     type(symm_op_t), allocatable, public :: ops(:)
     integer, public          :: nops
     FLOAT                    :: breakdir(1:3)
+    integer, public          :: periodic_dim
     integer                  :: space_group
     logical                  :: any_non_spherical
     logical                  :: symmetries_compute
@@ -125,6 +126,8 @@ contains
         species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE  
       if(this%any_non_spherical)exit
     end do
+
+    this%periodic_dim = space%periodic_dim
 
     dim4syms = min(3, space%dim)
 

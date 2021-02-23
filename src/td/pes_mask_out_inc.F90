@@ -555,8 +555,9 @@ end subroutine pes_mask_output_states
 !!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
 !!\f]
 ! ---------------------------------------------------------
-subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
+subroutine pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
   type(pes_mask_t),    intent(in)  :: mask
+  type(space_t),       intent(in)  :: space
   type(states_elec_t), intent(in)  :: st
   integer,             intent(in)  :: ik  
   FLOAT, target,       intent(out) :: pesK(:,:,:)
@@ -645,7 +646,7 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
   ! since along the periodi dimensions the discrete Fourier transform is 
   ! exact we need to renormalize only along the non periodic ones
   scale = M_ONE
-  do idim= mask%mesh%sb%periodic_dim + 1, mask%mesh%sb%dim
+  do idim = space%periodic_dim + 1, space%dim
     scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
   end do
   pesK = pesK *scale 
@@ -1873,12 +1874,13 @@ end subroutine pes_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
+subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo, iter)
   type(pes_mask_t),    intent(inout)    :: mask
   type(mesh_t),        intent(in)       :: mesh
   type(states_elec_t), intent(in)       :: st
   type(output_t),      intent(in)       :: outp
   type(namespace_t),   intent(in)       :: namespace
+  type(space_t),       intent(in)       :: space
   character(len=*),    intent(in)       :: file
   type(grid_t),        intent(in)       :: gr
   type(geometry_t),    intent(in)       :: geo
@@ -1906,7 +1908,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
     call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   end if
   
-  if (simul_box_is_periodic(mesh%sb)) then
+  if (space%is_periodic()) then
     ! For periodic systems the results must be obtained using
     ! the oct-photoelectron-spectrum routine
     call profiling_out(prof)
@@ -1960,9 +1962,9 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   do ik = st%d%kpt%start, st%d%kpt%end
 
     if(mask%add_psia) then 
-      call pes_mask_fullmap(mask, st, ik, pesK, wfAk)
+      call pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
     else 
-      call pes_mask_fullmap(mask, st, ik, pesK)
+      call pes_mask_fullmap(mask, space, st, ik, pesK)
     end if
     
     ! only the root node of the domain and state parallelization group writes the output

@@ -38,6 +38,7 @@ module states_elec_io_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -61,10 +62,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_eigenvalues(iunit, nst, st, sb, kpoints, error, st_start, compact)
+  subroutine states_elec_write_eigenvalues(iunit, nst, st, space, kpoints, error, st_start, compact)
     integer,             intent(in) :: iunit, nst
     type(states_elec_t), intent(in) :: st
-    type(simul_box_t),   intent(in) :: sb
+    type(space_t),       intent(in) :: space
     type(kpoints_t),     intent(in) :: kpoints
     FLOAT, optional,     intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional,   intent(in) :: st_start
@@ -116,14 +117,14 @@ contains
       call messages_info(1, iunit)
 
       do ik = 1, st%d%nik, ns
-        if(simul_box_is_periodic(sb)) then
+        if (space%is_periodic()) then
           ikk = states_elec_dim_get_kpoint_index(st%d, ik)
-          kpoint(1:sb%dim) = kpoints%get_point(ikk, absolute_coordinates = .false.)
+          kpoint(1:space%dim) = kpoints%get_point(ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
-          do idir = 1, sb%dim
+          do idir = 1, space%dim
             write(tmp_str(1), '(f10.6)') kpoint(idir)
             message(1) = trim(message(1))//trim(tmp_str(1))
-            if(idir < sb%dim) message(1) = trim(message(1))//','
+            if(idir < space%dim) message(1) = trim(message(1))//','
           end do
           message(1) = trim(message(1))//')'
           call messages_info(1, iunit)
@@ -187,7 +188,7 @@ contains
       
       tmp_str(1) = '#  State'
 
-      if(sb%periodic_dim > 0) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
+      if (space%is_periodic()) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
 
       if(st%d%ispin  ==  SPIN_POLARIZED) tmp_str(1) = trim(tmp_str(1))//'  Spin'
 
@@ -240,7 +241,7 @@ contains
 
           write(tmp_str(1), '(i7)') ist
 
-          if(sb%periodic_dim > 0) then
+          if (space%is_periodic()) then
             write(tmp_str(1), '(2a,i7)') trim(tmp_str(1)), ' ', ik
           end if
 
@@ -364,10 +365,10 @@ contains
   end subroutine states_elec_write_eigenvalues
 
   ! ---------------------------------------------------------
-  subroutine states_elec_write_gaps(iunit, st, sb)
+  subroutine states_elec_write_gaps(iunit, st, space)
     integer,             intent(in) :: iunit
     type(states_elec_t), intent(in) :: st
-    type(simul_box_t),   intent(in) :: sb
+    type(space_t),       intent(in) :: space
     
     integer :: ik, ist
 
@@ -377,7 +378,7 @@ contains
     PUSH_SUB(states_elec_write_gaps)
 
     if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
-     .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+     .or. .not. space%is_periodic() .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
       POP_SUB(states_elec_write_gaps)
       return
     end if

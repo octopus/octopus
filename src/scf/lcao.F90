@@ -50,6 +50,7 @@ module lcao_oct_m
   use simul_box_oct_m
   use scalapack_oct_m
   use smear_oct_m
+  use space_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -130,9 +131,10 @@ module lcao_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(this, namespace, gr, geo, st)
+  subroutine lcao_init(this, namespace, space, gr, geo, st)
     type(lcao_t),         intent(out) :: this
     type(namespace_t),    intent(in)  :: namespace
+    type(space_t),        intent(in)  :: space
     type(grid_t),         intent(in)  :: gr
     type(geometry_t),     intent(in)  :: geo
     type(states_elec_t),  intent(in)  :: st
@@ -223,7 +225,7 @@ contains
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
     end if
-    if(simul_box_is_periodic(gr%sb) .and. this%alternative) then
+    if (space%is_periodic() .and. this%alternative) then
       call messages_experimental("LCAOAlternative in periodic systems")
       ! specifically, if you get the message about submesh radius > box size, results will probably be totally wrong.
     end if
@@ -642,8 +644,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(namespace, gr, geo, st, ks, hm, st_start, lmm_r)
+  subroutine lcao_run(namespace, space, gr, geo, st, ks, hm, st_start, lmm_r)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -662,7 +665,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
       if (st_start > st%nst) then ! nothing to be done in LCAO
@@ -673,7 +676,7 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, namespace, gr, geo, st)
+    call lcao_init(lcao, namespace, space, gr, geo, st)
 
     call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
@@ -691,7 +694,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         st%eigenval = M_HUGE
@@ -717,11 +720,11 @@ contains
 
       if (.not. present(st_start)) then
         call states_elec_fermi(st, namespace, gr%mesh)
-        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb, hm%kpoints)
+        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, space, hm%kpoints)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
+          call v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
           if (st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
@@ -754,7 +757,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
           call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if
@@ -938,7 +941,7 @@ contains
 
     use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
-      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. sb%periodic_dim > 0
+      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. geo%space%is_periodic()
 
     ps => species_ps(geo%atom(iatom)%species)
 
@@ -947,7 +950,7 @@ contains
       ASSERT(.not. gr%have_fine_mesh)
    
       !There is no periodic copies here, so this will not work for periodic systems
-      ASSERT(.not. sb%periodic_dim > 0)
+      ASSERT(.not. geo%space%is_periodic())
 
       if(.not. this%alternative) then
         

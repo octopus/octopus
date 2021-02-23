@@ -123,7 +123,7 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:sys%space%dim, 1:sys%space%dim, 1:2))
@@ -227,7 +227,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call messages_info(2)
-    call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+    call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
       gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
@@ -284,7 +284,7 @@ contains
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
           if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
-          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+          call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
         end if
@@ -292,14 +292,14 @@ contains
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-            call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+            call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           else
-            call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
+            call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
           end if
         end if
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+        call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
           gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
@@ -365,7 +365,7 @@ contains
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
         if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
-        call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+        call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
       end if
@@ -373,14 +373,14 @@ contains
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+          call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         else
-          call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
+          call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
         end if
       end if
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+      call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
         gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO

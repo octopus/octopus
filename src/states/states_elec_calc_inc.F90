@@ -1837,10 +1837,11 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, kpoints, psolver, st_min, st_max, iindex, &
+subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolver, st_min, st_max, iindex, &
                                          jindex, kindex, lindex, twoint, phase, singularity, exc_k)
   type(states_elec_t), target,   intent(inout) :: st
   type(namespace_t),             intent(in)    :: namespace
+  type(space_t),                 intent(in)    :: space
   type(grid_t),                  intent(in)    :: gr
   type(kpoints_t),               intent(in)    :: kpoints
   type(poisson_t),               intent(inout) :: psolver
@@ -1899,7 +1900,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, kpoints, psolver, st_m
   if(present(singularity)) then
     call fourier_space_op_nullify(coulb)
     qq = M_ZERO
-    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO)
+    call poisson_build_kernel(psolver, namespace, space, coulb, qq, M_ZERO)
   end if
 
   do ist_global = 1, nst_tot
@@ -1928,7 +1929,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, kpoints, psolver, st_m
                          - kpoints%get_point(jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &
+        call poisson_build_kernel(psolver, namespace, space, coulb, qq, M_ZERO, &
                   -(kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 

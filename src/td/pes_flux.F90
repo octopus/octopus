@@ -43,6 +43,7 @@ module pes_flux_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use string_oct_m
@@ -167,14 +168,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, namespace, mesh, st, hm, save_iter, max_iter)
-    type(pes_flux_t),    intent(inout) :: this
-    type(namespace_t),   intent(in)    :: namespace
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(in)    :: st
+  subroutine pes_flux_init(this, namespace, space, mesh, st, hm, save_iter, max_iter)
+    type(pes_flux_t),         intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
+    type(mesh_t),             intent(in)    :: mesh
+    type(states_elec_t),      intent(in)    :: st
     type(hamiltonian_elec_t), intent(in)    :: hm
-    integer,             intent(in)    :: save_iter
-    integer,             intent(in)    :: max_iter
+    integer,                  intent(in)    :: save_iter
+    integer,                  intent(in)    :: max_iter
 
     type(block_t)      :: blk
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
@@ -200,7 +202,7 @@ contains
     kptend = st%d%kpt%end
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
-    pdim   = mesh%sb%periodic_dim
+    pdim   = space%periodic_dim
 
     this%surf_interp = .false.
 
@@ -236,8 +238,8 @@ contains
     !% at <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = PES_SPHERICAL
-    if(mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
-    if(simul_box_is_periodic(mesh%sb)) default_shape = PES_PLANE
+    if (mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
+    if (space%is_periodic()) default_shape = PES_PLANE
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
@@ -325,7 +327,7 @@ contains
 
       else if (parse_is_defined(namespace, 'PES_Flux_Lsize')) then 
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
-        if (simul_box_is_periodic(mesh%sb)) then        
+        if (space%is_periodic()) then        
           ! the cube sides along the periodic directions are out of the simulation box
           border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
           call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
@@ -536,7 +538,7 @@ contains
 !     end if
 
     ! Generate the momentum space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, hm%kpoints, mesh%mpi_grp%comm)
+    call pes_flux_reciprocal_mesh_gen(this, namespace, space, mesh%sb, st, hm%kpoints, mesh%mpi_grp%comm)
 
 
     !%Variable PES_Flux_UseSymmetries
@@ -577,7 +579,7 @@ contains
 
     else 
       
-      call pes_flux_integrate_cub_tabulate(this, mesh, st, hm%kpoints)
+      call pes_flux_integrate_cub_tabulate(this, space, mesh, st, hm%kpoints)
 
     end if
 
@@ -694,9 +696,10 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, namespace, sb, st, kpoints, comm, post)
+  subroutine pes_flux_reciprocal_mesh_gen(this, namespace, space, sb, st, kpoints, comm, post)
     type(pes_flux_t),    intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
     type(kpoints_t),     intent(in)    :: kpoints
@@ -724,7 +727,7 @@ contains
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
     mdim   = sb%dim
-    pdim   = sb%periodic_dim
+    pdim   = space%periodic_dim
 
     this%dim  = mdim
     this%pdim = pdim
@@ -772,7 +775,7 @@ contains
       if (this%kgrid == PES_CARTESIAN) then
         call messages_not_implemented('Cartesian momentum grid with a spherical surface')
       end if
-      if (simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         call messages_not_implemented('Spherical surface flux for periodic systems')
       end if
       if (mdim == 1) then
@@ -781,7 +784,7 @@ contains
     end if
     
     if (this%surf_shape == PES_CUBIC) then
-      if (simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
       end if
     end if
@@ -1092,7 +1095,7 @@ contains
       dk(1:mdim) = M_ONE/kpoints%nik_axis(1:mdim)
 
       this%arpes_grid = .false.
-      if(simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         !%Variable PES_Flux_ARPES_grid
         !%Type logical
         !%Section Time-Dependent::PhotoElectronSpectrum
@@ -1559,15 +1562,16 @@ contains
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
-    type(pes_flux_t),    intent(inout)    :: this
-    type(mesh_t),        intent(in)       :: mesh
-    type(states_elec_t), intent(inout)    :: st
-    type(grid_t),        intent(in)       :: gr
-    type(hamiltonian_elec_t), intent(in)  :: hm
-    integer,             intent(in)       :: iter
-    FLOAT,               intent(in)       :: dt
-    logical,             intent(in)       :: stopping
+  subroutine pes_flux_calc(this, space, mesh, st, gr, hm, iter, dt, stopping)
+    type(pes_flux_t),         intent(inout)    :: this
+    type(space_t),            intent(in)       :: space
+    type(mesh_t),             intent(in)       :: mesh
+    type(states_elec_t),      intent(inout)    :: st
+    type(grid_t),             intent(in)       :: gr
+    type(hamiltonian_elec_t), intent(in)       :: hm
+    integer,                  intent(in)       :: iter
+    FLOAT,                    intent(in)       :: dt
+    logical,                  intent(in)       :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
@@ -1673,7 +1677,7 @@ contains
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) then
-          call pes_flux_integrate_cub(this, mesh, st, hm%kpoints, dt)
+          call pes_flux_integrate_cub(this, space, mesh, st, hm%kpoints, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
         end if
@@ -1693,8 +1697,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_tabulate(this, mesh, st, kpoints)
+  subroutine pes_flux_integrate_cub_tabulate(this, space, mesh, st, kpoints)
     type(pes_flux_t),    intent(inout) :: this
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     type(kpoints_t),     intent(in)    :: kpoints
@@ -1719,7 +1724,7 @@ contains
     end if
 
     mdim = mesh%sb%dim
-    pdim = mesh%sb%periodic_dim
+    pdim = space%periodic_dim
 
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
@@ -1804,7 +1809,7 @@ contains
     end if
     
     
-    if(simul_box_is_periodic(mesh%sb)) then
+    if (space%is_periodic()) then
       !Tabulate the Born-von Karman phase 
       SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
 
@@ -1936,8 +1941,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub(this, mesh, st, kpoints, dt)
+  subroutine pes_flux_integrate_cub(this, space, mesh, st, kpoints, dt)
     type(pes_flux_t),    intent(inout) :: this
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st 
     type(kpoints_t),     intent(in)    :: kpoints
@@ -2059,7 +2065,7 @@ contains
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
 
-            if(simul_box_is_periodic(mesh%sb)) then
+            if (space%is_periodic()) then
               phase(ikp, ik)  = vphase(ikp, ik) *  this%bvk_phase(ikp,ik)
             else 
               phase(ikp, ik)  = vphase(ikp, ik) 

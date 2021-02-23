@@ -174,7 +174,7 @@ contains
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
-    if(.not. simul_box_is_periodic(sb)) then 
+    if(.not. space%is_periodic()) then
 
       SAFE_ALLOCATE(map_inv(0:this%mesh%np_part))
       map_inv(0:this%mesh%np_part) = 0

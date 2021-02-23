@@ -35,6 +35,7 @@ module boundaries_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use subarray_oct_m
   use types_oct_m
   use unit_oct_m
@@ -47,6 +48,8 @@ module boundaries_oct_m
   type boundaries_t
     private
     type(mesh_t), pointer :: mesh
+    logical              :: periodic = .false.       !< some boundaries are to be treated periodic
+    logical              :: fully_periodic = .false. !< all boundaries are to be treated periodic
     integer              :: nper             !< the number of points that correspond to pbc
     integer, allocatable :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
     integer, allocatable :: per_send(:, :)
@@ -123,9 +126,10 @@ contains
   end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
-  subroutine boundaries_init(this, namespace, mesh)
+  subroutine boundaries_init(this, namespace, space, mesh)
     type(boundaries_t),   intent(inout) :: this
     type(namespace_t),    intent(in)    :: namespace
+    type(space_t),        intent(in)    :: space
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
@@ -142,7 +146,10 @@ contains
 
     this%mesh => mesh
 
-    if (simul_box_is_periodic(mesh%sb)) then
+    this%periodic = space%is_periodic()
+    this%fully_periodic = space%periodic_dim == space%dim
+
+    if (space%is_periodic()) then
 
       !%Variable SpiralBoundaryCondition
       !%Type logical
@@ -182,7 +189,7 @@ contains
 
         ip_global = mesh_local2global(mesh, ip)
 
-        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner = mesh_periodic_point(mesh, space, ip_global, ip)
         ip_inner = mesh_global2local(mesh, ip_inner)
 
         ! If the point is the periodic of another point, is not zero
@@ -215,7 +222,7 @@ contains
 
         ip_global = mesh_local2global(mesh, ip)
 
-        ip_inner_global = mesh_periodic_point(mesh, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
         ip_inner = mesh_global2local(mesh, ip_inner_global)
         
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
@@ -330,7 +337,7 @@ contains
 
     PUSH_SUB(boundaries_end)
 
-    if(simul_box_is_periodic(this%mesh%sb)) then
+    if (this%periodic) then
       if(this%mesh%parallel_in_domains) then    
         
         ASSERT(allocated(this%nsend))

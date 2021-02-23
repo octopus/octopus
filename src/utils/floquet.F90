@@ -118,7 +118,7 @@ program oct_floquet
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, global_namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call v_ks_calc(sys%ks, global_namespace, sys%space, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
 
   call floquet_init()

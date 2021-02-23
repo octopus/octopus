@@ -277,9 +277,10 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
+  subroutine scf_rdmft(rdm, namespace, space, gr, geo, st, ks, hm, outp, restart_dump)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr  !< grid
     type(geometry_t),         intent(in)    :: geo !< geometry
     type(states_elec_t),      intent(inout) :: st  !< States
@@ -302,7 +303,7 @@ contains
     end if
 
     ! problem is about k-points for exchange
-    if (simul_box_is_periodic(gr%sb)) then
+    if (space%is_periodic()) then
       call messages_not_implemented("Periodic system calculations for RDMFT", namespace=namespace)
     end if
 
@@ -328,7 +329,7 @@ contains
       write(message(2),'(a)') '--this may take a while--'
       call messages_info(2)
 
-      call dstates_elec_me_two_body(st, namespace, gr, hm%kpoints, hm%exxop%psolver, 1, &
+      call dstates_elec_me_two_body(st, namespace, space, gr, hm%kpoints, hm%exxop%psolver, 1, &
                                       st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
         rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm, namespace, hm, st, gr%mesh)
@@ -356,7 +357,7 @@ contains
         if (rdm%do_basis) then
           call scf_orb(rdm, namespace, gr, st, hm, energy)
         else
-          call scf_orb_cg(rdm, namespace, gr, geo, st, ks, hm, energy)
+          call scf_orb_cg(rdm, namespace, space, gr, geo, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
@@ -448,7 +449,7 @@ contains
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
+        call output_all(outp, namespace, space, dirname, gr, geo, st, hm, ks)
         call scf_write_static(dirname, "info")
       end if
 
@@ -467,7 +468,7 @@ contains
     end if
 
     call scf_write_static(STATIC_DIR, "info")
-    call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
+    call output_all(outp, namespace, space, STATIC_DIR, gr, geo, st, hm, ks)
 
     POP_SUB(scf_rdmft) 
 
@@ -1014,9 +1015,10 @@ contains
   !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
   !-----------------------------------------------------------------
-  subroutine scf_orb_cg(rdm, namespace, gr, geo, st, ks, hm, energy)
+  subroutine scf_orb_cg(rdm, namespace, space, gr, geo, st, ks, hm, energy)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr !< grid
     type(geometry_t),         intent(in)    :: geo !< geometry
     type(states_elec_t),      intent(inout) :: st !< States
@@ -1031,7 +1033,7 @@ contains
     PUSH_SUB(scf_orb_cg)
     call profiling_in(prof_orb_cg, "CG")
     
-    call v_ks_calc(ks, namespace, hm, st, geo)
+    call v_ks_calc(ks, namespace, space, hm, st, geo)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
     
     rdm%eigens%converged = 0
@@ -1063,7 +1065,7 @@ contains
     
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, namespace, hm, st, geo)
+    call v_ks_calc(ks, namespace, space, hm, st, geo)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
     call rdm_derivatives(rdm, namespace, hm, st, gr)
     

@@ -133,9 +133,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine td_init(td, namespace, gr, geo, st, ks, hm, outp)
+  subroutine td_init(td, namespace, space, gr, geo, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(in)    :: st
@@ -287,7 +288,7 @@ contains
     td%dt = td%dt/td%mu
 
     ! now the photoelectron stuff
-    call pes_init(td%pesv, namespace, gr%mesh, gr%sb, st, outp%restart_write_interval, hm, td%max_iter, td%dt)
+    call pes_init(td%pesv, namespace, space, gr%mesh, gr%sb, st, outp%restart_write_interval, hm, td%max_iter, td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -403,7 +404,7 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
+        call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
@@ -428,7 +429,7 @@ contains
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 
-    call td_init_wfs(td, namespace, mc, gr, geo, st, ks, hm, fromScratch)
+    call td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, fromScratch)
 
     if (td%iter >= td%max_iter) then
       call states_elec_deallocate_wfns(st)
@@ -453,14 +454,14 @@ contains
       end if
     end if
 
-    call td_write_init(td%write_handler, namespace, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
+    call td_write_init(td%write_handler, namespace, space, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
       call scissor_init(hm%scissor, namespace, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
-    if (td%iter == 0) call td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
+    if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
 
     if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
@@ -579,11 +580,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_elec_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
+        call propagator_elec_dt(ks, namespace, space, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
           geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
           move_ions = ion_dynamics_ions_move(td%ions) )
       case(BO)
-        call propagator_elec_dt_bo(td%scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
+        call propagator_elec_dt_bo(td%scf, namespace, space, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Apply mask absorbing boundaries
@@ -591,10 +592,10 @@ contains
 
       !Photoelectron stuff
       if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
-        call pes_calc(td%pesv, namespace, gr%mesh, st, td%dt, iter, gr, hm, stopping)
+        call pes_calc(td%pesv, namespace, space, gr%mesh, st, td%dt, iter, gr, hm, stopping)
       end if
 
-      call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
+      call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
       ! write down data
       call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, fromScratch)
@@ -656,7 +657,7 @@ contains
       if (st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
       end if
-      call td_write_output(namespace, gr, st, hm, ks, outp, geo, iter, td%dt)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, iter, td%dt)
     end if
 
     if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -668,7 +669,7 @@ contains
         call messages_warning(1, namespace=namespace)
       end if
 
-      call pes_output(td%pesv, namespace, gr%mesh, st, iter, outp, td%dt, gr, geo)
+      call pes_output(td%pesv, namespace, space, gr%mesh, st, iter, outp, td%dt, gr, geo)
 
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
         call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
@@ -682,7 +683,7 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
         call forces_calculate(gr, namespace, geo, hm, st, ks, t = iter*td%dt, dt = td%dt)
         call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=namespace)
         call td_print_header(namespace)
@@ -693,9 +694,10 @@ contains
   end subroutine td_check_point
 
   ! ---------------------------------------------------------
-  subroutine td_init_wfs(td, namespace, mc, gr, geo, st, ks, hm, from_scratch)
+  subroutine td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, from_scratch)
     type(td_t),                  intent(inout) :: td
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(multicomm_t),           intent(in)    :: mc
     type(grid_t),                intent(inout) :: gr
     type(geometry_t),            intent(in)    :: geo
@@ -826,13 +828,13 @@ contains
       call messages_info(1)
       call states_elec_freeze_adjust_qtot(st)
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
     else if (freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
       if (from_scratch) then
         call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, st%nst-1, family_is_mgga(ks%xc_family))
       else
@@ -843,7 +845,7 @@ contains
     else
       ! Normal run.
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
     end if
 
     !%Variable TDFreezeHXC
@@ -929,9 +931,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
+  subroutine td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -941,7 +944,7 @@ contains
 
     PUSH_SUB(td_run_zero_iter)
 
-    call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
+    call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
     ! I apply the delta electric field *after* td_write_iter, otherwise the
     ! dipole matrix elements in write_proj are wrong
@@ -961,7 +964,7 @@ contains
     call propagator_elec_run_zero_iter(hm, gr, td%tr)
     if (outp%output_interval > 0) then
       call td_write_data(td%write_handler)
-      call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, 0)
     end if
 
     POP_SUB(td_run_zero_iter)
