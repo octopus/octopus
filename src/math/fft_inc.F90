@@ -289,8 +289,11 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
     end select
 
     if(scale) then
-      ! multiply by 1/(N1*N2*N2)
-      scaling_factor = M_ONE/(fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3))
+      ! multiply by 1/(N1*N2*N3)
+      ! separate divisions to avoid integer overflow
+      scaling_factor = M_ONE/TOFLOAT(fft_array(slot)%rs_n_global(1))
+      scaling_factor = scaling_factor/TOFLOAT(fft_array(slot)%rs_n_global(2))
+      scaling_factor = scaling_factor/TOFLOAT(fft_array(slot)%rs_n_global(3))
       !$omp parallel do private(jj,ii)
       do kk = 1, fft_array(slot)%rs_n(3)
         do jj = 1, fft_array(slot)%rs_n(2)

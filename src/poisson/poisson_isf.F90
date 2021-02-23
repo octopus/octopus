@@ -226,6 +226,9 @@ contains
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
+#if defined(HAVE_MPI)
+    integer(8) :: number_points
+#endif
     
     PUSH_SUB(poisson_isf_solve)
 
@@ -280,6 +283,13 @@ contains
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
 #if defined(HAVE_MPI)
+        ! make sure we do not run into integer overflow here
+        number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+        number_points = number_points * cube%rs_n_global(3)
+        if (number_points >= HUGE(0)) then
+          message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+          call messages_fatal(1)
+        end if
         call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
 #endif
