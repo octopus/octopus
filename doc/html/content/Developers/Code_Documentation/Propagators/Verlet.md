@@ -71,6 +71,7 @@ One ''tick'' of the propagator is defined in the function {{< code "classical_pa
 
 The Verlet algorithm is a good (because simple) example to illustrate how the systems and the interaction are updated as the code progresses through the main loop.
 
+
 {{% mermaid %}}
 sequenceDiagram
     participant A as system A
@@ -102,3 +103,6 @@ sequenceDiagram
     end
     end
 {{% /mermaid %}}
+
+{{% sequence-diag %}}
+
