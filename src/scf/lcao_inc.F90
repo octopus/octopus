@@ -62,7 +62,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   
-  call submesh_init(sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+  call submesh_init(sphere, geo%space, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
@@ -461,7 +461,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     norbs = species_niwfs(geo%atom(iatom)%species)
 
     ! initialize the radial grid
-    call submesh_init(this%sphere(iatom), gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    call submesh_init(this%sphere(iatom), geo%space, gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
   end do
 

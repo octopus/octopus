@@ -231,8 +231,8 @@ subroutine scdm_init(scdm, namespace, st, der, fullcube, operate_on_scdm)
   SAFE_ALLOCATE(scdm%boxmesh%sb)
   scdm%boxmesh%sb%periodic_dim = 0
   scdm%boxmesh%sb%dim = 3
-  scdm%boxmesh%sb%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
-  scdm%boxmesh%sb%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+  scdm%boxmesh%sb%latt%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+  scdm%boxmesh%sb%latt%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
   
   !set mesh points 
   scdm%boxmesh%np = scdm%full_box

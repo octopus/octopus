@@ -1012,7 +1012,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%fine%mesh, namespace, sb, geo%atom(iatom), spin_channels, rho)
+      call species_atom_density(gr%fine%mesh, geo%space, namespace, sb, geo%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)

@@ -1178,7 +1178,7 @@ contains
 
     ! the offset is different in periodic directions
     offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
+    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
 
     do idir = mesh%sb%periodic_dim+1, 3
       offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
@@ -1193,11 +1193,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%rs_n_global(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
+                                           mesh%spacing(1)*mesh%sb%latt%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
+                                           mesh%spacing(2)*mesh%sb%latt%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+                                           mesh%spacing(3)*mesh%sb%latt%rlattice_primitive(idir, 3)), idir = 1, 3)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%rs_n_global(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -1249,7 +1249,7 @@ contains
 
     ! the offset is different in periodic directions
     offset = M_ZERO
-    offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
+    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
 
     do idir = mesh%sb%periodic_dim+1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
@@ -1266,7 +1266,7 @@ contains
     ! this is only for Gaussian input files, not for output files.
     do idir = 1, 3
       write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), &
-        (mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir), idir2 = 1, 3)
+        (mesh%spacing(idir)*mesh%sb%latt%rlattice_primitive(idir2, idir), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
       write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, (geo%atom(iatom)%x(idir), idir = 1, 3)
@@ -1346,7 +1346,7 @@ contains
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     do idir = 1, 3
       do idir2 = 1, 3
-        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
+        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
       end do
     end do
     
@@ -1468,7 +1468,7 @@ contains
     filename = trim(dir)//'/'//trim(fname)//".vtk"
    
 
-    if(mesh%sb%nonorthogonal) then
+    if(mesh%sb%latt%nonorthogonal) then
       ! non-orthogonal grid
       SAFE_ALLOCATE(points(cube%rs_n_global(1),cube%rs_n_global(2),cube%rs_n_global(3),3))
       
@@ -1476,7 +1476,7 @@ contains
         do i2 =1 , cube%rs_n_global(2)
           do i3 =1 , cube%rs_n_global(3)
             pnt(1:3) =(/cube%Lrs(i1, 1),cube%Lrs(i2, 2),cube%Lrs(i3, 3)/)
-            points(i1,i2,i3, 1:3) = matmul(mesh%sb%rlattice_primitive(1:3,1:3), pnt(1:3))
+            points(i1,i2,i3, 1:3) = matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), pnt(1:3))
           end do
         end do
       end do

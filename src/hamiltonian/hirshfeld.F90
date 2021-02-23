@@ -101,13 +101,13 @@ contains
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
-      call periodic_copy_init(pp, this%mesh%sb, this%geo%atom(iatom)%x, rmax)
+      call periodic_copy_init(pp, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, this%geo%atom(iatom)%x, rmax)
 
       do icell = 1, periodic_copy_num(pp)
-        pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%mesh%sb, icell) 
+        pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, icell) 
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
+        call species_atom_density_np(this%mesh, this%geo%space, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
 
         do ip = 1, this%mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
@@ -176,7 +176,8 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, namespace, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, this%geo%space, namespace, this%mesh%sb, &
+                                  this%geo%atom(iatom), this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -319,21 +320,25 @@ contains
     rmax_isqu = rmax_i**2
     rmax_jsqu = rmax_j**2
 
-    call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, rmax_j)
+    call periodic_copy_init(pp_j, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, this%geo%atom(jatom)%x, rmax_j)
     do jcell = 1, periodic_copy_num(pp_j)
 
-      pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
+      pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%geo%space, &
+                                    this%mesh%sb%latt, this%mesh%sb%lsize, jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
       call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      call periodic_copy_init(pp_i, this%mesh%sb, pos_j, (rmax_j+rmax_i))  ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      call periodic_copy_init(pp_i, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, &
+                                   pos_j, (rmax_j+rmax_i))  ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
 
       do icell = 1, periodic_copy_num(pp_i)
 
-        pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell) + &
-                                    (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
+        pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%geo%space, &
+                                      this%mesh%sb%latt, this%mesh%sb%lsize, icell) + &
+                                      (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) &
+                                     - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
         rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
@@ -343,8 +348,9 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, pos_i, this%st%d%nspin, &
-                                       atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+          call species_atom_density_np(this%mesh, this%geo%space, this%geo%atom(iatom), namespace, &
+                                         pos_i, this%st%d%nspin, &
+                                         atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle

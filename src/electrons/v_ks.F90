@@ -1107,7 +1107,7 @@ contains
           end do
           
           if(simul_box_is_periodic(ks%gr%sb)) then
-            latvec(1:3, 1:3) = ks%gr%sb%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
+            latvec(1:3, 1:3) = ks%gr%sb%latt%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
             call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
           else
             call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)

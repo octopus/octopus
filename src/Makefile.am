@@ -57,6 +57,7 @@ basic_f_srcs =                                 \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
+        basic/lattice_vectors.F90              \
 	basic/linked_list.F90                  \
 	basic/list_node.F90                    \
 	basic/loct.F90                         \
@@ -70,7 +71,7 @@ basic_f_srcs =                                 \
 	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
-	basic/clock.F90             \
+	basic/clock.F90                        \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \

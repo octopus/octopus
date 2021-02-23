@@ -21,6 +21,7 @@
 module kpoints_oct_m
   use distributed_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -245,13 +246,13 @@ contains
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, namespace, symm, dim, periodic_dim, rlattice, klattice)
+  subroutine kpoints_init(this, namespace, symm, dim, periodic_dim, latt)
     type(kpoints_t),            intent(out) :: this
     type(namespace_t),          intent(in)  :: namespace
     type(symmetries_t), target, intent(in)  :: symm
     integer,                    intent(in)  :: dim
     integer,                    intent(in)  :: periodic_dim
-    FLOAT,                      intent(in)  :: rlattice(:,:), klattice(:,:)
+    type(lattice_vectors_t),    intent(in)  :: latt
 
     integer :: ik, idir, is
     character(len=100) :: str_tmp
@@ -569,13 +570,13 @@ contains
                this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
 
       do ik = 1, this%full%npoints
-        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
+        call kpoints_to_absolute(latt%klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
       end do
 
       this%full%weight = M_ONE / this%full%npoints
 
       if(this%use_symmetries) then
-        message(1) = "Checking if the generated full k-point grid is symmetric";
+        message(1) = "Checking if the generated full k-point grid is symlatt";
         call messages_info(1)
         call kpoints_check_symmetries(this%full, symm, dim, this%use_time_reversal, namespace)
       end if
@@ -630,11 +631,11 @@ contains
       end if
      
       do ik = 1, this%reduced%npoints
-        call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
+        call kpoints_to_absolute(latt%klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
 
-      call kpoints_fold_to_1BZ(this%full, klattice)
-      call kpoints_fold_to_1BZ(this%reduced, klattice)
+      call kpoints_fold_to_1BZ(this%full, latt%klattice)
+      call kpoints_fold_to_1BZ(this%reduced, latt%klattice)
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -722,7 +723,7 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+      call kpoints_path_generate(dim, latt%klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
         this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
@@ -740,10 +741,10 @@ contains
 
       !The points have been generated in absolute coordinates
       do ik = 1, path_kpoints_grid%npoints
-        call kpoints_to_reduced(rlattice, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik), dim)
+        call kpoints_to_reduced(latt%rlattice, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik), dim)
       end do
 
-      call kpoints_fold_to_1BZ(path_kpoints_grid, klattice)
+      call kpoints_fold_to_1BZ(path_kpoints_grid, latt%klattice)
 
       !We need to copy the arrays containing the information on the symmetries
       !Before calling kpoints_grid_addto
@@ -855,7 +856,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
-          call kpoints_to_absolute(klattice, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik), dim)
+          call kpoints_to_absolute(latt%klattice, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik), dim)
         end do
       else
         do ik = 1, user_kpoints_grid%npoints
@@ -864,7 +865,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(rlattice, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik), dim)
+          call kpoints_to_reduced(latt%rlattice, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik), dim)
         end do
       end if
       call parse_block_end(blk)
@@ -904,7 +905,7 @@ contains
       ! for the moment we do not apply symmetries to user kpoints
 !       call kpoints_grid_copy(this%full, this%reduced)
 
-      call kpoints_fold_to_1BZ(user_kpoints_grid, klattice)
+      call kpoints_fold_to_1BZ(user_kpoints_grid, latt%klattice)
 
       call kpoints_grid_addto(this%full   ,  user_kpoints_grid)
       call kpoints_grid_addto(this%reduced,  user_kpoints_grid)
@@ -1625,7 +1626,7 @@ contains
       call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
-    !A simple map to tell if the k-point as a matching symmetric point or not
+    !A simple map to tell if the k-point as a matching symlatt point or not
     SAFE_ALLOCATE(kmap(kpt_dist%start:kpt_dist%end))
 
     do iop = 1, symmetries_number(symm)
@@ -1644,7 +1645,7 @@ contains
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
         end do
 
-        ! remove (mark) k-points which already have a symmetric point
+        ! remove (mark) k-points which already have a symlatt point
         do ik2 = 1, nk
 
           if(iop /= symmetries_identity_index(symm)) then
@@ -1652,7 +1653,7 @@ contains
             do idim = 1, dim
               diff(idim)=diff(idim)-anint(diff(idim))
             end do
-            !We found point corresponding to the symmetric kpoint
+            !We found point corresponding to the symlatt kpoint
             if(sum(abs(diff(1:dim))) < symprec ) then
               kmap(ik) = -ik2
               exit
@@ -1664,7 +1665,7 @@ contains
             do idim = 1, dim
               diff(idim)=diff(idim)-anint(diff(idim))
             end do
-            !We found point corresponding to the symmetric kpoint
+            !We found point corresponding to the symlatt kpoint
             if(sum(abs(diff(1:dim))) < symprec ) then
               kmap(ik) = -ik2
               exit
@@ -1676,7 +1677,7 @@ contains
         if(kmap(ik) == ik) then
           write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
            grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
-           ") ", "has no symmetric in the k-point grid for the following symmetry"
+           ") ", "has no symlatt in the k-point grid for the following symmetry"
           write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', transpose(symm_op_rotation_matrix_red(symm%ops(iop)))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
           call messages_fatal(3, namespace=namespace)

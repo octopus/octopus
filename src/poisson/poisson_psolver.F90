@@ -307,7 +307,7 @@ contains
     do idim = 1, mesh%sb%periodic_dim
       qq(idim) = qq_in(idim) - anint(qq_in(idim) + M_HALF*CNST(1e-8))
     end do
-    call kpoints_to_absolute(mesh%sb%klattice, qq, qq_abs, mesh%sb%periodic_dim)
+    call kpoints_to_absolute(mesh%sb%latt%klattice, qq, qq_abs, mesh%sb%periodic_dim)
     modq2 = sum(qq_abs(1:mesh%sb%periodic_dim)**2)
     if (modq2 > M_EPSILON) then
       this%offset = M_ONE/modq2

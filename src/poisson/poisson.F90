@@ -58,6 +58,7 @@ module poisson_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use submesh_oct_m
   use types_oct_m
   use unit_oct_m
@@ -1049,8 +1050,9 @@ contains
   !! For periodic systems, the periodic copies of the Gaussian
   !! are taken into account up to to a certain threshold that can
   !! be specified in the input file.
-  subroutine poisson_test(this, mesh, namespace, repetitions)
+  subroutine poisson_test(this, space, mesh, namespace, repetitions)
     type(poisson_t),   intent(in) :: this
+    type(space_t),     intent(in) :: space
     type(mesh_t),      intent(in) :: mesh
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: repetitions
@@ -1089,8 +1091,8 @@ contains
     SAFE_ALLOCATE(     rho(1:mesh%np))
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
-    SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
-    SAFE_ALLOCATE(xx_per(1:mesh%sb%dim))
+    SAFE_ALLOCATE(xx(1:space%dim, 1:n_gaussians))
+    SAFE_ALLOCATE(xx_per(1:space%dim))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
@@ -1098,7 +1100,7 @@ contains
     write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
     write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
     call messages_info(2)
-    beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
+    beta = M_ONE / ( alpha**space%dim * sqrt(M_PI)**space%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
     call messages_info(1)
@@ -1106,10 +1108,10 @@ contains
     ! Set the centers of the Gaussians by hand
     xx(1, 1) = M_ONE
     xx(2, 1) = -M_HALF
-    if(mesh%sb%dim == 3) xx(3, 1) = M_TWO
+    if(space%dim == 3) xx(3, 1) = M_TWO
     xx(1, 2) = -M_TWO
     xx(2, 2) = M_ZERO
-    if(mesh%sb%dim == 3) xx(3, 2) = -M_ONE
+    if(space%dim == 3) xx(3, 2) = -M_ONE
     xx = xx * alpha
 
     ! Density as sum of Gaussians
@@ -1133,16 +1135,16 @@ contains
     vh_exact = M_ZERO
     do nn = 1, n_gaussians
       ! sum over all periodic copies for each Gaussian
-      call periodic_copy_init(pp, mesh%sb, xx(:, nn), range=M_ONE/threshold)
+      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, xx(:, nn), range=M_ONE/threshold)
       write(message(1), '(a,i2,a,i9,a)') 'Computing Gaussian ', nn, ' for ', periodic_copy_num(pp), ' periodic copies.'
       call messages_info(1)
 
       do icell = 1, periodic_copy_num(pp)
-        xx_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        xx_per(1:space%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
         !$omp parallel do private(rr, ralpha)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin=xx_per(1:mesh%sb%dim))
-          select case(mesh%sb%dim)
+          call mesh_r(mesh, ip, rr, origin=xx_per(1:space%dim))
+          select case(space%dim)
           case(3)
             if(rr > R_SMALL) then
               vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr

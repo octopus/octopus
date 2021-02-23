@@ -233,7 +233,7 @@ contains
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
       call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-      call zhamiltonian_elec_apply_atom (hm, namespace, geo%atom(iatom), gr%mesh, iatom, zpsi, viapsi)
+      call zhamiltonian_elec_apply_atom (hm, namespace, geo%space, geo%atom(iatom), gr%mesh, iatom, zpsi, viapsi)
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
@@ -303,7 +303,7 @@ contains
     end do
 
     if(present(t)) then
-      call epot_global_force(hm%ep, geo, time, global_force)
+      call geometry_global_force(geo, time, global_force)
 
       ! the ion-ion term is already calculated
       do iatom = 1, geo%natoms
@@ -336,7 +336,7 @@ contains
       force_scf = M_ZERO
     end if
 
-    if(hm%ep%force_total_enforce) then
+    if(geo%force_total_enforce) then
       call forces_set_total_to_zero(geo, force)
       call forces_set_total_to_zero(geo, force_loc)
       call forces_set_total_to_zero(geo, force_nl)
@@ -544,7 +544,7 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   force_nlcc = M_ZERO
 
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-    call species_get_nlcc_grad(geo%atom(iatom)%species, geo%atom(iatom)%x, gr%mesh, drho)
+    call species_get_nlcc_grad(geo%atom(iatom)%species, geo%space, geo%atom(iatom)%x, gr%mesh, drho)
 
     do idir = 1, geo%space%dim
       do is = 1, hm%d%spin_channels
@@ -607,7 +607,7 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
       if(ps_has_density(species_ps(geo%atom(iatom)%species))) then
 
-        call species_atom_density_grad(gr%mesh, gr%sb, geo%atom(iatom), &
+        call species_atom_density_grad(gr%mesh, geo%space, gr%sb, geo%atom(iatom), &
                  namespace, hm%d%spin_channels, drho)
 
         do idir = 1, geo%space%dim

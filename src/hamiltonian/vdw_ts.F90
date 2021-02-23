@@ -238,9 +238,9 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%cutoff)
+        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize,  geo%atom(jatom)%x, this%cutoff)
         do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
-          x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+          x_j(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, jcopy)
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
             rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
@@ -387,9 +387,9 @@ contains
     do jatom = 1, geo%natoms
       jspecies = species_index(geo%atom(jatom)%species)
       
-      call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%cutoff)
+      call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, geo%atom(jatom)%x, this%cutoff)
       do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
-        x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+        x_j(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, jcopy)
         do iatom = 1, geo%natoms
           ispecies = species_index(geo%atom(iatom)%species)
           rr2 =  sum((x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2)

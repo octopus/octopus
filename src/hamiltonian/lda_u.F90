@@ -275,7 +275,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%sb%nonorthogonal) then
+      if(gr%sb%latt%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -287,7 +287,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%sb%nonorthogonal) then
+      if(gr%sb%latt%nonorthogonal) then
         call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if

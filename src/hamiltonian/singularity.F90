@@ -184,7 +184,7 @@ contains
  
         if(all(abs(qpoint(1:sb%dim))< CNST(1e-6))) cycle
 
-        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint) * kpoints%full%weight(ik2)
+        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint, sb%latt%klattice) * kpoints%full%weight(ik2)
       end do
       this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume
     end do
@@ -237,7 +237,7 @@ contains
 
               if(abs(ikx)<=Nk/3 .and. abs(iky)<=Nk/3 .and. abs(ikz)<=Nk/3) cycle
 
-              this%FF = this%FF + aux_funct(qpoint)*kvol_element
+              this%FF = this%FF + aux_funct(qpoint, sb%latt%klattice)*kvol_element
             end do
           end do
         end do
@@ -285,8 +285,9 @@ contains
 
   contains
     
-    FLOAT function aux_funct(qq) result(ff)
+    FLOAT function aux_funct(qq, klattice) result(ff)
       FLOAT,   intent(in) :: qq(1:MAX_DIM)
+      FLOAT,   intent(in) :: klattice(:,:)
      
       FLOAT :: half_a, qq_abs(1:MAX_DIM)
 
@@ -295,15 +296,15 @@ contains
       if(this%coulomb_singularity == SINGULARITY_GENERAL) then
         !See Eq. (16) of PRB 75, 205126 (2007)
         ff = (M_TWO*M_PI)**2/(M_TWO*(                                                              &
-           (M_TWO*sin(qq(1)*M_PI)*sin(qq(1)*M_PI)*dot_product(sb%klattice(1:3,1),sb%klattice(1:3,1))  &
-         +sin(qq(1)*M_TWO*M_PI)*sin(qq(2)*M_TWO*M_PI)*dot_product(sb%klattice(1:3,1),sb%klattice(1:3,2))) &
-          +(M_TWO*sin(qq(2)*M_PI)*sin(qq(2)*M_PI)*dot_product(sb%klattice(1:3,2),sb%klattice(1:3,2))  &
-         +sin(qq(2)*M_TWO*M_PI)*sin(qq(3)*M_TWO*M_PI)*dot_product(sb%klattice(1:3,2),sb%klattice(1:3,3))) &
-          +(M_TWO*sin(qq(3)*M_PI)*sin(qq(3)*M_PI)*dot_product(sb%klattice(1:3,3),sb%klattice(1:3,3))  &
-         +sin(qq(3)*M_TWO*M_PI)*sin(qq(1)*M_TWO*M_PI)*dot_product(sb%klattice(1:3,3),sb%klattice(1:3,1)))))
+           (M_TWO*sin(qq(1)*M_PI)*sin(qq(1)*M_PI)*dot_product(klattice(1:3,1),klattice(1:3,1))  &
+         +sin(qq(1)*M_TWO*M_PI)*sin(qq(2)*M_TWO*M_PI)*dot_product(klattice(1:3,1),klattice(1:3,2))) &
+          +(M_TWO*sin(qq(2)*M_PI)*sin(qq(2)*M_PI)*dot_product(klattice(1:3,2),klattice(1:3,2))  &
+         +sin(qq(2)*M_TWO*M_PI)*sin(qq(3)*M_TWO*M_PI)*dot_product(klattice(1:3,2),klattice(1:3,3))) &
+          +(M_TWO*sin(qq(3)*M_PI)*sin(qq(3)*M_PI)*dot_product(klattice(1:3,3),klattice(1:3,3))  &
+         +sin(qq(3)*M_TWO*M_PI)*sin(qq(1)*M_TWO*M_PI)*dot_product(klattice(1:3,3),klattice(1:3,1)))))
       else
         half_a = M_HALF*(sb%rcell_volume*CNST(4.0))**(CNST(1.0/3.0))
-        call kpoints_to_absolute(sb%klattice, qq, qq_abs, 3)
+        call kpoints_to_absolute(klattice, qq, qq_abs, 3)
         !See Eq. (6) of PRB 34, 4405 (1986)
         ff = (half_a)**2/(M_THREE-cos(qq_abs(1)*half_a)*cos(qq_abs(2)*half_a) &
                             -cos(qq_abs(1)*half_a)*cos(qq_abs(3)*half_a)         &

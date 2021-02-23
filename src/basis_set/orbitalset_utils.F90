@@ -122,9 +122,9 @@ contains
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos
 
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:geo%space%dim), rcut)
+        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
         do inn = 1, periodic_copy_num(pc)
-          xi(1:geo%space%dim) = periodic_copy_position(pc, sb, inn)
+          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
           rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
 
           !This atom is too far
@@ -149,9 +149,9 @@ contains
  
       this%nneighbors = 0
       do ios = 1, nos
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:geo%space%dim), rcut)
+        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
         do inn = 1, periodic_copy_num(pc)
-          xi(1:geo%space%dim) = periodic_copy_position(pc, sb, inn)
+          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
           rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
 
           if( rr > rcut + TOL_INTERSITE ) cycle

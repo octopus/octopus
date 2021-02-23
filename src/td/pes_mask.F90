@@ -821,7 +821,7 @@ contains
     dim = mask%mesh%sb%dim
 
     do ii = 1, maxval(mask%ll(:))
-      mask%Lk(ii,1:dim)= matmul(sb%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
+      mask%Lk(ii,1:dim)= matmul(sb%latt%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
     end do
 
     POP_SUB(pes_mask_generate_Lk)

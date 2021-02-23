@@ -32,6 +32,8 @@ module simul_box_oct_m
   use global_oct_m
   use io_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
+  use lookup_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -60,7 +62,7 @@ module simul_box_oct_m
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
     reciprocal_lattice,         &
-    check_ions_compatible_with_symmetries 
+    check_ions_compatible_with_symmetries
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -92,16 +94,12 @@ module simul_box_oct_m
 
     character(len=1024), private :: user_def !< for the user-defined box
 
-    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
-    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
-    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
-    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
-    FLOAT :: rmetric            (MAX_DIM,MAX_DIM) !< metric for the real space lattice vectors
+    type(lattice_vectors_t) :: latt
+    
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
-    logical :: nonorthogonal
     
     integer :: periodic_dim
 
@@ -489,11 +487,10 @@ contains
     type(namespace_t), intent(in)    :: namespace
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(3), volume_element
+    FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
     integer :: idim, jdim, ncols
     logical :: has_angles
-    FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
-    FLOAT, parameter :: tol_angle = CNST(1.0e-6)  
+    FLOAT :: angles(1:MAX_DIM)
 
     PUSH_SUB(simul_box_build_lattice)
 
@@ -546,48 +543,13 @@ contains
       sb%beta  = angles(2)
       sb%gamma = angles(3)
 
-      !Converting the angles to LatticeVectors
-      !See 57_iovars/ingeo.F90 in Abinit for details
-      if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-        (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
-
-        cosang=cos(M_PI*angles(1)/CNST(180.0));
-        a2=M_TWO/M_THREE*(M_ONE-cosang);
-        aa=sqrt(a2);
-        cc=sqrt(M_ONE-a2);
-        sb%rlattice_primitive(1,1) = aa
-        sb%rlattice_primitive(2,1) = M_ZERO
-        sb%rlattice_primitive(3,1) = cc
-        sb%rlattice_primitive(1,2) =-M_HALF*aa
-        sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-        sb%rlattice_primitive(3,2) = cc
-        sb%rlattice_primitive(1,3) =-M_HALF*aa
-        sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
-        sb%rlattice_primitive(3,3) = cc
-      else
-        sb%rlattice_primitive(1,1) = M_ONE
-        sb%rlattice_primitive(2,1) = M_ZERO
-        sb%rlattice_primitive(3,1) = M_ZERO
-        sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
-        sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-        sb%rlattice_primitive(3,2) = M_ZERO
-        sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
-        sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
-                                         /sb%rlattice_primitive(2,2) 
-        sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
-      end if
-
       if (parse_is_defined(namespace, 'LatticeVectors')) then
         message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
         call messages_print_var_info(stdout, "LatticeParameters")
         call messages_fatal(1, namespace=namespace)
       end if
-
-      if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
-        sb%nonorthogonal = .true.
-      else
-        sb%nonorthogonal = .false.
-      end if
+      
+      call build_metric_from_angles(sb%latt, angles)
 
     else
 
@@ -604,17 +566,19 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%<br></tt>
       !%End
-      sb%rlattice_primitive = M_ZERO
-      sb%nonorthogonal = .false.
+      sb%latt%rlattice_primitive = M_ZERO
+      sb%latt%nonorthogonal = .false.
       do idim = 1, sb%dim
-        sb%rlattice_primitive(idim, idim) = M_ONE
+        sb%latt%rlattice_primitive(idim, idim) = M_ONE
       end do
 
       if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
-            call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
-            if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
+            call parse_block_float(blk, idim - 1,  jdim - 1, sb%latt%rlattice_primitive(jdim, idim))
+            if(idim /= jdim .and. abs(sb%latt%rlattice_primitive(jdim, idim)) > M_EPSILON) then
+              sb%latt%nonorthogonal = .true.
+            end if
           enddo
         end do
         call parse_block_end(blk)
@@ -631,37 +595,40 @@ contains
       end do
     end if
 
-    sb%rlattice = M_ZERO
+    sb%latt%rlattice = M_ZERO
     do idim = 1, sb%dim
-      norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
+      norm = sqrt(sum(sb%latt%rlattice_primitive(1:sb%dim, idim)**2))
       sb%lsize(idim) = sb%lsize(idim) * norm
       do jdim = 1, sb%dim
-        sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
-        sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
+        sb%latt%rlattice_primitive(jdim, idim) = sb%latt%rlattice_primitive(jdim, idim) / norm
+        sb%latt%rlattice(jdim, idim) = sb%latt%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end do
     end do
 
-    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
-    sb%klattice = sb%klattice * M_TWO*M_PI
+    call reciprocal_lattice(sb%latt%rlattice, sb%latt%klattice, sb%rcell_volume, sb%dim, namespace)
+    sb%latt%klattice = sb%latt%klattice * M_TWO*M_PI
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, volume_element, sb%dim, namespace)
+    call reciprocal_lattice(sb%latt%rlattice_primitive, sb%latt%klattice_primitive, volume_element, sb%dim, namespace)
 
     if(sb%dim == 3) then
-      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
-      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2)))
-      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
+      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 2), &
+                                                          sb%latt%rlattice_primitive(1:3, 3))**2)))
+      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 3), &
+                                                          sb%latt%rlattice_primitive(1:3, 1))**2)))
+      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 1), &
+                                                          sb%latt%rlattice_primitive(1:3, 2))**2)))
     end if
 
     ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-    sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
+    rlatt = matmul(transpose(sb%latt%rlattice_primitive), sb%latt%rlattice_primitive)
     if(.not. has_angles .and. sb%dim == 3) then
       !We compute the angles from the lattice vectors
-      sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
-      sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
-      sb%gamma=acos(sb%rmetric(1,2)/sqrt(sb%rmetric(1,1)*sb%rmetric(2,2)))/M_PI*CNST(180.0)
+      sb%alpha=acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
+      sb%beta =acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
+      sb%gamma=acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
     end if
 
     POP_SUB(simul_box_build_lattice)
@@ -735,7 +702,7 @@ contains
     if (simul_box_is_periodic(sb)) then
       if(.not. geo%reduced_coordinates) then
         !convert the position to reduced coordinates
-         xx(1:pd) = matmul(ratom(1:pd), sb%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
+         xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
       else
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
@@ -751,66 +718,12 @@ contains
       ASSERT(all(xx(1:pd) < CNST(1.0)))
 
       xx(1:pd) = (xx(1:pd) - M_HALF)
-      ratom(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), xx(1:pd))
+      ratom(1:pd) = matmul(sb%latt%rlattice(1:pd, 1:pd), xx(1:pd))
 
     end if
     
 
   end subroutine simul_box_periodic_atom_in_box
-
-  !--------------------------------------------------------------
-  subroutine reciprocal_lattice(rv, kv, volume, dim, namespace)
-    FLOAT,             intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,             intent(out) :: volume
-    integer,           intent(in)  :: dim
-    type(namespace_t), intent(in)  :: namespace
-
-    integer :: ii
-    FLOAT :: cross(1:3), rv3(1:3, 1:3)
-
-    PUSH_SUB(reciprocal_lattice)
-
-    kv(:,:) = M_ZERO
-
-    select case(dim)
-    case(3)
-      cross(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
-      volume = dot_product(rv(1:3, 1), cross(1:3))
-
-      kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
-      kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
-      kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
-    case(2)
-      rv3(1:3, 1:3) = M_ZERO
-      rv3(1:2, 1:2) = rv(1:2, 1:2)
-      rv3(3, 3) = M_ONE
-      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2)) 
-      volume = dot_product(rv3(1:3, 3), cross(1:3))
-
-      kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
-      kv(1:3, 2) = dcross_product(rv3(:, 3), rv3(:, 1))/volume
-    case(1)
-      volume = rv(1, 1)
-      kv(1, 1) = M_ONE / rv(1, 1)
-    case default ! dim > 3
-      message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
-      call messages_warning(1, namespace=namespace)
-      volume = M_ONE
-      do ii = 1, dim
-        kv(ii, ii) = M_ONE/rv(ii,ii)
-        !  At least initialize the thing
-        volume = volume * sqrt(sum(rv(:, ii)**2))
-      end do
-    end select
-
-    if ( volume < M_ZERO ) then 
-      message(1) = "Your lattice vectors form a left-handed system."
-      call messages_fatal(1, namespace=namespace)
-    end if
-
-    POP_SUB(reciprocal_lattice)
-  end subroutine reciprocal_lattice
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
@@ -875,7 +788,7 @@ contains
       write(message(1),'(1x)')
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
       do idir = 1, this%dim
-        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
+        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%latt%rlattice(idir2, idir)), &
           idir2 = 1, this%dim) 
       end do
       call messages_info(2+this%dim, iunit)
@@ -887,7 +800,7 @@ contains
 
       write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do idir = 1, this%dim
-        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, this%klattice(idir2, idir)), &
+        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, this%latt%klattice(idir2, idir)), &
           idir2 = 1, this%dim)
       end do
       call messages_info(1+this%dim, iunit)
@@ -924,7 +837,7 @@ contains
         do idir1 = 1, this%dim
           write(iunit, '(a)', advance='no') '['
           do idir2 = 1, this%dim
-            write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, this%rlattice(idir2, idir1))
+            write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, this%latt%rlattice(idir2, idir1))
           end do
           write(iunit, '(a)', advance='no') ']'
           if(idir1 < this%dim) then
@@ -974,9 +887,9 @@ contains
     
     !convert from Cartesian to reduced lattice coord 
     if (nn == 1) then
-      xx_red(1, 1:this%dim) = matmul(xx(1, 1:this%dim), this%klattice_primitive(1:this%dim, 1:this%dim))
+      xx_red(1, 1:this%dim) = matmul(xx(1, 1:this%dim), this%latt%klattice_primitive(1:this%dim, 1:this%dim))
     else
-      call lalg_gemm(nn, this%dim, this%dim, M_ONE, xx, this%klattice_primitive, M_ZERO, xx_red)
+      call lalg_gemm(nn, this%dim, this%dim, M_ONE, xx, this%latt%klattice_primitive, M_ZERO, xx_red)
     end if
 
     select case(this%box_shape)
@@ -1057,10 +970,11 @@ contains
     sbout%lsize                   = sbin%lsize
     sbout%image                   = sbin%image
     sbout%user_def                = sbin%user_def
-    sbout%rlattice                = sbin%rlattice
-    sbout%rlattice_primitive      = sbin%rlattice_primitive
-    sbout%klattice                = sbin%klattice
-    sbout%klattice_primitive      = sbin%klattice_primitive
+    sbout%latt%rlattice           = sbin%latt%rlattice
+    sbout%latt%rlattice_primitive = sbin%latt%rlattice_primitive
+    sbout%latt%klattice           = sbin%latt%klattice
+    sbout%latt%klattice_primitive = sbin%latt%klattice_primitive
+    sbout%latt%nonorthogonal      = sbin%latt%nonorthogonal
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
 
@@ -1188,7 +1102,7 @@ contains
         end do
 
         if(iatom_symm > geo%natoms) then
-          write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
+          write(message(1),'(a,i6)') 'Internal error: could not find symlatt partner for atom number', iatom
           write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
           call messages_fatal(2, namespace=namespace)
         end if
