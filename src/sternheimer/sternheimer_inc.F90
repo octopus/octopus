@@ -139,6 +139,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
     if (calculate_rho) then
       call lalg_copy(gr%mesh%np, st%d%nspin, lr(1)%X(dl_rho)(:, :), dl_rhoin(:, :, 1))
 
+      this%X(omega) = omega
       call X(sternheimer_calc_hvar)(this, gr%mesh, st, hm, xc, lr, nsigma, hvar)
     end if
 
@@ -508,9 +509,16 @@ subroutine X(sternheimer_calc_hvar)(this, mesh, st, hm, xc, lr, nsigma, hvar)
   else
     call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar)
   end if
+  if (this%enable_el_pt_coupling) then
+#ifdef R_TCOMPLEX    
+    call calc_hvar_photons(this, mesh, st, lr(1)%zdl_rho, nsigma, hvar)
+#else
+    ! Photons only available with complex states
+    ASSERT(.false.)
+#endif
+  end if
 
   POP_SUB(X(sternheimer_calc_hvar))
-
 end subroutine X(sternheimer_calc_hvar)
 
 
@@ -563,7 +571,7 @@ subroutine X(calc_hvar)(add_hartree, mesh, st, hm, xc, lr_rho, nsigma, hvar, fxc
       end do
     end if
   end do
-  
+
   if (nsigma == 2) hvar(1:mesh%np, 1:st%d%nspin, 2) = R_CONJ(hvar(1:mesh%np, 1:st%d%nspin, 1))
 
   if (add_hartree) then

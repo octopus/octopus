@@ -165,8 +165,10 @@ contains
        this%nmodes = parse_block_n(blk)
        SAFE_ALLOCATE(this%omega(1:this%nmodes))
        SAFE_ALLOCATE(this%lambda(1:this%nmodes))
-       SAFE_ALLOCATE(this%pol(1:this%nmodes, this%dim))
+       SAFE_ALLOCATE(this%pol(1:this%nmodes, 3))
        SAFE_ALLOCATE(this%pol_dipole(1:mesh%np, 1:this%nmodes))
+
+       this%pol = M_ZERO
 
        do ii = 1, this%nmodes
           ncols = parse_block_cols(blk, ii-1)

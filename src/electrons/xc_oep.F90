@@ -151,10 +151,15 @@ contains
 
       !%Variable EnablePhotons
       !%Type logical
-      !%Default .false.
-      !%Section Hamiltonian::XC
+      !%Default no
+      !%Section Hamiltonian
       !%Description
-      !% Activate the one-photon OEP
+      !% This variable can be used to enable photons in several types of calculations.
+      !% It can be used to activate the one-photon OEP formalism.      
+      !% In the case of CalculationMode = casida, it enables photon modes as
+      !% described in ACS Photonics 2019, 6, 11, 2757-2778.
+      !% Finally, if set to yes when solving the ferquency-dependent Sternheimer
+      !% equation, the photons are coupled to the electronic subsystem.
       !%End
       call messages_obsolete_variable(namespace, 'OEPPtX', 'EnablePhotons')
       call parse_variable(namespace, 'EnablePhotons', .false., oep%has_photons)

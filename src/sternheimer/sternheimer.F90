@@ -26,10 +26,12 @@ module sternheimer_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -40,6 +42,7 @@ module sternheimer_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
@@ -92,6 +95,8 @@ module sternheimer_oct_m
        dcalc_kvar,                &
        zcalc_kvar
 
+  character(len=*), public, parameter :: EM_RESP_PHOTONS_DIR = "em_resp_photons/"
+
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
@@ -110,9 +115,18 @@ module sternheimer_oct_m
      logical               :: last_occ_response
      logical               :: occ_response_by_sternheimer
      logical               :: preorthogonalization
+     logical, public       :: enable_el_pt_coupling  !< switch on photoncoupling
+     FLOAT                 :: domega          !< current frequency for which we solve the freq.-dep. equation
+     CMPLX                 :: zomega          !< current frequency for which we solve the freq.-dep. equation
+     FLOAT, allocatable, public  :: dphoton_coord_q(:) !< canonical photon coordinate
+     CMPLX, allocatable, public  :: zphoton_coord_q(:) !< canonical photon coordinate
+     FLOAT                 :: el_pt_eta      !< broadening for photonic subsystem
+     FLOAT, allocatable :: omg2_lmda_r(:)
+     FLOAT, allocatable :: lambda_dot_r(:)
+     type(photon_mode_t)   :: pt_modes
   end type sternheimer_t
   
-  type(profile_t), save :: prof, prof_hvar
+  type(profile_t), save :: prof, prof_hvar, prof_hvar_photons
 
 contains
   
@@ -133,7 +147,8 @@ contains
     logical,        optional, intent(in)    :: set_last_occ_response
     logical,        optional, intent(in)    :: occ_response_by_sternheimer
 
-    integer :: ham_var
+    integer :: ip, nm, ii
+    integer :: ham_var, iunit
     logical :: default_preorthog
 
     PUSH_SUB(sternheimer_init)
@@ -254,6 +269,42 @@ contains
 
     if(this%add_fxc) call sternheimer_build_fxc(this, namespace, gr%mesh, st, xc)
 
+
+    ! This variable is documented in xc_oep_init.
+    call parse_variable(namespace, 'EnablePhotons', .false., this%enable_el_pt_coupling)
+    call messages_print_var_value(stdout, 'EnablePhotons', this%enable_el_pt_coupling)
+
+    if(this%enable_el_pt_coupling) then
+      call photon_mode_init(this%pt_modes, namespace, gr%mesh, space%dim, M_ZERO)
+      call io_mkdir(EM_RESP_PHOTONS_DIR, namespace)
+      iunit = io_open(EM_RESP_PHOTONS_DIR // 'photon_modes', namespace, action='write')
+      call photon_mode_write_info(this%pt_modes, iunit)
+      SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes))
+
+      nm = this%pt_modes%nmodes
+      SAFE_ALLOCATE(this%omg2_lmda_r(1:gr%mesh%np))
+      SAFE_ALLOCATE(this%lambda_dot_r(1:gr%mesh%np))
+      do ii = 1, nm
+        do ip = 1, gr%mesh%np
+          this%omg2_lmda_r(ip) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
+            sum(this%pt_modes%pol(ii, 1:space%dim)*gr%mesh%x(ip, 1:space%dim))
+          this%lambda_dot_r(ip) = this%pt_modes%lambda(ii) * &
+            sum(this%pt_modes%pol(ii, 1:space%dim)*gr%mesh%x(ip, 1:space%dim))
+        end do
+      end do
+    end if
+
+    !%Variable PhotonEta
+    !%Type float
+    !%Default 0.0000367
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% This variable provides the value for the broadening of the photonic spectra
+    !% when the coupling of electrons to photons is enabled in the frequency-dependent Sternheimer equation
+    !%End
+    call parse_variable(namespace, 'PhotonEta', CNST(0.0000367), this%el_pt_eta, units_inp%energy)
+    call messages_print_var_value(stdout, 'PhotonEta', this%el_pt_eta, units_inp%energy)
+
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
 
@@ -276,6 +327,10 @@ contains
     type(sternheimer_t), intent(inout) :: this
 
     PUSH_SUB(sternheimer_end)
+
+    SAFE_DEALLOCATE_A(this%zphoton_coord_q)
+    SAFE_DEALLOCATE_A(this%omg2_lmda_r)
+    SAFE_DEALLOCATE_A(this%lambda_dot_r)
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
@@ -460,6 +515,72 @@ contains
     POP_SUB(sternheimer_obsolete_variables)
   end subroutine sternheimer_obsolete_variables
   
+  !--------------------------------------------------------------
+  subroutine calc_hvar_photons(this, mesh, st, lr_rho, nsigma, hvar)
+    type(sternheimer_t),    intent(inout) :: this
+    type(mesh_t),           intent(in)    :: mesh
+    type(states_elec_t),    intent(in)    :: st
+    integer,                intent(in)    :: nsigma
+    CMPLX,                  intent(in)    :: lr_rho(:,:)
+    CMPLX,                  intent(inout) :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+
+    CMPLX, allocatable :: s_lr_rho(:), vp_dip_self_ener(:), vp_bilinear_el_pt(:)
+    CMPLX, allocatable :: first_moments(:)
+    integer :: nm, is, ii
+    CMPLX :: integral_result
+
+    PUSH_SUB(calc_hvar_photons)
+    call profiling_in(prof_hvar_photons, 'CALC_HVAR_PHOTONS')
+
+    nm = this%pt_modes%nmodes
+
+    ! photonic terms
+    SAFE_ALLOCATE(s_lr_rho(1:mesh%np))
+    SAFE_ALLOCATE(first_moments(1:nm))
+    SAFE_ALLOCATE(vp_dip_self_ener(1:mesh%np))
+    SAFE_ALLOCATE(vp_bilinear_el_pt(1:mesh%np))
+
+    ! spin summed density
+    s_lr_rho = M_ZERO
+    do is = 1, st%d%nspin
+      s_lr_rho = s_lr_rho + lr_rho(:, is)
+    end do
+
+    ! Compute photon q_{\alpha}s and potential for bilinear el-pt coupling
+    vp_bilinear_el_pt = M_ZERO
+    do ii = 1, nm
+      first_moments(ii) = zmf_integrate(mesh, this%omg2_lmda_r(1:mesh%np)*s_lr_rho(1:mesh%np))
+
+      this%zphoton_coord_q(ii) = (M_ONE/(M_TWO*(this%pt_modes%omega(ii))**2)) * &
+        ((M_ONE/(this%zomega - this%pt_modes%omega(ii) + M_zI*this%el_pt_eta)) -  &
+        (M_ONE/(this%zomega + this%pt_modes%omega(ii) + M_zI*this%el_pt_eta))) * &
+        first_moments(ii)
+
+      vp_bilinear_el_pt = vp_bilinear_el_pt - &
+        this%pt_modes%omega(ii)*this%lambda_dot_r(1:mesh%np)*this%zphoton_coord_q(ii)
+    end do
+
+    ! Compute potential with dipole-self energy contribution
+    vp_dip_self_ener = M_ZERO
+    do ii = 1, nm
+      integral_result = zmf_integrate(mesh, this%lambda_dot_r(1:mesh%np)*s_lr_rho(1:mesh%np))
+      vp_dip_self_ener = vp_dip_self_ener + integral_result*this%lambda_dot_r(1:mesh%np)
+    end do
+
+    hvar(1:mesh%np, 1, 1) = hvar(1:mesh%np, 1, 1) + vp_dip_self_ener(1:mesh%np) + vp_bilinear_el_pt(1:mesh%np)
+
+    SAFE_DEALLOCATE_A(s_lr_rho)
+    SAFE_DEALLOCATE_A(first_moments)
+    SAFE_DEALLOCATE_A(vp_dip_self_ener)
+    SAFE_DEALLOCATE_A(vp_bilinear_el_pt)
+
+    if (nsigma == 2) hvar(1:mesh%np, 1:st%d%nspin, 2) = conjg(hvar(1:mesh%np, 1:st%d%nspin, 1))
+
+    call profiling_out(prof_hvar_photons)
+    POP_SUB(calc_hvar_photons)
+  end subroutine calc_hvar_photons
+
+
 #include "complex.F90"
 #include "sternheimer_inc.F90"
 
