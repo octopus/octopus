@@ -13,24 +13,25 @@ Input      : 10-vdw_d3_dna.01-gs_novdw.inp
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ;  van der Waals energy  ; GREPFIELD(static/info, 'vanderWaals =', 3) ; 0.0
 
-Precision: 1.09e-06
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -329.28312189999997
-Precision: 8.52e-07
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.471635685
-Precision: 5.39e-07
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 366.09354492
+Precision: 1.98e-06
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -329.28312271
+Precision: 1.48e-06
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.47163625499999
+Precision: 6.00e-07
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 366.093544865
 Precision: 9.24e-14
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 92.35785409
-Precision: 6.60e-08
-match ;  Int[n*v_xc]         ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.43294126
-Precision: 4.40e-08
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57938568
-Precision: 1.09e-14
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.92935123
-Precision: 3e-07
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 234.93641237
-Precision: 6.33e-07
+Precision: 1.04e-07
+match ;  Int[n*v_xc]         ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.432941295
+Precision: 7.15e-08
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57938570499999
+Precision: 5.50e-09
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.929351235
+Precision: 3.90e-07
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 234.936412375
+Precision: 8.31e-07
 match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -932.162128915
+
 Precision: 8.14e-16
 match ;  Eigenvalue  10      ; GREPFIELD(static/info, ' 10   --', 3) ; -0.814247
 Precision: 6.60e-16
@@ -51,49 +52,32 @@ Precision: 1.61e-16
 match ;  Eigenvalue  90      ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161035
 Precision: 8.00e-18
 match ;  Eigenvalue 100      ; GREPFIELD(static/info, '100   --', 3) ; -0.007995
-Precision: 2.e-05
-match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.05697049999999999
-Precision: 8.64e-05
-match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.11773349999999999
+Precision: 1.04e-05
+match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.0569645
+Precision: 2.00e-04
+match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.11774699999999999
 
-Precision: 1.10e-08
-match ;  Force 10 (x)    ; GREPFIELD(static/info, '10         N', 3) ; 0.008873269999999999
-Precision: 5.50e-09
-match ;  Force 10 (y)    ; GREPFIELD(static/info, '10         N', 4) ; 0.001031155
-Precision: 5.50e-09
-match ;  Force 10 (z)    ; GREPFIELD(static/info, '10         N', 5) ; -0.005506635
-Precision: 4e-09
-match ;  Force 20 (x)    ; GREPFIELD(static/info, '20         C', 3) ; -0.0007601945
-Precision: 1.e-08
-match ;  Force 20 (y)    ; GREPFIELD(static/info, '20         C', 4) ; -0.00424731
 Precision: 5.50e-08
+match ;  Force 10 (x)    ; GREPFIELD(static/info, '10         N', 3) ; 0.008873269999999999
+match ;  Force 10 (y)    ; GREPFIELD(static/info, '10         N', 4) ; 0.00103115
+match ;  Force 10 (z)    ; GREPFIELD(static/info, '10         N', 5) ; -0.005506635
+match ;  Force 20 (x)    ; GREPFIELD(static/info, '20         C', 3) ; -0.0007601960000000001
+match ;  Force 20 (y)    ; GREPFIELD(static/info, '20         C', 4) ; -0.00424731
 match ;  Force 20 (z)    ; GREPFIELD(static/info, '20         C', 5) ; -0.011872549999999999
-Precision: 5.33e-18
 match ;  Force 30 (x)    ; GREPFIELD(static/info, '30         C', 3) ; 0.00532964
-Precision: 5.50e-09
 match ;  Force 30 (y)    ; GREPFIELD(static/info, '30         C', 4) ; -0.001592825
-Precision: 1.78e-17
 match ;  Force 30 (z)    ; GREPFIELD(static/info, '30         C', 5) ; 0.0177596
-Precision: 1.15e-17
 match ;  Force 40 (x)    ; GREPFIELD(static/info, '40         H', 3) ; -0.0114851
-Precision: 5.50e-10
-match ;  Force 40 (y)    ; GREPFIELD(static/info, '40         H', 4) ; 0.0008852455
-Precision: 1.47e-17
+match ;  Force 40 (y)    ; GREPFIELD(static/info, '40         H', 4) ; 0.000885245
 match ;  Force 40 (z)    ; GREPFIELD(static/info, '40         H', 5) ; -0.0147137
-Precision: 1.10e-09
-match ;  Force 50 (x)    ; GREPFIELD(static/info, '50         H', 3) ; -0.000705886
-Precision: 2.e-09
+match ;  Force 50 (x)    ; GREPFIELD(static/info, '50         H', 3) ; -0.0007058855
 match ;  Force 50 (y)    ; GREPFIELD(static/info, '50         H', 4) ; -0.0001351925
-Precision: 5.50e-09
 match ;  Force 50 (z)    ; GREPFIELD(static/info, '50         H', 5) ; 0.006233235
-Precision: 1.89e-17
 match ;  Force 60 (x)    ; GREPFIELD(static/info, '60         H', 3) ; -0.0188592
-Precision: 2.55e-19
 match ;  Force 60 (y)    ; GREPFIELD(static/info, '60         H', 4) ; 0.000254565
-Precision: 1.10e-17
 match ;  Force 60 (z)    ; GREPFIELD(static/info, '60         H', 5) ; 0.0109573
 
-Precision: 5.08e-15
+Precision: 7e-15
 match ;  Partial charge  5  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6) ; 5.083
 match ;  Partial charge 10  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 11) ; 5.087
 match ;  Partial charge 15  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 16) ; 4.023

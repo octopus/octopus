@@ -79,11 +79,19 @@ contains
     FLOAT :: dg(1:3), gvec(1:3)
     FLOAT, allocatable :: modg2(:)
     integer, allocatable :: map(:), ucoords(:, :), ured_gvec(:, :)
+    integer(8) :: number_points
 
     PUSH_SUB(fourier_shell_init)
 
     this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk), dg = dg)
 
+    ! make sure we do not run into integer overflow here
+    number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+    number_points = number_points * cube%rs_n_global(3)
+    if (number_points >= HUGE(0)) then
+      message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+      call messages_fatal(1)
+    end if
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ured_gvec(1:3, 1:product(cube%rs_n_global(1:3))))

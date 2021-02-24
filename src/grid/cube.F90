@@ -400,6 +400,7 @@ contains
     integer :: tmp_local(6), position, process, ix, iy, iz, index
     integer, allocatable :: local_sizes(:)
     type(profile_t), save ::  prof_gt, prof_map
+    integer(8) :: number_points
 
     PUSH_SUB(cube_do_mapping)
 
@@ -429,6 +430,13 @@ contains
 
     SAFE_ALLOCATE(cube%xlocal(1:cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%np_local(1:cube%mpi_grp%size))
+    ! make sure we do not run into integer overflow here
+    number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+    number_points = number_points * cube%rs_n_global(3)
+    if (number_points >= HUGE(0)) then
+      message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+      call messages_fatal(1)
+    end if
     SAFE_ALLOCATE(cube%local(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
 
     index = 1
@@ -484,6 +492,13 @@ contains
 
       SAFE_ALLOCATE(cube%xlocal_fs(1:cube%mpi_grp%size))
       SAFE_ALLOCATE(cube%np_local_fs(1:cube%mpi_grp%size))
+      ! make sure we do not run into integer overflow here
+      number_points = cube%fs_n_global(1) * cube%fs_n_global(2)
+      number_points = number_points * cube%fs_n_global(3)
+      if (number_points >= HUGE(0)) then
+        message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+        call messages_fatal(1)
+      end if
       SAFE_ALLOCATE(cube%local_fs(1:cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3), 3))
 
       index = 1
