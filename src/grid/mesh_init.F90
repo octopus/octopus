@@ -866,7 +866,7 @@ contains
       end if
       
       !Do the partioning of the boundary points
-      call mesh_partition_boundaries(mesh, stencil, vsize)
+      !call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
       call restart_init(restart_dump, namespace, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)

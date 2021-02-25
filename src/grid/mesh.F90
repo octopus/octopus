@@ -876,9 +876,9 @@ contains
       if (ip <= mesh%np) then
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
       else if (ip <= mesh%np + mesh%vp%np_ghost) then
-        ipg = mesh%vp%ghost(mesh%vp%xghost + ip - mesh%np - 1)
+        ipg = mesh%vp%ghost(ip - mesh%np)
       else if (ip <= mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry) then
-        ipg = mesh%vp%bndry(mesh%vp%xbndry + ip - mesh%np - mesh%vp%np_ghost - 1)
+        ipg = mesh%vp%bndry(ip - mesh%np - mesh%vp%np_ghost)
       else
         ipg = 0
       end if
@@ -893,7 +893,7 @@ contains
     if (.not. mesh%parallel_in_domains) then
       ip = ipg
     else
-      ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
+      ip = vec_global2local(mesh%vp, ipg)
     end if
   end function mesh_global2local
 end module mesh_oct_m

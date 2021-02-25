@@ -230,7 +230,7 @@ contains
       call mesh_global_index_to_coords(coarse, ig, idx)
       ig = mesh_global_index_from_coords(fine, 2*idx)
       ! translate to a local number of the fine grid
-      if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
+      if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig)
       tt%to_coarse(i) = ig
     end do
 

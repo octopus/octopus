@@ -88,7 +88,8 @@ module boundaries_oct_m
 
   type pv_handle_batch_t
     private
-    type(batch_t)        :: ghost_send
+    type(batch_t)        :: ghost_send   !< batch for sending data; it is packed into this one
+    type(batch_t)        :: ghost_recv   !< batch for receiving data; it is unpacked from this one
     integer, allocatable :: requests(:)
     integer              :: nnb
     ! these are needed for CL
@@ -235,7 +236,8 @@ contains
           do ipart = 1, mesh%vp%npart
             if(ipart == mesh%vp%partno) cycle
 
-            ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
+            ! TODO: Fix this!!!
+            ip_inner = vec_global2local(mesh%vp, ip_inner_global)
             
             if(ip_inner /= 0) then
               if(ip_inner <= mesh%vp%np_local_vec(ipart)) then

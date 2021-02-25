@@ -128,7 +128,6 @@ subroutine X(vec_gather)(vp, root, v_local, v)
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank == root) then
     do ii = 1, vp%np_global
-!!$    do ii = vp%xlocal, vp%xlocal + vp%np_local - 1
       v(vp%local_vec(ii)) = v_tmp(ii)
     end do
 

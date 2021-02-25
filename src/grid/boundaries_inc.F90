@@ -37,6 +37,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   nsend = subarray_size(vp%ghost_spoints)
   SAFE_ALLOCATE(ghost_send(1:nsend))
   call X(subarray_gather)(vp%ghost_spoints, v_local, ghost_send)
+  ASSERT(.false.)
 
 #ifdef HAVE_MPI
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
@@ -60,7 +61,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   class(batch_t), target,   intent(inout) :: v_local
   type(pv_handle_batch_t),  intent(out)   :: handle
 
-  integer :: ipart, pos, ii, tag, nn, offset
+  integer :: ipart, pos, ii, tag, nn, ip, ipart2
   type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
   call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
@@ -74,28 +75,36 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
-  call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
-  ! first post the receptions
-  select case(v_local%status())
+  call X(batch_init)(handle%ghost_recv, v_local%dim, 1, v_local%nst, vp%np_ghost, &
+    packed=v_local%status()==BATCH_PACKED)
+  if(v_local%status()==BATCH_DEVICE_PACKED) call handle%ghost_recv%do_pack(copy = .false.)
 
+  call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
+
+  ! first post the receptions
+  ! the communication scheme is in principle a sparse alltoallv:
+  ! we use a ring scheme to post the receives and the sends which has
+  ! the advantage that matching messages are posted at the same time,
+  ! facilitating the matching of those messages
+  select case(v_local%status())
   case(BATCH_DEVICE_PACKED)
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack_size(1)*vp%np_ghost))
-      offset = 0
     else
       ! get device pointer for CUDA-aware MPI
-      call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%ff_device, &
+      call accel_get_device_pointer(handle%X(recv_buffer), handle%ghost_recv%ff_device, &
         [product(v_local%pack_size)])
-      ! offset needed because the device pointer represents the full vector
-      offset = v_local%pack_size(1)*vp%np_local
     end if
 
-    do ipart = 1, vp%npart
+    ! ring scheme: count upwards from local rank for receiving
+    do ipart2 = vp%partno, vp%partno + vp%npart
+      ipart = ipart2
+      if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack_size(1) + offset
+      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack_size(1)
 #ifdef HAVE_MPI
       call MPI_Irecv(handle%X(recv_buffer)(pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
@@ -104,28 +113,32 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
-    do ipart = 1, vp%npart
+    do ipart2 = vp%partno, vp%partno + vp%npart
+      ipart = ipart2
+      if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
+      pos = 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
-      call MPI_Irecv(v_local%X(ff_pack)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
+      call MPI_Irecv(handle%ghost_recv%X(ff_pack)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
+      do ipart2 = vp%partno, vp%partno + vp%npart
+        ipart = ipart2
+        if(ipart > vp%npart) ipart = ipart - vp%npart
         if(vp%ghost_rcounts(ipart) == 0) cycle
         
         handle%nnb = handle%nnb + 1
         tag = ii
-        pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
+        pos = 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
-        call MPI_Irecv(v_local%X(ff_linear)(pos, ii), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
+        call MPI_Irecv(handle%ghost_recv%X(ff_linear)(pos, ii), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
         vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
@@ -134,13 +147,29 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   end select
   call profiling_out(prof_irecv)
 
-  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
+  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, vp%ghost_scount, &
     packed=v_local%status()==BATCH_PACKED)
 
   if(v_local%status()==BATCH_DEVICE_PACKED) call handle%ghost_send%do_pack(copy = .false.)
 
-  !now collect the data for sending
-  call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
+  ! now pack the data for sending
+  select case(handle%ghost_send%status())
+  case(BATCH_PACKED)
+    do ip = 1, vp%ghost_scount
+      do ii = 1, handle%ghost_send%nst_linear
+        handle%ghost_send%X(ff_pack)(ii, ip) = v_local%X(ff_pack)(ii, vp%ghost_sendmap(ip))
+      end do
+    end do
+  case(BATCH_NOT_PACKED)
+    do ii = 1, handle%ghost_send%nst_linear
+      do ip = 1, vp%ghost_scount
+        handle%ghost_send%X(ff_linear)(ip, ii) = v_local%X(ff_linear)(vp%ghost_sendmap(ip), ii)
+      end do
+    end do
+  case(BATCH_DEVICE_PACKED)
+    ! TODO: implement!
+    ASSERT(.false.)
+  end select
 
   if(v_local%status() == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack_size(1:2))
@@ -154,26 +183,30 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   call profiling_in(prof_isend, TOSTRING(X(GHOST_UPDATE_ISEND)))
   select case(v_local%status())
-
   case(BATCH_DEVICE_PACKED)
-    do ipart = 1, vp%npart
+    ! ring scheme: count downwards from local rank for sending
+    do ipart2 = vp%partno, vp%partno - vp%npart, -1
+      ipart = ipart2
+      if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
 #ifdef HAVE_MPI
-      call MPI_Isend(handle%X(send_buffer)(1 + (vp%ghost_sendpos(ipart) - 1)*v_local%pack_size(1)), &
+      call MPI_Isend(handle%X(send_buffer)(1 + vp%ghost_sdispls(ipart)*v_local%pack_size(1)), &
         vp%ghost_scounts(ipart)*v_local%pack_size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
 
   case(BATCH_PACKED)
-    do ipart = 1, vp%npart
+    do ipart2 = vp%partno, vp%partno - vp%npart, -1
+      ipart = ipart2
+      if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
 #ifdef HAVE_MPI
-      call MPI_Isend(handle%ghost_send%X(ff_pack)(1, vp%ghost_sendpos(ipart)), &
+      call MPI_Isend(handle%ghost_send%X(ff_pack)(1, vp%ghost_sdispls(ipart)+1), &
         vp%ghost_scounts(ipart)*v_local%pack_size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
@@ -181,12 +214,14 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
+      do ipart2 = vp%partno, vp%partno - vp%npart, -1
+        ipart = ipart2
+        if(ipart < 1) ipart = ipart + vp%npart
         if(vp%ghost_scounts(ipart) == 0) cycle
         handle%nnb = handle%nnb + 1
         tag = ii
 #ifdef HAVE_MPI
-        call MPI_Isend(handle%ghost_send%X(ff_linear)(vp%ghost_sendpos(ipart), ii), &
+        call MPI_Isend(handle%ghost_send%X(ff_linear)(vp%ghost_sdispls(ipart)+1, ii), &
              vp%ghost_scounts(ipart), R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
@@ -206,6 +241,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 
   integer, allocatable :: status(:, :)
   type(profile_t), save :: prof_wait
+  integer :: ii, ip
 
   call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
@@ -218,6 +254,27 @@ subroutine X(ghost_update_batch_finish)(handle)
 #endif
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_A(handle%requests)
+
+  ! unpack received values
+  select case(handle%v_local%status())
+  case(BATCH_PACKED)
+    do ip = 1, handle%vp%np_ghost
+      do ii = 1, handle%ghost_recv%nst_linear
+        handle%v_local%X(ff_pack)(ii, handle%vp%np_local + ip) = &
+          handle%ghost_recv%X(ff_pack)(ii, handle%vp%ghost_recvmap(ip))
+      end do
+    end do
+  case(BATCH_NOT_PACKED)
+    do ii = 1, handle%ghost_recv%nst_linear
+      do ip = 1, handle%vp%np_ghost
+        handle%v_local%X(ff_linear)(handle%vp%np_local + ip, ii) = &
+          handle%ghost_recv%X(ff_linear)(handle%vp%ghost_recvmap(ip), ii)
+      end do
+    end do
+  case(BATCH_DEVICE_PACKED)
+    ! TODO: implement!
+    ASSERT(.false.)
+  end select
 
   if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
@@ -264,8 +321,8 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
   if(boundaries%mesh%parallel_in_domains) then
-    bndry_start = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + 1
-    bndry_end   = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + boundaries%mesh%vp%np_bndry
+    bndry_start = boundaries%mesh%np + boundaries%mesh%vp%np_ghost + 1
+    bndry_end   = boundaries%mesh%np_part
   else
     bndry_start = boundaries%mesh%np + 1
     bndry_end   = boundaries%mesh%np_part
