@@ -32,6 +32,7 @@ module boundaries_oct_m
   use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
+  use partition_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -134,8 +135,8 @@ contains
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
     integer :: ip_inner_global, ipart
-    integer, allocatable :: recv_rem_points(:, :)
-    integer :: nper_recv
+    integer, allocatable :: recv_rem_points(:, :), points(:), part(:), points_local(:)
+    integer :: nper_recv, iper_recv
 #ifdef HAVE_MPI
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
@@ -214,10 +215,14 @@ contains
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
+        SAFE_ALLOCATE(points(1:nper_recv))
+        SAFE_ALLOCATE(points_local(1:nper_recv))
+        SAFE_ALLOCATE(part(1:nper_recv))
         this%nrecv = 0
       end if
 
       iper = 0
+      iper_recv = 0
       do ip = sp + 1, mesh%np_part
 
         ip_global = mesh_local2global(mesh, ip)
@@ -231,31 +236,25 @@ contains
           this%per_points(POINT_INNER, iper) = ip_inner
 
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
-          ! find in which paritition it is
-          do ipart = 1, mesh%vp%npart
-            if(ipart == mesh%vp%partno) cycle
-
-            ! TODO: Fix this!!!
-            ip_inner = vec_global2local(mesh%vp, ip_inner_global)
-            
-            if(ip_inner /= 0) then
-              if(ip_inner <= mesh%vp%np_local_vec(ipart)) then
-                ! count the points to receive from each node
-                this%nrecv(ipart) = this%nrecv(ipart) + 1
-                ! and store the number of the point
-                this%per_recv(this%nrecv(ipart), ipart) = ip
-                ! and where it is in the other partition
-                recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
-
-                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
-              
-                exit
-              end if
-            end if
-            
-          end do
+          iper_recv = iper_recv + 1
+          points(iper_recv) = ip_inner_global
+          points_local(iper_recv) = ip
         end if
       end do
+      if(mesh%parallel_in_domains) then
+        ! find the points in the other partitions
+        call partition_get_partition_number(mesh%inner_partition, nper_recv, &
+          points, part)
+        do iper_recv = 1, nper_recv
+          ipart = part(iper_recv)
+          ! count the points to receive from each node
+          this%nrecv(ipart) = this%nrecv(ipart) + 1
+          ! and store the number of the point
+          this%per_recv(this%nrecv(ipart), ipart) = points_local(iper_recv)
+          ! and its global index
+          recv_rem_points(this%nrecv(ipart), ipart) = points(iper_recv)
+        end do
+      end if
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
@@ -296,6 +295,10 @@ contains
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
           call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%mpi_grp%comm, status, mpi_err)
+          ! get local index of the points to send
+          do ip = 1, this%nsend(ipart)
+            this%per_send(ip, ipart) = mesh_global2local(mesh, this%per_send(ip, ipart))
+          end do
         end do
 
         ! we no longer need this
