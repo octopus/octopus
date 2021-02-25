@@ -1,4 +1,5 @@
 !! Copyright (C) 2005-2020 Florian Lorenzen, Heiko Appel, Martin Lueders
+!! Copyright (C) 2021 Sebastian Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
