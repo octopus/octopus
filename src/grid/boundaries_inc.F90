@@ -107,7 +107,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
 
     ! ring scheme: count upwards from local rank for receiving
-    do ipart2 = vp%partno, vp%partno + vp%npart
+    do ipart2 = vp%partno, vp%partno + vp%npart - 1
       ipart = ipart2
       if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
@@ -123,7 +123,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
-    do ipart2 = vp%partno, vp%partno + vp%npart
+    do ipart2 = vp%partno, vp%partno + vp%npart - 1
       ipart = ipart2
       if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
@@ -139,7 +139,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart2 = vp%partno, vp%partno + vp%npart
+      do ipart2 = vp%partno, vp%partno + vp%npart - 1
         ipart = ipart2
         if(ipart > vp%npart) ipart = ipart - vp%npart
         if(vp%ghost_rcounts(ipart) == 0) cycle
@@ -195,7 +195,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   select case(v_local%status())
   case(BATCH_DEVICE_PACKED)
     ! ring scheme: count downwards from local rank for sending
-    do ipart2 = vp%partno, vp%partno - vp%npart, -1
+    do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
       ipart = ipart2
       if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
@@ -209,7 +209,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end do
 
   case(BATCH_PACKED)
-    do ipart2 = vp%partno, vp%partno - vp%npart, -1
+    do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
       ipart = ipart2
       if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
@@ -224,7 +224,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart2 = vp%partno, vp%partno - vp%npart, -1
+      do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
         ipart = ipart2
         if(ipart < 1) ipart = ipart + vp%npart
         if(vp%ghost_scounts(ipart) == 0) cycle
@@ -303,6 +303,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   end if
 
   call handle%ghost_send%end()
+  call handle%ghost_recv%end()
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))

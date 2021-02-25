@@ -301,6 +301,9 @@ contains
           ! get local index of the points to send
           do ip = 1, this%nsend(ipart)
             this%per_send(ip, ipart) = mesh_global2local(mesh, this%per_send(ip, ipart))
+            ! make sure we have local points here
+            ASSERT(this%per_send(ip, ipart) > 0)
+            ASSERT(this%per_send(ip, ipart) <= mesh%np)
           end do
         end do
 
