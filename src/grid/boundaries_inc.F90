@@ -26,26 +26,37 @@ subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
 
-  R_TYPE,  allocatable :: ghost_send(:)
-  integer              :: nsend
+  R_TYPE,  allocatable :: ghost_send(:), ghost_recv(:)
+  integer :: ip
   type(profile_t), save :: prof_update
   
   call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
   PUSH_SUB(X(vec_ghost_update))
 
-  ! TODO: implement packing and unpacking
-  ASSERT(.false.)
+  SAFE_ALLOCATE(ghost_recv(1:vp%np_ghost))
+  SAFE_ALLOCATE(ghost_send(1:vp%ghost_scount))
+
+  ! pack data for sending
+  do ip = 1, vp%ghost_scount
+    ghost_send(ip) = v_local(vp%ghost_sendmap(ip))
+  end do
 
 #ifdef HAVE_MPI
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send(1), vp%ghost_scounts(1), vp%ghost_sdispls(1), R_MPITYPE, &
-       v_local(vp%np_local+1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
+       ghost_recv(1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
        vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 #endif
 
+  ! unpack received data
+  do ip = 1, vp%np_ghost
+    v_local(vp%np_local + ip) = ghost_recv(vp%ghost_recvmap(ip))
+  end do
+
   SAFE_DEALLOCATE_A(ghost_send)
+  SAFE_DEALLOCATE_A(ghost_recv)
 
   POP_SUB(X(vec_ghost_update))
 
