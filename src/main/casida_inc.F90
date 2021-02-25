@@ -483,11 +483,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   ! load saved matrix elements
   SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-  if(.not. cas%has_photons) then
-    call load_saved(matrix, is_saved, restart_file)
-  else
-    is_saved = .false.
-  end if
+  ! load electronic elements (also when using photon modes)
+  call load_saved(matrix, is_saved, restart_file)
 
   SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
   is_calcd = .true.
@@ -655,18 +652,21 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           ! now the exchange part
           mtxel_xc = X(mf_dotp)(mesh, rho_i(:), integrand_xc(:, cas%pair(ia)%kk))
 
-          mtxel_vm = M_ZERO
-          if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-            ! buffer is precomputed once before double loop
-            mtxel_vm = mtxel_vm + &
-            rhobufferx * X(mf_dotp)(mesh, rho_i(:), bufferx(:)) + &
-            rhobuffery * X(mf_dotp)(mesh, rho_i(:), buffery(:)) + &
-            rhobufferz * X(mf_dotp)(mesh, rho_i(:), bufferz(:))
-          end if
-
           matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
-
         end if
+
+        ! add photonic contribution
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+          mtxel_vm = M_ZERO
+          ! buffer is precomputed once before double loop
+          mtxel_vm = mtxel_vm + &
+          rhobufferx * X(mf_dotp)(mesh, rho_i(:), bufferx(:)) + &
+          rhobuffery * X(mf_dotp)(mesh, rho_i(:), buffery(:)) + &
+          rhobufferz * X(mf_dotp)(mesh, rho_i(:), bufferz(:))
+
+          matrix(jb_local, ia_local) = matrix(jb_local, ia_loacl) + mtxel_vm
+        end if
+
         if(.not. cas%distributed_matrix) then
           if(jb /= ia) matrix(ia, jb) = R_CONJ(matrix(jb, ia))
         end if
