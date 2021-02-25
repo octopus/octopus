@@ -184,28 +184,25 @@ contains
       sp = mesh%np
       if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
 
-      !count the number of points that are periodic
+      ! count the number of points that are periodic
       this%nper = 0
       nper_recv = 0
       do ip = sp + 1, mesh%np_part
 
         ip_global = mesh_local2global(mesh, ip)
+        ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner_global)
 
-        ip_inner = mesh_periodic_point(mesh, space, ip_global, ip)
-        ip_inner = mesh_global2local(mesh, ip_inner)
-
-        ! If the point is the periodic of another point, is not zero
-        ! (this might happen in the parallel case) and is inside the
-        ! grid then we have to copy it from the grid points.  
-        !
-        ! If the point index is larger than mesh%np then it is the
-        ! periodic copy of a point that is zero, so we don`t count it
-        ! as it will be initialized to zero anyway. For different
-        ! mixed boundary conditions the last check should be removed.
-        !
-        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
+        ! it is the same point, can happen for mixed periodicity
+        if (ip == ip_inner) cycle
+        ! the point maps to the boundary, can happen for mixed periodicity
+        ! in this case the point is already set to zero, so we can ignore it
+        ! for different mixed boundary conditions, we would need to be careful here
+        if (ip_inner_global > mesh%np_global) cycle
+        ! now check if point is local or if it needs to be communicated
+        if(ip_inner /= 0) then
           this%nper = this%nper + 1
-        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
+        else
           nper_recv = nper_recv + 1
         end if
       end do
@@ -227,16 +224,21 @@ contains
       do ip = sp + 1, mesh%np_part
 
         ip_global = mesh_local2global(mesh, ip)
-
         ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
         ip_inner = mesh_global2local(mesh, ip_inner_global)
         
-        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
+        ! it is the same point, can happen for mixed periodicity
+        if (ip == ip_inner) cycle
+        ! the point maps to the boundary, can happen for mixed periodicity
+        ! in this case the point is already set to zero, so we can ignore it
+        if (ip_inner_global > mesh%np_global) cycle
+        ! now check if point is local or if it needs to be communicated
+        if(ip_inner /= 0) then
           iper = iper + 1
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
-
-        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
+        else
+          ! the point is on another node
           iper_recv = iper_recv + 1
           points(iper_recv) = ip_inner_global
           points_local(iper_recv) = ip
