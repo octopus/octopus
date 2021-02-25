@@ -329,12 +329,10 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
 
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
+  bndry_start = boundaries%mesh%np + 1
+  bndry_end   = boundaries%mesh%np_part
   if(boundaries%mesh%parallel_in_domains) then
-    bndry_start = boundaries%mesh%np + boundaries%mesh%vp%np_ghost + 1
-    bndry_end   = boundaries%mesh%np_part
-  else
-    bndry_start = boundaries%mesh%np + 1
-    bndry_end   = boundaries%mesh%np_part
+    bndry_start = bndry_start + boundaries%mesh%vp%np_ghost
   end if
     
   if (.not. boundaries%fully_periodic) call zero_boundaries()
