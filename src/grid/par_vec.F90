@@ -25,9 +25,8 @@
   !! - Local points that are stored redundantly on
   !!   another process because of the partitioning are
   !!   called ghost points.
-  !! - Points from the enlargement are only stored
-  !!   once on the corresponding process and are called
-  !!   boundary points.
+  !! - Boundary points are stored locally such that each
+  !!   process has all points it needs for the finite differences
   !! - np is the total number of inner points.
   !!
   !! A globally defined vector v has two parts:
@@ -38,10 +37,9 @@
   !! The two parts are split according to the partitions.
   !! The result of this split are local vectors vl on each process
   !! which consist of three parts:
-  !! - vl(1:np_local_vec)                                     local points.
-  !! - vl(np_local_vec+1:np_local_vec+np_ghost)                   ghost points.
-  !! - vl(np_local_vec+np_ghost+1:np_local_vec+np_ghost+np_bndry) boundary points.
-  !!
+  !! - vl(1:np_local)                                     local points.
+  !! - vl(np_local+1:np_local+np_ghost)                   ghost points.
+  !! - vl(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
   !!
   !! Usage example for par_vec routines.
   !! \verbatim
@@ -89,7 +87,6 @@ module par_vec_oct_m
   use profiling_oct_m
   use space_oct_m
   use stencil_oct_m
-  use subarray_oct_m
 
   implicit none
 
@@ -113,14 +110,13 @@ module par_vec_oct_m
     !> Partition number of the
     !! current process
     integer              :: partno              
-    type(subarray_t)     :: ghost_spoints     !< Ghost points that actual process must send to the neighbours
     integer, allocatable :: ghost_sendpos(:)  !< The positions of the points for the ghost communication
 
     integer, allocatable :: ghost_rdispls(:)  !< Ghost points receive displacements 
     integer, allocatable :: ghost_sdispls(:)  !< Ghost points send displacements 
     integer, allocatable :: ghost_rcounts(:)  !< Number of ghost points to receive
     integer, allocatable :: ghost_scounts(:)  !< Number of ghost points to send
-    integer              :: ghost_scount
+    integer              :: ghost_scount      !< Total number of ghost points to send
     integer, allocatable :: ghost_sendmap(:)  !< map for packing ghost points
     integer, allocatable :: ghost_recvmap(:)  !< map for unpacking ghost points
 
@@ -154,23 +150,14 @@ module par_vec_oct_m
     integer, allocatable    :: recv_disp(:)         !< Displacement of points to receive from all the other processes
     integer, allocatable    :: send_disp(:)         !< Displacement of points to send to all the other processes
                                                     !! in a MPI_Alltoallv.
-    integer                 :: np_bndry             !< Number of boundary points.
-                                                    !! Local value
-    integer                 :: xbndry               !< Starting index of running process in bndry(:) 
-                                                    !! Local value
+    integer                 :: np_bndry             !< Number of local boundary points.
  
-    integer, allocatable    :: bndry(:)             !< Global numbers of boundary points.
-                                                    !! Global vector; np_enl elements
+    integer, allocatable    :: bndry(:)             !< local to global mapping of boundary points, np_bndry elements
       
-    type(iihash_t), private :: global               !< global(r) contains the global ->
-                                                        !! local mapping
-    integer, private        :: total                    !< Total number of ghost points. 
+    type(iihash_t), private :: global               !< global contains the global -> local mapping
 
-    integer                 :: np_ghost                 !< How many ghost points has partition r?
-                                                        !! Local value
-    integer                 :: xghost                   !< Starting index of running procces in ghost(:) vector.
-    integer, allocatable    :: ghost(:)                 !< Global indices of all local points.
-                                                        !! Global vector; vp%total elements
+    integer                 :: np_ghost             !< number of local ghost points
+    integer, allocatable    :: ghost(:)             !< Global indices of ghost points, np_ghost elements
   end type pv_t
 
   interface vec_scatter
@@ -218,28 +205,16 @@ contains
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
     integer                     :: npart            !< Number of partitions.
-    integer                     :: np_enl           !< Number of points in enlargement.
-    integer                     :: gip, ip, jp, kp, jj, index, inode, jnode !< Counters.
-    integer, allocatable        :: irr(:)           !< Counter.
+    integer                     :: gip, ip, jp, jj, index, inode
     integer                     :: p1(MAX_DIM)      !< Points.
-    type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
     type(iihash_t)              :: boundary, boundary_inv
     type(iihash_t)              :: ghost, ghost_inv
     integer                     :: iunit            !< For debug output to files.
     character(len=6)            :: filenum
-    integer                     :: tmp, init, size, ii
-    integer, allocatable        :: init_v(:), size_v(:), init_recv(:), sbuffer(:)
     logical                     :: found
    
-    integer                     :: idir, ipart, np_inner, np_bndry
-    integer, allocatable        :: np_ghost_tmp(:), np_bndry_tmp(:)
-    !> Number of ghost points per
-    !! neighbour per partition.      
-    integer, allocatable        :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
-    integer, allocatable        :: xghost_tmp(:)
-    integer, allocatable        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
-    integer, allocatable        :: xghost_neigh_back(:)     !< Same as previous, but outward
-    integer, allocatable        :: points(:), points_bndry(:), part_bndry(:), part_inner(:), part_ghost(:)
+    integer                     :: tmp, idir, ipart, np_bndry
+    integer, allocatable        :: points(:), part_ghost(:)
 
     PUSH_SUB(vec_init)
 
@@ -247,7 +222,6 @@ contains
 #ifdef HAVE_MPI
     call MPI_Comm_Size(comm, npart, mpi_err)
 #endif
-    np_enl = np_part_global - np_global
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
@@ -261,8 +235,6 @@ contains
     vp%npart     = npart
 
 
-    SAFE_ALLOCATE(ghost_flag(1:npart))
-    SAFE_ALLOCATE(irr(1:npart))
     SAFE_ALLOCATE(vp%np_local_vec(1:npart))
     SAFE_ALLOCATE(vp%xlocal_vec(1:npart))
     SAFE_ALLOCATE(vp%ghost_rcounts(1:npart))
@@ -401,7 +373,6 @@ contains
          vp%ghost_sendmap(1), vp%ghost_scounts(1), vp%ghost_sdispls(1), MPI_INTEGER, &
          vp%comm, mpi_err)
 #endif
-    print*, vp%partno, vp%ghost_scount, vp%np_ghost
     do ip = 1, vp%ghost_scount
       ! get local index
       index = iihash_lookup(vp%global, vp%ghost_sendmap(ip), found)
@@ -435,8 +406,6 @@ contains
       call iihash_insert(vp%global, vp%bndry(ip), ip + vp%np_local + vp%np_ghost)
     end do
     
-    !call init_send_points()
-
     SAFE_DEALLOCATE_A(part_ghost)
 
     POP_SUB(vec_init)
@@ -517,43 +486,6 @@ contains
       
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
-    
-    subroutine init_send_points()
-
-      integer, allocatable :: displacements(:)
-      integer :: ii, jj, kk, ipart, total
-
-      PUSH_SUB(vec_init.init_send_points)
-
-      SAFE_ALLOCATE(vp%ghost_sendpos(1:vp%npart))
-
-      total = sum(vp%ghost_scounts(1:vp%npart))
-
-      SAFE_ALLOCATE(displacements(1:total))
-        
-      jj = 0
-      !! Iterate over all possible receivers.
-      !do ipart = 1, vp%npart
-      !  vp%ghost_sendpos(ipart) = jj + 1
-      !  ! Iterate over all ghost points that ipart wants.
-      !  do ii = 0, vp%ghost_scounts(ipart) - 1
-      !    ! Get global number kk of i-th ghost point.
-      !    !kk = vp%ghost(xghost_neigh_partno(ipart) + ii)
-      !    kk = 1
-      !    ! Lookup up local number of point kk
-      !    jj = jj + 1
-      !    displacements(jj) = vec_global2local(vp, kk)
-      !  end do
-      !end do
-
-      !call subarray_init(vp%ghost_spoints, total, displacements)
-
-      SAFE_DEALLOCATE_A(displacements)
-      SAFE_DEALLOCATE_A(xghost_neigh_partno)
-
-      POP_SUB(vec_init.init_send_points)
-    end subroutine init_send_points
-
   end subroutine vec_init
 
 
@@ -562,11 +494,7 @@ contains
   subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
 
-    integer :: ipart
-
     PUSH_SUB(vec_end)
-
-    call subarray_end(vp%ghost_spoints)
 
     SAFE_DEALLOCATE_A(vp%ghost_rdispls)
     SAFE_DEALLOCATE_A(vp%ghost_sdispls)

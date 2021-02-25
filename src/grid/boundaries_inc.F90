@@ -34,9 +34,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   PUSH_SUB(X(vec_ghost_update))
 
-  nsend = subarray_size(vp%ghost_spoints)
-  SAFE_ALLOCATE(ghost_send(1:nsend))
-  call X(subarray_gather)(vp%ghost_spoints, v_local, ghost_send)
+  ! TODO: implement packing and unpacking
   ASSERT(.false.)
 
 #ifdef HAVE_MPI

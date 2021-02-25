@@ -36,7 +36,6 @@ module boundaries_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use space_oct_m
-  use subarray_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
