@@ -188,7 +188,7 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, inner_partition, bndry_partition, vp, namespace)
+  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, inner_partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
 
     !> The next seven entries come from the mesh.
@@ -198,7 +198,6 @@ contains
     type(stencil_t),   intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
     type(space_t),     intent(in)    :: space
     type(partition_t), intent(in)    :: inner_partition
-    type(partition_t), intent(in)    :: bndry_partition
     type(pv_t),        intent(inout) :: vp             !< Description of partition.
     type(namespace_t), intent(in)    :: namespace
 
@@ -247,8 +246,7 @@ contains
     vp%np_local = vp%np_local_vec(vp%partno)
 
 
-    ! Set up local-to-global index table for local points
-    ! (xlocal_vec, local) and for boundary points (xbndry, bndry).
+    ! Set up local-to-global index table for local points (xlocal_vec, local)
     vp%xlocal_vec(1) = 1
     ! Set the starting point of local and boundary points
     do inode = 2, npart

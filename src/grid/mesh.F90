@@ -104,7 +104,6 @@ module mesh_oct_m
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
     type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
-    type(partition_t) :: bndry_partition   !< describes how the boundary points are assigned to the domains
 
     FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
     integer, allocatable :: resolution(:, :, :)
@@ -619,7 +618,6 @@ contains
     if(this%parallel_in_domains) then
       call vec_end(this%vp)
       call partition_end(this%inner_partition)
-      call partition_end(this%bndry_partition)
     end if
 
     if (multiresolution_use(this%hr_area)) then

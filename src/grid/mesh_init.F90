@@ -900,7 +900,6 @@ contains
       ! At the moment we still need the global partition. This will be removed in near future.
       SAFE_ALLOCATE(part_vec(1:mesh%np_part_global))
       call partition_get_global(mesh%inner_partition, part_vec(1:mesh%np_global))
-      call partition_get_global(mesh%bndry_partition, part_vec(mesh%np_global+1:mesh%np_part_global))
 
 
       ! generate a table of neighbours
@@ -953,7 +952,7 @@ contains
     end if
 
     call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-         space, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
+         space, mesh%inner_partition, mesh%vp, namespace)
 
     ! check the number of ghost neighbours in parallel
     nnb = 0
