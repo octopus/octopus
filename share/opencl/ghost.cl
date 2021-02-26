@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010 X. Andrade
+ Copyright (C) 2020 S.Ohlmann
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -20,21 +20,16 @@
 
 #include <cl_global.h>
 
-__kernel void subarray_gather(const __global int * restrict blength,
-			      const __global int * restrict offsets,
-			      const __global int * restrict dest,
-			      const __global double * restrict array, const int ldarray,
-			      __global double * restrict subarray, const int ldsubarray){
+__kernel void ghost_reorder(const int np, const int offset,
+                            const __global int * restrict map,
+                            const __global double * restrict xx, const int ldxx,
+                            __global double * restrict yy, const int ldyy){
 
-  const int ist = get_global_id(0);
-  const int ii0 = get_local_id(1);
-  const int dii = get_local_size(1);
-  const int ibl = get_global_id(2);
+  int ist = get_global_id(0);
+  int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
 
-  for(int ii = ii0; ii < blength[ibl]; ii += dii){
-    subarray[((dest[ibl] + ii)<<ldsubarray) + ist] = array[((offsets[ibl] - 1 + ii)<<ldarray) + ist];
-  }
-
+  if(ip < np) yy[((offset + ip)<<ldyy) + ist] = xx[((map[ip]-1)<<ldxx) + ist];
+  //if(ip < np) printf("%d %d %d %d %d\n", ist, ip, map[ip]-1, np, offset);
 }
 
 /*

@@ -100,6 +100,8 @@ module boundaries_oct_m
     CMPLX, pointer       :: zsend_buffer(:)
     type(batch_t),   pointer :: v_local
     type(pv_t),      pointer :: vp
+    type(accel_mem_t)    :: buff_sendmap
+    type(accel_mem_t)    :: buff_recvmap
   end type pv_handle_batch_t
 
   interface boundaries_set

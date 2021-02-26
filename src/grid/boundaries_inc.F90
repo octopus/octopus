@@ -72,6 +72,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, ip, ipart2
+  integer :: offset, dim2, dim3, localsize
   type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
   call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
@@ -87,7 +88,6 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   call X(batch_init)(handle%ghost_recv, v_local%dim, 1, v_local%nst, vp%np_ghost, &
     packed=v_local%status()==BATCH_PACKED)
-  if(v_local%status()==BATCH_DEVICE_PACKED) call handle%ghost_recv%do_pack(copy = .false.)
 
   call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
 
@@ -98,6 +98,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   ! facilitating the matching of those messages
   select case(v_local%status())
   case(BATCH_DEVICE_PACKED)
+    call handle%ghost_recv%do_pack(copy = .false.)
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack_size(1)*vp%np_ghost))
     else
@@ -177,8 +178,29 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
-    ! TODO: implement!
-    ASSERT(.false.)
+    ! TODO: copy this only once to the GPU
+    call accel_create_buffer(handle%buff_sendmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, handle%vp%ghost_scount)
+    call accel_write_buffer(handle%buff_sendmap, vp%ghost_scount, vp%ghost_sendmap)
+    offset = 0
+    call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%ghost_scount)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 1, offset)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%buff_sendmap)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%v_local%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%v_local%pack_size_real(1)))
+    call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%ghost_send%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 6, log2(handle%ghost_send%pack_size_real(1)))
+
+    localsize = accel_kernel_workgroup_size(kernel_ghost_reorder)/handle%ghost_send%pack_size_real(1)
+
+    dim3 = handle%vp%ghost_scount/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(handle%vp%ghost_scount, localsize))
+
+    call accel_kernel_run(kernel_ghost_reorder, &
+      (/handle%ghost_send%pack_size_real(1), dim2, dim3/), &
+      (/handle%ghost_send%pack_size_real(1), localsize, 1/))
+
+    call accel_finish()
+    call accel_release_buffer(handle%buff_sendmap)
   end select
 
   if(v_local%status() == BATCH_DEVICE_PACKED) then
@@ -252,6 +274,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   integer, allocatable :: status(:, :)
   type(profile_t), save :: prof_wait
   integer :: ii, ip
+  integer :: localsize, dim2, dim3
 
   call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
@@ -282,25 +305,44 @@ subroutine X(ghost_update_batch_finish)(handle)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
-    ! TODO: implement!
-    ASSERT(.false.)
-  end select
-
-  if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
     ! synchronize the operate_map kernel for the inner points
     call accel_finish()
 
+    ! copy to GPU if not using CUDA aware MPI
     if(.not. accel%cuda_mpi) then
-      call accel_write_buffer(handle%v_local%ff_device, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
-        handle%X(recv_buffer), offset = handle%v_local%pack_size(1)*handle%vp%np_local)
+      call accel_write_buffer(handle%ghost_recv%ff_device, handle%ghost_recv%pack_size(1)*handle%vp%np_ghost, &
+        handle%X(recv_buffer))
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
     else
       nullify(handle%X(send_buffer))
       nullify(handle%X(recv_buffer))
     end if
-  end if
+
+    call accel_create_buffer(handle%buff_recvmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, handle%vp%np_ghost)
+    call accel_write_buffer(handle%buff_recvmap, handle%vp%np_ghost, handle%vp%ghost_recvmap)
+    ! now unpack the values on the GPU
+    call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%np_ghost)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 1, handle%vp%np_local)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%buff_recvmap)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%ghost_recv%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%ghost_recv%pack_size_real(1)))
+    call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%v_local%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 6, log2(handle%v_local%pack_size_real(1)))
+
+    localsize = accel_kernel_workgroup_size(kernel_ghost_reorder)/handle%ghost_recv%pack_size_real(1)
+
+    dim3 = handle%vp%np_ghost/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(handle%vp%np_ghost, localsize))
+
+    call accel_kernel_run(kernel_ghost_reorder, &
+      (/handle%ghost_recv%pack_size_real(1), dim2, dim3/), &
+      (/handle%ghost_recv%pack_size_real(1), localsize, 1/))
+
+    call accel_finish()
+    call accel_release_buffer(handle%buff_recvmap)
+  end select
 
   call handle%ghost_send%end()
   call handle%ghost_recv%end()
