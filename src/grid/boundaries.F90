@@ -200,7 +200,7 @@ contains
         ! for different mixed boundary conditions, we would need to be careful here
         if (ip_inner_global > mesh%np_global) cycle
         ! now check if point is local or if it needs to be communicated
-        if(ip_inner /= 0) then
+        if (ip_inner /= 0 .and. ip_inner <= mesh%np) then
           this%nper = this%nper + 1
         else
           nper_recv = nper_recv + 1
@@ -233,7 +233,7 @@ contains
         ! in this case the point is already set to zero, so we can ignore it
         if (ip_inner_global > mesh%np_global) cycle
         ! now check if point is local or if it needs to be communicated
-        if(ip_inner /= 0) then
+        if (ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
