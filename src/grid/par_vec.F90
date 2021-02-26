@@ -214,7 +214,7 @@ contains
     character(len=6)            :: filenum
     logical                     :: found
    
-    integer                     :: tmp, idir, ipart, np_bndry
+    integer                     :: tmp, idir, ipart
     integer, allocatable        :: points(:), part_ghost(:)
 
     PUSH_SUB(vec_init)
@@ -279,7 +279,7 @@ contains
     call iihash_init(boundary_inv)
     call iihash_init(ghost_inv)
     vp%np_ghost = 0
-    np_bndry = 0
+    vp%np_bndry = 0
     do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ! Get coordinates of current point.
       call index_to_coords(idx, vp%local(gip), p1)
