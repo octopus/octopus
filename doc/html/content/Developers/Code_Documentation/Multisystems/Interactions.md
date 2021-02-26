@@ -144,3 +144,6 @@ Currently, the following interaction types are defined:
 {{% notice note %}}
 When using these system types, **always** use the parameters, and not their numerical values, as they might change over time.
 {{% /notice %}}
+
+
+{{% graphviz-file "/static/interaction_graph.dot" %}}
