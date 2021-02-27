@@ -178,13 +178,10 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
-    ! TODO: copy this only once to the GPU
-    call accel_create_buffer(handle%buff_sendmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, handle%vp%ghost_scount)
-    call accel_write_buffer(handle%buff_sendmap, vp%ghost_scount, vp%ghost_sendmap)
     offset = 0
     call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%ghost_scount)
     call accel_set_kernel_arg(kernel_ghost_reorder, 1, offset)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%buff_sendmap)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 2, vp%buff_sendmap)
     call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%v_local%ff_device)
     call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%v_local%pack_size_real(1)))
     call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%ghost_send%ff_device)
@@ -200,7 +197,6 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       (/handle%ghost_send%pack_size_real(1), localsize, 1/))
 
     call accel_finish()
-    call accel_release_buffer(handle%buff_sendmap)
   end select
 
   if(v_local%status() == BATCH_DEVICE_PACKED) then
@@ -320,12 +316,10 @@ subroutine X(ghost_update_batch_finish)(handle)
       nullify(handle%X(recv_buffer))
     end if
 
-    call accel_create_buffer(handle%buff_recvmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, handle%vp%np_ghost)
-    call accel_write_buffer(handle%buff_recvmap, handle%vp%np_ghost, handle%vp%ghost_recvmap)
     ! now unpack the values on the GPU
     call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%np_ghost)
     call accel_set_kernel_arg(kernel_ghost_reorder, 1, handle%vp%np_local)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%buff_recvmap)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%vp%buff_recvmap)
     call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%ghost_recv%ff_device)
     call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%ghost_recv%pack_size_real(1)))
     call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%v_local%ff_device)
@@ -341,7 +335,6 @@ subroutine X(ghost_update_batch_finish)(handle)
       (/handle%ghost_recv%pack_size_real(1), localsize, 1/))
 
     call accel_finish()
-    call accel_release_buffer(handle%buff_recvmap)
   end select
 
   call handle%ghost_send%end()

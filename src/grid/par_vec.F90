@@ -76,6 +76,7 @@
   !! deallocate(ul, vl, wl)
   !! \endverbatim
 module par_vec_oct_m
+  use accel_oct_m
   use global_oct_m
   use iihash_oct_m
   use index_oct_m
@@ -88,6 +89,7 @@ module par_vec_oct_m
   use profiling_oct_m
   use space_oct_m
   use stencil_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -120,6 +122,8 @@ module par_vec_oct_m
     integer              :: ghost_scount      !< Total number of ghost points to send
     integer, allocatable :: ghost_sendmap(:)  !< map for packing ghost points
     integer, allocatable :: ghost_recvmap(:)  !< map for unpacking ghost points
+    type(accel_mem_t)    :: buff_sendmap      !< buffer for send map on GPUs
+    type(accel_mem_t)    :: buff_recvmap      !< buffer for recv map on GPUs
 
     ! The following members are set independent of the processs.
     integer                 :: npart                !< Number of partitions.
@@ -379,6 +383,15 @@ contains
       vp%ghost_sendmap(ip) = index
     end do
 
+    if (accel_is_enabled()) then
+      ! copy maps to GPU
+      call accel_create_buffer(vp%buff_sendmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, vp%ghost_scount)
+      call accel_write_buffer(vp%buff_sendmap, vp%ghost_scount, vp%ghost_sendmap)
+
+      call accel_create_buffer(vp%buff_recvmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, vp%np_ghost)
+      call accel_write_buffer(vp%buff_recvmap, vp%np_ghost, vp%ghost_recvmap)
+    end if
+
     if(debug%info) then
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
@@ -514,6 +527,11 @@ contains
     SAFE_DEALLOCATE_A(vp%ghost)
 
     call iihash_end(vp%global)
+
+    if (accel_is_enabled()) then
+      call accel_release_buffer(vp%buff_recvmap)
+      call accel_release_buffer(vp%buff_sendmap)
+    end if
 
     POP_SUB(vec_end)
 
