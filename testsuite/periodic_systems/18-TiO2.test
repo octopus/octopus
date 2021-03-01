@@ -23,16 +23,16 @@ else
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -118.71359251
   Precision: 1.42e-05
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -27.915893115000003
-  Precision: 1.93e-05
-  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 41.70021131
+  Precision: 2.20e-05
+  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 41.7002088
   Precision: 2.01e-06
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -31.300609989999998
   Precision: 1.98e-07
   match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.26692991
-  Precision: 1.30e-05
-  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 86.37467710499999
-  Precision: 3.14e-05
-  match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -159.7431205
+  Precision: 1.40e-05
+  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 86.37467624499999
+  Precision: 3.58e-05
+  match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -159.74311647500002
   Precision: 1.00e-15
   match ;  k-point 1 (x)  ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
   Precision: 1.00e-15
@@ -49,7 +49,7 @@ else
   match ;  Eigenvalue  5  ; GREPFIELD(static/info, '#k =   1', 3, 5) ; -1.2069955
   Precision: 3.30e-07
   match ;  Two-body (vvvv) Re  ; LINEFIELD(static/output_me_two_body, 2, 9) ; 0.0545098
-  Precision: 4.61e-19
+  Precision: 1.0e-18
   match ;  Two-body (vvvv) Im  ; LINEFIELD(static/output_me_two_body, 2, 10) ; -2.36485e-20
   Precision: 5.06e-17
   match ;  Direct gap  ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0506
@@ -57,7 +57,7 @@ else
   match ;  Indirect gap  ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0199
   Precision: 4.34e-05
   match ;  Two-body (cccc) Re  ; LINEFIELD(static/output_me_two_body, 1887, 9) ; 0.1921695
-  Precision: 1.61e-18
+  Precision: 5.e-18
   match ;  Two-body (cccc) Im  ; LINEFIELD(static/output_me_two_body, 1887, 10) ; 3.6978500000000005e-19
   Precision: 2.36e-15
   match ;  Two-body (vvcc) Re  ; LINEFIELD(static/output_me_two_body, 14, 9) ; -1.536649999999999e-16
