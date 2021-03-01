@@ -276,7 +276,7 @@ Precision: 3.90e-19
 match ;   Stress (yx)     ; GREPFIELD(static/info, 'T_{ij}', 2, 2) ; -0.0003901682
 Precision: 5.86e-19
 match ;   Stress (yz)     ; GREPFIELD(static/info, 'T_{ij}', 4, 2) ; -0.0005861137
-Precision: 5.86e-19
+Precision: 2.e-10
 match ;   Stress (zy)     ; GREPFIELD(static/info, 'T_{ij}', 3, 3) ; -0.0005859455
 Precision: 5.50e-11
 match ;   Stress (zx)     ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ; 0.00013920705
