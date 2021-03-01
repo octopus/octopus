@@ -167,7 +167,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
       call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
         elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
-      do is = 1, 2
+      do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
