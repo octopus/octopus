@@ -41,8 +41,6 @@ module convergence_criteria_oct_m
     character(len=:), allocatable, public :: label
     type(unit_t), pointer, public :: unit => null()
 
-    integer, public :: quantity  !< The quantity that needs to be converged
-  
     FLOAT, public   :: val_abs    !< Current value of the criteria
     FLOAT, public   :: val_rel  
     FLOAT, pointer  :: value_diff

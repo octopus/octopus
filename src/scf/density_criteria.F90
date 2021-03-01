@@ -23,7 +23,6 @@ module density_criteria_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use quantity_oct_m
 
   implicit none
 
@@ -46,10 +45,6 @@ module density_criteria_oct_m
 contains
 
   ! ---------------------------------------------------------
-  !> The factory routine (or constructor) allocates a pointer of the
-  !! corresponding type and then calls the init routine which is a type-bound
-  !! procedure of the corresponding type. With this design, also derived
-  !! classes can use the init routine of the parent class.
   function density_criteria_constructor(tol_abs, tol_rel) result(crit)
     FLOAT,                       intent(in) :: tol_abs
     FLOAT,                       intent(in) :: tol_rel
@@ -61,7 +56,6 @@ contains
 
     crit%tol_abs = tol_abs
     crit%tol_rel = tol_rel
-    crit%quantity = DENSITY
     crit%label = 'dens'
 
     POP_SUB(density_criteria_constructor)

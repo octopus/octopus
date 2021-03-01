@@ -25,8 +25,11 @@ module scf_oct_m
   use convergence_criteria_oct_m
   use criteria_factory_oct_m
   use density_oct_m
+  use density_criteria_oct_m
   use eigensolver_oct_m
+  use eigenval_criteria_oct_m
   use energy_calc_oct_m
+  use energy_criteria_oct_m
   use forces_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -53,7 +56,6 @@ module scf_oct_m
   use partial_charges_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use quantity_oct_m
   use restart_oct_m
   use scdm_oct_m
   use simul_box_oct_m
@@ -174,14 +176,14 @@ contains
     call iter%start(scf%criteria_list)
     do while (iter%has_next())
       crit => iter%get_next()
-      select case(crit%quantity)
-      case(ENERGY)
+      select type (crit)
+      type is (energy_criteria_t)
         call crit%set_pointers(scf%energy_diff, scf%energy_in)
-      case(DENSITY)
+      type is (density_criteria_t)
         call crit%set_pointers(scf%abs_dens_diff, st%qtot)
-      case(SUMEIGENVAL)
+      type is (eigenval_criteria_t)
         call crit%set_pointers(scf%evsum_diff, scf%evsum_out)
-      case default
+      class default
         ASSERT(.false.)
       end select
     end do
@@ -680,7 +682,7 @@ contains
       call iterator%start(scf%criteria_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
-        call scf_update_initial_quantity(scf, hm, st, gr, crit%quantity)
+        call scf_update_initial_quantity(scf, hm, crit)
       end do
 
       !Used for computing the imperfect convegence contribution to the forces
@@ -749,7 +751,7 @@ contains
       call iterator%start(scf%criteria_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
-        call scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, crit%quantity)
+        call scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, crit)
       end do
       
       ! are we finished?
@@ -1270,15 +1272,15 @@ contains
         call iterator%start(scf%criteria_list)
         do while (iterator%has_next())
           crit => iterator%get_next()
-          select case(crit%quantity)
-          case(ENERGY)
+          select type (crit)
+          type is (energy_criteria_t)
             write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
-          case(DENSITY)
+          type is (density_criteria_t)
             write(iunit, '(2es13.5)', advance = 'no') crit%val_abs, crit%val_rel           
-          case(SUMEIGENVAL)
+          type is (eigenval_criteria_t)
             write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
             write(iunit, '(es13.5)', advance = 'no') crit%val_rel
-          case default 
+          class default 
             ASSERT(.false.)
           end select
         end do
@@ -1335,23 +1337,21 @@ contains
 
   ! --------------------------------------------------------
   !> Update the quantity at the begining of a SCF cycle
-  subroutine scf_update_initial_quantity(scf, hm, st, gr, quantity)
-    type(scf_t),              intent(inout) :: scf 
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    type(states_elec_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
-    integer,                  intent(in)    :: quantity             
+  subroutine scf_update_initial_quantity(scf, hm, criteria)
+    type(scf_t),                   intent(inout) :: scf 
+    type(hamiltonian_elec_t),      intent(in)    :: hm
+    class(convergence_criteria_t), intent(in)    :: criteria
 
     PUSH_SUB(scf_update_initial_quantity)
 
-    select case(quantity)
-    case(ENERGY)
+    select type (criteria)
+    type is (energy_criteria_t)
       scf%energy_in = hm%energy%total
-    case(DENSITY)
+    type is (density_criteria_t)
       !Do nothing here
-    case(SUMEIGENVAL)
+    type is (eigenval_criteria_t)
       !Setting of the value is done in the scf_update_diff_quantity routine
-    case default
+    class default
       ASSERT(.false.)
     end select
 
@@ -1360,26 +1360,24 @@ contains
 
   ! --------------------------------------------------------
   !> Update the quantity at the begining of a SCF cycle
-  subroutine scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, quantity)
-    type(scf_t),              intent(inout) :: scf
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    type(states_elec_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
-    FLOAT,                    intent(in)    :: rhoout(:,:,:), rhoin(:,:,:) 
-    integer,                  intent(in)    :: quantity
+  subroutine scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, criteria )
+    type(scf_t),                   intent(inout) :: scf
+    type(hamiltonian_elec_t),      intent(in)    :: hm
+    type(states_elec_t),           intent(in)    :: st
+    type(grid_t),                  intent(in)    :: gr
+    FLOAT,                         intent(in)    :: rhoout(:,:,:), rhoin(:,:,:)
+    class(convergence_criteria_t), intent(in)    :: criteria
   
     integer :: is
     FLOAT, allocatable :: tmp(:)
   
     PUSH_SUB(scf_update_diff_quantity)
 
-    select case(quantity)
-    case(ENERGY)
-
+    select type (criteria)
+    type is (energy_criteria_t)
       scf%energy_diff = abs(hm%energy%total - scf%energy_in)
 
-    case(DENSITY)
-
+    type is (density_criteria_t)
       scf%abs_dens_diff = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, st%d%nspin
@@ -1388,13 +1386,12 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp)
 
-    case(SUMEIGENVAL)
-
+    type is (eigenval_criteria_t)
       scf%evsum_out = states_elec_eigenvalues_sum(st)
       scf%evsum_diff = abs(scf%evsum_out - scf%evsum_in)
       scf%evsum_in = scf%evsum_out
 
-    case default
+    class default
       ASSERT(.false.)
     end select
   
