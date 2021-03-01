@@ -33,9 +33,8 @@ module eigenval_criteria_oct_m
 
   type, extends(convergence_criteria_t) :: eigenval_criteria_t
     private
-
   contains
-    final     :: eigenval_criteria_end
+    final :: eigenval_criteria_finalize
   end type eigenval_criteria_t
 
   interface eigenval_criteria_t
@@ -65,15 +64,15 @@ contains
   end function eigenval_criteria_constructor
 
   ! ---------------------------------------------------------
-  subroutine eigenval_criteria_end(this)
+  subroutine eigenval_criteria_finalize(this)
     type(eigenval_criteria_t),   intent(inout) :: this
 
-    PUSH_SUB(eigenval_criteria_end)
+    PUSH_SUB(eigenval_criteria_finalize)
 
     call convergence_criteria_end(this)
 
-    POP_SUB(eigenval_criteria_end)
-  end subroutine eigenval_criteria_end
+    POP_SUB(eigenval_criteria_finalize)
+  end subroutine eigenval_criteria_finalize
 
 end module eigenval_criteria_oct_m
 

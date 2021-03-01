@@ -32,9 +32,8 @@ module density_criteria_oct_m
 
   type, extends(convergence_criteria_t) :: density_criteria_t
     private
-
   contains
-    final     :: density_criteria_end
+    final :: density_criteria_finalize
   end type density_criteria_t
 
   interface density_criteria_t
@@ -62,16 +61,15 @@ contains
   end function density_criteria_constructor
 
   ! ---------------------------------------------------------
-  subroutine density_criteria_end(this)
+  subroutine density_criteria_finalize(this)
     type(density_criteria_t),   intent(inout) :: this
 
-    PUSH_SUB(density_criteria_end)
+    PUSH_SUB(density_criteria_finalize)
 
     call convergence_criteria_end(this)
 
-    POP_SUB(density_criteria_end)
-  end subroutine density_criteria_end
-
+    POP_SUB(density_criteria_finalize)
+  end subroutine density_criteria_finalize
 
 end module density_criteria_oct_m
 

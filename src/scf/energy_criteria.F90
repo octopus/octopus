@@ -33,9 +33,8 @@ module energy_criteria_oct_m
 
   type, extends(convergence_criteria_t) :: energy_criteria_t
     private
-
   contains
-    final     :: energy_criteria_end 
+    final :: energy_criteria_finalize
   end type energy_criteria_t
 
   interface energy_criteria_t
@@ -65,15 +64,15 @@ contains
   end function energy_criteria_constructor
 
   ! ---------------------------------------------------------
-  subroutine energy_criteria_end(this) 
+  subroutine energy_criteria_finalize(this)
     type(energy_criteria_t),   intent(inout) :: this
 
-    PUSH_SUB(energy_criteria_end)
+    PUSH_SUB(energy_criteria_finalize)
 
     call convergence_criteria_end(this)
 
-    POP_SUB(energy_criteria_end)
-  end subroutine energy_criteria_end
+    POP_SUB(energy_criteria_finalize)
+  end subroutine energy_criteria_finalize
 
 end module energy_criteria_oct_m
 
