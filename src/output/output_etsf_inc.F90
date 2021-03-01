@@ -70,7 +70,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
   if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_dims(geo, gr%sb, gr%symm, geometry_dims, geometry_flags)
+      call output_etsf_geometry_dims(geo, gr%symm, geometry_dims, geometry_flags)
 
       call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", &
         geometry_dims, geometry_flags, ncid, namespace)
@@ -86,7 +86,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
   if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%sb, gr%symm, density_dims, density_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, density_dims, density_flags)
     call output_etsf_density_dims(st, dcube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, &
@@ -114,7 +114,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
 
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%sb, gr%symm, wfs_dims, wfs_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(kpoints, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
     call output_etsf_wfs_rsp_dims(st, dcube, wfs_dims, wfs_flags)
@@ -149,7 +149,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
     call cube_function_alloc_fs(zcube, cf)
     call fourier_shell_init(shell, zcube, gr%mesh)
 
-    call output_etsf_geometry_dims(geo, gr%sb, gr%symm, pw_dims, pw_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(kpoints, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
     call output_etsf_basisdata_dims(pw_flags)
@@ -233,9 +233,8 @@ end subroutine output_etsf_error
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_dims(geo, sb, symm, dims, flags)
+subroutine output_etsf_geometry_dims(geo, symm, dims, flags)
   type(geometry_t),        intent(in)    :: geo
-  type(simul_box_t),       intent(in)    :: sb
   type(symmetries_t),      intent(in)    :: symm
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags

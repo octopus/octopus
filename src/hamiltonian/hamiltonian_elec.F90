@@ -125,7 +125,7 @@ module hamiltonian_elec_oct_m
     FLOAT, allocatable :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, allocatable :: vberry(:,:) !< Berry phase potential from external E_field
 
-    type(derivatives_t), pointer :: der !< pointer to derivatives
+    type(derivatives_t), pointer, private :: der !< pointer to derivatives
     
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
@@ -694,7 +694,7 @@ contains
             hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
 
             !In the fully periodic case, we use Berry phases
-            if(gr%sb%periodic_dim < gr%sb%dim) then
+            if (space%periodic_dim < space%dim) then
               if (.not. allocated(hm%ep%v_static)) then
                 SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
                 hm%ep%v_static(1:gr%mesh%np) = M_ZERO

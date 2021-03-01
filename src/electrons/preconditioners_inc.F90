@@ -48,7 +48,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   case(PRE_FILTER)
     call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
     call wfs_elec_init(batch_b, hm%d%dim, 1, 1, b, ik)
-    call boundaries_set(hm%der%boundaries, batch_a)
+    call boundaries_set(gr%der%boundaries, batch_a)
     if (allocated(hm%hm_base%phase)) then
       SAFE_ALLOCATE(batch_ea)
       call batch_a%copy_to(batch_ea)

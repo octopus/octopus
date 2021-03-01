@@ -953,7 +953,7 @@ contains
     end if
 
     call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-         space%dim, space%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
+         space, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
 
     ! check the number of ghost neighbours in parallel
     nnb = 0
@@ -1019,7 +1019,7 @@ contains
     jj(space%dim + 1:MAX_DIM) = 0
 
     if (multiresolution_use(mesh%hr_area)) then
-      call multiresolution_vol_pp(sb)
+      call multiresolution_vol_pp()
     else
       do ip = 1, np
         call mesh_local_index_to_coords(mesh, ip, jj)
@@ -1039,8 +1039,7 @@ contains
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
   end subroutine mesh_get_vol_pp
 
-  subroutine multiresolution_vol_pp(sb)
-    type(simul_box_t), intent(in) :: sb
+  subroutine multiresolution_vol_pp()
 
     integer :: ix, iy, iz, dx, dy, dz, newi, newj, newk, ii, lii, ljj, lkk, nn
     FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)

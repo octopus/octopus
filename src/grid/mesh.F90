@@ -166,8 +166,7 @@ contains
 
 ! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(sb, space, mesh, alpha, db)
-    type(simul_box_t), intent(in)  :: sb
+  subroutine mesh_double_box(space, mesh, alpha, db)
     type(space_t),     intent(in)  :: space
     type(mesh_t),      intent(in)  :: mesh
     FLOAT,             intent(in)  :: alpha !< enlargement factor for double box

@@ -126,7 +126,7 @@ contains
     call stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     
     ! Stress from Ewald summation
-    call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
+    call stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
     
 
     ! Stress from kinetic energy of ion
@@ -768,12 +768,11 @@ contains
 
   end subroutine poisson_fft_gg_transform_l
 ! ---------------------------------------------------------
-  subroutine stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
-    type(grid_t),      target,        intent(in) :: gr !< grid
+  subroutine stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
+    type(grid_t),     target, intent(in)    :: gr !< grid
     type(geometry_t), target, intent(in)    :: geo
-    type(hamiltonian_elec_t),  intent(inout)    :: hm
-    FLOAT,                         intent(inout) :: stress(:, :)
-    FLOAT,                         intent(out) :: stress_Ewald(3, 3) ! temporal
+    FLOAT,                    intent(inout) :: stress(:, :)
+    FLOAT,                    intent(out)   :: stress_Ewald(3, 3) ! temporal
 
     FLOAT :: stress_l(3, 3)
 

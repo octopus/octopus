@@ -82,7 +82,7 @@ module hamiltonian_mxll_oct_m
     FLOAT, allocatable             :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
-    type(derivatives_t), pointer   :: der !< pointer to derivatives
+    type(derivatives_t), pointer, private :: der !< pointer to derivatives
     type(states_mxll_t), pointer   :: st
 
     integer                        :: rs_sign

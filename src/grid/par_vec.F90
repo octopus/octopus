@@ -87,6 +87,7 @@ module par_vec_oct_m
   use namespace_oct_m
   use partition_oct_m
   use profiling_oct_m
+  use space_oct_m
   use stencil_oct_m
   use subarray_oct_m
 
@@ -200,21 +201,19 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
-       inner_partition, bndry_partition, vp, namespace)
+  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, inner_partition, bndry_partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
 
     !> The next seven entries come from the mesh.
-    integer,          intent(in)    :: np_global      !< mesh%np_global
-    integer,          intent(in)    :: np_part_global !< mesh%np_part_global
-    type(index_t),    intent(in)    :: idx
-    type(stencil_t),  intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
-    integer,          intent(in)    :: dim            !< Number of dimensions.
-    integer,          intent(in)    :: periodic_dim   !< Number of periodic dimensions
-    type(partition_t),intent(in)    :: inner_partition
-    type(partition_t),intent(in)    :: bndry_partition
-    type(pv_t),       intent(inout) :: vp             !< Description of partition.
-    type(namespace_t),intent(in)    :: namespace
+    integer,           intent(in)    :: np_global      !< mesh%np_global
+    integer,           intent(in)    :: np_part_global !< mesh%np_part_global
+    type(index_t),     intent(in)    :: idx
+    type(stencil_t),   intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
+    type(space_t),     intent(in)    :: space
+    type(partition_t), intent(in)    :: inner_partition
+    type(partition_t), intent(in)    :: bndry_partition
+    type(pv_t),        intent(inout) :: vp             !< Description of partition.
+    type(namespace_t), intent(in)    :: namespace
 
     ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -315,7 +314,7 @@ contains
     end do
 
     do jj = 1, stencil%size
-      ASSERT(all(stencil%points(1:dim, jj) <= idx%enlarge(1:dim)))
+      ASSERT(all(stencil%points(1:space%dim, jj) <= idx%enlarge(1:space%dim)))
     end do
     
     SAFE_ALLOCATE(vp%send_count(1:npart))
@@ -579,7 +578,7 @@ contains
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
         call index_to_coords(idx, jp, p1)
-        write(iunit, '(99i8)') jp, (p1(idir), idir = 1, dim)
+        write(iunit, '(99i8)') jp, (p1(idir), idir = 1, space%dim)
       end do
 
       call io_close(iunit)
@@ -595,7 +594,7 @@ contains
          points, part_bndry)
     
     ! Set up the global-to-local point number mapping
-    if (periodic_dim /= 0) then
+    if (space%periodic_dim /= 0) then
       ip = 1
       jp = npart
       SAFE_ALLOCATE(vp%bndry(1:np_enl))

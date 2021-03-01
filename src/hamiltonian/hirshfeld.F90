@@ -107,7 +107,7 @@ contains
         pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, icell) 
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%geo%space, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
+        call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
 
         do ip = 1, this%mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
@@ -348,7 +348,7 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%geo%space, this%geo%atom(iatom), namespace, &
+          call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, &
                                          pos_i, this%st%d%nspin, &
                                          atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
