@@ -28,11 +28,12 @@ module convergence_criteria_oct_m
   implicit none
 
   private
-  public ::                  &
-    convergence_criteria_t,  &
-    criteria_list_t,         &
-    criteria_iterator_t,     &
-    convergence_criteria_end
+  public ::                    &
+    convergence_criteria_t,    &
+    convergence_criteria_end,  &
+    criteria_list_t,           &
+    criteria_iterator_t
+
 
   type, abstract :: convergence_criteria_t
     private
@@ -87,35 +88,6 @@ contains
      
     POP_SUB(criteria_write_info)
   end subroutine criteria_write_info
-
-  ! ---------------------------------------------------------
-  subroutine criteria_list_add_node(this, criteria)
-    class(criteria_list_t)                :: this
-    class(convergence_criteria_t), target :: criteria
-
-    PUSH_SUB(criteria_list_add_node)
-
-    call this%add_ptr(criteria)
-
-    POP_SUB(criteria_list_add_node)
-  end subroutine criteria_list_add_node
-
-  ! ---------------------------------------------------------
-  function criteria_iterator_get_next(this) result(criteria)
-    class(criteria_iterator_t),     intent(inout) :: this
-    class(convergence_criteria_t),  pointer       :: criteria
-
-    PUSH_SUB(criteria_iterator_get_next)
-
-    select type (ptr => this%get_next_ptr())
-    class is (convergence_criteria_t)
-      criteria => ptr
-    class default
-      ASSERT(.false.)
-    end select
-
-    POP_SUB(criteria_iterator_get_next)
-  end function criteria_iterator_get_next
 
   ! ---------------------------------------------------------
   !> Is the convergence reached ?
@@ -179,6 +151,35 @@ contains
 
     POP_SUB(convergence_criteria_end)
   end subroutine convergence_criteria_end
+
+  ! ---------------------------------------------------------
+  subroutine criteria_list_add_node(this, criteria)
+    class(criteria_list_t)                :: this
+    class(convergence_criteria_t), target :: criteria
+
+    PUSH_SUB(criteria_list_add_node)
+
+    call this%add_ptr(criteria)
+
+    POP_SUB(criteria_list_add_node)
+  end subroutine criteria_list_add_node
+
+  ! ---------------------------------------------------------
+  function criteria_iterator_get_next(this) result(criteria)
+    class(criteria_iterator_t),     intent(inout) :: this
+    class(convergence_criteria_t),  pointer       :: criteria
+
+    PUSH_SUB(criteria_iterator_get_next)
+
+    select type (ptr => this%get_next_ptr())
+    class is (convergence_criteria_t)
+      criteria => ptr
+    class default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(criteria_iterator_get_next)
+  end function criteria_iterator_get_next
 
 end module convergence_criteria_oct_m
 
