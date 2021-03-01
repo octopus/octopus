@@ -36,8 +36,6 @@ module convergence_criteria_oct_m
 
   type, abstract :: convergence_criteria_t
     private
-
-    integer, public :: type    !< Type of the quantity
     FLOAT,   public :: tol_abs !< Tolerance of the convergence criteria
     FLOAT,   public :: tol_rel !< Tolerance of the convergence criteria
     character(len=:), allocatable, public :: label
