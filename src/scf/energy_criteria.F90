@@ -58,7 +58,7 @@ contains
     crit%tol_abs = tol_abs
     crit%tol_rel = tol_rel
     crit%unit => unit
-    crit%label = 'en'
+    crit%label = 'energy'
 
     POP_SUB(energy_criteria_constructor)
   end function energy_criteria_constructor
