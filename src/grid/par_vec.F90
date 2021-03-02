@@ -218,7 +218,7 @@ contains
     logical                     :: found
    
     integer                     :: tmp, idir, ipart
-    integer, allocatable        :: points(:), part_ghost(:)
+    integer, allocatable        :: points(:), part_ghost(:), ghost_tmp(:), part_ghost_tmp(:)
 
     PUSH_SUB(vec_init)
 
@@ -316,9 +316,10 @@ contains
       ASSERT(found)
     end do
 
-    SAFE_ALLOCATE(vp%ghost(1:vp%np_ghost))
+    ! first get the temporary array of ghost points, will be later reorder by partition
+    SAFE_ALLOCATE(ghost_tmp(1:vp%np_ghost))
     do ip = 1, vp%np_ghost
-      vp%ghost(ip) = iihash_lookup(ghost_inv, ip, found)
+      ghost_tmp(ip) = iihash_lookup(ghost_inv, ip, found)
       ASSERT(found)
     end do
     call iihash_end(ghost_inv)
@@ -326,16 +327,40 @@ contains
     call iihash_end(ghost)
     call iihash_end(boundary)
 
-    SAFE_ALLOCATE(part_ghost(1:vp%np_ghost))
+    SAFE_ALLOCATE(part_ghost_tmp(1:vp%np_ghost))
     call partition_get_partition_number(inner_partition, vp%np_ghost, &
-         vp%ghost, part_ghost)
+         ghost_tmp, part_ghost_tmp)
 
+    ! determine parallel distribution (counts, displacements)
     vp%ghost_rcounts(:) = 0
     do ip = 1, vp%np_ghost
-      ipart = part_ghost(ip)
+      ipart = part_ghost_tmp(ip)
       vp%ghost_rcounts(ipart) = vp%ghost_rcounts(ipart)+1
     end do
     ASSERT(sum(vp%ghost_rcounts) == vp%np_ghost)
+
+    SAFE_ALLOCATE(vp%ghost_rdispls(1:vp%npart))
+    vp%ghost_rdispls(1) = 0
+    do ipart = 2, vp%npart
+      vp%ghost_rdispls(ipart) = vp%ghost_rdispls(ipart - 1) + vp%ghost_rcounts(ipart - 1)
+    end do
+
+    ! reorder points by partition
+    SAFE_ALLOCATE(vp%ghost(1:vp%np_ghost))
+    SAFE_ALLOCATE(part_ghost(1:vp%np_ghost))
+    SAFE_ALLOCATE(points(1:vp%npart))
+    points = 0
+    do ip = 1, vp%np_ghost
+      ipart = part_ghost_tmp(ip)
+      points(ipart) = points(ipart)+1
+      ! jp is the new index, sorted according to partitions
+      jp = vp%ghost_rdispls(ipart) + points(ipart)
+      vp%ghost(jp) = ghost_tmp(ip)
+      part_ghost(jp) = part_ghost_tmp(ip)
+    end do
+    SAFE_DEALLOCATE_A(points)
+    SAFE_DEALLOCATE_A(ghost_tmp)
+    SAFE_DEALLOCATE_A(part_ghost_tmp)
 
     call init_MPI_Alltoall()
     
@@ -346,13 +371,10 @@ contains
 #endif
 
     SAFE_ALLOCATE(vp%ghost_sdispls(1:vp%npart))
-    SAFE_ALLOCATE(vp%ghost_rdispls(1:vp%npart))
 
     vp%ghost_sdispls(1) = 0
-    vp%ghost_rdispls(1) = 0
     do ipart = 2, vp%npart
       vp%ghost_sdispls(ipart) = vp%ghost_sdispls(ipart - 1) + vp%ghost_scounts(ipart - 1)
-      vp%ghost_rdispls(ipart) = vp%ghost_rdispls(ipart - 1) + vp%ghost_rcounts(ipart - 1)
     end do
     vp%ghost_scount = sum(vp%ghost_scounts)
 

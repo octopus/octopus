@@ -27,7 +27,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
 
-  R_TYPE,  allocatable :: ghost_send(:), ghost_recv(:)
+  R_TYPE,  allocatable :: ghost_send(:)
   integer :: ip
   type(profile_t), save :: prof_update
   
@@ -35,7 +35,6 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   PUSH_SUB(X(vec_ghost_update))
 
-  SAFE_ALLOCATE(ghost_recv(1:vp%np_ghost))
   SAFE_ALLOCATE(ghost_send(1:vp%ghost_scount))
 
   ! pack data for sending
@@ -46,18 +45,12 @@ subroutine X(vec_ghost_update)(vp, v_local)
 #ifdef HAVE_MPI
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send(1), vp%ghost_scounts(1), vp%ghost_sdispls(1), R_MPITYPE, &
-       ghost_recv(1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
+       v_local(vp%np_local+1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
        vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 #endif
 
-  ! unpack received data
-  do ip = 1, vp%np_ghost
-    v_local(vp%np_local + ip) = ghost_recv(vp%ghost_recvmap(ip))
-  end do
-
   SAFE_DEALLOCATE_A(ghost_send)
-  SAFE_DEALLOCATE_A(ghost_recv)
 
   POP_SUB(X(vec_ghost_update))
 
@@ -86,9 +79,6 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
-  call X(batch_init)(handle%ghost_recv, v_local%dim, 1, v_local%nst, vp%np_ghost, &
-    packed=v_local%status()==BATCH_PACKED)
-
   call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
 
   ! first post the receptions
@@ -98,12 +88,11 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   ! facilitating the matching of those messages
   select case(v_local%status())
   case(BATCH_DEVICE_PACKED)
-    call handle%ghost_recv%do_pack(copy = .false.)
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack_size(1)*vp%np_ghost))
     else
       ! get device pointer for CUDA-aware MPI
-      call accel_get_device_pointer(handle%X(recv_buffer), handle%ghost_recv%ff_device, &
+      call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%ff_device, &
         [product(v_local%pack_size)])
     end if
 
@@ -131,9 +120,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = 1 + vp%ghost_rdispls(ipart)
+      pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
-      call MPI_Irecv(handle%ghost_recv%X(ff_pack)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
+      call MPI_Irecv(v_local%X(ff_pack)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
@@ -147,9 +136,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
         
         handle%nnb = handle%nnb + 1
         tag = ii
-        pos = 1 + vp%ghost_rdispls(ipart)
+        pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
-        call MPI_Irecv(handle%ghost_recv%X(ff_linear)(pos, ii), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
+        call MPI_Irecv(v_local%X(ff_linear)(pos, ii), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
         vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
@@ -269,8 +258,6 @@ subroutine X(ghost_update_batch_finish)(handle)
 
   integer, allocatable :: status(:, :)
   type(profile_t), save :: prof_wait
-  integer :: ii, ip
-  integer :: localsize, dim2, dim3
 
   call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
@@ -284,30 +271,14 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_A(handle%requests)
 
-  ! unpack received values
-  select case(handle%v_local%status())
-  case(BATCH_PACKED)
-    do ip = 1, handle%vp%np_ghost
-      do ii = 1, handle%ghost_recv%nst_linear
-        handle%v_local%X(ff_pack)(ii, handle%vp%np_local + ip) = &
-          handle%ghost_recv%X(ff_pack)(ii, handle%vp%ghost_recvmap(ip))
-      end do
-    end do
-  case(BATCH_NOT_PACKED)
-    do ii = 1, handle%ghost_recv%nst_linear
-      do ip = 1, handle%vp%np_ghost
-        handle%v_local%X(ff_linear)(handle%vp%np_local + ip, ii) = &
-          handle%ghost_recv%X(ff_linear)(handle%vp%ghost_recvmap(ip), ii)
-      end do
-    end do
-  case(BATCH_DEVICE_PACKED)
+  if (handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
     ! synchronize the operate_map kernel for the inner points
     call accel_finish()
 
     ! copy to GPU if not using CUDA aware MPI
     if(.not. accel%cuda_mpi) then
-      call accel_write_buffer(handle%ghost_recv%ff_device, handle%ghost_recv%pack_size(1)*handle%vp%np_ghost, &
+      call accel_write_buffer(handle%v_local%ff_device, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
         handle%X(recv_buffer))
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
@@ -315,30 +286,9 @@ subroutine X(ghost_update_batch_finish)(handle)
       nullify(handle%X(send_buffer))
       nullify(handle%X(recv_buffer))
     end if
-
-    ! now unpack the values on the GPU
-    call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%np_ghost)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 1, handle%vp%np_local)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 2, handle%vp%buff_recvmap)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%ghost_recv%ff_device)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%ghost_recv%pack_size_real(1)))
-    call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%v_local%ff_device)
-    call accel_set_kernel_arg(kernel_ghost_reorder, 6, log2(handle%v_local%pack_size_real(1)))
-
-    localsize = accel_kernel_workgroup_size(kernel_ghost_reorder)/handle%ghost_recv%pack_size_real(1)
-
-    dim3 = handle%vp%np_ghost/(accel_max_size_per_dim(2)*localsize) + 1
-    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(handle%vp%np_ghost, localsize))
-
-    call accel_kernel_run(kernel_ghost_reorder, &
-      (/handle%ghost_recv%pack_size_real(1), dim2, dim3/), &
-      (/handle%ghost_recv%pack_size_real(1), localsize, 1/))
-
-    call accel_finish()
-  end select
+    end if
 
   call handle%ghost_send%end()
-  call handle%ghost_recv%end()
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))

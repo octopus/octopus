@@ -90,7 +90,6 @@ module boundaries_oct_m
   type pv_handle_batch_t
     private
     type(batch_t)        :: ghost_send   !< batch for sending data; it is packed into this one
-    type(batch_t)        :: ghost_recv   !< batch for receiving data; it is unpacked from this one
     integer, allocatable :: requests(:)
     integer              :: nnb
     ! these are needed for CL
