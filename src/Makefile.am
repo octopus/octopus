@@ -336,6 +336,7 @@ noinst_HEADERS +=                             \
 	grid/io_function_inc.F90              \
 	grid/mesh_batch_inc.F90               \
 	grid/mesh_function_inc.F90            \
+	grid/mesh_inc.F90                     \
 	grid/mesh_interpolation_inc.F90       \
 	grid/multigrid_inc.F90                \
 	grid/nl_operator_inc.F90              \

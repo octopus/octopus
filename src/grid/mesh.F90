@@ -20,6 +20,7 @@
 
 module mesh_oct_m
   use basis_set_abst_oct_m
+  use comm_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -122,6 +123,18 @@ module mesh_oct_m
     procedure :: end => mesh_end
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
+    procedure :: dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    procedure :: dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    procedure :: dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    procedure :: dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    procedure :: dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    procedure :: dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
+    generic :: allreduce => dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    generic :: allreduce => dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    generic :: allreduce => dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    generic :: allreduce => dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    generic :: allreduce => dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    generic :: allreduce => dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -896,6 +909,19 @@ contains
       ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
     end if
   end function mesh_global2local
+
+#include "undef.F90"
+#include "real.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
+#include "mesh_inc.F90"
+
 end module mesh_oct_m
 
 
