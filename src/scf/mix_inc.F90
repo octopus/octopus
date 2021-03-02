@@ -175,7 +175,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     end do
   end do
 
-  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp, beta)
+  if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(beta)
 
   ! According to Johnson (1988), w0 is chosen as 0.01. Because we do not
   ! normalize the components, we need to choose w0 differently. Its purpose
@@ -206,7 +206,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
         work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l), reduce = .false.)
       end do
     end do
-    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp,  work(i))
+    if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(work(i))
   end do
 
   ! linear mixing term
@@ -378,7 +378,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
       aa(jj, ii) = R_CONJ(aa(ii, jj))
     end do
   end do
-  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp,  aa)
+  if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(aa)
 
   aa(1:size, size + 1) = CNST(-1.0)
   aa(size + 1, 1:size) = CNST(-1.0)
@@ -493,7 +493,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
           a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i), reduce = .false.)
         end do
       end do
-      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp,  a(i, j))
+      if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(a(i, j))
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
@@ -517,7 +517,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
         end do
       end do
     end do
-    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp,  alpha)
+    if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(alpha)
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
 

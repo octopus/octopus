@@ -3034,7 +3034,7 @@ contains
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
     end do
     if(gr%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%mesh%mpi_grp, total_current, dim = gr%sb%dim)
+      call gr%mesh%allreduce(total_current, dim = gr%sb%dim)
     end if
 
     abs_current = CNST(0.0)
@@ -3045,7 +3045,7 @@ contains
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
     end do
     if(gr%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%mesh%mpi_grp, abs_current, dim = gr%sb%dim)
+      call gr%mesh%allreduce(abs_current, dim = gr%sb%dim)
     end if
 
    if(mpi_grp_is_root(mpi_world)) then
@@ -3060,7 +3060,7 @@ contains
                                dmf_integrate(gr%mesh, st%current(:, idir, ispin), reduce = .false.))
       end do
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp, total_current, dim = gr%sb%dim)
+        call gr%mesh%allreduce(total_current, dim = gr%sb%dim)
       end if
       if(mpi_grp_is_root(mpi_world)) &
         call write_iter_double(out_total_current, total_current, gr%sb%dim)

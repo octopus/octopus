@@ -268,7 +268,7 @@ contains
       end do !inn
 
       if(der%mesh%parallel_in_domains) then
-        call comm_allreduce(der%mesh%mpi_grp, this%coulomb_IIJJ)
+        call der%mesh%allreduce(this%coulomb_IIJJ)
       end if
  
 

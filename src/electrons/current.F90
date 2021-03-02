@@ -639,7 +639,7 @@ contains
       end do
     end do
 
-    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp,  cmel)
+    if(der%mesh%parallel_in_domains) call der%mesh%allreduce(cmel)
 
     
 

@@ -89,7 +89,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
     end do
   end do
 
-  if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp, &
+  if(der%mesh%parallel_in_domains) call der%mesh%allreduce(&
                    eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call profiling_out(prof)

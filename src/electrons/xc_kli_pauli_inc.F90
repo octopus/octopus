@@ -167,7 +167,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
           delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
         end do
       end do
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp,  delta_v, dim = eigen_n)
+      if(mesh%parallel_in_domains) call mesh%allreduce(delta_v, dim = eigen_n)
 
       do ist = 1,eigen_n
         kssi = oep%eigen_index(ist)

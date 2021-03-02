@@ -925,7 +925,7 @@ contains
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp, mask_tmp, geo%natoms)
+      call mesh%allreduce(mask_tmp, geo%natoms)
     end if                               
     ions_mask = mask_tmp == 1
 

@@ -94,7 +94,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
    end do
 
 
-   call comm_allreduce(sm%mesh%mpi_grp, tmp)
+   call sm%mesh%allreduce(tmp)
 
    do ip = 1, sm%np_global
       if (sm%part_v(ip) == sm%mesh%vp%partno) then

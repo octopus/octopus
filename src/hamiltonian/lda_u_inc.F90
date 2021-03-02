@@ -1204,7 +1204,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, space, mesh, der, psol
   end do !iorb
 
   if(mesh%parallel_in_domains) then 
-    call comm_allreduce(mesh%mpi_grp, this%coulomb)
+    call mesh%allreduce(this%coulomb)
   end if 
 
   if(this%orbs_dist%parallel) then
@@ -1553,7 +1553,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       end if
     end do !ios
  
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, dot) 
+    if(mesh%parallel_in_domains) call mesh%allreduce(dot)
 
     do ios = 1, this%norbsets
        os => this%orbsets(ios)

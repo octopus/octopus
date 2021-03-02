@@ -239,7 +239,7 @@ contains
       do m = 1, ubound(res, 1)
         res(m) = TOFLOAT( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.))
       end do
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp,  res)
+      if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(res)
 
       call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
       pdot3 = TOFLOAT(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)))
@@ -561,7 +561,7 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(gr%mesh%mpi_grp, force_nlcc)
+    call gr%mesh%allreduce(force_nlcc)
     call profiling_out(prof_comm)
   end if
  
@@ -627,7 +627,7 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(gr%mesh%mpi_grp, force_scf)
+    call gr%mesh%allreduce(force_scf)
     call profiling_out(prof_comm)
   end if
 
@@ -652,7 +652,7 @@ subroutine total_force_from_local_potential(gr, ep, gdensity, force)
     force_tmp(idir) = dmf_dotp(gr%mesh, ep%vpsl(1:gr%mesh%np), gdensity(:, idir), reduce = .false.)
   end do
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp,  force_tmp, dim = gr%sb%dim)
+  if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(force_tmp, dim = gr%sb%dim)
   force(1:gr%sb%dim) = force(1:gr%sb%dim) + force_tmp(1:gr%sb%dim)
 
   POP_SUB(total_force_from_local_potential)

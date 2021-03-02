@@ -143,7 +143,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
       v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
     end if
   end do
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, v_bar_S, dim = st%st_end) 
+  if(mesh%parallel_in_domains) call mesh%allreduce(v_bar_S, dim = st%st_end)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then

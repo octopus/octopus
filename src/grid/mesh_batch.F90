@@ -84,7 +84,7 @@ contains
     
     if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
       nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
-      call comm_allreduce(mesh%mpi_grp, nrm2, dim = aa%nst)
+      call mesh%allreduce(nrm2, dim = aa%nst)
       nrm2(1:aa%nst) = sqrt(nrm2(1:aa%nst))
     end if
 

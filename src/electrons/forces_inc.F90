@@ -104,7 +104,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, force_tmp) 
+  if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(force_tmp)
 
   force(1:geo%space%dim, 1:geo%natoms) = force(1:geo%space%dim, 1:geo%natoms) + force_tmp(1:geo%space%dim, 1:geo%natoms)
 

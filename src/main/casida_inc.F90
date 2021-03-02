@@ -56,7 +56,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp, zx)
+      call mesh%allreduce(zx)
     end if
 
     ! intensity
@@ -98,7 +98,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           end do
 
           if(mesh%parallel_in_domains) then
-            call comm_allreduce(mesh%mpi_grp, zx)
+            call mesh%allreduce(zx)
           end if
           
 
@@ -186,7 +186,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   end do
 
   if(mesh%parallel_in_domains) then
-    call comm_allreduce(mesh%mpi_grp, xx)
+    call mesh%allreduce(xx)
   end if
 
   SAFE_DEALLOCATE_A(ff)

@@ -259,7 +259,7 @@ contains
           call states_elec_get_state(st, mesh, jst, ik, psij)
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
         end do
-        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, aa, dim = nst)
+        if(mesh%parallel_in_domains) call mesh%allreduce(aa, dim = nst)
  
         ! subtract the projections
         do jst = ist + 1, nst
@@ -281,7 +281,7 @@ contains
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
         end do
 
-        if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp, aa, dim = ist - 1)
+        if(mesh%parallel_in_domains .and. ist > 1) call mesh%allreduce(aa, dim = ist - 1)
         ! then subtract the projections
         do jst = 1, ist - 1
           call states_elec_get_state(st, mesh, jst, ik, psij)
@@ -309,7 +309,7 @@ contains
             call states_elec_get_state(st, mesh, jst, ik, psij)
             aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
           end do
-          if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp, aa, dim = ist - 1)
+          if(mesh%parallel_in_domains .and. ist > 1) call mesh%allreduce(aa, dim = ist - 1)
 
           ! subtract the projections
           do jst = 1, ist - 1
@@ -538,7 +538,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp, ss, dim = length_ss)
+    call mesh%allreduce(ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
@@ -689,7 +689,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp, ss, dim = length_ss)
+    call mesh%allreduce(ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
@@ -883,7 +883,7 @@ subroutine X(states_elec_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-      call comm_allreduce(mesh%mpi_grp, ss, dim = nst)
+      call mesh%allreduce(ss, dim = nst)
       call profiling_out(reduce_prof)
     end if
 
@@ -1165,10 +1165,10 @@ subroutine X(states_elec_angular_momentum)(st, gr, ll, l2)
 
   if(gr%mesh%parallel_in_domains) then
 #if !defined(R_TREAL)
-    call comm_allreduce(gr%mesh%mpi_grp,  ll)
+    call gr%mesh%allreduce(ll)
 #endif
     if(present(l2)) then
-      call comm_allreduce(gr%mesh%mpi_grp,  l2)
+      call gr%mesh%allreduce(l2)
     end if
   end if
 
@@ -1241,7 +1241,7 @@ subroutine X(states_elec_matrix)(st1, st2, mesh, aa)
       end do
       SAFE_DEALLOCATE_A(phi2)
 
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp,  aa(:,:,ik))
+      if(mesh%parallel_in_domains) call mesh%allreduce(aa(:,:,ik))
 
       ! Each process holds some lines of the matrix. So it is broadcasted (All processes
       ! should get the whole matrix)
@@ -1269,7 +1269,7 @@ subroutine X(states_elec_matrix)(st1, st2, mesh, aa)
         end do
       end do
    
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp,  aa(:, :, ik))
+      if(mesh%parallel_in_domains) call mesh%allreduce(aa(:, :, ik))
 
     end if
 
@@ -1593,7 +1593,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
 
     SAFE_DEALLOCATE_A(psi)
 
@@ -1659,7 +1659,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 #endif
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
 
     call accel_release_buffer(overlap_buffer)
 
@@ -1677,7 +1677,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
       end do
     end do
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
   end if
 
   ! Debug output
@@ -1770,7 +1770,7 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
   
   call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
   
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, proj, dim = (/gs_nst_, st%nst/))
+  if(mesh%parallel_in_domains) call mesh%allreduce(proj, dim = (/gs_nst_, st%nst/))
   
   call profiling_out(prof)
   POP_SUB(X(states_elec_calc_projections))
@@ -2031,7 +2031,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolve
   end do
 
   if(gr%mesh%parallel_in_domains) then
-    call comm_allreduce(gr%mesh%mpi_grp, twoint)
+    call gr%mesh%allreduce(twoint)
   end if
 
   if(present(singularity)) then
