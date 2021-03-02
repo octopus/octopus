@@ -125,7 +125,7 @@ module scf_oct_m
     type(lda_u_mixer_t) :: lda_u_mix
     type(berry_t) :: berry
 
-    type(criterion_list_t) :: criterion_list
+    type(criterion_list_t), public :: criterion_list
     FLOAT :: energy_in, energy_diff, abs_dens_diff, evsum_in, evsum_out, evsum_diff
   end type scf_t
 
@@ -477,7 +477,6 @@ contains
       crit => iter%get_next()
       SAFE_DEALLOCATE_P(crit)
     end do
-
 
     POP_SUB(scf_end)
   end subroutine scf_end
