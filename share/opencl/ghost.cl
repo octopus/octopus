@@ -29,7 +29,6 @@ __kernel void ghost_reorder(const int np, const int offset,
   int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
 
   if(ip < np) yy[((offset + ip)<<ldyy) + ist] = xx[((map[ip]-1)<<ldxx) + ist];
-  //if(ip < np) printf("%d %d %d %d %d\n", ist, ip, map[ip]-1, np, offset);
 }
 
 /*
