@@ -18,8 +18,8 @@
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_0)(comm, aa)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_0)(grp, aa)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa
 
 #if defined(HAVE_MPI)
@@ -27,19 +27,19 @@ subroutine X(comm_allreduce_0)(comm, aa)
 #endif
 
   !no PUSH SUB, called too often
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
 #if defined(HAVE_MPI)
   aac = aa
-  call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+  call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 #endif
 
 end subroutine X(comm_allreduce_0)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_1)(comm, aa, dim)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_1)(grp, aa, dim)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa(:)
   integer, optional,                intent(in)    :: dim
 
@@ -60,12 +60,12 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
   if(dim1 > 0) then
 
 #if defined(HAVE_MPI2)
-     call MPI_Allreduce(MPI_IN_PLACE, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+     call MPI_Allreduce(MPI_IN_PLACE, aa, dim1, R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 #elif defined(HAVE_MPI)
      
      SAFE_ALLOCATE(aac(1:dim1))
      aac(1:dim1) = aa(1:dim1)
-     call MPI_Allreduce(aac, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+     call MPI_Allreduce(aac, aa, dim1, R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
      SAFE_DEALLOCATE_A(aac)
      
 #endif
@@ -76,8 +76,8 @@ end subroutine X(comm_allreduce_1)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_2)(comm, aa, dim)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_2)(grp, aa, dim)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa(:, :)
   integer, optional,                intent(in)    :: dim(:) !< (2)
 
@@ -108,12 +108,12 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
 
 #if defined(HAVE_MPI2)
 
-    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 
 #elif defined(HAVE_MPI)
     SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2)))
     aac(1:dim_(1), 1:dim_(2)) = aa(1:dim_(1), 1:dim_(2))
-    call MPI_Allreduce(aac(1, 1), aa(1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(aac(1, 1), aa(1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 #endif
 
   else
@@ -122,7 +122,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
 
     SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2)))
     aac(1:dim_(1), 1:dim_(2)) = aa(1:dim_(1), 1:dim_(2))
-    call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
     aa(1:dim_(1), 1:dim_(2)) = aac(1:dim_(1), 1:dim_(2))
     SAFE_DEALLOCATE_A(aac)
 
@@ -131,7 +131,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
     SAFE_ALLOCATE(aac(1:dim_(1), 1))
     do ii = 1, dim_(2)
       aac(1:dim_(1), 1) = aa(1:dim_(1), ii)
-      call MPI_Allreduce(aac(1, 1), aa(1, ii), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(aac(1, 1), aa(1, ii), dim_(1), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
     end do
     SAFE_DEALLOCATE_A(aac)
 #endif
@@ -142,8 +142,8 @@ end subroutine X(comm_allreduce_2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_3)(comm, aa, dim)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_3)(grp, aa, dim)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa(:, :, :)
   integer, optional,                intent(in)    :: dim(:) !< (3)
 
@@ -174,12 +174,12 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
 
 #if defined(HAVE_MPI2)
 
-      call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 
 #elif defined(HAVE_MPI)
       SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
       aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
-      call MPI_Allreduce(aac(1, 1, 1), aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(aac(1, 1, 1), aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(aac)
 #endif
 
@@ -189,7 +189,7 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
 
       SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
       aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
-      call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
       aa(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aac(1:dim_(1), 1:dim_(2), 1:dim_(3))
       SAFE_DEALLOCATE_A(aac)
 
@@ -199,7 +199,7 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
       do jj = 1, dim_(3)
         do ii = 1, dim_(2)
           aac(1:dim_(1), 1, 1) = aa(1:dim_(1), ii, jj)
-          call MPI_Allreduce(aac(1, 1, 1), aa(1, ii, jj), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
+          call MPI_Allreduce(aac(1, 1, 1), aa(1, ii, jj), dim_(1), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
         end do
       end do
       SAFE_DEALLOCATE_A(aac)
@@ -212,8 +212,8 @@ end subroutine X(comm_allreduce_3)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_4)(comm, aa)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_4)(grp, aa)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa(:, :, :, :)
 
   integer :: dim_(1:4)
@@ -227,12 +227,12 @@ subroutine X(comm_allreduce_4)(comm, aa)
 
 #if defined(HAVE_MPI2)
 
-    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 
 #elif defined(HAVE_MPI)
     SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)))
     aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4))
-    call MPI_Allreduce(aac(1, 1, 1, 1), aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(aac(1, 1, 1, 1), aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 #endif
 
   SAFE_DEALLOCATE_A(aac)
@@ -242,8 +242,8 @@ end subroutine X(comm_allreduce_4)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(comm_allreduce_5)(comm, aa)
-  integer,                          intent(in)    :: comm
+subroutine X(comm_allreduce_5)(grp, aa)
+  type(mpi_grp_t),                  intent(in)    :: grp
   R_TYPE,                           intent(inout) :: aa(:, :, :, :, :)
 
   integer :: dim_(1:5)
@@ -257,14 +257,14 @@ subroutine X(comm_allreduce_5)(comm, aa)
 
 #if defined(HAVE_MPI2)
 
-    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 
 #elif defined(HAVE_MPI)
     SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)))
     aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)) = &
       aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5))
     call MPI_Allreduce(aac(1, 1, 1, 1, 1), aa(1, 1, 1, 1, 1), product(dim_), &
-      R_MPITYPE, MPI_SUM, comm, mpi_err)
+      R_MPITYPE, MPI_SUM, grp%comm, mpi_err)
 #endif
 
   SAFE_DEALLOCATE_A(aac)
