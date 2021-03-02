@@ -24,6 +24,7 @@ module lcao_oct_m
   use batch_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m

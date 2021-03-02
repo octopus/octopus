@@ -164,6 +164,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
+      do idim = 1, st%d%dim
+        call boundaries_set(gr%der%boundaries, lcaopsi(:, idim, ispin))
+      end do
 
       ! Uncomment to output all the atomic orbitals used in the LCAO calculation
       !if (debug%info) then
@@ -176,7 +179,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
     do ik = kstart, kend
       ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), &
+                        hpsi(:, :, ik), n1, ik, set_bc = .false.)
     end do
 
     do n2 = n1, this%norbs
