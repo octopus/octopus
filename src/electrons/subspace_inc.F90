@@ -135,7 +135,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       
     end do
 
-    if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, rdiff)
+    if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, rdiff)
     diff(1:st%nst) = sqrt(abs(rdiff(1:st%nst)))
 
     SAFE_DEALLOCATE_A(rdiff)
@@ -541,7 +541,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   
   SAFE_DEALLOCATE_A(hpsib)
     
-  if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, hmss, dim = (/st%nst, st%nst/))
+  if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp, hmss, dim = (/st%nst, st%nst/))
   
   call profiling_out(hamiltonian_elec_prof)
   POP_SUB(X(subspace_diag_hamiltonian))

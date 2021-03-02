@@ -197,7 +197,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! reduce
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     do isigma = 1, nsigma
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr(isigma)%X(dl_rho))
+      call comm_allreduce(st%st_kpt_mpi_grp, lr(isigma)%X(dl_rho))
     end do
   end if
 

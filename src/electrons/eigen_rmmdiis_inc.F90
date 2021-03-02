@@ -91,7 +91,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
     !me(2) = <psi|psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, me(2, :), reduce = .false.)
-    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, me)
 
     !This is the Rayleigh quotient defined as <psi||H|psi>/<psi|psi>
     do ist = minst, maxst
@@ -147,7 +147,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     ! fr(4) is <\psi|H|\delta\psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(2)%batch, fr(4, :), reduce = .false.)
 
-    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, fr)
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, fr)
 
     !The residue of the new state \phi reads as
     !  R(\phi) = ( <\psi + \lambda\delta\psi | H | \psi + \lambda\delta\psi >)/
@@ -201,7 +201,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       if(iter == 2) then
         call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, resb(iter)%batch, me(1, 1:bsize), reduce = .false.)
         call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, psib(iter)%batch, me(2, 1:bsize), reduce = .false.)
-        if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
+        if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, me)
         do ist = minst, maxst
           st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
         end do
@@ -237,7 +237,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
         end do
       end do
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, mm)
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, mm)
 
       SAFE_ALLOCATE(evec(1:iter, 1:1, 1:bsize))
       SAFE_ALLOCATE(eval(1:iter, 1:bsize))
@@ -379,7 +379,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch)
     call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
-    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, me)
 
     !This is the Rayleigh quotient
     do ist = minst, maxst
@@ -397,10 +397,10 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     nops = nops + maxst - minst + 1
   end do
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, eigen_full)
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, eigen_full)
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, eigen_full)
-    call comm_allreduce(st%mpi_grp%comm, st%eigenval(1:st%nst, ik))
+    call comm_allreduce(st%mpi_grp, eigen_full)
+    call comm_allreduce(st%mpi_grp, st%eigenval(1:st%nst, ik))
   end if
 
   diff(:) = sqrt(abs(eigen_full(:)))
@@ -486,7 +486,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me1(2, :), reduce = .false.)
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1)
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, me1)
 
       !This is the Rayleigh quotient
       do ist = minst, maxst
@@ -517,7 +517,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, resb,  me2(3, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik),  resb,  me2(4, :), reduce = .false.)
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2)
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, me2)
 
       do ist = minst, maxst
         ii = ist - minst + 1

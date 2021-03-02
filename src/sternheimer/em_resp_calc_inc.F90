@@ -1280,7 +1280,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st,
         lr_k(magn_dir(idir1, 1), 1), lr0(1))
       
       if (st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, lr0(1)%X(dl_rho))
+        call comm_allreduce(st%st_kpt_mpi_grp, lr0(1)%X(dl_rho))
       end if
 
       do ip = 1, gr%mesh%np 
@@ -2289,7 +2289,7 @@ subroutine X(inhomog_B)(sh, namespace, gr, st, hm, xc, geo, idir1, idir2, lr_k1,
     call X(calc_rho)(gr%mesh, st, factor_rho, factor_sum, factor_k, factor_k, lr_k1(1), lr_k2(1), lr0(1))
     call X(calc_rho)(gr%mesh, st, factor_sum * factor_rho, factor_sum, factor_k, factor_k, lr_k2(1), lr_k1(1), lr0(1))
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr0(1)%X(dl_rho))
+      call comm_allreduce(st%st_kpt_mpi_grp, lr0(1)%X(dl_rho))
     end if
     call X(sternheimer_calc_hvar)(sh, gr%mesh, st, hm, xc, lr0(1:1), 1, hvar) 
     call lr_dealloc(lr0(1))
@@ -2726,7 +2726,7 @@ subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, id
     call X(calc_rho)(gr%mesh, st, factor_rho, factor_sum, factor1, factor1, lr_k1(1), lr_k2(1), lr0(1))
     call X(calc_rho)(gr%mesh, st, factor_sum * factor_rho, factor_sum, factor1, factor1, lr_k2(1), lr_k1(1), lr0(1))
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr0(1)%X(dl_rho))
+      call comm_allreduce(st%st_kpt_mpi_grp, lr0(1)%X(dl_rho))
     end if
 
     do ip = 1, gr%mesh%np 

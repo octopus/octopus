@@ -190,7 +190,7 @@ contains
     end do
 
     if(dist_kpt%parallel) then
-      call comm_allreduce(dist_kpt%mpi_grp%comm, this%Fk)
+      call comm_allreduce(dist_kpt%mpi_grp, this%Fk)
     end if
     call distributed_end(dist_kpt)
 
@@ -271,7 +271,7 @@ contains
       end do
 
       if(st%d%kpt%parallel) then
-        call comm_allreduce(st%d%kpt%mpi_grp%comm, energy) 
+        call comm_allreduce(st%d%kpt%mpi_grp, energy) 
       end if
 
       write(message(1), '(a,f12.6,a,a,a)') 'Debug: Singularity energy ', &

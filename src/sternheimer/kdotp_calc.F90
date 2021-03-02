@@ -108,7 +108,7 @@ subroutine zcalc_band_velocity(namespace, space, gr, st, hm, geo, pert, velocity
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(pertpsi)
 
-  call comm_allreduce(st%st_kpt_mpi_grp%comm, velocity)
+  call comm_allreduce(st%st_kpt_mpi_grp, velocity)
 
   call profiling_out(prof)
 

@@ -1658,7 +1658,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi)
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+        call comm_allreduce(st%st_kpt_mpi_grp, st%spin)
       end if
             
     end if
@@ -1689,7 +1689,7 @@ contains
       end if
     end do
 
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp, tot)
 
     POP_SUB(states_elec_eigenvalues_sum)
   end function states_elec_eigenvalues_sum
@@ -2122,15 +2122,15 @@ contains
 
       PUSH_SUB(states_elec_calc_quantities.reduce_all)
 
-      if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
+      if(associated(tau)) call comm_allreduce(grp, tau, dim = (/der%mesh%np, st%d%nspin/))
 
-      if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
+      if (present(density_laplacian)) call comm_allreduce(grp, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
 
       do is = 1, st%d%nspin
-        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
+        if(associated(jp)) call comm_allreduce(grp, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
 
         if(present(density_gradient)) &
-          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
+          call comm_allreduce(grp, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
       end do
 
       POP_SUB(states_elec_calc_quantities.reduce_all)
@@ -2578,7 +2578,7 @@ end subroutine  states_elec_set_phase
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
+      call comm_allreduce(st%st_kpt_mpi_grp, st%st_kpt_task)
     end if
 
     POP_SUB(states_elec_kpoints_distribution)

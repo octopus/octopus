@@ -815,7 +815,7 @@ contains
 
          if(mesh%parallel_in_domains) then
            call profiling_in(reduce_prof, "W90_MMN_REDUCE")
-           call comm_allreduce(mesh%mpi_grp%comm, overlap)
+           call comm_allreduce(mesh%mpi_grp, overlap)
            call profiling_out(reduce_prof)
          end if
  
@@ -1094,7 +1094,7 @@ contains
       
           if(mesh%parallel_in_domains) then
             call profiling_in(reduce_prof, "W90_AMN_REDUCE")
-            call comm_allreduce(mesh%mpi_grp%comm, projection)
+            call comm_allreduce(mesh%mpi_grp, projection)
             call profiling_out(reduce_prof)
           end if
       

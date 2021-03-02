@@ -42,7 +42,7 @@ subroutine X(calculate_eigenvalues)(namespace, hm, der, st)
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     TOFLOAT(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  call comm_allreduce(st%st_kpt_mpi_grp%comm, st%eigenval)
+  call comm_allreduce(st%st_kpt_mpi_grp, st%eigenval)
 
   SAFE_DEALLOCATE_A(eigen)
 
@@ -89,7 +89,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
     end do
   end do
 
-  if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, &
+  if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp, &
                    eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call profiling_out(prof)

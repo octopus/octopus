@@ -243,9 +243,9 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
     ex = rr
     if(present(vxc)) then
       if(st%d%ispin == SPINORS) then
-        call comm_allreduce(st%mpi_grp%comm, bij)
+        call comm_allreduce(st%mpi_grp, bij)
       else
-        call comm_allreduce(st%mpi_grp%comm, tmp_vxc)
+        call comm_allreduce(st%mpi_grp, tmp_vxc)
       end if
     end if
   end if

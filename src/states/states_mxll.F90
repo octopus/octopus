@@ -816,7 +816,7 @@ contains
       end do
       mean_value(1:3) = mean_value(1:3) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(1:3))
+        call comm_allreduce(gr%mesh%mpi_grp, mean_value(1:3))
       end if
     end if
 
@@ -850,7 +850,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
+        call comm_allreduce(gr%mesh%mpi_grp, mean_value(:))
       end if
     end if
 

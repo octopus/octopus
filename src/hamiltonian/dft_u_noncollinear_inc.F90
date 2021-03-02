@@ -138,7 +138,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
     do ios = 1, this%norbsets
       do is2 = 1, st%d%dim
         do is1 = 1, st%d%dim
-          call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%zcoulomb(:,:,:,:,is1,is2,ios))
+          call comm_allreduce(this%orbs_dist%mpi_grp, this%zcoulomb(:,:,:,:,is1,is2,ios))
         end do
       end do
     end do

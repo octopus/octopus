@@ -104,7 +104,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, force_tmp) 
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp, force_tmp) 
 
   force(1:geo%space%dim, 1:geo%natoms) = force(1:geo%space%dim, 1:geo%natoms) + force_tmp(1:geo%space%dim, 1:geo%natoms)
 
@@ -343,9 +343,9 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, TOSTRING(X(FORCES_COMM)))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nl)
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_u)
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
+    call comm_allreduce(st%st_kpt_mpi_grp, force_nl)
+    call comm_allreduce(st%st_kpt_mpi_grp, force_u)
+    call comm_allreduce(st%st_kpt_mpi_grp, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
@@ -488,8 +488,8 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, kpoints, x, lda_u_leve
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, TOSTRING(X(FORCES_COMM)))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
+    call comm_allreduce(st%st_kpt_mpi_grp, force)
+    call comm_allreduce(st%st_kpt_mpi_grp, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
@@ -631,8 +631,8 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, kpoints, lr, lr2, fo
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, TOSTRING(X(FORCES_COMM)))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_deriv, dim = (/gr%sb%dim, geo%natoms/))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
+    call comm_allreduce(st%st_kpt_mpi_grp, force_deriv, dim = (/gr%sb%dim, geo%natoms/))
+    call comm_allreduce(st%st_kpt_mpi_grp, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif

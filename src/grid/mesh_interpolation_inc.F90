@@ -154,7 +154,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
   end do
 
-  call comm_allreduce(mesh%mpi_grp%comm, interpolated_values, npoints)
+  call comm_allreduce(mesh%mpi_grp, interpolated_values, npoints)
   
   POP_SUB(X(mesh_interpolation_evaluate))
 

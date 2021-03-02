@@ -391,7 +391,7 @@ contains
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
        ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l) 
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_l) 
     end if
 
     stress_l = stress_l/der%mesh%sb%rcell_volume
@@ -588,7 +588,7 @@ contains
     
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_t_NL)
     end if
 
 
@@ -834,7 +834,7 @@ contains
     end do
 
     if(geo%atoms_dist%parallel) then
-       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, stress_l)
+       call comm_allreduce(geo%atoms_dist%mpi_grp, stress_l)
     end if
 
 ! And the long-range part, using an Ewald sum

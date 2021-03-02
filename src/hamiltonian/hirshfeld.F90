@@ -124,7 +124,7 @@ contains
     end do
 
     if(this%mesh%parallel_in_domains) then
-      call comm_allreduce(this%mesh%mpi_grp%comm, this%free_volume)
+      call comm_allreduce(this%mesh%mpi_grp, this%free_volume)
     end if
 
     SAFE_DEALLOCATE_A(atom_density)
@@ -401,7 +401,7 @@ contains
     end do
 
     if(this%mesh%parallel_in_domains) then
-      call comm_allreduce(this%mesh%mpi_grp%comm, dposition, dim = this%mesh%sb%dim)
+      call comm_allreduce(this%mesh%mpi_grp, dposition, dim = this%mesh%sb%dim)
     end if
 
     SAFE_DEALLOCATE_A(atom_density)

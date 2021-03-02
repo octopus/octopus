@@ -99,7 +99,7 @@ contains
     mm(3) = dmf_integrate(mesh, md(:, 3), reduce = .false.)
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, mm)
+      call comm_allreduce(mesh%mpi_grp, mm)
     end if
 
     SAFE_DEALLOCATE_A(md)
@@ -218,7 +218,7 @@ contains
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, lmm)
+      call comm_allreduce(mesh%mpi_grp, lmm)
     end if 
     
     SAFE_DEALLOCATE_A(md)

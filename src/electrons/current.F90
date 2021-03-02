@@ -516,7 +516,7 @@ contains
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%current, dim = (/der%mesh%np, der%dim, st%d%nspin/)) 
+      call comm_allreduce(st%st_kpt_mpi_grp, st%current, dim = (/der%mesh%np, der%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
@@ -639,7 +639,7 @@ contains
       end do
     end do
 
-    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
+    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp,  cmel)
 
     
 

@@ -833,7 +833,7 @@ contains
        end do !norb
 
        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
+         call comm_allreduce(st%st_kpt_mpi_grp, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
        end if
      end do !ia
 

@@ -70,9 +70,9 @@ module mesh_function_oct_m
   ! FIXME: This is very ugly, at least these values should be set by a function.
   public :: mesh_aux
   logical, public :: sp_parallel
-  integer, public :: sp_np, sp_dim, sp_st1, sp_st2, sp_kp1, sp_kp2, sp_comm
+  integer, public :: sp_np, sp_dim, sp_st1, sp_st2, sp_kp1, sp_kp2
   integer, public :: sp_distdot_mode
-  !
+  type(mpi_grp_t), public :: sp_grp
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &
@@ -177,7 +177,7 @@ REAL_DOUBLE function distdot(n, x, ix, y, iy)
         end do
       end do
     end do
-    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+    if(sp_parallel) call comm_allreduce(sp_grp, distdot)
 
   case(3)
     distdot = M_ZERO
@@ -203,7 +203,7 @@ REAL_DOUBLE function distdot(n, x, ix, y, iy)
         end do
       end do
     end do
-    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+    if(sp_parallel) call comm_allreduce(sp_grp, distdot)
 
   end select
 

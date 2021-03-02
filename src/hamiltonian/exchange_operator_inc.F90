@@ -888,7 +888,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
 
   !Reduction
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, MM)
+    call comm_allreduce(st%mpi_grp, MM)
   end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -934,7 +934,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
 
   !Reduction
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm,this%ace%X(chi))
+    call comm_allreduce(st%mpi_grp,this%ace%X(chi))
   end if
 
 #ifdef R_TCOMPLEX
@@ -1209,7 +1209,7 @@ subroutine X(exchange_operator_scdm_apply)(this, namespace, scdm, mesh, st_d, kp
     end do
 
     ! sum contributions to hpsi from all processes in the st_exx_grp group
-    call comm_allreduce(this%scdm%st_exx_grp%comm, temp_state_global)
+    call comm_allreduce(this%scdm%st_exx_grp, temp_state_global)
     
     ! add exchange contribution to the input state
     hpsi(1:mesh%np_global, 1) =  hpsi(1:mesh%np_global, 1) + temp_state_global(1:mesh%np_global, 1)

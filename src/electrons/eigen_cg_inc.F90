@@ -247,7 +247,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       if(gr%mesh%parallel_in_domains) then
         sb(1) = gg1
         sb(2) = gg
-        call comm_allreduce(gr%mesh%mpi_grp%comm, sb, dim = 2)
+        call comm_allreduce(gr%mesh%mpi_grp, sb, dim = 2)
         gg1 = sb(1)
         gg  = sb(2)
       end if
@@ -319,7 +319,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         dsb(1) = a0
         dsb(2) = b0
         dsb(3) = cg0
-        call comm_allreduce(gr%mesh%mpi_grp%comm, dsb, dim = 3)
+        call comm_allreduce(gr%mesh%mpi_grp, dsb, dim = 3)
         a0 = dsb(1)
         b0 = dsb(2)
         cg0 = dsb(3)

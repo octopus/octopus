@@ -122,7 +122,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
     end do
 
-    call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+    call comm_allreduce(this%der%mesh%mpi_grp, tmp)
 
     do jp = 1, this%der%mesh%np
       pot(jp) = tmp(mesh_local2global(this%der%mesh, jp))

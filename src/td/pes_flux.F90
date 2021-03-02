@@ -1662,9 +1662,9 @@ contains
                 end if
               end do
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
+                call comm_allreduce(mesh%mpi_grp, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
                 do imdim = 1, mdim
-                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
+                  call comm_allreduce(mesh%mpi_grp, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
                 end do
               end if
             end if
@@ -2153,7 +2153,7 @@ contains
 
     if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
                                       .or. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 )) then
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+      call comm_allreduce(mesh%mpi_grp, spctramp_cub)
     end if
 
 
@@ -2257,8 +2257,8 @@ contains
             end do
 
             if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
-              call comm_allreduce(mesh%mpi_grp%comm, s1_act)
-              call comm_allreduce(mesh%mpi_grp%comm, s2_act)
+              call comm_allreduce(mesh%mpi_grp, s1_act)
+              call comm_allreduce(mesh%mpi_grp, s2_act)
             end if
 
             if(itstep == tdstep_on_node) then
@@ -2332,8 +2332,8 @@ contains
               end do
 
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, integ11_t)
-                call comm_allreduce(mesh%mpi_grp%comm, integ21_t)
+                call comm_allreduce(mesh%mpi_grp, integ11_t)
+                call comm_allreduce(mesh%mpi_grp, integ21_t)
               end if
 
               ! multiply with Bessel function & sum over all ll
@@ -2378,8 +2378,8 @@ contains
     SAFE_DEALLOCATE_A(phase_act)
 
     if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev)
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
+      call comm_allreduce(mesh%mpi_grp, this%conjgphase_prev)
+      call comm_allreduce(mesh%mpi_grp, spctramp_sph)
     end if
 
     this%spctramp_sph(:, :, :, 1:this%nk, :) = this%spctramp_sph(:, :, :, 1:this%nk, :) & 
@@ -2577,8 +2577,8 @@ contains
       end do
 
       if(mesh%parallel_in_domains) then
-        call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
-        call comm_allreduce(mesh%mpi_grp%comm, which_surface)
+        call comm_allreduce(mesh%mpi_grp, this%nsrfcpnts)
+        call comm_allreduce(mesh%mpi_grp, which_surface)
       end if
 
       SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))

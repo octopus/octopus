@@ -234,7 +234,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, reduce)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, TOSTRING(X(DOTP_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dd)
+    call comm_allreduce(mesh%mpi_grp, dd)
     call profiling_out(profcomm)
   end if
 
@@ -356,7 +356,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, TOSTRING(X(BATCH_SELF_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dd)
+    call comm_allreduce(mesh%mpi_grp, dd)
     call profiling_out(profcomm)
   end if
 
@@ -493,7 +493,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, TOSTRING(X(DOTPV_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
+    call comm_allreduce(mesh%mpi_grp, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
   
@@ -636,7 +636,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, TOSTRING(X(DOTPV_MF_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
+    call comm_allreduce(mesh%mpi_grp, dot, dim = nst_)
     call profiling_out(profcomm)
   end if
   
@@ -1167,7 +1167,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, TOSTRING(X(BATCH_GRAM_SCHMIDT_REDUCE)))
-      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
+      call comm_allreduce(mesh%mpi_grp, ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if
    

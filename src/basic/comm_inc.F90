@@ -48,7 +48,7 @@ subroutine X(comm_allreduce_1)(grp, aa, dim)
   R_TYPE, allocatable :: aac(:)
 #endif
 
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_1))
 
@@ -89,7 +89,7 @@ subroutine X(comm_allreduce_2)(grp, aa, dim)
   integer :: ii
 #endif
 
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_2))
 
@@ -155,7 +155,7 @@ subroutine X(comm_allreduce_3)(grp, aa, dim)
   integer :: ii, jj
 #endif
 
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_3))
 
@@ -219,7 +219,7 @@ subroutine X(comm_allreduce_4)(grp, aa)
   integer :: dim_(1:4)
   R_TYPE, allocatable :: aac(:, :, :, :)
 
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_4))
 
@@ -249,7 +249,7 @@ subroutine X(comm_allreduce_5)(grp, aa)
   integer :: dim_(1:5)
   R_TYPE, allocatable :: aac(:, :, :, :, :)
 
-  if (comm == -1) return
+  if (grp%comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_5))
 

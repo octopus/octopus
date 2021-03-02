@@ -268,12 +268,12 @@ contains
       end do !inn
 
       if(der%mesh%parallel_in_domains) then
-        call comm_allreduce(der%mesh%mpi_grp%comm, this%coulomb_IIJJ)
+        call comm_allreduce(der%mesh%mpi_grp, this%coulomb_IIJJ)
       end if
  
 
       if(dist%parallel) then
-        call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)
+        call comm_allreduce(dist%mpi_grp, this%coulomb_IIJJ)
       end if
       
       #ifdef HAVE_MPI

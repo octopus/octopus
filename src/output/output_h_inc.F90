@@ -218,7 +218,7 @@
           end do
         end do
         if(der%mesh%parallel_in_domains) then
-          call comm_allreduce(der%mesh%mpi_grp%comm, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%dim/))
+          call comm_allreduce(der%mesh%mpi_grp, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%dim/))
         end if
 
         write(fname, '(2a)') 'current_kpt'
@@ -279,7 +279,7 @@
       end do
     
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, density_kpt)
+        call comm_allreduce(st%dom_st_kpt_mpi_grp, density_kpt)
       end if
 
       do is = 1, st%d%nspin
