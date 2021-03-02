@@ -183,7 +183,7 @@ contains
     ! Shortcut to the global number of vertices
     nv_global = mesh%np_global
 
-    call partition_init(mesh%inner_partition, nv_global, mesh%mpi_grp)
+    call partition_init(mesh%partition, nv_global, mesh%mpi_grp)
 
     ! Get number of partitions.
     npart = mesh%mpi_grp%size
@@ -192,7 +192,7 @@ contains
     SAFE_ALLOCATE(istart(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
     SAFE_ALLOCATE(vtxdist(1:npart+1))
-    call partition_get_local_size(mesh%inner_partition, iv, nv)
+    call partition_get_local_size(mesh%partition, iv, nv)
 #ifdef HAVE_MPI
     call MPI_Allgather(iv, 1, MPI_INTEGER, istart(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
     call MPI_Allgather(nv, 1, MPI_INTEGER, lsize(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
@@ -392,7 +392,7 @@ contains
 
     ASSERT(all(part(1:nv) > 0))
     ASSERT(all(part(1:nv) <= vsize))
-    call partition_set(mesh%inner_partition, part)
+    call partition_set(mesh%partition, part)
 
     if (debug%info .or. library == METIS) then
       SAFE_DEALLOCATE_A(xadj_global)
@@ -447,8 +447,8 @@ contains
     PUSH_SUB(mesh_partition_from_parent)
 
     !Initialize partition
-    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
-    call partition_get_local_size(mesh%inner_partition, istart, np)
+    call partition_init(mesh%partition, mesh%np_global, mesh%mpi_grp)
+    call partition_get_local_size(mesh%partition, istart, np)
 
     !Get the partition number of each point from the parent mesh
     SAFE_ALLOCATE(points(1:np))
@@ -458,10 +458,10 @@ contains
       call mesh_global_index_to_coords(mesh, ip_global, idx)
       points(ip_local) = mesh_global_index_from_coords(parent, 2*idx)
     end do
-    call partition_get_partition_number(parent%inner_partition, np, points, part)
+    call partition_get_partition_number(parent%partition, np, points, part)
 
     !Set the partition
-    call partition_set(mesh%inner_partition, part)
+    call partition_set(mesh%partition, part)
 
     !Free memory
     SAFE_DEALLOCATE_A(points)
@@ -500,7 +500,7 @@ contains
     
     write(numstring, '(i6.6)') vsize
 
-    call partition_dump(mesh%inner_partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) then
       message(1) = "Unable to write inner mesh partition to 'inner_partition_"//trim(numstring)//".obf'"
       call messages_warning(1)
@@ -542,7 +542,7 @@ contains
       call messages_info(1)
     end if
 
-    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
+    call partition_init(mesh%partition, mesh%np_global, mesh%mpi_grp)
 
     write(numstring, '(i6.6)') mesh%mpi_grp%size
     dir = restart_dir(restart)
@@ -554,7 +554,7 @@ contains
       call messages_warning(1)
       ierr = ierr + 1
     else
-      call partition_load(mesh%inner_partition, restart_dir(restart), filename, err)
+      call partition_load(mesh%partition, restart_dir(restart), filename, err)
       if (err /= 0) then
         message(1) = "Unable to read inner mesh partition from '"//trim(filename)//"'."
         call messages_warning(1)
@@ -564,7 +564,7 @@ contains
 
     ! Free the memory in case we were unable to read the partitions
     if (ierr /= 0) then
-      call partition_end(mesh%inner_partition)
+      call partition_end(mesh%partition)
     end if
 
     if (debug%info) then

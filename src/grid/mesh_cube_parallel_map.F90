@@ -169,7 +169,7 @@ contains
     end do
 
     if (mesh%parallel_in_domains) then
-      call partition_get_partition_number(mesh%inner_partition, ipos, global_index, cube_part_local)      
+      call partition_get_partition_number(mesh%partition, ipos, global_index, cube_part_local)      
     else
       cube_part_local = 1
     end if

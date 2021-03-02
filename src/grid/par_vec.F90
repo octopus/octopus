@@ -192,7 +192,7 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, inner_partition, vp, namespace)
+  subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
 
     !> The next seven entries come from the mesh.
@@ -201,7 +201,7 @@ contains
     type(index_t),     intent(in)    :: idx
     type(stencil_t),   intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
     type(space_t),     intent(in)    :: space
-    type(partition_t), intent(in)    :: inner_partition
+    type(partition_t), intent(in)    :: partition
     type(pv_t),        intent(inout) :: vp             !< Description of partition.
     type(namespace_t), intent(in)    :: namespace
 
@@ -246,7 +246,7 @@ contains
 
     ! Count number of points for each process.
     ! Local points.
-    call partition_get_np_local(inner_partition, vp%np_local_vec)
+    call partition_get_np_local(partition, vp%np_local_vec)
     vp%np_local = vp%np_local_vec(vp%partno)
 
 
@@ -272,7 +272,7 @@ contains
     do ip = 1, vp%np_local
       points(ip) = vp%xlocal + ip - 1
     end do
-    call partition_get_partition_number(inner_partition, vp%np_local, &
+    call partition_get_partition_number(partition, vp%np_local, &
          points, vp%part_local)
     SAFE_DEALLOCATE_A(points)
 
@@ -328,7 +328,7 @@ contains
     call iihash_end(boundary)
 
     SAFE_ALLOCATE(part_ghost_tmp(1:vp%np_ghost))
-    call partition_get_partition_number(inner_partition, vp%np_ghost, &
+    call partition_get_partition_number(partition, vp%np_ghost, &
          ghost_tmp, part_ghost_tmp)
 
     ! determine parallel distribution (counts, displacements)
@@ -461,7 +461,7 @@ contains
       SAFE_ALLOCATE(vp%local_vec(sp:ep))
 
       ! Calculate the local vector in parallel
-      call partition_get_local(inner_partition, vp%local(vp%xlocal:), np_tmp)
+      call partition_get_local(partition, vp%local(vp%xlocal:), np_tmp)
 
       SAFE_ALLOCATE(xlocal_tmp(1:npart))
       xlocal_tmp = vp%xlocal_vec - 1
@@ -498,7 +498,7 @@ contains
 
       SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
       ! Get the destination partitions
-      call partition_get_partition_number(inner_partition, vp%np_local, points, vp%part_local_rev)
+      call partition_get_partition_number(partition, vp%np_local, points, vp%part_local_rev)
       SAFE_DEALLOCATE_A(points)
 
       do ip = 1, vp%np_local

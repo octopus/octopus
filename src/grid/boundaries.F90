@@ -245,7 +245,7 @@ contains
       end do
       if(mesh%parallel_in_domains) then
         ! find the points in the other partitions
-        call partition_get_partition_number(mesh%inner_partition, nper_recv, &
+        call partition_get_partition_number(mesh%partition, nper_recv, &
           points, part)
         do iper_recv = 1, nper_recv
           ipart = part(iper_recv)

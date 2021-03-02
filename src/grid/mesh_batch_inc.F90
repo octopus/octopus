@@ -764,7 +764,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       ! get their destination
       SAFE_ALLOCATE(partno(1:mesh%np))
-      call partition_get_partition_number(mesh%inner_partition, mesh%np, &
+      call partition_get_partition_number(mesh%partition, mesh%np, &
            points, partno)
       SAFE_DEALLOCATE_A(points)
 
