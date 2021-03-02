@@ -19,10 +19,10 @@
 #include "global.h"
 
 module criteria_factory_oct_m
-  use convergence_criteria_oct_m
-  use density_criteria_oct_m
-  use eigenval_criteria_oct_m
-  use energy_criteria_oct_m
+  use convergence_criterion_oct_m
+  use density_criterion_oct_m
+  use eigenval_criterion_oct_m
+  use energy_criterion_oct_m
   use global_oct_m
   use namespace_oct_m
   use messages_oct_m
@@ -42,15 +42,15 @@ contains
   
   ! ---------------------------------------------------------
   subroutine criteria_factory_init(list, namespace, max_iter, check_conv)
-    class(criteria_list_t), intent(inout) :: list
-    type(namespace_t),      intent(in)    :: namespace
-    integer,                intent(in)    :: max_iter
-    logical,                intent(out)   :: check_conv
+    class(criterion_list_t), intent(inout) :: list
+    type(namespace_t),       intent(in)    :: namespace
+    integer,                 intent(in)    :: max_iter
+    logical,                 intent(out)   :: check_conv
 
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
     FLOAT :: conv_energy_diff
-    class(convergence_criteria_t), pointer    :: crit, other
-    type(criteria_iterator_t) :: iter
+    class(convergence_criterion_t), pointer    :: crit, other
+    type(criterion_iterator_t) :: iter
 
     PUSH_SUB(criteria_factory_init)
  
@@ -68,7 +68,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, conv_energy_diff, unit = units_inp%energy)
-    crit => energy_criteria_t(conv_energy_diff, M_ZERO, units_out%energy)
+    crit => energy_criterion_t(conv_energy_diff, M_ZERO, units_out%energy)
     call list%add(crit)
 
     !%Variable ConvAbsDens
@@ -107,7 +107,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), conv_rel_dens)
-    crit => density_criteria_t(conv_abs_dens, conv_rel_dens)
+    crit => density_criterion_t(conv_abs_dens, conv_rel_dens)
     call list%add(crit)
 
     !%Variable ConvAbsEv
@@ -143,7 +143,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev)
-    crit => eigenval_criteria_t(conv_abs_ev, conv_rel_ev, units_out%energy)
+    crit => eigenval_criterion_t(conv_abs_ev, conv_rel_ev, units_out%energy)
     call list%add(crit)
 
     call messages_obsolete_variable(namespace, 'ConvForce')

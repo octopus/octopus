@@ -18,63 +18,60 @@
 
 #include "global.h"
 
-module eigenval_criteria_oct_m
-  use convergence_criteria_oct_m
+module density_criterion_oct_m
+  use convergence_criterion_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use unit_oct_m
 
   implicit none
 
   private
   public ::                  &
-    eigenval_criteria_t
+    density_criterion_t
 
-  type, extends(convergence_criteria_t) :: eigenval_criteria_t
+  type, extends(convergence_criterion_t) :: density_criterion_t
     private
   contains
-    final :: eigenval_criteria_finalize
-  end type eigenval_criteria_t
+    final :: density_criterion_finalize
+  end type density_criterion_t
 
-  interface eigenval_criteria_t
-    procedure eigenval_criteria_constructor
-  end interface eigenval_criteria_t
+  interface density_criterion_t
+    procedure density_criterion_constructor
+  end interface density_criterion_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  function eigenval_criteria_constructor(tol_abs, tol_rel, unit) result(crit)
+  function density_criterion_constructor(tol_abs, tol_rel) result(crit)
     FLOAT,                       intent(in) :: tol_abs
     FLOAT,                       intent(in) :: tol_rel
-    type(unit_t),        target, intent(in) :: unit
-    class(eigenval_criteria_t),  pointer :: crit
+    class(density_criterion_t),      pointer :: crit
 
-    PUSH_SUB(eigenval_criteria_constructor)
+    PUSH_SUB(density_criterion_constructor)
 
     SAFE_ALLOCATE(crit)
 
     crit%tol_abs = tol_abs
     crit%tol_rel = tol_rel
-    crit%unit => unit
-    crit%label = 'evsum'
+    crit%label = 'dens'
 
-    POP_SUB(eigenval_criteria_constructor)
-  end function eigenval_criteria_constructor
+    POP_SUB(density_criterion_constructor)
+  end function density_criterion_constructor
 
   ! ---------------------------------------------------------
-  subroutine eigenval_criteria_finalize(this)
-    type(eigenval_criteria_t),   intent(inout) :: this
+  subroutine density_criterion_finalize(this)
+    type(density_criterion_t),   intent(inout) :: this
 
-    PUSH_SUB(eigenval_criteria_finalize)
+    PUSH_SUB(density_criterion_finalize)
 
-    call convergence_criteria_end(this)
+    call convergence_criterion_end(this)
 
-    POP_SUB(eigenval_criteria_finalize)
-  end subroutine eigenval_criteria_finalize
+    POP_SUB(density_criterion_finalize)
+  end subroutine density_criterion_finalize
 
-end module eigenval_criteria_oct_m
+end module density_criterion_oct_m
 
 !! Local Variables:
 !! mode: f90

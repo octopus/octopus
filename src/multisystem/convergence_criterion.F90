@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module convergence_criteria_oct_m
+module convergence_criterion_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -29,52 +29,52 @@ module convergence_criteria_oct_m
 
   private
   public ::                    &
-    convergence_criteria_t,    &
-    convergence_criteria_end,  &
-    criteria_list_t,           &
-    criteria_iterator_t
+    convergence_criterion_t,    &
+    convergence_criterion_end,  &
+    criterion_list_t,           &
+    criterion_iterator_t
 
 
-  type, abstract :: convergence_criteria_t
+  type, abstract :: convergence_criterion_t
     private
-    FLOAT,   public :: tol_abs !< Tolerance of the convergence criteria
-    FLOAT,   public :: tol_rel !< Tolerance of the convergence criteria
+    FLOAT,   public :: tol_abs !< Tolerance of the convergence criterion
+    FLOAT,   public :: tol_rel !< Tolerance of the convergence criterion
     character(len=:), allocatable, public :: label
     type(unit_t), pointer, public :: unit => null()
 
-    FLOAT, public   :: val_abs    !< Current value of the criteria
+    FLOAT, public   :: val_abs    !< Current value of the criterion
     FLOAT, public   :: val_rel  
     FLOAT, pointer  :: value_diff
     FLOAT, pointer  :: norm
 
   contains
-    procedure :: is_converged => convergence_criteria_is_converged
-    procedure :: set_pointers => criteria_set_quantity_pointers
-    procedure :: write_info => criteria_write_info
-  end type convergence_criteria_t
+    procedure :: is_converged => convergence_criterion_is_converged
+    procedure :: set_pointers => criterion_set_quantity_pointers
+    procedure :: write_info => criterion_write_info
+  end type convergence_criterion_t
 
-  !> These classes extend the list and list iterator to make a criteria list
-  type, extends(linked_list_t) :: criteria_list_t
+  !> These classes extend the list and list iterator to make a criterion list
+  type, extends(linked_list_t) :: criterion_list_t
     private
   contains
-    procedure :: add => criteria_list_add_node
-  end type criteria_list_t
+    procedure :: add => criterion_list_add_node
+  end type criterion_list_t
 
-  type, extends(linked_list_iterator_t) :: criteria_iterator_t
+  type, extends(linked_list_iterator_t) :: criterion_iterator_t
     private
   contains
-    procedure :: get_next => criteria_iterator_get_next
-  end type criteria_iterator_t
+    procedure :: get_next => criterion_iterator_get_next
+  end type criterion_iterator_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine criteria_write_info(this, iunit)
-    class(convergence_criteria_t), intent(inout) :: this
+  subroutine criterion_write_info(this, iunit)
+    class(convergence_criterion_t), intent(inout) :: this
     integer,                       intent(in)    :: iunit
 
-    PUSH_SUB(criteria_write_info)
+    PUSH_SUB(criterion_write_info)
 
     if (associated(this%unit)) then
       write(iunit, '(6x,a,a,a,es15.8,a,es15.8,4a)') 'abs_', this%label, ' = ', &
@@ -86,16 +86,16 @@ contains
     end if
     write(iunit, '(6x,a,a,a,es15.8,a,es15.8,a)') 'rel_', this%label, ' = ', this%val_rel, ' (', this%tol_rel, ')'
      
-    POP_SUB(criteria_write_info)
-  end subroutine criteria_write_info
+    POP_SUB(criterion_write_info)
+  end subroutine criterion_write_info
 
   ! ---------------------------------------------------------
   !> Is the convergence reached ?
-  subroutine convergence_criteria_is_converged(this, is_converged)
-    class(convergence_criteria_t),  intent(inout) :: this
+  subroutine convergence_criterion_is_converged(this, is_converged)
+    class(convergence_criterion_t),  intent(inout) :: this
     logical,                        intent(out)   :: is_converged
 
-    PUSH_SUB(convergence_criteria_is_converged)
+    PUSH_SUB(convergence_criterion_is_converged)
    
     this%val_abs = abs(this%value_diff)
 
@@ -117,29 +117,29 @@ contains
     end if
 
 
-    POP_SUB(convergence_criteria_is_converged)
-  end subroutine convergence_criteria_is_converged
+    POP_SUB(convergence_criterion_is_converged)
+  end subroutine convergence_criterion_is_converged
 
   ! ---------------------------------------------------------
   !> Setting pointers to the in, out and norm values
-  subroutine criteria_set_quantity_pointers(this, value_diff, value_norm)
-    class(convergence_criteria_t),  intent(inout) :: this
+  subroutine criterion_set_quantity_pointers(this, value_diff, value_norm)
+    class(convergence_criterion_t),  intent(inout) :: this
     FLOAT, target,                  intent(in)    :: value_diff
     FLOAT, target,                  intent(in)    :: value_norm
   
-    PUSH_SUB(criteria_set_quantity_pointers)
+    PUSH_SUB(criterion_set_quantity_pointers)
   
     this%value_diff => value_diff
     this%norm => value_norm
   
-    POP_SUB(criteria_set_quantity_pointers)
-  end subroutine criteria_set_quantity_pointers
+    POP_SUB(criterion_set_quantity_pointers)
+  end subroutine criterion_set_quantity_pointers
 
   ! ---------------------------------------------------------
-  subroutine convergence_criteria_end(this)
-    class(convergence_criteria_t),  intent(inout) :: this
+  subroutine convergence_criterion_end(this)
+    class(convergence_criterion_t),  intent(inout) :: this
 
-    PUSH_SUB(convergence_criteria_end)
+    PUSH_SUB(convergence_criterion_end)
 
     nullify(this%value_diff)
     nullify(this%norm)
@@ -149,39 +149,39 @@ contains
       deallocate(this%label)
     end if
 
-    POP_SUB(convergence_criteria_end)
-  end subroutine convergence_criteria_end
+    POP_SUB(convergence_criterion_end)
+  end subroutine convergence_criterion_end
 
   ! ---------------------------------------------------------
-  subroutine criteria_list_add_node(this, criteria)
-    class(criteria_list_t)                :: this
-    class(convergence_criteria_t), target :: criteria
+  subroutine criterion_list_add_node(this, criterion)
+    class(criterion_list_t)                 :: this
+    class(convergence_criterion_t), target :: criterion
 
-    PUSH_SUB(criteria_list_add_node)
+    PUSH_SUB(criterion_list_add_node)
 
-    call this%add_ptr(criteria)
+    call this%add_ptr(criterion)
 
-    POP_SUB(criteria_list_add_node)
-  end subroutine criteria_list_add_node
+    POP_SUB(criterion_list_add_node)
+  end subroutine criterion_list_add_node
 
   ! ---------------------------------------------------------
-  function criteria_iterator_get_next(this) result(criteria)
-    class(criteria_iterator_t),     intent(inout) :: this
-    class(convergence_criteria_t),  pointer       :: criteria
+  function criterion_iterator_get_next(this) result(criterion)
+    class(criterion_iterator_t),      intent(inout) :: this
+    class(convergence_criterion_t),  pointer       :: criterion
 
-    PUSH_SUB(criteria_iterator_get_next)
+    PUSH_SUB(criterion_iterator_get_next)
 
     select type (ptr => this%get_next_ptr())
-    class is (convergence_criteria_t)
-      criteria => ptr
+    class is (convergence_criterion_t)
+      criterion => ptr
     class default
       ASSERT(.false.)
     end select
 
-    POP_SUB(criteria_iterator_get_next)
-  end function criteria_iterator_get_next
+    POP_SUB(criterion_iterator_get_next)
+  end function criterion_iterator_get_next
 
-end module convergence_criteria_oct_m
+end module convergence_criterion_oct_m
 
 !! Local Variables:
 !! mode: f90

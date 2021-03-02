@@ -18,8 +18,8 @@
 
 #include "global.h"
 
-module energy_criteria_oct_m
-  use convergence_criteria_oct_m
+module energy_criterion_oct_m
+  use convergence_criterion_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -29,29 +29,29 @@ module energy_criteria_oct_m
 
   private
   public ::                  &
-    energy_criteria_t
+    energy_criterion_t
 
-  type, extends(convergence_criteria_t) :: energy_criteria_t
+  type, extends(convergence_criterion_t) :: energy_criterion_t
     private
   contains
-    final :: energy_criteria_finalize
-  end type energy_criteria_t
+    final :: energy_criterion_finalize
+  end type energy_criterion_t
 
-  interface energy_criteria_t
-    procedure energy_criteria_constructor
-  end interface energy_criteria_t
+  interface energy_criterion_t
+    procedure energy_criterion_constructor
+  end interface energy_criterion_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  function energy_criteria_constructor(tol_abs, tol_rel, unit) result(crit)
+  function energy_criterion_constructor(tol_abs, tol_rel, unit) result(crit)
     FLOAT,                       intent(in) :: tol_abs
     FLOAT,                       intent(in) :: tol_rel
     type(unit_t),        target, intent(in) :: unit
-    class(energy_criteria_t),  pointer :: crit
+    class(energy_criterion_t),  pointer :: crit
 
-    PUSH_SUB(energy_criteria_constructor)
+    PUSH_SUB(energy_criterion_constructor)
 
     SAFE_ALLOCATE(crit)
 
@@ -60,21 +60,21 @@ contains
     crit%unit => unit
     crit%label = 'energy'
 
-    POP_SUB(energy_criteria_constructor)
-  end function energy_criteria_constructor
+    POP_SUB(energy_criterion_constructor)
+  end function energy_criterion_constructor
 
   ! ---------------------------------------------------------
-  subroutine energy_criteria_finalize(this)
-    type(energy_criteria_t),   intent(inout) :: this
+  subroutine energy_criterion_finalize(this)
+    type(energy_criterion_t),   intent(inout) :: this
 
-    PUSH_SUB(energy_criteria_finalize)
+    PUSH_SUB(energy_criterion_finalize)
 
-    call convergence_criteria_end(this)
+    call convergence_criterion_end(this)
 
-    POP_SUB(energy_criteria_finalize)
-  end subroutine energy_criteria_finalize
+    POP_SUB(energy_criterion_finalize)
+  end subroutine energy_criterion_finalize
 
-end module energy_criteria_oct_m
+end module energy_criterion_oct_m
 
 !! Local Variables:
 !! mode: f90

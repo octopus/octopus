@@ -22,14 +22,14 @@ module scf_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use berry_oct_m
-  use convergence_criteria_oct_m
+  use convergence_criterion_oct_m
   use criteria_factory_oct_m
   use density_oct_m
-  use density_criteria_oct_m
+  use density_criterion_oct_m
   use eigensolver_oct_m
-  use eigenval_criteria_oct_m
+  use eigenval_criterion_oct_m
   use energy_calc_oct_m
-  use energy_criteria_oct_m
+  use energy_criterion_oct_m
   use forces_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -125,7 +125,7 @@ module scf_oct_m
     type(lda_u_mixer_t) :: lda_u_mix
     type(berry_t) :: berry
 
-    type(criteria_list_t) :: criteria_list
+    type(criterion_list_t) :: criterion_list
     FLOAT :: energy_in, energy_diff, abs_dens_diff, evsum_in, evsum_out, evsum_diff
   end type scf_t
 
@@ -146,8 +146,8 @@ contains
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
-    class(convergence_criteria_t), pointer    :: crit
-    type(criteria_iterator_t) :: iter
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iter
 
     PUSH_SUB(scf_init)
 
@@ -171,17 +171,17 @@ contains
     end if
     
     !Create the list of convergence criteria
-    call criteria_factory_init(scf%criteria_list, namespace, scf%max_iter, scf%check_conv)
+    call criteria_factory_init(scf%criterion_list, namespace, scf%max_iter, scf%check_conv)
     !Setting the pointers
-    call iter%start(scf%criteria_list)
+    call iter%start(scf%criterion_list)
     do while (iter%has_next())
       crit => iter%get_next()
       select type (crit)
-      type is (energy_criteria_t)
+      type is (energy_criterion_t)
         call crit%set_pointers(scf%energy_diff, scf%energy_in)
-      type is (density_criteria_t)
+      type is (density_criterion_t)
         call crit%set_pointers(scf%abs_dens_diff, st%qtot)
-      type is (eigenval_criteria_t)
+      type is (eigenval_criterion_t)
         call crit%set_pointers(scf%evsum_diff, scf%evsum_out)
       class default
         ASSERT(.false.)
@@ -459,8 +459,8 @@ contains
   subroutine scf_end(scf)
     type(scf_t),  intent(inout) :: scf
 
-    class(convergence_criteria_t), pointer    :: crit
-    type(criteria_iterator_t) :: iter
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iter
     
     PUSH_SUB(scf_end)
 
@@ -472,7 +472,7 @@ contains
 
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
 
-    call iter%start(scf%criteria_list)
+    call iter%start(scf%criterion_list)
     do while (iter%has_next())
       crit => iter%get_next()
       SAFE_DEALLOCATE_P(crit)
@@ -528,8 +528,8 @@ contains
 #ifdef HAVE_MPI
     logical :: forced_finish_tmp    
 #endif
-    class(convergence_criteria_t), pointer    :: crit
-    type(criteria_iterator_t) :: iterator
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iterator
     logical :: is_crit_conv
 
     PUSH_SUB(scf_run)
@@ -679,7 +679,7 @@ contains
       if(iter == 1) then
         scf%evsum_in = states_elec_eigenvalues_sum(st)
       end if
-      call iterator%start(scf%criteria_list)
+      call iterator%start(scf%criterion_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
         call scf_update_initial_quantity(scf, hm, crit)
@@ -748,7 +748,7 @@ contains
       end if
 
       !We update the quantities at the end of the scf cycle
-      call iterator%start(scf%criteria_list)
+      call iterator%start(scf%criterion_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
         call scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, crit)
@@ -760,14 +760,14 @@ contains
       converged_current = scf%check_conv .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
       !Loop over the different criteria
-      call iterator%start(scf%criteria_list)
+      call iterator%start(scf%criterion_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
         call crit%is_converged(is_crit_conv)
         converged_current = converged_current .and. is_crit_conv
       end do
 
-      ! only finish if the convergence criterion is fulfilled in two
+      ! only finish if the convergence criteria are fulfilled in two
       ! consecutive iterations
       finish = converged_last .and. converged_current
 
@@ -1133,7 +1133,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         if(scf%max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
-          call iterator%start(scf%criteria_list)
+          call iterator%start(scf%criterion_list)
           do while (iterator%has_next())
             crit => iterator%get_next()
             call crit%write_info(iunit)
@@ -1269,15 +1269,15 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
-        call iterator%start(scf%criteria_list)
+        call iterator%start(scf%criterion_list)
         do while (iterator%has_next())
           crit => iterator%get_next()
           select type (crit)
-          type is (energy_criteria_t)
+          type is (energy_criterion_t)
             write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
-          type is (density_criteria_t)
+          type is (density_criterion_t)
             write(iunit, '(2es13.5)', advance = 'no') crit%val_abs, crit%val_rel           
-          type is (eigenval_criteria_t)
+          type is (eigenval_criterion_t)
             write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
             write(iunit, '(es13.5)', advance = 'no') crit%val_rel
           class default 
@@ -1337,19 +1337,19 @@ contains
 
   ! --------------------------------------------------------
   !> Update the quantity at the begining of a SCF cycle
-  subroutine scf_update_initial_quantity(scf, hm, criteria)
-    type(scf_t),                   intent(inout) :: scf 
-    type(hamiltonian_elec_t),      intent(in)    :: hm
-    class(convergence_criteria_t), intent(in)    :: criteria
+  subroutine scf_update_initial_quantity(scf, hm, criterion)
+    type(scf_t),                    intent(inout) :: scf 
+    type(hamiltonian_elec_t),       intent(in)    :: hm
+    class(convergence_criterion_t), intent(in)    :: criterion
 
     PUSH_SUB(scf_update_initial_quantity)
 
-    select type (criteria)
-    type is (energy_criteria_t)
+    select type (criterion)
+    type is (energy_criterion_t)
       scf%energy_in = hm%energy%total
-    type is (density_criteria_t)
+    type is (density_criterion_t)
       !Do nothing here
-    type is (eigenval_criteria_t)
+    type is (eigenval_criterion_t)
       !Setting of the value is done in the scf_update_diff_quantity routine
     class default
       ASSERT(.false.)
@@ -1360,24 +1360,24 @@ contains
 
   ! --------------------------------------------------------
   !> Update the quantity at the begining of a SCF cycle
-  subroutine scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, criteria )
-    type(scf_t),                   intent(inout) :: scf
-    type(hamiltonian_elec_t),      intent(in)    :: hm
-    type(states_elec_t),           intent(in)    :: st
-    type(grid_t),                  intent(in)    :: gr
-    FLOAT,                         intent(in)    :: rhoout(:,:,:), rhoin(:,:,:)
-    class(convergence_criteria_t), intent(in)    :: criteria
+  subroutine scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, criterion)
+    type(scf_t),                    intent(inout) :: scf
+    type(hamiltonian_elec_t),       intent(in)    :: hm
+    type(states_elec_t),            intent(in)    :: st
+    type(grid_t),                   intent(in)    :: gr
+    FLOAT,                          intent(in)    :: rhoout(:,:,:), rhoin(:,:,:)
+    class(convergence_criterion_t), intent(in)    :: criterion
   
     integer :: is
     FLOAT, allocatable :: tmp(:)
   
     PUSH_SUB(scf_update_diff_quantity)
 
-    select type (criteria)
-    type is (energy_criteria_t)
+    select type (criterion)
+    type is (energy_criterion_t)
       scf%energy_diff = abs(hm%energy%total - scf%energy_in)
 
-    type is (density_criteria_t)
+    type is (density_criterion_t)
       scf%abs_dens_diff = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, st%d%nspin
@@ -1386,7 +1386,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp)
 
-    type is (eigenval_criteria_t)
+    type is (eigenval_criterion_t)
       scf%evsum_out = states_elec_eigenvalues_sum(st)
       scf%evsum_diff = abs(scf%evsum_out - scf%evsum_in)
       scf%evsum_in = scf%evsum_out
