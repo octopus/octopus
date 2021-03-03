@@ -90,10 +90,12 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   case(BATCH_DEVICE_PACKED)
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack_size(1)*vp%np_ghost))
+      offset = 0
     else
       ! get device pointer for CUDA-aware MPI
       call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%ff_device, &
         [product(v_local%pack_size)])
+      offset = vp%np_local*v_local%pack_size(1)
     end if
 
     ! ring scheme: count upwards from local rank for receiving
@@ -104,7 +106,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack_size(1)
+      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack_size(1) + offset
 #ifdef HAVE_MPI
       call MPI_Irecv(handle%X(recv_buffer)(pos), vp%ghost_rcounts(ipart)*v_local%pack_size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
@@ -279,7 +281,7 @@ subroutine X(ghost_update_batch_finish)(handle)
     ! copy to GPU if not using CUDA aware MPI
     if(.not. accel%cuda_mpi) then
       call accel_write_buffer(handle%v_local%ff_device, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
-        handle%X(recv_buffer))
+        handle%X(recv_buffer), handle%v_local%pack_size(1)*handle%vp%np_local)
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
     else
