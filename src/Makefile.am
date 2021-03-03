@@ -312,7 +312,6 @@ grid_f_srcs =                                 \
 	grid/stencil_stargeneral.F90          \
 	grid/stencil_starplus.F90             \
 	grid/stencil_variational.F90          \
-	grid/subarray.F90                     \
 	grid/submesh.F90                      \
 	grid/symmetrizer.F90                  \
 	grid/transfer_table.F90               \
@@ -344,7 +343,6 @@ noinst_HEADERS +=                             \
 	grid/partition_transfer_inc.F90       \
 	grid/par_vec_inc.F90                  \
 	grid/restart_inc.F90                  \
-	grid/subarray_inc.F90                 \
 	grid/submesh_inc.F90                  \
 	grid/symmetrizer_inc.F90              \
 	grid/vtk_inc.F90

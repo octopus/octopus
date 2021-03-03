@@ -108,7 +108,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
      if(mesh%parallel_in_domains) then
        do ipt = 1, npt
-         pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
+         pt(ipt) = vec_global2local(mesh%vp, pt(ipt))
          lvalues(ipt) = CNST(0.0)
          boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
          inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np

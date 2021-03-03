@@ -39,7 +39,6 @@ module mesh_partition_oct_m
   private
   public ::                      &
     mesh_partition,              &
-    mesh_partition_boundaries,   &
     mesh_partition_from_parent,  &
     mesh_partition_dump,         &
     mesh_partition_load,         &
@@ -184,7 +183,7 @@ contains
     ! Shortcut to the global number of vertices
     nv_global = mesh%np_global
 
-    call partition_init(mesh%inner_partition, nv_global, mesh%mpi_grp)
+    call partition_init(mesh%partition, nv_global, mesh%mpi_grp)
 
     ! Get number of partitions.
     npart = mesh%mpi_grp%size
@@ -193,7 +192,7 @@ contains
     SAFE_ALLOCATE(istart(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
     SAFE_ALLOCATE(vtxdist(1:npart+1))
-    call partition_get_local_size(mesh%inner_partition, iv, nv)
+    call partition_get_local_size(mesh%partition, iv, nv)
 #ifdef HAVE_MPI
     call MPI_Allgather(iv, 1, MPI_INTEGER, istart(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
     call MPI_Allgather(nv, 1, MPI_INTEGER, lsize(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
@@ -393,7 +392,7 @@ contains
 
     ASSERT(all(part(1:nv) > 0))
     ASSERT(all(part(1:nv) <= vsize))
-    call partition_set(mesh%inner_partition, part)
+    call partition_set(mesh%partition, part)
 
     if (debug%info .or. library == METIS) then
       SAFE_DEALLOCATE_A(xadj_global)
@@ -436,123 +435,6 @@ contains
 
   end subroutine mesh_partition
 
-  ! --------------------------------------------------------
-  subroutine mesh_partition_boundaries(mesh, stencil, vsize)
-    type(mesh_t),      intent(inout) :: mesh
-    type(stencil_t),   intent(in)    :: stencil
-    integer,           intent(in)    :: vsize
-
-    integer              :: np_global, istart, np, ipart, npart, ip
-    integer              :: is, ii, jj         ! Counter.
-    integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
-    integer, allocatable :: neighbours_index(:), neighbours_part(:)
-    integer, allocatable :: part(:)
-    integer, allocatable :: votes(:), bps(:), bps_total(:)
-    logical, allocatable :: winner(:)
-    integer              :: maxvotes
-
-    PUSH_SUB(mesh_partition_boundaries)
-
-    ipart = mesh%mpi_grp%rank + 1
-    npart = mesh%mpi_grp%size
-    np_global = mesh%np_part_global - mesh%np_global
-    call partition_init(mesh%bndry_partition, np_global, mesh%mpi_grp)
-    call partition_get_local_size(mesh%bndry_partition, istart, np)
-
-    !Get the global indices of the neighbours connected through the stencil
-    !Neighbours that are not inner points get a value of 0
-    SAFE_ALLOCATE(neighbours_index(1:np*stencil%size))
-    neighbours_index = 0
-
-    do is = 1, np
-      !Global index of the point
-      ii = mesh%np_global + istart - 1 + is
-
-      !get the coordinates of the point
-      call mesh_global_index_to_coords(mesh, ii, ix)
-
-      do jj = 1, stencil%size
-        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
-        if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
-        ip = mesh_global_index_from_coords(mesh, jx)
-        if (ip > 0 .and. ip <= mesh%np_global) neighbours_index((is-1)*stencil%size + jj) = ip
-      end do
-
-    end do
-
-    !Get the partition number of the neighbours
-    SAFE_ALLOCATE(neighbours_part(1:np*stencil%size))
-    call partition_get_partition_number(mesh%inner_partition, np*stencil%size, neighbours_index, neighbours_part)
-    SAFE_DEALLOCATE_A(neighbours_index)
-
-    !First round of voting
-    SAFE_ALLOCATE(part(1:np))
-    SAFE_ALLOCATE(bps(1:vsize))
-    SAFE_ALLOCATE(votes(1:vsize))
-    SAFE_ALLOCATE(winner(1:vsize))
-    part = 0
-    bps = 0
-    do is = 1, np
-      votes = 0
-      do jj = 1, stencil%size
-        ipart = neighbours_part((is-1)*stencil%size + jj)
-        if (ipart == 0) cycle
-        votes(ipart) = votes(ipart) + 1
-      end do
-
-      ! now count the votes
-      maxvotes = maxval(votes)
-
-      ! choose a winner if it is unique
-      if (count(votes == maxvotes) == 1) then
-        part(is) = maxloc(votes, dim = 1)
-        bps(part(is)) = bps(part(is)) + 1
-      end if
-    end do
-
-    !Count how many points have already been assigned to each partition in all processes
-    SAFE_ALLOCATE(bps_total(1:vsize))
-#ifdef HAVE_MPI 
-    call MPI_Allreduce(bps(1), bps_total(1), vsize, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, mpi_err)
-#endif
-
-    !Second round of voting
-    do is = 1, np
-      !Only points that were not assigned yet
-      if (part(is) /= 0) cycle
-
-      votes = 0
-      do jj = 1, stencil%size
-        ipart = neighbours_part((is-1)*stencil%size + jj)
-        if (ipart == 0) cycle
-        votes(ipart) = votes(ipart) + 1
-      end do
-
-      ! now count the votes
-      maxvotes = maxval(votes)
-      ! from all the ones that have the maximum
-      winner = (votes == maxvotes)
-      ! select the one that has fewer points currently
-      part(is) = minloc(bps_total, dim = 1,  mask = winner)
-      ! and count it
-      bps_total(part(is)) = bps_total(part(is)) + 1
-    end do
-
-    SAFE_DEALLOCATE_A(votes)
-    SAFE_DEALLOCATE_A(bps)
-    SAFE_DEALLOCATE_A(winner)
-    SAFE_DEALLOCATE_A(bps_total)
-    SAFE_DEALLOCATE_A(neighbours_part)
-
-    ASSERT(all(part > 0))
-    ASSERT(all(part <= vsize))
-    call partition_set(mesh%bndry_partition, part)
-
-    SAFE_DEALLOCATE_A(part)
-
-    POP_SUB(mesh_partition_boundaries)
-  end subroutine mesh_partition_boundaries
-
   ! ----------------------------------------------------
   subroutine mesh_partition_from_parent(mesh, parent)
     type(mesh_t), intent(inout) :: mesh
@@ -565,8 +447,8 @@ contains
     PUSH_SUB(mesh_partition_from_parent)
 
     !Initialize partition
-    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
-    call partition_get_local_size(mesh%inner_partition, istart, np)
+    call partition_init(mesh%partition, mesh%np_global, mesh%mpi_grp)
+    call partition_get_local_size(mesh%partition, istart, np)
 
     !Get the partition number of each point from the parent mesh
     SAFE_ALLOCATE(points(1:np))
@@ -576,10 +458,10 @@ contains
       call mesh_global_index_to_coords(mesh, ip_global, idx)
       points(ip_local) = mesh_global_index_from_coords(parent, 2*idx)
     end do
-    call partition_get_partition_number(parent%inner_partition, np, points, part)
+    call partition_get_partition_number(parent%partition, np, points, part)
 
     !Set the partition
-    call partition_set(mesh%inner_partition, part)
+    call partition_set(mesh%partition, part)
 
     !Free memory
     SAFE_DEALLOCATE_A(points)
@@ -618,18 +500,11 @@ contains
     
     write(numstring, '(i6.6)') vsize
 
-    call partition_dump(mesh%inner_partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) then
       message(1) = "Unable to write inner mesh partition to 'inner_partition_"//trim(numstring)//".obf'"
       call messages_warning(1)
       ierr = ierr + 1
-    end if
-
-    call partition_dump(mesh%bndry_partition, restart_dir(restart), 'bndry_partition_'//trim(numstring)//'.obf', err)
-    if (err /= 0) then
-      message(1) = "Unable to write boundary mesh partition to 'bndry_partition_"//trim(numstring)//".obf'"
-      call messages_warning(1)
-      ierr = ierr + 2
     end if
 
     if (debug%info) then
@@ -667,8 +542,7 @@ contains
       call messages_info(1)
     end if
 
-    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
-    call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
+    call partition_init(mesh%partition, mesh%np_global, mesh%mpi_grp)
 
     write(numstring, '(i6.6)') mesh%mpi_grp%size
     dir = restart_dir(restart)
@@ -680,33 +554,17 @@ contains
       call messages_warning(1)
       ierr = ierr + 1
     else
-      call partition_load(mesh%inner_partition, restart_dir(restart), filename, err)
+      call partition_load(mesh%partition, restart_dir(restart), filename, err)
       if (err /= 0) then
         message(1) = "Unable to read inner mesh partition from '"//trim(filename)//"'."
         call messages_warning(1)
         ierr = ierr + 2
       end if
     end if
-    
-    !Read boundary partition
-    filename = 'bndry_partition_'//numstring//'.obf'
-    if (.not. io_file_exists(trim(dir)//"/"//filename)) then
-      message(1) = "Unable to read boundary mesh partition, file '"//trim(filename)//"' does not exist."
-      call messages_warning(1)
-      ierr = ierr + 4
-    else
-      call partition_load(mesh%bndry_partition, restart_dir(restart), filename, err)
-      if (err /= 0) then
-        message(1) = "Unable to read boundary mesh partition from '"//trim(filename)//"'."
-        call messages_warning(1)
-        ierr = ierr + 8
-      end if
-    end if
-      
+
     ! Free the memory in case we were unable to read the partitions
     if (ierr /= 0) then
-      call partition_end(mesh%inner_partition)
-      call partition_end(mesh%bndry_partition)
+      call partition_end(mesh%partition)
     end if
 
     if (debug%info) then
