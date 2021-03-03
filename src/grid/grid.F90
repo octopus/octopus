@@ -156,9 +156,9 @@ contains
     select type (box => gr%sb%box)
     type is (box_image_t)
       do idir = 1, space%dim
-        ! default grid_spacing is determined from lsize and the size of the image
+        ! default grid_spacing is determined from the pixel size such that one grid point = one pixel.
         if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(box%image_size(idir))
+          grid_spacing(idir) = box%pixel_size(idir)
         end if
       end do
     end select

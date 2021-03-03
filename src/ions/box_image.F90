@@ -36,10 +36,10 @@ module box_image_oct_m
   !> Class implementing a box generated from a 2D image.
   type, extends(box_shape_t) :: box_image_t
     private
-    integer, public             :: image_size(2)
-    FLOAT               :: lsize(2) !< half the length of the image in each direction.
-    type(c_ptr)         :: image
-    character(len=:), allocatable :: filename
+    integer                       :: image_size(2) !< size of the image in each direction in pixels
+    FLOAT, public                 :: pixel_size(2) !< size of a pixel in atomic units
+    type(c_ptr)                   :: image         !< libgd handler
+    character(len=:), allocatable :: filename      !< name of image file
   contains
     procedure :: contains_points => box_image_contains_points
     procedure :: write_info => box_image_write_info
@@ -100,17 +100,20 @@ contains
     box%image_size(2) = gdlib_image_sy(box%image)
 #endif
 
-    ! adjust Lsize if necessary to ensure that one grid point = one pixel
-    box%lsize = lsize
+    ! If necessary, adjust lsize to ensure that we always have a pixel at the
+    ! origin and that the edges always fall between two pixels.
     do idir = 1, 2
       box_npts = box%image_size(idir)
       if((idir >  periodic_dim .and. even(box%image_size(idir))) .or. &
         (idir <= periodic_dim .and.  odd(box%image_size(idir)))) then
         box_npts = box_npts + 1
-        box%lsize(idir) = box%lsize(idir) * box_npts / box%image_size(idir)
-        lsize(idir) = box%lsize(idir)
+        lsize(idir) = lsize(idir) * box_npts / box%image_size(idir)
       end if
     end do
+
+    ! Calculate the size of a pixel. To have one grid point = one pixel the
+    ! spacing must be the same as the pixel size.
+    box%pixel_size = (M_TWO*lsize)/box%image_size
 
     POP_SUB(box_image_constructor)
   end function box_image_constructor
@@ -143,11 +146,13 @@ contains
     integer :: red, green, blue, ix, iy
 
     do ip = 1, nn
+      ! Transform our cartesian coordinates into pixel coordinates.
       ! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
       ! For reasons that probably made sense to someone at some time, computer graphic coordinates are not the same
       ! as in standard graphing. ... The top left corner of the screen is (0,0).
-      ix = nint(( xx(ip, 1) + this%lsize(1)) * this%image_size(1) / (M_TWO * this%lsize(1)))
-      iy = nint((-xx(ip, 2) + this%lsize(2)) * this%image_size(2) / (M_TWO * this%lsize(2)))
+      ix =   nint((xx(ip, 1) - this%center(1))/this%pixel_size(1)) + (this%image_size(1) - 1)/2
+      iy = - nint((xx(ip, 2) - this%center(2))/this%pixel_size(2)) + (this%image_size(2) - 1)/2
+
 #if defined(HAVE_GDLIB)
       call gdlib_image_get_pixel_rgb(this%image, ix, iy, red, green, blue)
 #endif
