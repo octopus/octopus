@@ -137,7 +137,7 @@ contains
     PUSH_SUB(density_calc_state)
     call profiling_in(prof, "CALC_STATE_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     istin_= 0
 
@@ -332,7 +332,7 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
     do ist = 1, psib%nst

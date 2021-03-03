@@ -587,7 +587,7 @@ contains
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint(1:gr%sb%dim) = hm%kpoints%get_point(states_elec_dim_get_kpoint_index(hm%d, ik))
+        kpoint(1:gr%sb%dim) = hm%kpoints%get_point(hm%d%get_kpoint_index(ik))
         do ip = 1, gr%mesh%np_part
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end do
@@ -1070,7 +1070,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(this%d%get_kpoint_index(ik))
           !We add the vector potential
           kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
@@ -1640,7 +1640,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(states_elec_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = this%kpoints%get_point(this%d%get_kpoint_index(ik))
 
           !$omp parallel do schedule(static)
           do ip = 1, mesh%np_part
@@ -1803,7 +1803,7 @@ contains
     SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
 
-    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+    ispin = hm%d%get_spin_index(ik)
 
     ! Compute (T + Vnl)|psi> and store it
     call zhamiltonian_elec_apply_single(hm, namespace, mesh, psi, auxpsi, 1, ik, &

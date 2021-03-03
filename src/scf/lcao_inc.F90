@@ -178,7 +178,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     end do
 
     do ik = kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), &
                         hpsi(:, :, ik), n1, ik, set_bc = .false.)
     end do
@@ -196,7 +196,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
         end if
 
         do ik = kstart, kend
-          if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+          if(ispin /= st%d%get_spin_index(ik)) cycle
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
 
@@ -227,7 +227,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   zeropsi = R_TOTYPE(M_ZERO)
 
   do ik = kstart, kend
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev, preserve_mat=.true.)
 
 #ifdef HAVE_MPI
@@ -251,7 +251,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(debug%info .and. mpi_grp_is_root(mpi_world)) then
     do ik =  kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik) 
+      ispin = st%d%get_spin_index(ik) 
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
@@ -283,7 +283,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
-        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+        if(ispin /= st%d%get_spin_index(ik)) cycle
         do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
           call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
           call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
@@ -570,11 +570,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
     ! iterate over the kpoints for this spin
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+      if(ispin /= st%d%get_spin_index(ik)) cycle
 
       if(st%d%nik > st%d%spin_channels) then
         write(message(1), '(a)') ' '
-        write(message(2), '(a,i5)') 'LCAO for k-point ', states_elec_dim_get_kpoint_index(st%d, ik)
+        write(message(2), '(a,i5)') 'LCAO for k-point ', st%d%get_kpoint_index(ik)
         write(message(3), '(a)') ' '
         call messages_info(3)
       end if

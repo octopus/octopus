@@ -171,7 +171,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
 
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
+    ikpoint = st%d%get_kpoint_index(iq)
     if(st%d%kweights(iq) <= M_EPSILON) cycle
 
     do ib = st%group%block_start, st%group%block_end
@@ -427,7 +427,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, kpoints, x, lda_u_leve
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
+    ikpoint = st%d%get_kpoint_index(iq)
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
@@ -555,7 +555,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, kpoints, lr, lr2, fo
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
+    ikpoint = st%d%get_kpoint_index(iq)
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq)

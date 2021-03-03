@@ -2525,7 +2525,7 @@ contains
     SAFE_ALLOCATE(Nex_kpt(1:st%d%nik)) 
     Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
-      ikpt = states_elec_dim_get_kpoint_index(st%d, ik)
+      ikpt = st%d%get_kpoint_index(ik)
       call zstates_elec_calc_projections(st, gs_st, namespace, gr%mesh, ik, projections, gs_nst)
       do ist = 1, gs_nst
         weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 

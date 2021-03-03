@@ -1423,8 +1423,8 @@ contains
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
 !      end if
       do ik = 1, st%d%nik
-        is = states_elec_dim_get_spin_index(st%d, ik)
-        ikk = states_elec_dim_get_kpoint_index(st%d, ik)
+        is = st%d%get_spin_index(ik)
+        ikk = st%d%get_kpoint_index(ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
         do ist = 1, st%nst

@@ -41,8 +41,6 @@ module states_elec_dim_oct_m
     is_spin_down,                     &
     is_spin_up,                       &
     states_elec_choose_kpoints,            &
-    states_elec_dim_get_spin_index,        &
-    states_elec_dim_get_kpoint_index,      &
     kpoints_distribute
 
   !> Parameters...
@@ -69,6 +67,9 @@ module states_elec_dim_oct_m
     integer :: orth_method
     logical :: pack_states
     FLOAT   :: cl_states_mem
+  contains
+    procedure :: get_spin_index => states_elec_dim_get_spin_index
+    procedure :: get_kpoint_index => states_elec_dim_get_kpoint_index
   end type states_elec_dim_t
 
 contains
@@ -146,8 +147,8 @@ contains
 
   ! ---------------------------------------------------------
   integer pure function states_elec_dim_get_spin_index(this, iq) result(index)
-    type(states_elec_dim_t), intent(in) :: this
-    integer,                 intent(in) :: iq
+    class(states_elec_dim_t), intent(in) :: this
+    integer,                  intent(in) :: iq
 
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + mod(iq - 1, 2)
@@ -160,8 +161,8 @@ contains
 
   ! ---------------------------------------------------------
   integer pure function states_elec_dim_get_kpoint_index(this, iq) result(index)
-    type(states_elec_dim_t), intent(in) :: this
-    integer,                 intent(in) :: iq
+    class(states_elec_dim_t), intent(in) :: this
+    integer,                  intent(in) :: iq
     
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + (iq - 1)/2
@@ -200,7 +201,7 @@ contains
     SAFE_ALLOCATE(dd%kweights(1:dd%nik))
 
     do iq = 1, dd%nik
-      ik = states_elec_dim_get_kpoint_index(dd, iq)
+      ik = dd%get_kpoint_index(iq)
       dd%kweights(iq) = kpoints%get_weight(ik)
     end do
 

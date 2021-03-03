@@ -579,7 +579,7 @@ subroutine X(lr_calc_beta)(sh, namespace, space, gr, st, hm, xc, geo, em_lr, dip
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 
-                  ispin = states_elec_dim_get_spin_index(st%d, ik)
+                  ispin = st%d%get_spin_index(ik)
 
                   if (present(kdotp_em_lr) .and. u(2) <= space%periodic_dim) then
                     tmp(1:gr%mesh%np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:gr%mesh%np, idim, ist, ik)
@@ -699,7 +699,7 @@ contains
     SAFE_ALLOCATE(psi2(1:gr%mesh%np_part, 1:st%d%dim))
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       do ist = 1, st%nst
 
         call states_elec_get_state(st, gr%mesh, ist, ik, psi1)
@@ -999,7 +999,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
           call pert_setup_dir(pert_e(ii), dir(ii))
         end do
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_elec_dim_get_spin_index(st%d, ik)
+          ispin = st%d%get_spin_index(ik)
           weight = st%d%kweights(ik) * st%smear%el_per_state
           do ist = 1, st%nst
             if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -1335,7 +1335,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st,
   end if
   
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     weight = st%d%kweights(ik) * st%smear%el_per_state
     zpol_k(:,:,:) = M_ZERO
     do ii = 1, nfactor_ke
@@ -1774,7 +1774,7 @@ subroutine X(lr_calc_susceptibility_periodic)(namespace, space, symm, mesh, st, 
   
   do ik = st%d%kpt%start, st%d%kpt%end
     weight = st%d%kweights(ik)*st%smear%el_per_state
-    ispin = states_elec_dim_get_spin_index(st%d,ik)
+    ispin = st%d%get_spin_index(ik)
     do ist = 1, st%nst
       if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
@@ -2295,7 +2295,7 @@ subroutine X(inhomog_B)(sh, namespace, gr, st, hm, xc, geo, idir1, idir2, lr_k1,
     call lr_dealloc(lr0(1))
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       ik0 = ik - st%d%kpt%start + 1
       call X(calc_hvar_psi)(gr%mesh, st, ik, hvar(:, ispin, 1), psi_out(:, :, :, ik0, 1))
     end do
@@ -2744,7 +2744,7 @@ subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, id
     call X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, lr_b(1)%X(dl_psi)(:, :, :, ik), &
       lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), psi_out(:, :, :, ik0, 1))
     
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     call X(inhomog_BE)(namespace, gr, st, hm, geo, idir1, idir2, ik, add_hartree, add_fxc, hvar(:, ispin, 1), &
       lr_k(1)%X(dl_psi)(:, :, :, ik), lr_k(1)%X(dl_psi)(:, :, :, ik), lr_kk1(1)%X(dl_psi)(:, :, :, ik), &
       lr_kk2(1)%X(dl_psi)(:, :, :, ik), lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), &
@@ -2798,7 +2798,7 @@ subroutine X(inhomog_KE_tot)(sh, namespace, gr, st, hm, xc, geo, idir, nsigma, l
 
   do ik = st%d%kpt%start, st%d%kpt%end
     ik0 = ik - st%d%kpt%start + 1
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     do isigma = 1, nsigma
       call X(inhomog_EB)(gr%mesh, st, ik, add_hartree, add_fxc, hvar(:, ispin, isigma), lr_k(1)%X(dl_psi)(:, :, :, ik), &
         lr_kk(1)%X(dl_psi)(:, :, :, ik), factor_k, psi_out(:, :, :, ik0, isigma))
@@ -2871,7 +2871,7 @@ subroutine X(calc_rho)(mesh, st, factor, factor_sum, factor_e, factor_k, lr_e, l
   SAFE_ALLOCATE(psi1(1:mesh%np, 1:st%d%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     call X(mf_dotp_matrix)(mesh, st%nst, st%d%dim, &
       factor_k * lr_k%X(dl_psi)(:,:,:, ik), factor_e*lr_e%X(dl_psi)(:,:,:, ik), mat%X(matrix))
 

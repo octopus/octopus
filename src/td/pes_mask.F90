@@ -1372,7 +1372,7 @@ contains
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
               call pes_mask_Volkov_time_evolution_wf(mask, space, mesh, kpoints, dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
-                                                     states_elec_dim_get_kpoint_index(st%d, ik))
+                                                     st%d%get_kpoint_index(ik))
                                                      
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                 + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)

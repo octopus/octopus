@@ -431,7 +431,7 @@ contains
     SAFE_ALLOCATE(pkm(st%d%kpt%start:st%d%kpt%end, 1:st%nst))
     pkm(:, :) = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      iq = states_elec_dim_get_kpoint_index(st%d, ik) 
+      iq = st%d%get_kpoint_index(ik) 
 
       call fourier_shell_init(shell, zcube, gr%mesh, kk = sys%kpoints%reduced%red_point(:, iq))  
 

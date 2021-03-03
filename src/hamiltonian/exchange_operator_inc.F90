@@ -120,7 +120,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
   SAFE_ALLOCATE(pot(1:mesh%np))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st_d%dim))
 
-  ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
+  ikpoint = st_d%get_kpoint_index(psib%ik)
 
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
@@ -136,9 +136,9 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
 
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+      if(st_d%get_spin_index(ik2) /= st_d%get_spin_index(psib%ik)) cycle
 
-      ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
+      ikpoint2 = st_d%get_kpoint_index(ik2)
       !Down-sampling and q-grid
       if(st_d%nik > st_d%spin_channels) then
         if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
@@ -376,7 +376,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
   !We start by the contribution from states all present in memory
   do ik = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+    ikpoint = st%d%get_kpoint_index(ik)
     do ib = st%group%block_start, st%group%block_end
       !We treat a batch of states at the same time
       st_start =  st%group%block_range(ib, 1)
@@ -498,7 +498,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
       !For each wf we received, we compute the potentials 
       !using the local wfn
       if(icom<=nreceiv .and. node_fr > -1) then
-        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+        ikpoint = st%d%get_kpoint_index(ik)
         call local_contribution( .not. double_sided_communication  )
       end if
 
@@ -627,8 +627,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
       !Local contribution
       do ik2 = st%d%kpt%start, st%d%kpt%end
-        if(states_elec_dim_get_spin_index(st%d, ik2) /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-        ikpoint2 = states_elec_dim_get_kpoint_index(st%d, ik2)
+        if(st%d%get_spin_index(ik2) /= st%d%get_spin_index(ik)) cycle
+        ikpoint2 = st%d%get_kpoint_index(ik2)
 
         !Down-sampling and q-point
         if(use_external_kernel) then
@@ -1057,7 +1057,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, mesh, st_d, kpoi
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
     
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+      if(st_d%get_spin_index(ik2) /= st_d%get_spin_index(psib%ik)) cycle
 
       if(this%st%occ(ist, ik2) < M_EPSILON) cycle
 
@@ -1097,7 +1097,6 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, mesh, st_d, kpoi
 
   POP_SUB(X(exchange_operator_hartree_apply))
 end subroutine X(exchange_operator_hartree_apply)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

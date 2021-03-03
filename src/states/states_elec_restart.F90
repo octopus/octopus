@@ -232,7 +232,7 @@ contains
     do ik = 1, st%d%nik
       kpoint = M_ZERO
       kpoint(1:gr%sb%dim) = &
-        kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+        kpoints%get_point(st%d%get_kpoint_index(ik), absolute_coordinates = .true.)
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
@@ -554,7 +554,7 @@ contains
         end if
 
         kpoint(1:gr%sb%dim) = &
-          kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+          kpoints%get_point(st%d%get_kpoint_index(ik), absolute_coordinates = .true.)
         ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
         if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
           ! write only once for each k-point so as not to be too verbose

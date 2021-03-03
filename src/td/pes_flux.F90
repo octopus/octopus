@@ -1619,7 +1619,7 @@ contains
             
             if(this%surf_shape == PES_PLANE) then
               ! Apply the phase containing kpoint only
-              kpoint(1:mdim) = hm%kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
+              kpoint(1:mdim) = hm%kpoints%get_point(st%d%get_kpoint_index(ik))
 
               !$omp parallel do schedule(static)
               do ip = 1, mesh%np_part

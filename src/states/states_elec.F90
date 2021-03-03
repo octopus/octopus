@@ -1480,7 +1480,7 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
-        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+        ikpoint = st%d%get_kpoint_index(ik)
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
@@ -1522,7 +1522,7 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
-          ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+          ikpoint = st%d%get_kpoint_index(ik)
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
@@ -1845,8 +1845,8 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
-      is = states_elec_dim_get_spin_index(st%d, ik)
+      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
+      is = st%d%get_spin_index(ik)
 
       do ist = st%st_start, st_end_
         ww = st%d%kweights(ik)*st%occ(ist, ik)

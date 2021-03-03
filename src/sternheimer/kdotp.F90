@@ -515,8 +515,8 @@ contains
     write(iunit,'(a)') '# Band velocities'
 
     do ik = 1, st%d%nik
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
-      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
+      ik2 = st%d%get_kpoint_index(ik)
       tmp = int2str(ik2)
 
       write(iunit,'(a,i1,a,a)') '# spin = ', ispin, ', k-point = ', trim(tmp)
@@ -557,8 +557,8 @@ contains
     PUSH_SUB(kdotp_write_eff_mass)
 
     do ik = 1, st%d%nik
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
-      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
+      ik2 = st%d%get_kpoint_index(ik)
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
@@ -609,8 +609,8 @@ contains
     call messages_print_stress(stdout, 'Degenerate subspaces')
 
     do ik = 1, st%d%nik
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
-      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
+      ik2 = st%d%get_kpoint_index(ik)
 
       tmp = int2str(ik2)
       write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 

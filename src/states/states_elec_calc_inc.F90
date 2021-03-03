@@ -1055,7 +1055,7 @@ subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
       do idir = 1, der%mesh%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
@@ -1906,7 +1906,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolve
   do ist_global = 1, nst_tot
     ist = mod(ist_global - 1, nst) + 1
     ikpt = (ist_global - ist) / nst + 1
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
+    ikpoint = st%d%get_kpoint_index(ikpt)
 
     wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
     ASSERT(wfs%status() /= BATCH_DEVICE_PACKED)
@@ -1920,7 +1920,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolve
     do jst_global = 1, nst_tot
       jst = mod(jst_global - 1, nst) + 1
       jkpt = (jst_global - jst) / nst + 1
-      jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
+      jkpoint = st%d%get_kpoint_index(jkpt)
 
       if(exc_k_ .and. ist /= jst) cycle
 
