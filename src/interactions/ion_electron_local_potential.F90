@@ -1,3 +1,4 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !! Copyright (C) 2021 Nicolas Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -95,8 +96,8 @@ contains
     nullify(this%psolver)
     nullify(this%mesh)
 
-    ! Here we should define the quantities needed for the interaction
-    ! As electron nor ions are systems, this is not possible to do now.
+    !We do not need any system quantity here
+    this%n_system_quantities = 0
 
     POP_SUB(ion_electron_local_potential_constructor)
   end function ion_electron_local_potential_constructor
@@ -129,7 +130,7 @@ contains
     this%atoms_dist => geo%atoms_dist
     this%atom => geo%atom
     this%ignore_external_ions = geo%ignore_external_ions
-    this%space = geo%space
+    this%space => geo%space
 
     this%namespace => namespace
 
@@ -211,9 +212,9 @@ contains
 
     ! reduce over atoms if required
     if(this%atoms_dist%parallel) then
-      call comm_allreduce(this%atoms_dist%mpi_grp%comm, this%potential(:,1), dim = this%mesh%np)
+      call comm_allreduce(this%atoms_dist%mpi_grp, this%potential(:,1), dim = this%mesh%np)
       if(this%have_density) then
-        call comm_allreduce(this%atoms_dist%mpi_grp%comm, density, dim = this%mesh%np)
+        call comm_allreduce(this%atoms_dist%mpi_grp, density, dim = this%mesh%np)
       end if
     end if
 
