@@ -168,8 +168,9 @@ contains
 
     PUSH_SUB(box_image_write_info)
 
-    write(iunit,'(2x,3a,i6,a,i6)') 'Type = defined by image "', trim(this%filename), '"', this%image_size(1), ' x ', &
+    write(message(1),'(2x,3a,i6,a,i6)') 'Type = defined by image "', trim(this%filename), '"', this%image_size(1), ' x ', &
       this%image_size(2)
+    call messages_info(1, iunit)
 
     POP_SUB(box_image_write_info)
   end subroutine box_image_write_info

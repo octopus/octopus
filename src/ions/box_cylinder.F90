@@ -153,13 +153,14 @@ contains
 
     PUSH_SUB(box_cylinder_write_info)
 
-    write(iunit,'(2x,a)') 'Type = cylinder'
-    write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+    write(message(1),'(2x,a)') 'Type = cylinder'
+    write(message(2),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
       units_from_atomic(units_out%length, this%radius)
-    write(iunit,'(2x,3a,f7.3)') 'Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
+    write(message(3),'(2x,3a,f7.3)') 'Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
       units_from_atomic(units_out%length, this%half_length)
+    call messages_info(3, iunit)
 
-      POP_SUB(box_cylinder_write_info)
+    POP_SUB(box_cylinder_write_info)
   end subroutine box_cylinder_write_info
 
   !--------------------------------------------------------------

@@ -101,9 +101,10 @@ contains
 
     PUSH_SUB(box_sphere_write_info)
 
-    write(iunit,'(2x,a)') 'Type = sphere'
-    write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+    write(message(1),'(2x,a)') 'Type = sphere'
+    write(message(2),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
       units_from_atomic(units_out%length, this%radius)
+    call messages_info(2, iunit)
 
     POP_SUB(box_sphere_write_info)
   end subroutine box_sphere_write_info

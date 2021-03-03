@@ -131,12 +131,13 @@ contains
 
     PUSH_SUB(box_parallelepiped_write_info)
 
-    write(iunit,'(2x,a)') 'Type = parallelepiped'
-    write(iunit,'(2x,3a, 99(f8.3,a))') 'Lengths [', trim(units_abbrev(units_out%length)), '] = (', &
+    write(message(1),'(2x,a)') 'Type = parallelepiped'
+    write(message(2),'(2x,3a, 99(f8.3,a))') 'Lengths [', trim(units_abbrev(units_out%length)), '] = (', &
       (units_from_atomic(units_out%length, M_TWO*this%half_length(idir)), ',', idir = 1, this%dim - 1), &
       units_from_atomic(units_out%length, M_TWO*this%half_length(this%dim)), ')'
+    call messages_info(2, iunit)
 
-      POP_SUB(box_parallelepiped_write_info)
+    POP_SUB(box_parallelepiped_write_info)
   end subroutine box_parallelepiped_write_info
 
   !--------------------------------------------------------------

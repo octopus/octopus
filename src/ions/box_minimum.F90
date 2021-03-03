@@ -171,14 +171,17 @@ contains
 
     PUSH_SUB(box_minimum_write_info)
 
-    write(iunit, '(2x,a)') 'Type = minimum'
+    write(message(1), '(2x,a)') 'Type = minimum'
+    call messages_info(1, iunit)
     if (this%radius > M_ZERO) then
-      write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+      write(message(1),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, this%radius)
+      call messages_info(1, iunit)
     else
       do itype = 1, this%n_site_types
-        write(iunit,'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(itype)), 'Radius = ', &
+        write(message(1),'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(itype)), 'Radius = ', &
           units_from_atomic(units_out%length, this%site_type_radius(itype)), ' ', trim(units_abbrev(units_out%length))
+        call messages_info(1, iunit)
       end do
     end if
 
