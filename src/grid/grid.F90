@@ -153,15 +153,17 @@ contains
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
-    select type (box => gr%sb%box)
-    type is (box_image_t)
-      do idir = 1, space%dim
-        ! default grid_spacing is determined from the pixel size such that one grid point = one pixel.
-        if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = box%pixel_size(idir)
-        end if
-      end do
-    end select
+    if (associated(gr%sb%box)) then
+      select type (box => gr%sb%box)
+      type is (box_image_t)
+        do idir = 1, space%dim
+          ! default grid_spacing is determined from the pixel size such that one grid point = one pixel.
+          if(grid_spacing(idir) < M_ZERO) then
+            grid_spacing(idir) = box%pixel_size(idir)
+          end if
+        end do
+      end select
+    end if
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
