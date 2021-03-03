@@ -218,7 +218,7 @@ subroutine X(mesh_interpolation_test)(mesh)
 
   if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call MPI_Bcast(xx, MAX_DIM*ntest_points, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(xx, MAX_DIM*ntest_points, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
 
