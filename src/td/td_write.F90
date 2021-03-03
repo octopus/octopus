@@ -2435,7 +2435,7 @@ contains
       SAFE_DEALLOCATE_A(gspsi)
       SAFE_DEALLOCATE_A(psi)
 
-      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
+      call comm_allreduce(st%dom_st_kpt_mpi_grp, projections)
 
       ! n_dip is not defined for more than space%dim
       n_dip = geometry_dipole(geo)
@@ -2541,7 +2541,7 @@ contains
     end do
 
    if(st%parallel_in_states .or. st%d%kpt%parallel) then
-     call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex_kpt)
+     call comm_allreduce(st%st_kpt_mpi_grp, Nex_kpt)
    end if
 
   Nex = sum(Nex_kpt)
@@ -2599,7 +2599,7 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
 
-    call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
+    call comm_allreduce(st%dom_st_kpt_mpi_grp, projections)
 
 
     POP_SUB(calc_projections)
@@ -2668,8 +2668,8 @@ contains
         end if
       end do
       ! collect states at ik from all processes in one array
-      call comm_allreduce(mpi_world%comm, psi)
-      call comm_allreduce(mpi_world%comm, gs_psi)
+      call comm_allreduce(mpi_world, psi)
+      call comm_allreduce(mpi_world, gs_psi)
        
       ! compute the overlaps as a matrix product
       proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
@@ -2842,8 +2842,8 @@ contains
             end do
           end if
         end do
-        call comm_allreduce(mpi_world%comm, psi)
-        call comm_allreduce(mpi_world%comm, hpsi)
+        call comm_allreduce(mpi_world, psi)
+        call comm_allreduce(mpi_world, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
         call zgemm( 'n',                                  &
                     'c',                                  &
@@ -3034,7 +3034,7 @@ contains
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
     end do
     if(gr%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
+      call gr%mesh%allreduce(total_current, dim = gr%sb%dim)
     end if
 
     abs_current = CNST(0.0)
@@ -3045,7 +3045,7 @@ contains
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
     end do
     if(gr%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%mesh%mpi_grp%comm, abs_current, dim = gr%sb%dim)
+      call gr%mesh%allreduce(abs_current, dim = gr%sb%dim)
     end if
 
    if(mpi_grp_is_root(mpi_world)) then
@@ -3060,7 +3060,7 @@ contains
                                dmf_integrate(gr%mesh, st%current(:, idir, ispin), reduce = .false.))
       end do
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
+        call gr%mesh%allreduce(total_current, dim = gr%sb%dim)
       end if
       if(mpi_grp_is_root(mpi_world)) &
         call write_iter_double(out_total_current, total_current, gr%sb%dim)

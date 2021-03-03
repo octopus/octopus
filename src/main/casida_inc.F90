@@ -56,7 +56,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, zx)
+      call mesh%allreduce(zx)
     end if
 
     ! intensity
@@ -98,7 +98,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           end do
 
           if(mesh%parallel_in_domains) then
-            call comm_allreduce(mesh%mpi_grp%comm, zx)
+            call mesh%allreduce(zx)
           end if
           
 
@@ -186,7 +186,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   end do
 
   if(mesh%parallel_in_domains) then
-    call comm_allreduce(mesh%mpi_grp%comm, xx)
+    call mesh%allreduce(xx)
   end if
 
   SAFE_DEALLOCATE_A(ff)
@@ -715,7 +715,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   ! sum all matrix elements
   if(cas%parallel_in_eh_pairs .and. .not. cas%distributed_matrix) then
-    call comm_allreduce(cas%mpi_grp%comm, matrix)
+    call comm_allreduce(cas%mpi_grp, matrix)
   end if
   if(cas%distributed_matrix) then
 #ifdef HAVE_SCALAPACK
@@ -739,7 +739,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   if(.not. cas%has_photons) then
     if(cas%distributed_matrix) then
-      call comm_allreduce(cas%mpi_grp%comm, rank_of_element)
+      call comm_allreduce(cas%mpi_grp, rank_of_element)
       ! we subtract 1 again here; thus elements not associated to any rank
       ! are now negative
       rank_of_element = rank_of_element - 1

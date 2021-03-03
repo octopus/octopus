@@ -599,11 +599,11 @@ subroutine pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
 
 
 !   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-!     call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
+!     call comm_allreduce(st%st_kpt_mpi_grp, pesKloc)
 !   end if
 
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, pesKloc)
+    call comm_allreduce(st%mpi_grp, pesKloc)
   end if
 
   

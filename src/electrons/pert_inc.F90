@@ -1016,7 +1016,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
     
   end do
 
-  if(st%parallel_in_states) call comm_allreduce(st%mpi_grp%comm, expval)
+  if(st%parallel_in_states) call comm_allreduce(st%mpi_grp, expval)
 
 
   POP_SUB(X(pert_states_elec_expectation_value))

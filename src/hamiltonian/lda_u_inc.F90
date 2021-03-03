@@ -421,13 +421,13 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   SAFE_DEALLOCATE_A(muliken_charge)
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
+    call comm_allreduce(st%st_kpt_mpi_grp, this%X(n))
     if(this%level == DFT_U_ACBN0) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
+      call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt))
       if(this%intersite) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_ij))
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt_ij))
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt_ii))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_ij))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt_ij))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt_ii))
       end if
     end if
   end if
@@ -579,7 +579,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
+    call comm_allreduce(this%orbs_dist%mpi_grp, this%X(V))
   end if
 
   POP_SUB(lda_u_update_potential)
@@ -1204,11 +1204,11 @@ subroutine X(compute_coulomb_integrals) (this, namespace, space, mesh, der, psol
   end do !iorb
 
   if(mesh%parallel_in_domains) then 
-    call comm_allreduce(mesh%mpi_grp%comm, this%coulomb)
+    call mesh%allreduce(this%coulomb)
   end if 
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
+    call comm_allreduce(this%orbs_dist%mpi_grp, this%coulomb)
   end if
 
   SAFE_DEALLOCATE_A(nn)
@@ -1553,7 +1553,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       end if
     end do !ios
  
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, dot) 
+    if(mesh%parallel_in_domains) call mesh%allreduce(dot)
 
     do ios = 1, this%norbsets
        os => this%orbsets(ios)

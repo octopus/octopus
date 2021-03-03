@@ -252,8 +252,8 @@ contains
         end do !jatom
       end do !iatom
 
-      call comm_allreduce(this%dist%mpi_grp%comm, energy)
-      call comm_allreduce(this%dist%mpi_grp%comm, force)
+      call comm_allreduce(this%dist%mpi_grp, energy)
+      call comm_allreduce(this%dist%mpi_grp, force)
       
     end if
 
@@ -333,8 +333,8 @@ contains
       call periodic_copy_end(pc)
     end do
 
-    call comm_allreduce(this%dist%mpi_grp%comm, ereal)
-    call comm_allreduce(this%dist%mpi_grp%comm, force)
+    call comm_allreduce(this%dist%mpi_grp, ereal)
+    call comm_allreduce(this%dist%mpi_grp, force)
 
     if(present(force_components)) then
       force_components(1:space%dim, 1:natoms, ION_COMPONENT_REAL) = force(1:space%dim, 1:natoms)
@@ -352,8 +352,8 @@ contains
       charge = charge + zi
       eself = eself - this%alpha/sqrt(M_PI)*zi**2
     end do
-    call comm_allreduce(this%dist%mpi_grp%comm, eself)
-    call comm_allreduce(this%dist%mpi_grp%comm, charge)
+    call comm_allreduce(this%dist%mpi_grp, eself)
+    call comm_allreduce(this%dist%mpi_grp, charge)
 
 ! Long range part of Ewald sum
     select case(space%periodic_dim)
@@ -395,7 +395,7 @@ contains
                   (spec_ps%sigma_erf*sqrt(M_TWO))**2/rcell_volume*charge
           end if
        end do
-       call comm_allreduce(this%dist%mpi_grp%comm, epseudo)
+       call comm_allreduce(this%dist%mpi_grp, epseudo)
 
        energy = energy + epseudo
     end if
@@ -668,8 +668,8 @@ contains
       end do
     end do
 
-    call comm_allreduce(this%dist%mpi_grp%comm, efourier)
-    call comm_allreduce(this%dist%mpi_grp%comm, force_tmp)
+    call comm_allreduce(this%dist%mpi_grp, efourier)
+    call comm_allreduce(this%dist%mpi_grp, force_tmp)
 
     force = force + force_tmp
 

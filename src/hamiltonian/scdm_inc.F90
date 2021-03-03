@@ -93,7 +93,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     SCDM_temp(1:mesh%np,ii) = temp_column(1:mesh%np)
   end do
   ! the above is a prtial sum in states distribution
-  call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np, nval/))
+  call comm_allreduce(scdm%st_grp, SCDM_temp, (/mesh%np, nval/))
   call profiling_out(prof_scdm_matmul1)
 
   SAFE_DEALLOCATE_A(temp_state)
@@ -111,7 +111,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
       end do
     end do
   end do
-  call comm_allreduce(scdm%st_grp%comm,Pcc)
+  call comm_allreduce(scdm%st_grp,Pcc)
   SAFE_DEALLOCATE_A(SCDM_matrix)
 
   ! Cholesky fact.
@@ -178,7 +178,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
   end do
     ! reduce to world, since the above can be state+domain distribution
-  call comm_allreduce(mpi_world%comm, scdm%center)
+  call comm_allreduce(mpi_world, scdm%center)
 
   SAFE_DEALLOCATE_A(lxyz_domains)
   SAFE_DEALLOCATE_A(lxyz_global)
@@ -328,11 +328,11 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   ! the boxed SCDM states as well as their mapping boxes need to be available globally
   ! NOTE: strictly speaking only within their respective scdm%st_exx_grp, but that requires
   !       some more complicated communication, so for now this is global
-  call comm_allreduce(scdm%st_grp%comm, scdm%X(psi))
-  call comm_allreduce(scdm%st_grp%comm, scdm%box)
+  call comm_allreduce(scdm%st_grp, scdm%X(psi))
+  call comm_allreduce(scdm%st_grp, scdm%box)
 
   ! sum of the error of the norm of SCDM states by truncating them
-  call comm_allreduce(scdm%st_grp%comm, error)
+  call comm_allreduce(scdm%st_grp, error)
 
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM localization error:', error/st%nst)
 
@@ -573,7 +573,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
           call vec_gather(mesh%vp, 0, temp_state(1:mesh%np,1), state_global)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
-        call comm_allreduce(mpi_world%comm,sender)
+        call comm_allreduce(mpi_world,sender)
 #ifdef HAVE_MPI
         call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
 #endif

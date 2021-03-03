@@ -1274,7 +1274,7 @@ contains
       rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is), reduce = .false.)
     end do
     if(gr%fine%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+      call gr%fine%mesh%allreduce(rr)
     end if
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
@@ -1289,7 +1289,7 @@ contains
       rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is),  reduce = .false.)
     end do
     if(gr%fine%mesh%parallel_in_domains) then
-      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+      call gr%fine%mesh%allreduce(rr)
     end if
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr

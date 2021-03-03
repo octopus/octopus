@@ -722,7 +722,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
   ! reduce the projections
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(VNLPSI_MAT_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, projection%X(projection))
+    call mesh%allreduce(projection%X(projection))
     call profiling_out(reduce_prof)
   end if
 
@@ -1184,7 +1184,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim,
 
   if(mesh%parallel_in_domains) then
     call profiling_in(prof_matelement_reduce, TOSTRING(X(VNLPSI_MAT_ELEM_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, projs)
+    call mesh%allreduce(projs)
     call profiling_out(prof_matelement_reduce)
   end if
   
@@ -1417,7 +1417,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   ! reduce the projections
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(COMMUTATOR_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, projections)
+    call mesh%allreduce(projections)
     call profiling_out(reduce_prof)
   end if
 
@@ -1585,7 +1585,7 @@ contains
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(proj(1:4*this%full_projection_size*psib%pack_size_real(1)))
       call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
-      call comm_allreduce(mesh%mpi_grp%comm, proj)
+      call mesh%allreduce(proj)
       call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
       SAFE_DEALLOCATE_A(proj)
     end if

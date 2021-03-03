@@ -543,10 +543,10 @@ contains
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
         ! total spectrum = sum over all states
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
+        call comm_allreduce(st%st_kpt_mpi_grp, spctrout)
 
         ! orbital spectra
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
+        call comm_allreduce(st%st_kpt_mpi_grp, spctrsum)
       end if
 
       ! -----------------------------------------------------------------

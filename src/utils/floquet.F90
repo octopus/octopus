@@ -242,8 +242,8 @@ contains
             end do
           end if
         end do
-        call comm_allreduce(mpi_world%comm, psi)
-        call comm_allreduce(mpi_world%comm, hpsi)
+        call comm_allreduce(mpi_world, psi)
+        call comm_allreduce(mpi_world, hpsi)
         hmss(1:nst, 1:nst) = M_ZERO
         call zgemm( 'n',                                  &
                     'c',                                  &

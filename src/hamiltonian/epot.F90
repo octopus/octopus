@@ -425,11 +425,11 @@ contains
     if(geo%atoms_dist%parallel) then
       call profiling_in(epot_reduce, "EPOT_REDUCE")
 
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ep%vpsl, dim = gr%mesh%np)
+      call comm_allreduce(geo%atoms_dist%mpi_grp, ep%vpsl, dim = gr%mesh%np)
       if (allocated(st%rho_core)) &
-        call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
+        call comm_allreduce(geo%atoms_dist%mpi_grp, st%rho_core, dim = gr%mesh%np)
       if(ep%have_density) &
-        call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
+        call comm_allreduce(geo%atoms_dist%mpi_grp, density, dim = gr%mesh%np)
       call profiling_out(epot_reduce)
     end if
 

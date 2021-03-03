@@ -548,7 +548,7 @@ contains
     end do !ik
 
     if(st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, ake)
+      call comm_allreduce(st%st_kpt_mpi_grp, ake)
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
