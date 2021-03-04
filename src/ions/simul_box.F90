@@ -90,7 +90,6 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    FLOAT :: rcell_volume                        !< the volume of the cell in real space
     type(lattice_vectors_t) :: latt
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -129,7 +128,7 @@ contains
 
     call read_box()                        ! Parameters defining the simulation box.
 
-    call lattice_vectors_init(sb%latt, namespace, space, sb%lsize, sb%rcell_volume)       ! Build lattice vectors.
+    call lattice_vectors_init(sb%latt, namespace, space, sb%lsize) ! Build lattice vectors.
 
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
     select case (sb%box_shape)
@@ -588,7 +587,7 @@ contains
       call messages_info(2+this%dim, iunit)
 
       write(message(1),'(a,f18.4,3a,i1.1,a)') &
-        '  Cell volume = ', units_from_atomic(units_out%length**this%dim, this%rcell_volume), &
+        '  Cell volume = ', units_from_atomic(units_out%length**this%dim, this%latt%rcell_volume), &
         ' [', trim(units_abbrev(units_out%length**this%dim)), ']'
       call messages_info(1, iunit)
 

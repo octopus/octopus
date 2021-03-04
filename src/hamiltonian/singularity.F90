@@ -186,7 +186,7 @@ contains
 
         this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint, sb%latt%klattice) * kpoints%full%weight(ik2)
       end do
-      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume
+      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%latt%rcell_volume
     end do
 
     if(dist_kpt%parallel) then
@@ -223,7 +223,7 @@ contains
 
       this%FF = M_ZERO
       length = M_ONE
-      kvol_element = (M_ONE/(M_TWO*Nk+M_ONE))**3*((M_TWO*M_PI)**3)/sb%rcell_volume
+      kvol_element = (M_ONE/(M_TWO*Nk+M_ONE))**3*((M_TWO*M_PI)**3)/sb%latt%rcell_volume
       do istep = 1, Nsteps
 
         do ikx = 0, Nk
@@ -251,17 +251,17 @@ contains
       !We multiply by 4*pi/((2*pi)^3)
       this%FF = this%FF*CNST(8.0)*M_PI/((M_TWO*M_PI)**3)
       !The remaining part is treated as a spherical BZ
-      this%FF = this%FF + SINGUL_CNST*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume*length
+      this%FF = this%FF + SINGUL_CNST*(sb%latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%latt%rcell_volume*length
 
     else if(this%coulomb_singularity == SINGULARITY_GYGI) then
       !See Eq. (7) of PRB 34, 4405 (1986)
       !Here we use the fact that the fcc volume is a^3/4
-      this%FF = CNST(4.423758)*(sb%rcell_volume*CNST(4.0))**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
+      this%FF = CNST(4.423758)*(sb%latt%rcell_volume*CNST(4.0))**(CNST(2.0/3.0))/M_PI/sb%latt%rcell_volume
 
     else
       !The constant is 4*pi*(3/(4*pi))^1/3
       !We multiply by 4*pi/(2*pi^3)
-      this%FF = SINGUL_CNST*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
+      this%FF = SINGUL_CNST*(sb%latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%latt%rcell_volume
     end if
 
     if(debug%info) then
@@ -303,7 +303,7 @@ contains
           +(M_TWO*sin(qq(3)*M_PI)*sin(qq(3)*M_PI)*dot_product(klattice(1:3,3),klattice(1:3,3))  &
          +sin(qq(3)*M_TWO*M_PI)*sin(qq(1)*M_TWO*M_PI)*dot_product(klattice(1:3,3),klattice(1:3,1)))))
       else
-        half_a = M_HALF*(sb%rcell_volume*CNST(4.0))**(CNST(1.0/3.0))
+        half_a = M_HALF*(sb%latt%rcell_volume*CNST(4.0))**(CNST(1.0/3.0))
         call kpoints_to_absolute(klattice, qq, qq_abs, 3)
         !See Eq. (6) of PRB 34, 4405 (1986)
         ff = (half_a)**2/(M_THREE-cos(qq_abs(1)*half_a)*cos(qq_abs(2)*half_a) &

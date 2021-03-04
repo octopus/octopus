@@ -236,7 +236,7 @@ program dielectric_function
     
     dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
 
-    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(M_FOUR*M_PI)
+    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%latt%rcell_volume/(M_FOUR*M_PI)
   end do
 
   SAFE_DEALLOCATE_A(fullmat)

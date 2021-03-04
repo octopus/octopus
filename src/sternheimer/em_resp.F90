@@ -1207,7 +1207,7 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
+        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%latt%rcell_volume
       do idir = 1, gr%sb%dim
         epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
       end do
@@ -1223,7 +1223,7 @@ contains
         write(iunit, '(a)') '# Without G = G'' = 0 term of the LRC kernel'
 
         epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
+          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%latt%rcell_volume
         do idir = 1, gr%sb%dim
           epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
         end do
@@ -1242,7 +1242,7 @@ contains
         do ik = 1, hm%kpoints%reduced%npoints
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
-              epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / gr%sb%rcell_volume
+              epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / gr%sb%latt%rcell_volume
             end do
           end do
         end do
@@ -1495,10 +1495,10 @@ contains
         diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
           em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir))
 
-        epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%rcell_volume
+        epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%latt%rcell_volume
       end do
       diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
-      epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
+      epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%latt%rcell_volume
   
       iunit = io_open(trim(dirname)//'/alpha_mo', namespace, action='write')
   
@@ -1545,10 +1545,10 @@ contains
           diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
             em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
 
-          epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%rcell_volume
+          epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%latt%rcell_volume
         end do
         diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
-        epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
+        epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%latt%rcell_volume
 
         write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
         write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
@@ -1605,7 +1605,7 @@ contains
           write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
           do idir = 1, gr%sb%dim
             eps_mk(idir) = M_TWO * M_PI * (em_vars%alpha_be_k(magn_dir(idir, 1), magn_dir(idir, 2), idir, ik) - &
-              em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / gr%sb%rcell_volume
+              em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / gr%sb%latt%rcell_volume
           end do
 
           do idir = 1, gr%sb%dim

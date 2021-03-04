@@ -719,7 +719,7 @@ contains
       end if
     end do
 
-    tb09_c =  dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume
+    tb09_c =  dmf_integrate(der%mesh, gnon)/der%mesh%sb%latt%rcell_volume
 
     SAFE_DEALLOCATE_A(gnon)
 
@@ -798,7 +798,7 @@ contains
       end if
     end do
 
-    parameters(1) =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
+    parameters(1) =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%latt%rcell_volume)
 
     call xc_f03_func_set_ext_params(functl(1)%conf, parameters)
 

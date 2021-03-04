@@ -42,18 +42,18 @@ module lattice_vectors_oct_m
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
+    FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal
   end type lattice_vectors_t
 
 contains
 
   !--------------------------------------------------------------
-  subroutine lattice_vectors_init(latt, namespace, space, lsize, cell_volume)
+  subroutine lattice_vectors_init(latt, namespace, space, lsize)
     type(lattice_vectors_t), intent(inout) :: latt
     type(namespace_t),       intent(in)    :: namespace
     type(space_t),           intent(in)    :: space
     FLOAT,                   intent(inout) :: lsize(:)
-    FLOAT,                   intent(out)   :: cell_volume
 
     type(block_t) :: blk
     FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
@@ -174,7 +174,7 @@ contains
       end do
     end do
 
-    call reciprocal_lattice(latt%rlattice, latt%klattice, cell_volume, space%dim, namespace)
+    call reciprocal_lattice(latt%rlattice, latt%klattice, latt%rcell_volume, space%dim, namespace)
     latt%klattice = latt%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)

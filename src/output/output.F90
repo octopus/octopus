@@ -1403,7 +1403,7 @@ contains
 
       adot(1:3, 1:3) = matmul(gr%sb%latt%rlattice(1:3, 1:3), gr%sb%latt%rlattice(1:3, 1:3))
       bdot(1:3, 1:3) = matmul(gr%sb%latt%klattice(1:3, 1:3), gr%sb%latt%klattice(1:3, 1:3))
-      recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+      recvol = (M_TWO * M_PI)**3 / gr%sb%latt%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%symm)
@@ -1478,7 +1478,7 @@ contains
         symmetries_number(gr%symm), 0, geo%natoms, &
         hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
         ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
-        gr%sb%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
+        gr%sb%latt%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
         M_ONE, gr%sb%latt%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
