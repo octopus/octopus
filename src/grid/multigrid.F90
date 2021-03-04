@@ -213,7 +213,7 @@ contains
     type(transfer_table_t), intent(inout) :: tt
     type(mesh_t),           intent(in)    :: fine, coarse
 
-    integer :: i, i1, i2, i4, i8, pt, ig
+    integer :: i, i1, i2, i4, i8, pt
     integer :: x(MAX_DIM), mod2(MAX_DIM), idx(MAX_DIM)
 
     PUSH_SUB(multigrid_get_transfer_tables)
@@ -223,15 +223,9 @@ contains
 
     ! GENERATE THE TABLE TO MAP FROM THE FINE TO THE COARSE GRID
     do i = 1, tt%n_coarse
-      ig = i
-      ! translate to a global index of the coarse grid
-      if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
-      ! locate the equivalent global fine grid point
-      call mesh_global_index_to_coords(coarse, ig, idx)
-      ig = mesh_global_index_from_coords(fine, 2*idx)
-      ! translate to a local number of the fine grid
-      if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig)
-      tt%to_coarse(i) = ig
+      ! locate the equivalent fine grid point
+      call mesh_local_index_to_coords(coarse, i, idx)
+      tt%to_coarse(i) = mesh_local_index_from_coords(fine, 2*idx)
     end do
 
     ! count
@@ -243,10 +237,7 @@ contains
     tt%n_fine4 = 0
     tt%n_fine8 = 0
     do i = 1, tt%n_fine
-      ig = i
-      ! translate to a global index
-      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      call mesh_global_index_to_coords(fine, ig, idx)
+      call mesh_local_index_to_coords(fine, i, idx)
       mod2 = mod(idx, 2)
       
       pt = sum(abs(mod2(1:3)))
@@ -277,8 +268,7 @@ contains
     ! and now build the tables
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
     do i = 1, fine%np
-      ig = i
-      call mesh_local_index_to_coords(fine, ig, idx)
+      call mesh_local_index_to_coords(fine, i, idx)
       x(1:3)    = idx(1:3)/2
       mod2(1:3) = mod(idx(1:3), 2)
 
