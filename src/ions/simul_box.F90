@@ -561,8 +561,6 @@ contains
       'image-defined ', &
       'hypercube     '/)
 
-    integer :: idir, idir2
-
     PUSH_SUB(simul_box_write_info)
 
     write(iunit,'(a)') 'Simulation Box:'
@@ -579,32 +577,8 @@ contains
 
     if(this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
-      write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
-      do idir = 1, this%dim
-        write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%latt%rlattice(idir2, idir)), &
-          idir2 = 1, this%dim) 
-      end do
-      call messages_info(2+this%dim, iunit)
-
-      write(message(1),'(a,f18.4,3a,i1.1,a)') &
-        '  Cell volume = ', units_from_atomic(units_out%length**this%dim, this%latt%rcell_volume), &
-        ' [', trim(units_abbrev(units_out%length**this%dim)), ']'
       call messages_info(1, iunit)
-
-      write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
-      do idir = 1, this%dim
-        write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, this%latt%klattice(idir2, idir)), &
-          idir2 = 1, this%dim)
-      end do
-      call messages_info(1+this%dim, iunit)
-
-      if(this%dim == 3) then
-        write(message(1),'(a)') '  Cell angles [degree]'
-        write(message(2),'(a, f8.3)') '    alpha = ', this%latt%alpha
-        write(message(3),'(a, f8.3)') '    beta  = ', this%latt%beta
-        write(message(4),'(a, f8.3)') '    gamma = ', this%latt%gamma
-        call messages_info(4, iunit)
-      end if
+      call this%latt%write_info(iunit)
     end if
 
     POP_SUB(simul_box_write_info)
