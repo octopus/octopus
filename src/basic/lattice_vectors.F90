@@ -41,13 +41,12 @@ module lattice_vectors_oct_m
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     logical :: nonorthogonal
-
   end type lattice_vectors_t
 
 contains
 
   subroutine build_metric_from_angles(this, angles)
-    type(lattice_vectors_t),    intent(inout) :: this
+    type(lattice_vectors_t), intent(inout) :: this
     FLOAT,                   intent(in)    :: angles(3)
 
     FLOAT :: cosang, a2, aa, cc
@@ -57,46 +56,41 @@ contains
    
     !Converting the angles to LatticeVectors
     !See 57_iovars/ingeo.F90 in Abinit for details
-    if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-      (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
+    if (abs(angles(1) - angles(2)) < tol_angle .and. abs(angles(2) - angles(3)) < tol_angle .and.  &
+      (abs(angles(1) - CNST(90.0)) + abs(angles(2) - CNST(90.0)) + abs(angles(3) - CNST(90.0))) > tol_angle) then
 
-      cosang=cos(M_PI*angles(1)/CNST(180.0));
-      a2=M_TWO/M_THREE*(M_ONE-cosang);
-      aa=sqrt(a2);
-      cc=sqrt(M_ONE-a2);
-      this%rlattice_primitive(1,1) = aa
-      this%rlattice_primitive(2,1) = M_ZERO
-      this%rlattice_primitive(3,1) = cc
-      this%rlattice_primitive(1,2) =-M_HALF*aa
-      this%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-      this%rlattice_primitive(3,2) = cc
-      this%rlattice_primitive(1,3) =-M_HALF*aa
-      this%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
-      this%rlattice_primitive(3,3) = cc
+      cosang = cos(M_PI*angles(1)/CNST(180.0))
+      a2 = M_TWO/M_THREE*(M_ONE - cosang)
+      aa = sqrt(a2)
+      cc = sqrt(M_ONE - a2)
+      this%rlattice_primitive(1, 1) =  aa
+      this%rlattice_primitive(2, 1) =  M_ZERO
+      this%rlattice_primitive(3, 1) =  cc
+      this%rlattice_primitive(1, 2) = -M_HALF*aa
+      this%rlattice_primitive(2, 2) =  M_HALF*sqrt(M_THREE)*aa
+      this%rlattice_primitive(3, 2) =  cc
+      this%rlattice_primitive(1, 3) = -M_HALF*aa
+      this%rlattice_primitive(2, 3) = -M_HALF*sqrt(M_THREE)*aa
+      this%rlattice_primitive(3, 3) =  cc
     else
-      this%rlattice_primitive(1,1) = M_ONE
-      this%rlattice_primitive(2,1) = M_ZERO
-      this%rlattice_primitive(3,1) = M_ZERO
-      this%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
-      this%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-      this%rlattice_primitive(3,2) = M_ZERO
-      this%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
-      this%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-this%rlattice_primitive(1,2)* this%rlattice_primitive(1,3))&
-                                       /this%rlattice_primitive(2,2)
-      this%rlattice_primitive(3,3) = sqrt(M_ONE-this%rlattice_primitive(1,3)**2-this%rlattice_primitive(2,3)**2)
+      this%rlattice_primitive(1, 1) = M_ONE
+      this%rlattice_primitive(2, 1) = M_ZERO
+      this%rlattice_primitive(3, 1) = M_ZERO
+      this%rlattice_primitive(1, 2) = cos(M_PI*angles(3)/CNST(180.0))
+      this%rlattice_primitive(2, 2) = sin(M_PI*angles(3)/CNST(180.0))
+      this%rlattice_primitive(3, 2) = M_ZERO
+      this%rlattice_primitive(1, 3) = cos(M_PI*angles(2)/CNST(180.0))
+      this%rlattice_primitive(2, 3) = (cos(M_PI*angles(1)/CNST(180.0)) - &
+                                      this%rlattice_primitive(1, 2)*this%rlattice_primitive(1, 3))/this%rlattice_primitive(2,2)
+      this%rlattice_primitive(3, 3) = sqrt(M_ONE - this%rlattice_primitive(1, 3)**2 - this%rlattice_primitive(2, 3)**2)
     end if
 
-    if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
-      this%nonorthogonal = .true.
-    else
-      this%nonorthogonal = .false.
-    end if
+    this%nonorthogonal = any(abs(angles - CNST(90.0)) > M_EPSILON)
 
     POP_SUB(build_metric_from_angles)
   end subroutine build_metric_from_angles
 
-
-    !--------------------------------------------------------------
+  !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume, dim, namespace)
     FLOAT,             intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
     FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
@@ -111,15 +105,15 @@ contains
 
     kv(:,:) = M_ZERO
 
-    select case(dim)
-    case(3)
+    select case (dim)
+    case (3)
       cross(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
       volume = dot_product(rv(1:3, 1), cross(1:3))
 
       kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
       kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
       kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
-    case(2)
+    case (2)
       rv3(1:3, 1:3) = M_ZERO
       rv3(1:2, 1:2) = rv(1:2, 1:2)
       rv3(3, 3) = M_ONE
@@ -128,7 +122,7 @@ contains
 
       kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
       kv(1:3, 2) = dcross_product(rv3(:, 3), rv3(:, 1))/volume
-    case(1)
+    case (1)
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
@@ -142,14 +136,13 @@ contains
       end do
     end select
 
-    if ( volume < M_ZERO ) then 
+    if (volume < M_ZERO) then
       message(1) = "Your lattice vectors form a left-handed system."
       call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
-
 
 end module lattice_vectors_oct_m
 
