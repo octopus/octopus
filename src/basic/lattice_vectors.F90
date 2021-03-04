@@ -37,6 +37,7 @@ module lattice_vectors_oct_m
 
   type lattice_vectors_t
     ! Components are public by default
+    integer, private :: dim
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -62,6 +63,8 @@ contains
     FLOAT :: angles(1:MAX_DIM)
 
     PUSH_SUB(lattice_vector_init)
+
+    latt%dim = space%dim
 
     latt%alpha = CNST(90.0)
     latt%beta  = CNST(90.0)
