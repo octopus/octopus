@@ -29,7 +29,6 @@ module epot_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
   use kpoints_oct_m
-  use lasers_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -66,7 +65,6 @@ module epot_oct_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_have_lasers,              &
     epot_have_kick,                &
     epot_have_external_potentials
 
@@ -94,9 +92,7 @@ module epot_oct_m
     integer                        :: natoms
 
     ! External e-m fields
-    integer                    :: no_lasers            !< number of laser pulses used
-    type(laser_t), allocatable :: lasers(:)            !< lasers stuff
-    FLOAT,         allocatable :: E_field(:)           !< static electric field
+    FLOAT, allocatable     :: E_field(:)           !< static electric field
     FLOAT, allocatable     :: v_static(:)          !< static scalar potential
     FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
     FLOAT, allocatable     :: B_field(:)           !< static magnetic field
@@ -219,9 +215,6 @@ contains
         call epot_generate_classical(ep, gr%mesh, geo)
       end if
     end if
-
-    ! lasers
-    call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh, kpoints)
 
     call kick_init(ep%kick, namespace, gr%sb, kpoints, ispin)
 
@@ -357,9 +350,6 @@ contains
 
 
     call kick_end(ep%kick)
-
-    ! the external laser
-    call laser_end(ep%no_lasers, ep%lasers)
 
     ! the macroscopic fields
     SAFE_DEALLOCATE_A(ep%E_field)
@@ -682,21 +672,6 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical function epot_have_lasers(ep)
-    type(epot_t), intent(in)  :: ep
-
-    PUSH_SUB(epot_have_lasers)
-
-    epot_have_lasers = .false.
-
-    if( ep%no_lasers /= 0 ) epot_have_lasers = .true.
-
-    POP_SUB(epot_have_lasers)
-
-  end function epot_have_lasers
-
-  ! ---------------------------------------------------------
-
   logical function epot_have_kick(ep)
     type(epot_t), intent(in)  :: ep
 
@@ -719,7 +694,7 @@ contains
 
     epot_have_external_potentials =  .false.
 
-    if( allocated(ep%v_static) .or. allocated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
+    if( allocated(ep%v_static) .or. allocated(ep%E_field) ) epot_have_external_potentials = .true.
 
     POP_SUB(epot_have_external_potentials)
 

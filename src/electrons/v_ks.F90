@@ -1401,7 +1401,7 @@ contains
       !! Static potentials are included in subroutine hamiltonian_elec_epot_generate (module hamiltonian).
       !! The sign convention for typical potentials and kick are different...
       if( hm%pcm%localf .and. ks%calc%time_present ) then
-        laser_present = epot_have_lasers( hm%ep )
+        laser_present = (hm%ext_lasers%no_lasers > 0)
         kick_present  = epot_have_kick(   hm%ep )
         if ( laser_present .and. kick_present ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
@@ -1409,8 +1409,8 @@ contains
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           potx = M_ZERO
           kick = M_ZERO
-          do ii = 1, hm%ep%no_lasers        
-            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          do ii = 1, hm%ext_lasers%no_lasers        
+            call laser_potential(hm%ext_lasers%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           kick_real = M_ZERO
           kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
@@ -1427,8 +1427,8 @@ contains
         else if ( laser_present .and. .not.kick_present ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
-          do ii = 1, hm%ep%no_lasers        
-            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          do ii = 1, hm%ext_lasers%no_lasers        
+            call laser_potential(hm%ext_lasers%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)

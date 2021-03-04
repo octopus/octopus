@@ -183,6 +183,9 @@ module hamiltonian_elec_oct_m
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
 
+    ! At the moment this is not treated as an external potential
+    class(lasers_t), pointer :: ext_lasers => null()      !< lasers 
+
   contains
     procedure :: update_span => hamiltonian_elec_span
     procedure :: dapply => dhamiltonian_elec_apply
@@ -325,11 +328,15 @@ contains
       hm%psolver_fine => hm%psolver
     end if
   
-    !Initialize external potential
+    ! Initialize external potential
     call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb, hm%kpoints)
+
+    ! Temporary place for the initialization of the lasers
+    hm%ext_lasers => lasers_t(namespace, gr%mesh)
+    call lasers_check_symmetries(hm%ext_lasers, kpoints)
 
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (parse_is_defined(namespace, 'StaticMagneticField') .or. gauge_field_is_applied(hm%ep%gfield) .or. &
@@ -532,8 +539,8 @@ contains
       end if
 
       if (.not. space%is_periodic()) then
-        do il = 1, hm%ep%no_lasers
-          if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
+        do il = 1, hm%ext_lasers%no_lasers
+          if (laser_kind(hm%ext_lasers%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
             if(accel_allow_CPU_only()) then
               hm%apply_packed = .false.
               call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
@@ -762,7 +769,7 @@ contains
         end if
       end if
 
-      external_potentials_present = epot_have_external_potentials(hm%ep)
+      external_potentials_present = epot_have_external_potentials(hm%ep) .or. (hm%ext_lasers%no_lasers > 0)
 
       kick_present = epot_have_kick(hm%ep)
 
@@ -824,6 +831,12 @@ contains
     call poisson_end(hm%psolver)
 
     nullify(hm%xc)
+
+    ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
+    if (associated(hm%ext_lasers)) then
+      deallocate(hm%ext_lasers)
+    end if
+
 
     call epot_end(hm%ep)
     nullify(hm%geo)
@@ -983,11 +996,12 @@ contains
     ! the lasers
     if (present(time) .or. this%time_zero) then
 
-      do ilaser = 1, this%ep%no_lasers
-        select case(laser_kind(this%ep%lasers(ilaser)))
+      do ilaser = 1, this%ext_lasers%no_lasers
+        select case(laser_kind(this%ext_lasers%lasers(ilaser)))
         case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
           do ispin = 1, this%d%spin_channels
-            call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time_)
+            call laser_potential(this%ext_lasers%lasers(ilaser), mesh,  &
+                                    this%hm_base%potential(:, ispin), time_)
           end do
         case(E_FIELD_MAGNETIC)
           call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
@@ -995,7 +1009,7 @@ contains
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
-          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
+          call laser_vector_potential(this%ext_lasers%lasers(ilaser), mesh, vp, time_)
           !$omp parallel do schedule(static)
           do ip = 1, mesh%np
             do idir = 1, mesh%sb%dim
@@ -1003,13 +1017,13 @@ contains
             end do
           end do
           ! and the magnetic field
-          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
+          call laser_field(this%ext_lasers%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
-          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
+          call laser_field(this%ext_lasers%lasers(ilaser), aa(1:mesh%sb%dim), time_)
           this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
             - aa(1:mesh%sb%dim)/P_C
         end select
@@ -1553,13 +1567,13 @@ contains
     do itime = 1, 2
       time_ = time(itime)
 
-      do ilaser = 1, this%ep%no_lasers
-        select case(laser_kind(this%ep%lasers(ilaser)))
+      do ilaser = 1, this%ext_lasers%no_lasers
+        select case(laser_kind(this%ext_lasers%lasers(ilaser)))
         case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
           SAFE_ALLOCATE(velectric(1:mesh%np))
           do ispin = 1, this%d%spin_channels
             velectric = M_ZERO
-            call laser_potential(this%ep%lasers(ilaser), mesh,  velectric, time_)
+            call laser_potential(this%ext_lasers%lasers(ilaser), mesh,  velectric, time_)
             !$omp parallel do simd schedule(static)
             do ip = 1, mesh%np
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + mu(itime) * velectric(ip)
@@ -1571,7 +1585,7 @@ contains
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
-          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
+          call laser_vector_potential(this%ext_lasers%lasers(ilaser), mesh, vp, time_)
           do idir = 1, mesh%sb%dim
             !$omp parallel do schedule(static)
             do ip = 1, mesh%np
@@ -1580,13 +1594,13 @@ contains
             end do
           end do
           ! and the magnetic field
-          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
+          call laser_field(this%ext_lasers%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
-          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
+          call laser_field(this%ext_lasers%lasers(ilaser), aa(1:mesh%sb%dim), time_)
           this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
             - mu(itime) * aa(1:mesh%sb%dim)/P_C
         end select
