@@ -459,26 +459,26 @@ contains
          ios2 = this%orbsets(ios)%map_os(icopies)
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i2, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+             write(iunit,'(i4,a10, 2x, i1, a1, i4, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                                              this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ios2, &
                                              this%orbsets(ios2)%nn, l_notation(this%orbsets(ios2)%ll), &
                                              units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
                                              units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
            else
-             write(iunit,'(i4,a10, 3x, a1, i2, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+             write(iunit,'(i4,a10, 3x, a1, i4, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                                              l_notation(this%orbsets(ios)%ll), ios2, l_notation(this%orbsets(ios2)%ll), &
                                              units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
                                              units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i4, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                           this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
                           int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,      &
                           units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
                           units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
            else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+             write(iunit,'(i4,a10, 3x, a1, i1, a2, i4, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                                   l_notation(this%orbsets(ios)%ll), int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,   &
                                   units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
                                   units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))

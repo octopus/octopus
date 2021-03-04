@@ -25,7 +25,7 @@ match ;   Total force ; GREPFIELD(static/info, 'Total force', 5)   ; 0.000000
 match ; Ueff 3d Na1 ; LINEFIELD(static/effectiveU, -10, 4) ; 0.224314
 match ; Ueff 3d Na2 ; LINEFIELD(static/effectiveU, -9, 4) ;  0.224314
 
-match ; V Na1-Na2 ;  GREPFIELD(static/info, '1        Na  3s 2 3s', 7); 0.077567
+match ; V Na1-Na2 ;  GREPFIELD(static/info, '1        Na  3s   2 3s', 7); 0.077567
 
 Processors : 4
 Input      : 10-intersite.02-graphite.inp
@@ -41,7 +41,7 @@ else
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -389.65192243
   Precision: 6.44e-04
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.82360309
-  Precision: 1.1.e-04
+  Precision: 1.1e-04
   match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 156.7897272
   Precision: 2.e-05
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -194.95878258
@@ -55,6 +55,6 @@ else
   match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 14.220706015
 
   Precision: 1.10e-06
-  match ;  V C1-C2  ; GREPFIELD(static/info, '1         C  2p 1 2p  2.470', 7) ; 2.494327
+  match ;  V C1-C2  ; GREPFIELD(static/info, '1         C  2p   1 2p  2.470', 7) ; 2.494327
 endif
 
