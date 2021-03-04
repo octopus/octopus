@@ -43,7 +43,7 @@ else
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.82360309
   Precision: 1.1.e-04
   match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 156.7897272
-  Precision: 2.e-05
+  Precision: 4.e-05
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -194.95878258
   Precision: 2.e-06
   match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -27.294241585

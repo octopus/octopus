@@ -96,19 +96,19 @@ match ;  Eigenvalue      [ k = 4, n = 8 ]  ; GREPFIELD(static/info, '#k =   4', 
 
 Input      : 17-aluminium.02-td.inp
 
-Precision: 3.87e-09
+Precision: 5.e-09
 match ;  Energy       [step   1]  ; LINEFIELD(td.general/energy, -151, 3) ; -3.8612735656755
-Precision: 4.01e-09
+Precision: 5.e-09
 match ;  Energy       [step  25]  ; LINEFIELD(td.general/energy, -126, 3) ; -3.730208379912
-Precision: 3.67e-09
+Precision: 5.e-09
 match ;  Energy       [step  50]  ; LINEFIELD(td.general/energy, -101, 3) ; -4.0681241967599995
-Precision: 3.81e-09
+Precision: 5..e-09
 match ;  Energy       [step  75]  ; LINEFIELD(td.general/energy, -76, 3) ; -3.6441697700035
-Precision: 4.56e-09
+Precision: 1.e-08
 match ;  Energy       [step 100]  ; LINEFIELD(td.general/energy, -51, 3) ; -4.0979109235505
-Precision: 2.13e-09
+Precision: 5.e-09
 match ;  Energy       [step 125]  ; LINEFIELD(td.general/energy, -26, 3) ; -3.7475037008839998
-Precision: 4.98e-09
+Precision: 1.e-08
 match ;  Energy       [step 150]  ; LINEFIELD(td.general/energy, -1, 3) ; -4.024328218672
 Precision: 1.37e-13
 match ;  Gauge field  [step   1]  ; LINEFIELD(td.general/gauge_field, -151, 3) ; 137.035999139
@@ -124,15 +124,15 @@ Precision: 6.75e-07
 match ;  Gauge field  [step 125]  ; LINEFIELD(td.general/gauge_field, -26, 3) ; -74.488318758445
 Precision: 1.00e-06
 match ;  Gauge field  [step 150]  ; LINEFIELD(td.general/gauge_field, -1, 3) ; -35.465422618435
-Precision: 7.16e-09
+Precision: 1.e-08
 match ;  Current      [step   1]  ; LINEFIELD(td.general/total_current, -151, 3) ; 11.674928916315
-Precision: 8.44e-09
+Precision: 1.e-08
 match ;  Current      [step  25]  ; LINEFIELD(td.general/total_current, -126, 3) ; -2.530124703088
 Precision: 6.68e-09
 match ;  Current      [step  50]  ; LINEFIELD(td.general/total_current, -101, 3) ; -8.367976706915
 Precision: 1.35e-08
 match ;  Current      [step  75]  ; LINEFIELD(td.general/total_current, -76, 3) ; 5.2994754649099995
-Precision: 2.64e-08
+Precision: 5.e-08
 match ;  Current      [step 100]  ; LINEFIELD(td.general/total_current, -51, 3) ; 5.1514369295255005
 Precision: 5.57e-09
 match ;  Current      [step 125]  ; LINEFIELD(td.general/total_current, -26, 3) ; -6.247983305868
