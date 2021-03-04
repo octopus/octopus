@@ -1,4 +1,4 @@
-!! Copyright (C) 2021 N. Tancogne-Dejean
+!! Copyright (C) 2021 N. Tancogne-Dejean, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -24,14 +24,15 @@ module lattice_vectors_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use space_oct_m
 
   implicit none
 
   private
 
   public ::                   &
-    lattice_vectors_t,           &
-    build_metric_from_angles, &
+    lattice_vectors_t,        &
+    lattice_vectors_init,     &
     reciprocal_lattice
 
   type lattice_vectors_t
@@ -46,6 +47,154 @@ module lattice_vectors_oct_m
 
 contains
 
+  !--------------------------------------------------------------
+  subroutine lattice_vectors_init(latt, namespace, space, lsize, cell_volume)
+    type(lattice_vectors_t), intent(inout) :: latt
+    type(namespace_t),       intent(in)    :: namespace
+    type(space_t),           intent(in)    :: space
+    FLOAT,                   intent(inout) :: lsize(:)
+    FLOAT,                   intent(out)   :: cell_volume
+
+    type(block_t) :: blk
+    FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
+    integer :: idim, jdim, ncols
+    logical :: has_angles
+    FLOAT :: angles(1:MAX_DIM)
+
+    PUSH_SUB(lattice_vector_init)
+
+    latt%alpha = CNST(90.0)
+    latt%beta  = CNST(90.0)
+    latt%gamma = CNST(90.0)
+
+    !%Variable LatticeParameters
+    !%Type block
+    !%Default 1 | 1 | 1
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% The lattice parameters (a, b, c).
+    !% This option is incompatible with Lsize and either one of the
+    !% two must be specified in the input file for periodic systems.
+    !% A second optional line can be used tu define the angles between the lattice vectors
+    !%End
+    lparams(:) = M_ONE
+    has_angles = .false.
+    angles = CNST(90.0)
+
+    if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      do idim = 1, space%dim
+        call parse_block_float(blk, 0, idim - 1, lparams(idim))
+      end do
+
+      if (parse_block_n(blk) > 1) then ! we have a shift, or even more
+        ncols = parse_block_cols(blk, 1)
+        if (ncols /= space%dim) then
+          write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', space%dim
+          call messages_fatal(1, namespace=namespace)
+        end if
+        do idim = 1, space%dim
+          call parse_block_float(blk, 1, idim - 1, angles(idim))
+        end do
+        has_angles = .true.
+      end if
+      call parse_block_end(blk)
+
+      if (parse_is_defined(namespace, 'Lsize')) then
+        message(1) = 'LatticeParameters is incompatible with Lsize'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+    end if
+
+    if (has_angles) then
+      latt%alpha = angles(1)
+      latt%beta  = angles(2)
+      latt%gamma = angles(3)
+
+      if (parse_is_defined(namespace, 'LatticeVectors')) then
+        message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
+        call messages_print_var_info(stdout, "LatticeParameters")
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      call build_metric_from_angles(latt, angles)
+
+    else
+
+      !%Variable LatticeVectors
+      !%Type block
+      !%Default simple cubic
+      !%Section Mesh::Simulation Box
+      !%Description
+      !% Primitive lattice vectors. Vectors are stored in rows.
+      !% Default:
+      !% <br><br><tt>%LatticeVectors
+      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+      !% <br>%<br></tt>
+      !%End
+      latt%rlattice_primitive = M_ZERO
+      latt%nonorthogonal = .false.
+      do idim = 1, space%dim
+        latt%rlattice_primitive(idim, idim) = M_ONE
+      end do
+
+      if (parse_block(namespace, 'LatticeVectors', blk) == 0) then
+        do idim = 1, space%dim
+          do jdim = 1, space%dim
+            call parse_block_float(blk, idim - 1,  jdim - 1, latt%rlattice_primitive(jdim, idim))
+            if (idim /= jdim .and. abs(latt%rlattice_primitive(jdim, idim)) > M_EPSILON) then
+              latt%nonorthogonal = .true.
+            end if
+          enddo
+        end do
+        call parse_block_end(blk)
+
+      end if
+    end if
+
+    ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+    if (.not. parse_is_defined(namespace, 'Lsize') .and. space%is_periodic()) then
+      do idim = 1, space%dim
+        if (lsize(idim) == M_ZERO) then
+          lsize(idim) = lparams(idim)*M_HALF
+        end if
+      end do
+    end if
+
+    latt%rlattice = M_ZERO
+    do idim = 1, space%dim
+      norm = sqrt(sum(latt%rlattice_primitive(1:space%dim, idim)**2))
+      lsize(idim) = lsize(idim) * norm
+      do jdim = 1, space%dim
+        latt%rlattice_primitive(jdim, idim) = latt%rlattice_primitive(jdim, idim) / norm
+        latt%rlattice(jdim, idim) = latt%rlattice_primitive(jdim, idim) * M_TWO*lsize(idim)
+      end do
+    end do
+
+    call reciprocal_lattice(latt%rlattice, latt%klattice, cell_volume, space%dim, namespace)
+    latt%klattice = latt%klattice * M_TWO*M_PI
+
+    call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
+
+    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
+    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
+    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
+    ! The F matrix of Chelikowski is matmul(transpose(latt%klattice_primitive), latt%klattice_primitive)
+    rlatt = matmul(transpose(latt%rlattice_primitive), latt%rlattice_primitive)
+    if (.not. has_angles .and. space%dim == 3) then
+      !We compute the angles from the lattice vectors
+      latt%alpha = acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
+      latt%beta  = acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
+      latt%gamma = acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
+    end if
+
+    POP_SUB(lattice_vector_init)
+  end subroutine lattice_vectors_init
+
+  !--------------------------------------------------------------
   subroutine build_metric_from_angles(this, angles)
     type(lattice_vectors_t), intent(inout) :: this
     FLOAT,                   intent(in)    :: angles(3)

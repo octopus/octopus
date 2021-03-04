@@ -60,7 +60,6 @@ module simul_box_oct_m
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
-    reciprocal_lattice,         &
     check_ions_compatible_with_symmetries
 
   integer, parameter, public :: &
@@ -130,7 +129,7 @@ contains
 
     call read_box()                        ! Parameters defining the simulation box.
 
-    call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
+    call lattice_vectors_init(sb%latt, namespace, space, sb%lsize, sb%rcell_volume)       ! Build lattice vectors.
 
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
     select case (sb%box_shape)
@@ -442,151 +441,6 @@ contains
     end subroutine read_box
 
   end subroutine simul_box_init
-
-  !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, namespace)
-    type(simul_box_t), intent(inout) :: sb
-    type(namespace_t), intent(in)    :: namespace
-
-    type(block_t) :: blk
-    FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
-    integer :: idim, jdim, ncols
-    logical :: has_angles
-    FLOAT :: angles(1:MAX_DIM)
-
-    PUSH_SUB(simul_box_build_lattice)
-
-    sb%latt%alpha = CNST(90.0)
-    sb%latt%beta  = CNST(90.0)
-    sb%latt%gamma = CNST(90.0)
-
-    !%Variable LatticeParameters
-    !%Type block
-    !%Default 1 | 1 | 1
-    !%Section Mesh::Simulation Box
-    !%Description
-    !% The lattice parameters (a, b, c). 
-    !% This option is incompatible with Lsize and either one of the 
-    !% two must be specified in the input file for periodic systems.
-    !% A second optional line can be used tu define the angles between the lattice vectors
-    !%End
-    lparams(:) = M_ONE
-    has_angles = .false.
-    angles = CNST(90.0)
-
-    if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
-      do idim = 1, sb%dim
-        call parse_block_float(blk, 0, idim - 1, lparams(idim))
-      end do
-
-      if(parse_block_n(blk) > 1) then ! we have a shift, or even more
-        ncols = parse_block_cols(blk, 1)
-        if(ncols /= sb%dim) then
-          write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
-          call messages_fatal(1, namespace=namespace)
-        end if
-        do idim = 1, sb%dim
-          call parse_block_float(blk, 1, idim - 1, angles(idim))
-        end do
-        has_angles = .true.
-      end if
-      call parse_block_end(blk)
-
-      if (parse_is_defined(namespace, 'Lsize')) then
-        message(1) = 'LatticeParameters is incompatible with Lsize'
-        call messages_print_var_info(stdout, "LatticeParameters")
-        call messages_fatal(1, namespace=namespace)
-      end if
-
-    end if
-
-    if( has_angles ) then
-      sb%latt%alpha = angles(1)
-      sb%latt%beta  = angles(2)
-      sb%latt%gamma = angles(3)
-
-      if (parse_is_defined(namespace, 'LatticeVectors')) then
-        message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
-        call messages_print_var_info(stdout, "LatticeParameters")
-        call messages_fatal(1, namespace=namespace)
-      end if
-      
-      call build_metric_from_angles(sb%latt, angles)
-
-    else
-
-      !%Variable LatticeVectors
-      !%Type block
-      !%Default simple cubic
-      !%Section Mesh::Simulation Box
-      !%Description
-      !% Primitive lattice vectors. Vectors are stored in rows.
-      !% Default:
-      !% <br><br><tt>%LatticeVectors
-      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-      !% <br>%<br></tt>
-      !%End
-      sb%latt%rlattice_primitive = M_ZERO
-      sb%latt%nonorthogonal = .false.
-      do idim = 1, sb%dim
-        sb%latt%rlattice_primitive(idim, idim) = M_ONE
-      end do
-
-      if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
-        do idim = 1, sb%dim
-          do jdim = 1, sb%dim
-            call parse_block_float(blk, idim - 1,  jdim - 1, sb%latt%rlattice_primitive(jdim, idim))
-            if(idim /= jdim .and. abs(sb%latt%rlattice_primitive(jdim, idim)) > M_EPSILON) then
-              sb%latt%nonorthogonal = .true.
-            end if
-          enddo
-        end do
-        call parse_block_end(blk)
-
-      end if
-    end if
-
-    ! Always need Lsize for periodic systems even if LatticeVectors block is not present
-    if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
-      do idim = 1, sb%dim
-        if (sb%lsize(idim) == M_ZERO) then
-          sb%lsize(idim) = lparams(idim)*M_HALF
-        end if
-      end do
-    end if
-
-    sb%latt%rlattice = M_ZERO
-    do idim = 1, sb%dim
-      norm = sqrt(sum(sb%latt%rlattice_primitive(1:sb%dim, idim)**2))
-      sb%lsize(idim) = sb%lsize(idim) * norm
-      do jdim = 1, sb%dim
-        sb%latt%rlattice_primitive(jdim, idim) = sb%latt%rlattice_primitive(jdim, idim) / norm
-        sb%latt%rlattice(jdim, idim) = sb%latt%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
-      end do
-    end do
-
-    call reciprocal_lattice(sb%latt%rlattice, sb%latt%klattice, sb%rcell_volume, sb%dim, namespace)
-    sb%latt%klattice = sb%latt%klattice * M_TWO*M_PI
-
-    call reciprocal_lattice(sb%latt%rlattice_primitive, sb%latt%klattice_primitive, volume_element, sb%dim, namespace)
-
-    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
-    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
-    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
-    ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-    rlatt = matmul(transpose(sb%latt%rlattice_primitive), sb%latt%rlattice_primitive)
-    if(.not. has_angles .and. sb%dim == 3) then
-      !We compute the angles from the lattice vectors
-      sb%latt%alpha=acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
-      sb%latt%beta =acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
-      sb%latt%gamma=acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
-    end if
-
-    POP_SUB(simul_box_build_lattice)
-  end subroutine simul_box_build_lattice
-
 
   !> This function adjusts the coordinates defined in the geometry
   !! object. If coordinates were given in reduced coordinates it
