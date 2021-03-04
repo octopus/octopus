@@ -93,7 +93,6 @@ module simul_box_oct_m
 
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
-    FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
     type(lattice_vectors_t) :: latt
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -458,9 +457,9 @@ contains
 
     PUSH_SUB(simul_box_build_lattice)
 
-    sb%alpha = CNST(90.0)
-    sb%beta  = CNST(90.0)
-    sb%gamma = CNST(90.0)
+    sb%latt%alpha = CNST(90.0)
+    sb%latt%beta  = CNST(90.0)
+    sb%latt%gamma = CNST(90.0)
 
     !%Variable LatticeParameters
     !%Type block
@@ -503,9 +502,9 @@ contains
     end if
 
     if( has_angles ) then
-      sb%alpha = angles(1)
-      sb%beta  = angles(2)
-      sb%gamma = angles(3)
+      sb%latt%alpha = angles(1)
+      sb%latt%beta  = angles(2)
+      sb%latt%gamma = angles(3)
 
       if (parse_is_defined(namespace, 'LatticeVectors')) then
         message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
@@ -590,9 +589,9 @@ contains
     rlatt = matmul(transpose(sb%latt%rlattice_primitive), sb%latt%rlattice_primitive)
     if(.not. has_angles .and. sb%dim == 3) then
       !We compute the angles from the lattice vectors
-      sb%alpha=acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
-      sb%beta =acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
-      sb%gamma=acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
+      sb%latt%alpha=acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
+      sb%latt%beta =acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
+      sb%latt%gamma=acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
     end if
 
     POP_SUB(simul_box_build_lattice)
@@ -758,9 +757,9 @@ contains
 
       if(this%dim == 3) then
         write(message(1),'(a)') '  Cell angles [degree]'
-        write(message(2),'(a, f8.3)') '    alpha = ', this%alpha
-        write(message(3),'(a, f8.3)') '    beta  = ', this%beta
-        write(message(4),'(a, f8.3)') '    gamma = ', this%gamma
+        write(message(2),'(a, f8.3)') '    alpha = ', this%latt%alpha
+        write(message(3),'(a, f8.3)') '    beta  = ', this%latt%beta
+        write(message(4),'(a, f8.3)') '    gamma = ', this%latt%gamma
         call messages_info(4, iunit)
       end if
     end if

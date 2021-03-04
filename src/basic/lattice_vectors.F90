@@ -40,6 +40,7 @@ module lattice_vectors_oct_m
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
+    FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     logical :: nonorthogonal
   end type lattice_vectors_t
 
