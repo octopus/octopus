@@ -23,18 +23,17 @@ module simul_box_oct_m
   use atom_oct_m
   use box_oct_m
   use box_cylinder_oct_m
+  use box_image_oct_m
   use box_minimum_oct_m
   use box_parallelepiped_oct_m
   use box_sphere_oct_m
   use iso_c_binding
-  use gdlib_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use lalg_basic_oct_m
   use lattice_vectors_oct_m
   use lookup_oct_m
-  use math_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -102,12 +101,6 @@ module simul_box_oct_m
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     
     integer :: periodic_dim
-
-    !> for the box defined through an image
-    integer             :: image_size(1:2)
-    type(c_ptr), private         :: image
-    character(len=200), private  :: filename
-
   contains
     procedure :: contains_points => simul_box_contains_points
     procedure :: write_info => simul_box_write_info
@@ -129,6 +122,7 @@ contains
     integer, allocatable :: site_type(:)
     FLOAT,   allocatable :: site_type_radius(:), site_position(:,:)
     character(len=LABEL_LEN), allocatable :: site_type_label(:)
+    character(len=200) :: filename
 
     PUSH_SUB(simul_box_init)
 
@@ -157,6 +151,9 @@ contains
       SAFE_DEALLOCATE_A(site_type_radius)
       SAFE_DEALLOCATE_A(site_type)
       SAFE_DEALLOCATE_A(site_position)
+
+    case (BOX_IMAGE)
+      sb%box => box_image_t(center, sb%lsize, filename, space%periodic_dim, namespace)
     end select
 
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
@@ -172,10 +169,6 @@ contains
 
       FLOAT :: default
       integer :: default_boxshape, idir, iatom, ispec
-#if defined(HAVE_GDLIB)
-      logical :: found
-      integer :: box_npts
-#endif
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
@@ -400,40 +393,11 @@ contains
         !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
 #if defined(HAVE_GDLIB)
-        call parse_variable(namespace, 'BoxShapeImage', '', sb%filename)
-        if(trim(sb%filename) == "") then
+        call parse_variable(namespace, 'BoxShapeImage', '', filename)
+        if(trim(filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1, namespace=namespace)
         end if
-
-        ! Find out the file and read it.
-        inquire(file=trim(sb%filename), exist=found)
-        if(.not. found) then
-          message(1) = "Could not find file '" // trim(sb%filename) // "' for BoxShape = box_image."
-
-          sb%filename = trim(conf%share) // '/' // trim(sb%filename)
-          inquire(file=trim(sb%filename), exist=found)
-          
-          if(.not. found) call messages_fatal(1, namespace=namespace)
-        end if
-
-        sb%image = gdlib_image_create_from(sb%filename)
-        if(.not.c_associated(sb%image)) then
-          message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
-          call messages_fatal(1, namespace=namespace)
-        end if
-        sb%image_size(1) = gdlib_image_sx(sb%image)
-        sb%image_size(2) = gdlib_image_sy(sb%image)
-
-        ! adjust Lsize if necessary to ensure that one grid point = one pixel
-        do idir = 1, 2
-          box_npts = sb%image_size(idir)
-          if((idir >  space%periodic_dim .and. even(sb%image_size(idir))) .or. &
-             (idir <= space%periodic_dim .and.  odd(sb%image_size(idir)))) then
-            box_npts = box_npts + 1
-            sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
-          end if
-        end do
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
@@ -733,11 +697,6 @@ contains
 
     PUSH_SUB(simul_box_end)
 
-#ifdef HAVE_GDLIB
-    if(sb%box_shape == BOX_IMAGE) &
-      call gdlib_imagedestroy(sb%image)
-#endif
-
     ! We first need to bet a pointer to the box to deallocated it because of a
     ! bug in gfortran.
     box => sb%box
@@ -767,15 +726,11 @@ contains
     write(iunit,'(a)') 'Simulation Box:'
 
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM)
+    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE)
       call this%box%write_info(iunit)
 
     case (BOX_USDEF)
       write(iunit,'(2x,a)') 'Type = user-defined'
-
-    case (BOX_IMAGE)
-      write(iunit,'(2x,3a,i6,a,i6)') 'Type = defined by image "', trim(this%filename), '", ', &
-        this%image_size(1), ' x ', this%image_size(2)
 
     end select
 
@@ -828,7 +783,7 @@ contains
     write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
     write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, MINIMUM)
+    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE)
       call this%box%write_short_info(iunit)
 
     case(PARALLELEPIPED)
@@ -848,9 +803,6 @@ contains
       else
         call this%box%write_short_info(iunit)
       end if
-
-    case(BOX_IMAGE)
-      write(iunit, '(a)') 'BoxShape = box_image; BoxShapeImage = '//trim(this%filename)
 
     case(HYPERCUBE)
       write(iunit, '(a)') 'BoxShape = hypercube'  ! add parameters?
@@ -877,10 +829,6 @@ contains
     FLOAT, allocatable :: xx_red(:, :)
     integer :: ip, idir
 
-#if defined(HAVE_GDLIB)
-    integer :: red, green, blue, ix, iy
-#endif
-
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx_red(1:nn, 1:this%dim))
     xx_red = M_ZERO
@@ -893,7 +841,7 @@ contains
     end if
 
     select case(this%box_shape)
-    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM)
+    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE)
       contained = this%box%contains_points(nn, xx_red)
 
     case (HYPERCUBE) 
@@ -904,20 +852,6 @@ contains
       do ip = 1, nn
         contained(ip) = all(xx_red(ip, 1:this%dim) >= llimit(1:this%dim) .and. xx_red(ip, 1:this%dim) <= ulimit(1:this%dim))
       end do
-
-#if defined(HAVE_GDLIB)
-! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
-! For reasons that probably made sense to someone at some time, computer graphic coordinates are not the same
-! as in standard graphing. ... The top left corner of the screen is (0,0).
-
-    case(BOX_IMAGE)
-      do ip = 1, nn
-        ix = nint(( xx_red(ip, 1) + this%lsize(1)) * this%image_size(1) / (M_TWO * this%lsize(1)))
-        iy = nint((-xx_red(ip, 2) + this%lsize(2)) * this%image_size(2) / (M_TWO * this%lsize(2)))
-        call gdlib_image_get_pixel_rgb(this%image, ix, iy, red, green, blue)
-        contained(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
-      end do
-#endif
 
     case(BOX_USDEF)
       ! is it inside the user-given boundaries?
@@ -968,7 +902,6 @@ contains
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize
     sbout%lsize                   = sbin%lsize
-    sbout%image                   = sbin%image
     sbout%user_def                = sbin%user_def
     sbout%latt%rlattice           = sbin%latt%rlattice
     sbout%latt%rlattice_primitive = sbin%latt%rlattice_primitive

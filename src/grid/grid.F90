@@ -19,6 +19,7 @@
 #include "global.h"
 
 module grid_oct_m
+  use box_image_oct_m
   use cube_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
@@ -152,16 +153,17 @@ contains
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
-#if defined(HAVE_GDLIB)
-    if(gr%sb%box_shape == BOX_IMAGE) then 
-      do idir = 1, space%dim
-        ! default grid_spacing is determined from lsize and the size of the image
-        if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(gr%sb%image_size(idir))
-        end if
-      end do
+    if (associated(gr%sb%box)) then
+      select type (box => gr%sb%box)
+      type is (box_image_t)
+        do idir = 1, space%dim
+          ! default grid_spacing is determined from the pixel size such that one grid point = one pixel.
+          if(grid_spacing(idir) < M_ZERO) then
+            grid_spacing(idir) = box%pixel_size(idir)
+          end if
+        end do
+      end select
     end if
-#endif
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
