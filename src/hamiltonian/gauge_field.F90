@@ -34,9 +34,8 @@ module gauge_field_oct_m
   use propagator_verlet_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
-  use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use unit_oct_m
@@ -74,10 +73,11 @@ module gauge_field_oct_m
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
-    integer :: ndim
     logical, public :: with_gauge_field
     integer :: dynamics
     FLOAT   :: kicktime 
+ 
+    type(space_t) :: space
   end type gauge_field_t
 
 contains
@@ -92,10 +92,9 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, namespace, sb, kpoints)
+  subroutine gauge_field_init(this, namespace, kpoints)
     type(gauge_field_t),     intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
-    type(simul_box_t),       intent(in)    :: sb
     type(kpoints_t),         intent(in)    :: kpoints
 
     integer :: ii, iop
@@ -103,13 +102,16 @@ contains
 
     PUSH_SUB(gauge_field_init)
 
+    ! Temporary initialization of the space. 
+    ! This will be inherited from system_t once this is turned into a system
+    call space_init(this%space, namespace)
+
     this%with_gauge_field = .false.
     this%vecpot = M_ZERO
     this%vecpot_vel = M_ZERO
     this%vecpot_acc = M_ZERO
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
-    this%ndim = sb%dim
 
     !%Variable GaugeFieldDynamics
     !%Type integer
@@ -159,12 +161,12 @@ contains
 
       this%with_gauge_field = .true.
 
-      do ii = 1, this%ndim
+      do ii = 1, this%space%dim
         call parse_block_float(blk, 0, ii - 1, this%vecpot_kick(ii))
       end do
 
       call parse_block_end(blk)
-      if(.not. simul_box_is_periodic(sb)) then
+      if(.not. this%space%is_periodic()) then
         message(1) = "GaugeVectorField is intended for periodic systems."
         call messages_warning(1, namespace=namespace)
       end if
@@ -194,7 +196,7 @@ contains
     call parse_variable(namespace, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
-       this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
+       this%vecpot(1:this%space%dim) = this%vecpot_kick(1:this%space%dim)
     endif
 
     POP_SUB(gauge_field_init)
@@ -224,10 +226,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_set_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vec_pot(:) !< (this%ndim)
+    FLOAT,                intent(in)    :: vec_pot(:) !< (this%space%dim)
 
     PUSH_SUB(gauge_field_set_vec_pot)
-    this%vecpot(1:this%ndim) = vec_pot(1:this%ndim)
+    this%vecpot(1:this%space%dim) = vec_pot(1:this%space%dim)
 
     POP_SUB(gauge_field_set_vec_pot)
   end subroutine gauge_field_set_vec_pot
@@ -236,10 +238,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_set_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: vec_pot_vel(:) !< (this%ndim)
+    FLOAT,                intent(in)    :: vec_pot_vel(:) !< (this%space%dim)
 
     PUSH_SUB(gauge_field_set_vec_pot_vel)
-    this%vecpot_vel(1:this%ndim) = vec_pot_vel(1:this%ndim)
+    this%vecpot_vel(1:this%space%dim) = vec_pot_vel(1:this%space%dim)
 
     POP_SUB(gauge_field_set_vec_pot_vel)
   end subroutine gauge_field_set_vec_pot_vel
@@ -248,10 +250,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot(this, vec_pot)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot(:) !< (this%ndim)
+    FLOAT,                intent(out) :: vec_pot(:) !< (this%space%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot)
-    vec_pot(1:this%ndim) = this%vecpot(1:this%ndim)
+    vec_pot(1:this%space%dim) = this%vecpot(1:this%space%dim)
 
     POP_SUB(gauge_field_get_vec_pot)
   end subroutine gauge_field_get_vec_pot
@@ -260,10 +262,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot_vel(this, vec_pot_vel)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot_vel(:) !< (this%ndim)
+    FLOAT,                intent(out) :: vec_pot_vel(:) !< (this%space%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot_vel)
-    vec_pot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim)
+    vec_pot_vel(1:this%space%dim) = this%vecpot_vel(1:this%space%dim)
 
     POP_SUB(gauge_field_get_vec_pot_vel)
   end subroutine gauge_field_get_vec_pot_vel
@@ -272,10 +274,10 @@ contains
   ! ---------------------------------------------------------
   subroutine gauge_field_get_vec_pot_acc(this, vec_pot_acc)
     type(gauge_field_t),  intent(in)  :: this
-    FLOAT,                intent(out) :: vec_pot_acc(:) !< (this%ndim)
+    FLOAT,                intent(out) :: vec_pot_acc(:) !< (this%space%dim)
 
     PUSH_SUB(gauge_field_get_vec_pot_acc)
-    vec_pot_acc(1:this%ndim) = this%vecpot_acc(1:this%ndim)
+    vec_pot_acc(1:this%space%dim) = this%vecpot_acc(1:this%space%dim)
 
     POP_SUB(gauge_field_get_vec_pot_acc)
   end subroutine gauge_field_get_vec_pot_acc
@@ -292,20 +294,20 @@ contains
 
     PUSH_SUB(gauge_field_propagate)
 
-    this%vecpot_acc(1:this%ndim) = this%force(1:this%ndim)
+    this%vecpot_acc(1:this%space%dim) = this%force(1:this%space%dim)
 
     ! apply kick, in case kicktime=0 the kick has already been applied
     if(this%kicktime > M_ZERO .and. time-dt <= this%kicktime .and. time >= this%kicktime )  then
-      this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
+      this%vecpot(1:this%space%dim) = this%vecpot(1:this%space%dim) +  this%vecpot_kick(1:this%space%dim)
       call messages_write('     ----------------  Applying gauge kick  ----------------')
       call messages_info()
     endif
 
-    this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
-      M_HALF * dt**2 * this%force(1:this%ndim)
+    this%vecpot(1:this%space%dim) = this%vecpot(1:this%space%dim) + dt * this%vecpot_vel(1:this%space%dim) + &
+      M_HALF * dt**2 * this%force(1:this%space%dim)
 
     !In the case of a kick, the induced field could not be higher than the initial kick
-    do idim = 1, this%ndim
+    do idim = 1, this%space%dim
       if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
          abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
 
@@ -320,14 +322,14 @@ contains
   end subroutine gauge_field_propagate
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init_vec_pot(this, sb, st)
+  subroutine gauge_field_init_vec_pot(this, volume, qtot)
     type(gauge_field_t),  intent(inout) :: this
-    type(simul_box_t),    intent(in)    :: sb
-    type(states_elec_t),  intent(in)    :: st
+    FLOAT,                intent(in)    :: volume
+    FLOAT,                intent(in)    :: qtot 
     
     PUSH_SUB(gauge_field_init_vec_pot)
 
-    this%wp2 = M_FOUR*M_PI*st%qtot/sb%rcell_volume
+    this%wp2 = M_FOUR*M_PI*qtot/volume
 
     write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
@@ -337,12 +339,12 @@ contains
   end subroutine gauge_field_init_vec_pot
 
   ! ---------------------------------------------------------
-  FLOAT function gauge_field_get_energy(this, sb) result(energy)
+  FLOAT function gauge_field_get_energy(this, volume) result(energy)
     type(gauge_field_t),  intent(in)    :: this
-    type(simul_box_t),    intent(in)    :: sb
+    FLOAT,                intent(in)    :: volume
 
     PUSH_SUB(gauge_field_get_energy)
-    energy = sb%rcell_volume / (CNST(8.0) * M_PI * P_c**2) * sum(this%vecpot_vel(1:this%ndim)**2)
+    energy = volume / (CNST(8.0) * M_PI * P_c**2) * sum(this%vecpot_vel(1:this%space%dim)**2)
 
     POP_SUB(gauge_field_get_energy)
   end function gauge_field_get_energy
@@ -371,12 +373,12 @@ contains
       call messages_info(1)
     end if
 
-    SAFE_ALLOCATE(vecpot(1:gfield%ndim, 1:2))
+    SAFE_ALLOCATE(vecpot(1:gfield%space%dim, 1:2))
     vecpot = M_ZERO
     call gauge_field_get_vec_pot(gfield, vecpot(:, 1))
     call gauge_field_get_vec_pot_vel(gfield, vecpot(:, 2))
 
-    call drestart_write_binary(restart, "gauge_field", 2*gfield%ndim, vecpot, err)
+    call drestart_write_binary(restart, "gauge_field", 2*gfield%space%dim, vecpot, err)
     SAFE_DEALLOCATE_A(vecpot)
     if (err /= 0) ierr = ierr + 1
 
@@ -413,8 +415,8 @@ contains
       call messages_info(1)
     end if
 
-    SAFE_ALLOCATE(vecpot(1:gfield%ndim, 1:2))
-    call drestart_read_binary(restart, "gauge_field", 2*gfield%ndim, vecpot, err)
+    SAFE_ALLOCATE(vecpot(1:gfield%space%dim, 1:2))
+    call drestart_read_binary(restart, "gauge_field", 2*gfield%space%dim, vecpot, err)
     if (err /= 0) ierr = ierr + 1
 
     call gauge_field_set_vec_pot(gfield, vecpot(:,1))
@@ -443,14 +445,14 @@ contains
 
     select case(this%dynamics)
     case(OPTION__GAUGEFIELDDYNAMICS__NONE)
-      this%force(1:gr%sb%dim) = M_ZERO 
+      this%force(1:this%space%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, this%space%periodic_dim
         this%force(idir) = M_ZERO
         do ispin = 1, st%d%spin_channels
           this%force(idir) = this%force(idir) - &
-                               CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+           CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
       end do
 
@@ -483,8 +485,8 @@ contains
       call gauge_field_propagate(this, dt, time, namespace)
 
     case (VERLET_COMPUTE_VEL)
-      this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
-        M_HALF * dt * (this%vecpot_acc(1:this%ndim) + this%force(1:this%ndim))
+      this%vecpot_vel(1:this%space%dim) = this%vecpot_vel(1:this%space%dim) + &
+        M_HALF * dt * (this%vecpot_acc(1:this%space%dim) + this%force(1:this%space%dim))
     case default
       message(1) = "Unsupported TD operation."
       call messages_fatal(1, namespace=namespace)
@@ -518,15 +520,15 @@ contains
       ! first line: column names
       call write_iter_header_start(out_gauge)
 
-      do idir = 1, this%ndim
+      do idir = 1, this%space%dim
         write(aux, '(a2,i1,a1)') 'A(', idir, ')'
         call write_iter_header(out_gauge, aux)
       end do
-      do idir = 1, this%ndim
+      do idir = 1, this%space%dim
         write(aux, '(a6,i1,a1)') 'dA/dt(', idir, ')'
         call write_iter_header(out_gauge, aux)
       end do
-      do idir = 1, this%ndim
+      do idir = 1, this%space%dim
         write(aux, '(a10,i1,a1)') 'd^2A/dt^2(', idir, ')'
         call write_iter_header(out_gauge, aux)
       end do
@@ -548,20 +550,20 @@ contains
 
     call write_iter_start(out_gauge)
 
-    do idir = 1, this%ndim
+    do idir = 1, this%space%dim
       temp(idir) = units_from_atomic(units_out%energy, this%vecpot(idir))
     end do
-    call write_iter_double(out_gauge, temp, this%ndim)
+    call write_iter_double(out_gauge, temp, this%space%dim)
 
-    do idir = 1, this%ndim
+    do idir = 1, this%space%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time, this%vecpot_vel(idir))
     end do
-    call write_iter_double(out_gauge, temp, this%ndim)
+    call write_iter_double(out_gauge, temp, this%space%dim)
 
-    do idir = 1, this%ndim
+    do idir = 1, this%space%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, this%vecpot_acc(idir))
     end do
-    call write_iter_double(out_gauge, temp, this%ndim)
+    call write_iter_double(out_gauge, temp, this%space%dim)
 
     call write_iter_nl(out_gauge)
 

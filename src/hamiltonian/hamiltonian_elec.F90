@@ -329,7 +329,7 @@ contains
     call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, namespace, gr%sb, hm%kpoints)
+    call gauge_field_init(hm%ep%gfield, namespace, hm%kpoints)
 
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (parse_is_defined(namespace, 'StaticMagneticField') .or. gauge_field_is_applied(hm%ep%gfield) .or. &
