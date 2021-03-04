@@ -210,13 +210,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
                                                 hm%exxop%cam_alpha, epsib, hpsib)
 
     case(HARTREE_FOCK)
-      if(hm%scdm_EXX)  then
-        call X(exchange_operator_scdm_apply)(hm%exxop, namespace, hm%scdm, mesh, hm%d, hm%kpoints, &
-                                              epsib, hpsib, hm%exxop%cam_alpha, hm%theory_level == HARTREE)
-      else
-        ! standard HF 
-        call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .false.)
-      end if
+      call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .false.)
 
     case(RDMFT)
       call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .true.)

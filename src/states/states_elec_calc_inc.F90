@@ -2048,6 +2048,249 @@ subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolve
 end subroutine X(states_elec_me_two_body)
 
 
+!> Perform RRQR on the transpose states stored in the states object
+!! and return the pivot vector 
+!! This is not an all-purpose routine for RRQR, but only operates on the
+!! specific set stored in st
+subroutine X(states_elec_rrqr_decomposition)(st, namespace, mesh, nst, root, ik, jpvt)
+  type(states_elec_t), intent(in)  :: st
+  type(namespace_t),   intent(in)  :: namespace
+  type(mesh_t),        intent(in)  :: mesh
+  integer,             intent(in)  :: nst
+  logical,             intent(in)  :: root !< this is needed for serial
+  integer,             intent(in)  :: ik ! perform SCDM with this k-point
+  integer,             intent(out) :: jpvt(:)
+
+  integer :: total_np, nref, info, wsize
+  R_TYPE, allocatable :: tau(:), work(:)
+  R_TYPE :: tmp
+#ifndef R_TREAL
+  FLOAT, allocatable :: rwork(:)
+#endif
+  R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
+  R_TYPE, allocatable :: KSt(:,:)
+  R_TYPE, allocatable :: psi(:, :)
+  integer :: ii,ist,  count, lnst
+  logical :: do_serial
+  integer :: psi_block(2), blacs_info
+  integer, allocatable :: ipiv(:)
+#ifdef HAVE_SCALAPACK
+  integer :: psi_desc(BLACS_DLEN)
+#ifndef R_TREAL
+  integer :: rwsize
+  FLOAT :: tmp2
+#endif
+#endif
+  integer :: sender
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(states_elec_rrqr_decomposition))
+  call profiling_in(prof, TOSTRING(X(RRQR)))
+
+  ASSERT(.not. mesh%use_curvilinear)
+  ASSERT(nst == st%nst)
+
+  lnst = st%lnst
+
+  ! decide whether we can use ScaLAPACK
+  do_serial = .false.
+  if(mesh%parallel_in_domains .or. st%parallel_in_states) then
+#ifndef HAVE_SCALAPACK
+     message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
+     call messages_warning(1, namespace=namespace)
+     do_serial = .true.
+#else
+     if(.not.st%scalapack_compatible) then
+        message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
+        call messages_warning(1, namespace=namespace)
+        do_serial = .true.
+     end if
+#endif
+  else
+     do_serial = .true.
+  endif
+
+  if(.not.do_serial) then
+    
+    call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
+    
+    ! allocate local part of transpose state matrix
+    SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    
+    ! copy states into the transpose matrix
+    count = 0
+    do ist = st%st_start,st%st_end
+      count = count + 1
+
+      call states_elec_get_state(st, mesh, ist, ik, psi)
+      
+      ! We need to set to zero some extra parts of the array
+      if(st%d%dim == 1) then
+        psi(mesh%np + 1:psi_block(1), 1:st%d%dim) = M_ZERO
+      else
+        psi(mesh%np + 1:mesh%np_part, 1:st%d%dim) = M_ZERO
+      end if
+
+      KSt(count, 1:total_np) = psi(1:total_np, 1)
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+     
+    ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+    ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+#ifdef HAVE_SCALAPACK
+    call descinit(psi_desc(1), nst, total_np, psi_block(2), psi_block(1), 0, 0, &
+      st%dom_st_proc_grid%context, lnst, blacs_info)
+#endif
+     
+    if(blacs_info /= 0) then
+       write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
+       call messages_fatal(1, namespace=namespace)
+    end if
+    
+    nref = min(nst, total_np)
+    SAFE_ALLOCATE(tau(1:nref))
+    tau = M_ZERO
+
+    ! calculate the QR decomposition
+    SAFE_ALLOCATE(ipiv(1:total_np))
+    ipiv(1:total_np) = 0
+
+    ! Note: lapack routine has different number of arguments depending on type
+#ifdef HAVE_SCALAPACK
+#ifndef R_TREAL
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info) 
+#else 
+    call pdgeqpf( nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, blacs_info)
+#endif
+#endif
+    
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
+      call messages_fatal(1, namespace=namespace)
+    end if
+     
+    wsize = nint(R_REAL(tmp))
+    SAFE_ALLOCATE(work(1:wsize))
+#ifdef HAVE_SCALAPACK
+#ifndef R_TREAL
+    rwsize = max(1,nint(R_REAL(tmp2)))
+    SAFE_ALLOCATE(rwork(1:rwsize))
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize, rwork(1), rwsize, blacs_info)
+    SAFE_DEALLOCATE_A(rwork)
+#else
+    call pdgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize,  blacs_info)
+#endif
+#endif
+
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
+      call messages_fatal(1, namespace=namespace)
+    end if
+    SAFE_DEALLOCATE_A(work)
+     
+     ! copy the first nst global elements of ipiv into jpvt
+     ! bcast is at the end of the routine
+!     if(mpi_world%rank==0)  then
+!        do ist =1,nst
+!           write(123,*) ipiv(ist)
+!        end do
+!     end if
+    jpvt(1:nst) =  ipiv(1:nst)
+     
+  else
+    ! first gather states into one array on the root process
+    ! build transpose of KS set on which RRQR is performed
+    if(root) then
+       SAFE_ALLOCATE(KSt(1:nst,1:mesh%np_global))
+    end if
+    
+    ! gather states in case of domain parallelization
+    if (mesh%parallel_in_domains.or.st%parallel_in_states) then
+      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      SAFE_ALLOCATE(state_global(1:mesh%np_global))
+      
+      count = 0
+      do ii = 1,nst
+        !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
+        state_global(1:mesh%np_global) = M_ZERO
+        sender = 0
+        if(state_is_local(st,ii)) then
+          call states_elec_get_state(st, mesh, ii, ik, temp_state)
+          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np,1), state_global)
+          if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
+        end if
+        call comm_allreduce(mpi_world,sender)
+#ifdef HAVE_MPI
+        call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
+#endif
+        ! keep full Kohn-Sham matrix only on root
+        if (root)  KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
+      end do
+      SAFE_DEALLOCATE_A(state_global)
+      SAFE_DEALLOCATE_A(temp_state)
+    else
+      ! serial
+      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      do ii = 1, nst
+        ! this call is necessary becasue we want to have only np not np_part
+        call states_elec_get_state(st, mesh, ii, ik, temp_state)
+        KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
+      end do
+      SAFE_DEALLOCATE_A(temp_state)
+    end if
+
+    ! now perform serial RRQR
+    ! dummy call to obtain dimension of work
+    ! Note: the lapack routine has different number of arguments depending on type
+    if(root) then
+      SAFE_ALLOCATE(work(1:1))
+      SAFE_ALLOCATE(tau(1:nst))
+#ifdef R_TREAL
+      call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+#else
+      SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+      call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+#endif
+      if (info /= 0) then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1, namespace=namespace)
+      end if
+
+      wsize = int(work(1))
+      SAFE_DEALLOCATE_A(work)
+      SAFE_ALLOCATE(work(1:wsize))
+
+      jpvt(:) = 0
+      tau(:) = 0.
+      ! actual call
+#ifdef R_TREAL
+         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
+#else
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+#endif
+      if (info /= 0)then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1, namespace=namespace)
+      end if
+      SAFE_DEALLOCATE_A(work)
+    endif
+
+    SAFE_DEALLOCATE_A(temp_state)
+    SAFE_DEALLOCATE_A(state_global)
+    
+   endif
+
+#ifdef HAVE_MPI
+    call MPI_Bcast(JPVT,nst, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+#endif
+
+   call profiling_out(prof)
+   POP_SUB(X(states_elec_rrqr_decomposition))
+end subroutine X(states_elec_rrqr_decomposition)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

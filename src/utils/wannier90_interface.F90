@@ -48,8 +48,8 @@ program wannier90_interface
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
+  use states_elec_calc_oct_m
   use electrons_oct_m
   use space_oct_m
   use string_oct_m
@@ -92,7 +92,6 @@ program wannier90_interface
   logical              :: read_td_states
 
   ! scdm variables
-  type(scdm_t)         :: scdm
   integer, allocatable :: jpvt(:)
   CMPLX, allocatable   :: uk(:,:,:)                                ! SCDM-Wannier gauge matrices U(k)
   CMPLX, allocatable   :: psi(:,:)
@@ -415,7 +414,7 @@ contains
          sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%mesh, w90_num_bands, .true., 1, jpvt)
+      call zstates_elec_rrqr_decomposition(sys%st, sys%namespace, sys%gr%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands

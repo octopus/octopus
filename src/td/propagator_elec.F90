@@ -46,7 +46,6 @@ module propagator_elec_oct_m
   use propagator_qoct_oct_m
   use propagator_rk_oct_m
   use propagator_verlet_oct_m
-  use scdm_oct_m
   use scf_oct_m
   use sparskit_oct_m
   use space_oct_m
@@ -493,12 +492,6 @@ contains
     else
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc)
-    end if
-
-    ! to work on SCDM states we rotate the states in st to the localized SCDM,
-    !i.e. we perform the SCDM procedure and overwrite the states in st
-    if (hm%scdm_EXX) then
-      call scdm_rotate_states(hm%scdm, namespace, st, gr%mesh)
     end if
 
     if(present(scsteps)) scsteps = 1
