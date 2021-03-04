@@ -1032,7 +1032,16 @@ contains
       mesh%volume_element = mesh%vol_pp(1)
     end if
 
-    mesh%surface_element(1:space%dim) = sb%surface_element(1:space%dim)
+    if (space%dim == 3) then
+      mesh%surface_element(1) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 2), &
+                                                            sb%latt%rlattice_primitive(1:3, 3))**2)))
+      mesh%surface_element(2) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 3), &
+                                                            sb%latt%rlattice_primitive(1:3, 1))**2)))
+      mesh%surface_element(3) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 1), &
+                                                            sb%latt%rlattice_primitive(1:3, 2))**2)))
+    else
+      mesh%surface_element(1:space%dim) = M_ZERO
+    end if
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
   end subroutine mesh_get_vol_pp

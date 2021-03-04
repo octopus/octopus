@@ -91,7 +91,6 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     type(lattice_vectors_t) :: latt
     
@@ -572,15 +571,6 @@ contains
     sb%latt%klattice = sb%latt%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(sb%latt%rlattice_primitive, sb%latt%klattice_primitive, volume_element, sb%dim, namespace)
-
-    if(sb%dim == 3) then
-      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 2), &
-                                                          sb%latt%rlattice_primitive(1:3, 3))**2)))
-      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 3), &
-                                                          sb%latt%rlattice_primitive(1:3, 1))**2)))
-      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%latt%rlattice_primitive(1:3, 1), &
-                                                          sb%latt%rlattice_primitive(1:3, 2))**2)))
-    end if
 
     ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
