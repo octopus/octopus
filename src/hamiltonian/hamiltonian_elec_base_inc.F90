@@ -919,7 +919,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
     
     SAFE_DEALLOCATE_A(psi)
     
-    INCR(iprojection, nprojs)
+    iprojection = iprojection + nprojs
   end do
   
   SAFE_DEALLOCATE_A(projection%X(projection))
@@ -1178,7 +1178,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim,
 
     SAFE_DEALLOCATE_A(psi)
 
-    INCR(iprojection, nprojs)
+    iprojection = iprojection + nprojs
 
   end do
 
@@ -1258,7 +1258,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim,
     
     SAFE_DEALLOCATE_A(ff)
 
-    INCR(iprojection, nprojs)
+    iprojection = iprojection + nprojs
 
   end do
 
@@ -1526,7 +1526,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
 
     SAFE_DEALLOCATE_A(psi)
 
-    INCR(iprojection, nprojs)
+    iprojection = iprojection + nprojs
   end do
 
   SAFE_DEALLOCATE_A(ind)

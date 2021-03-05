@@ -239,7 +239,6 @@
 ! do not use the STRINGIFY macro
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
-#define INCR(x, y) x = (x) + (y)
 
 
 ! Whenever a procedure is not called too many times, one should start it

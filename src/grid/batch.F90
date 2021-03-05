@@ -500,9 +500,9 @@ contains
 
     select case(target)
     case(BATCH_DEVICE_PACKED)
-      INCR(this%device_buffer_count, 1)
+      this%device_buffer_count = this%device_buffer_count + 1
     case(BATCH_PACKED)
-      INCR(this%host_buffer_count, 1)
+      this%host_buffer_count = this%host_buffer_count + 1
     end select
 
     call profiling_out(prof)
@@ -560,7 +560,7 @@ contains
           this%status_of = target
           this%host_buffer_count = 1
         end if
-        INCR(this%host_buffer_count, -1)
+        this%host_buffer_count = this%host_buffer_count - 1
       case(BATCH_DEVICE_PACKED)
         if(this%device_buffer_count == 1 .or. force_) then
           if(copy_) then
@@ -581,7 +581,7 @@ contains
           this%status_of = target
           this%device_buffer_count = 1
         end if
-        INCR(this%device_buffer_count, -1)
+        this%device_buffer_count = this%device_buffer_count - 1
       end select
     end if
 

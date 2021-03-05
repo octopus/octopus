@@ -420,7 +420,7 @@ contains
         end if
 
         if(.not. overlap) then
-          INCR(region_count(nregion), 1)
+          region_count(nregion) = region_count(nregion) + 1
           order(head(nregion) - 1 + region_count(nregion)) = iatom
           atom_counted(iatom) = .true.
         end if
@@ -477,7 +477,7 @@ contains
       iatom = order(iorder)
   
       if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
-        INCR(this%nprojector_matrices, 1)
+        this%nprojector_matrices = this%nprojector_matrices + 1
         this%apply_projector_matrices = .true.
         !The HGH pseudopotentials are now supporting the SOC
         if(epot%reltype /= NOREL .and. &
@@ -520,7 +520,7 @@ contains
 
         if(projector_is(epot%proj(iatom), PROJ_NONE)) cycle
           
-        INCR(iproj, 1)
+        iproj = iproj + 1
 
         pmat => this%projector_matrices(iproj)
 
@@ -536,7 +536,7 @@ contains
           do ll = 0, lmax
             if (ll == lloc) cycle
             do mm = -ll, ll
-              INCR(nmat, epot%proj(iatom)%kb_p(ll, mm)%n_c)
+              nmat = nmat + epot%proj(iatom)%kb_p(ll, mm)%n_c
             end do
           end do
           
@@ -554,7 +554,7 @@ contains
                   pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
                 end do
                 pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
-                INCR(imat, 1)
+                imat = imat + 1
               end do
             end do
           end do
@@ -628,7 +628,7 @@ contains
                   end do
                 end if
                 pmat%scal(imat) = mesh%volume_element
-                INCR(imat, 1)
+                imat = imat + 1
               end do
 
             end do
@@ -645,7 +645,7 @@ contains
           pmat%position(1:3, ip) = epot%proj(iatom)%sphere%x(ip, 1:3)
         end do
 
-        INCR(this%full_projection_size, pmat%nprojs)
+        this%full_projection_size = this%full_projection_size + pmat%nprojs
 
       end do
     end do
@@ -671,7 +671,7 @@ contains
 
       this%max_npoints = max(this%max_npoints, pmat%npoints)
       this%max_nprojs = max(this%max_nprojs, pmat%nprojs)
-      INCR(this%total_points, pmat%npoints)
+      this%total_points = this%total_points + pmat%npoints
     end do
 
     if(accel_is_enabled()) call build_opencl()
@@ -725,24 +725,24 @@ contains
         offsets(PROJS, imat) = pmat%nprojs
 
         offsets(MATRIX, imat) = matrix_size
-        INCR(matrix_size, pmat%npoints*pmat%nprojs)
+        matrix_size = matrix_size + pmat%npoints*pmat%nprojs
 
         offsets(MAP, imat) = this%total_points
-        INCR(this%total_points, pmat%npoints)
+        this%total_points = this%total_points + pmat%npoints
 
         offsets(SCAL, imat) = scal_size
-        INCR(scal_size, pmat%nprojs)
+        scal_size = scal_size + pmat%nprojs
 
         if(allocated(pmat%dmix) .or. allocated(pmat%zmix)) then
           offsets(MIX, imat) = mix_offset
-          INCR(mix_offset, pmat%nprojs**2)
+          mix_offset = mix_offset + pmat%nprojs**2
         else
           offsets(MIX, imat) = -1
         end if
         
         do is = 1, pmat%npoints
           ip = pmat%map(is)
-          INCR(cnt(ip), 1)
+          cnt(ip) = cnt(ip) + 1
         end do
       end do
 
@@ -756,9 +756,9 @@ contains
         pmat => this%projector_matrices(imat)
         do is = 1, pmat%npoints
           ip = pmat%map(is)
-          INCR(cnt(ip), 1)
+          cnt(ip) = cnt(ip) + 1
           invmap(cnt(ip), ip) = ii
-          INCR(ii, 1)
+          ii = ii + 1
         end do
       end do
 
@@ -766,7 +766,7 @@ contains
       pos(1) = 0
       do ip = 1, mesh%np
         do ii = 1, cnt(ip)
-          INCR(ipos, 1)
+          ipos = ipos + 1
           invmap2(ipos) = invmap(ii, ip)
         end do
         pos(ip + 1) = ipos

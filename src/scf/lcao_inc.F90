@@ -466,7 +466,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
 
     ! initialize the radial grid
     call submesh_init(this%sphere(iatom), geo%space, gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
-    INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
+    dof = dof + this%sphere(iatom)%np*this%mult*norbs
   end do
 
   if(this%keep_orb) then
@@ -970,13 +970,13 @@ contains
 
             ! we only count points per column (we have to send the
             ! same number to all points in a row)
-            INCR(send_count(st%node(jbasis) + 1), 1)
+            send_count(st%node(jbasis) + 1) = send_count(st%node(jbasis) + 1
           end if
 
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
             call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
-            INCR(recv_count(node + 1), 1)
+            recv_count(node + 1) = recv_count(node + 1) + 1
           end if
 
         end do
@@ -1001,8 +1001,8 @@ contains
 
               ! get the node id from coordinates
               call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest, node, mpi_err)
-              INCR(node, 1)
-              INCR(send_count(node), 1)
+              node = node + 1
+              send_count(node) = send_count(node) + 1
               send_buffer(send_count(node), node) = levec(ilbasis, jlbasis)
             end do
 
@@ -1011,9 +1011,9 @@ contains
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
             call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
-            INCR(node, 1)
+            node = node + 1
 
-            INCR(recv_count(node), 1)
+            recv_count(node) = recv_count(node) + 1
             ! where do we put it once received?
             recv_pos(1, recv_count(node), node) = ibasis
             recv_pos(2, recv_count(node), node) = jbasis

@@ -1030,8 +1030,8 @@ contains
 #endif
       end if
       
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
+      buffer_alloc_count = buffer_alloc_count + 1
+      allocated_mem = allocated_mem + fsize
 
     end if
       
@@ -1067,8 +1067,8 @@ contains
 #endif
       end if
       
-      INCR(buffer_alloc_count, -1)
-      INCR(allocated_mem, fsize)
+      buffer_alloc_count = buffer_alloc_count - 1
+      allocated_mem = allocated_mem + fsize
 
     end if
     
