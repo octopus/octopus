@@ -60,7 +60,6 @@ module hamiltonian_elec_oct_m
   use projector_oct_m
   use pcm_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
   use space_oct_m
@@ -152,9 +151,6 @@ module hamiltonian_elec_oct_m
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT, private :: mass_scaling(MAX_DIM)
 
-    !> use the SCDM method to compute the action of the Fock operator
-    logical :: scdm_EXX
-
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical, private :: inh_term
     type(states_elec_t) :: inh_st
@@ -168,8 +164,6 @@ module hamiltonian_elec_oct_m
     FLOAT :: current_time
     logical, private :: apply_packed  !< This is initialized by the StatesPack variable.
     
-    type(scdm_t)  :: scdm
-
     !> For the LDA+U 
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
@@ -451,27 +445,6 @@ contains
     !% See also the related <tt>StatesPack</tt> variable.
     !%End
     call parse_variable(namespace, 'HamiltonianApplyPacked', .true., hm%apply_packed)
-
-    
-    !%Variable SCDM_EXX
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
-    !% the Fock operator for exact exchange will be applied with the SCDM method.
-    !%End
-    call parse_variable(namespace, 'scdm_EXX', .false., hm%scdm_EXX)
-    if(hm%scdm_EXX) then
-      call messages_experimental("SCDM method for exact exchange")
-      if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)", namespace=namespace)
-      end if
-      message(1) = "Info: Using SCDM for exact exchange"
-      call messages_info(1)
-
-      call scdm_init(hm%scdm, namespace, st, hm%der, hm%psolver%cube)
-    end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
 #ifdef HAVE_MPI2

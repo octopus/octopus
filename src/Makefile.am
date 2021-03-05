@@ -443,7 +443,6 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
 	hamiltonian/rkb_projector.F90                \
-	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
 	hamiltonian/singularity.F90                  \
@@ -468,7 +467,6 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lda_u_inc.F90                    \
 	hamiltonian/projector_inc.F90                \
-	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
 	hamiltonian/vxc_inc.F90
 

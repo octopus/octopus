@@ -52,7 +52,6 @@ module scf_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use space_oct_m
@@ -730,9 +729,6 @@ contains
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
-      ! reset scdm flag
-      scdm_is_local = .false.
-       
       ! this initialization seems redundant but avoids improper optimization at -O3 by PGI 7 on chum,
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
       scf%eigens%converged = 0
