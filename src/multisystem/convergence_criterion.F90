@@ -100,7 +100,7 @@ contains
     this%val_abs = abs(this%value_diff)
 
     ASSERT(associated(this%norm))
-    if(abs(this%norm) <= M_EPSILON) then
+    if(abs(this%norm) < M_TINY) then
       this%val_rel = M_HUGE
     else
       this%val_rel = this%val_abs / abs(this%norm)

@@ -87,6 +87,7 @@ module global_oct_m
   CMPLX, public, parameter :: M_zI        = (CNST(0.0), CNST(1.0))
 
   FLOAT, public, parameter :: M_EPSILON   =  epsilon(M_ONE)
+  FLOAT, public, parameter :: M_TINY      =  tiny(M_ONE)
   FLOAT, public, parameter :: M_HUGE      =  huge(M_ONE)
 
   !> some physical constants
