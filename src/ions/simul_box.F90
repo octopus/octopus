@@ -128,7 +128,7 @@ contains
 
     call read_box()                        ! Parameters defining the simulation box.
 
-    call lattice_vectors_init(sb%latt, namespace, space, sb%lsize) ! Build lattice vectors.
+    sb%latt = lattice_vectors_t(namespace, space, sb%lsize) ! Build lattice vectors.
 
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
     select case (sb%box_shape)

@@ -34,7 +34,6 @@ module lattice_vectors_oct_m
 
   public ::                   &
     lattice_vectors_t,        &
-    lattice_vectors_init,     &
     reciprocal_lattice
 
   type lattice_vectors_t
@@ -46,19 +45,24 @@ module lattice_vectors_oct_m
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
-    logical :: nonorthogonal
+    logical :: nonorthogonal = .false.
   contains
+    procedure :: copy => lattice_vectors_copy
+    generic   :: assignment(=) => copy
     procedure :: write_info => lattice_vectors_write_info
   end type lattice_vectors_t
+
+  interface lattice_vectors_t
+    module procedure lattice_vectors_constructor
+  end interface lattice_vectors_t
 
 contains
 
   !--------------------------------------------------------------
-  subroutine lattice_vectors_init(latt, namespace, space, lsize)
-    type(lattice_vectors_t), intent(inout) :: latt
-    type(namespace_t),       intent(in)    :: namespace
-    type(space_t),           intent(in)    :: space
-    FLOAT,                   intent(inout) :: lsize(:)
+  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space, lsize) result(latt)
+    type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
+    FLOAT,             intent(inout) :: lsize(:)
 
     type(block_t) :: blk
     FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
@@ -66,7 +70,7 @@ contains
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM)
 
-    PUSH_SUB(lattice_vector_init)
+    PUSH_SUB(lattice_vectors_constructor)
 
     latt%dim = space%dim
 
@@ -198,8 +202,29 @@ contains
       latt%gamma = acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
     end if
 
-    POP_SUB(lattice_vector_init)
-  end subroutine lattice_vectors_init
+    POP_SUB(lattice_vectors_constructor)
+  end function lattice_vectors_constructor
+
+  !--------------------------------------------------------------
+  subroutine lattice_vectors_copy(this, source)
+    class(lattice_vectors_t), intent(out) :: this
+    class(lattice_vectors_t), intent(in)  :: source
+
+    PUSH_SUB(lattice_vectors_copy)
+
+    this%dim = source%dim
+    this%rlattice_primitive = source%rlattice_primitive
+    this%rlattice = source%rlattice
+    this%klattice_primitive = source%klattice_primitive
+    this%klattice = source%klattice
+    this%alpha = source%alpha
+    this%beta = source%beta
+    this%gamma = source%gamma
+    this%rcell_volume = source%rcell_volume
+    this%nonorthogonal = source%nonorthogonal
+
+    POP_SUB(lattice_vectors_copy)
+  end subroutine lattice_vectors_copy
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)
