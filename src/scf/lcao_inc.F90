@@ -970,7 +970,7 @@ contains
 
             ! we only count points per column (we have to send the
             ! same number to all points in a row)
-            send_count(st%node(jbasis) + 1) = send_count(st%node(jbasis) + 1
+            send_count(st%node(jbasis) + 1) = send_count(st%node(jbasis) + 1) + 1
           end if
 
           if(st%node(jbasis) == this%myroc(2)) then
