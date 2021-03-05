@@ -346,9 +346,9 @@ contains
     integer,              intent(in)    :: np       !< Number of (local) points.
     logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
 
-    integer :: ii, jj, p1(MAX_DIM), time, current, size
-    integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
-    integer :: nn, ip, idx(MAX_DIM)
+    integer :: ii, jj, p1(MAX_DIM), time, current
+    integer, allocatable :: st1(:), st2(:), st1r(:)
+    integer :: nn
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
