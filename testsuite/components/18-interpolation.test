@@ -5,7 +5,6 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 1
 
 Precision : 1e-12
 Input: 18-interpolation.01-1d.inp

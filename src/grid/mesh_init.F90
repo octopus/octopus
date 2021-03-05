@@ -515,6 +515,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     ! These must be initialized for vec_gather, vec_scatter to work
     ! as copy operations when running without domain parallelization.
     mesh%vp%np_global = mesh%np_global
+    mesh%vp%np_ghost = 0
+    mesh%vp%np_bndry = mesh%np_part - mesh%np
     mesh%vp%npart = 1
     mesh%vp%xlocal = 1
   end if
