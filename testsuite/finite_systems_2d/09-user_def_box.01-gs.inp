@@ -1,0 +1,25 @@
+# particle in a lower triangle
+
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | species_user_defined | potential_formula | "0" | valence | 1
+%
+
+%Coordinates
+"qd" | 0 | 0
+%
+
+BoxShape = user_defined
+BoxShapeUsDef = 'x > y'
+
+%Lsize
+ 5 | 5
+%
+Spacing = 0.1
+
+TheoryLevel = independent_particles
+
+StatesPack = yes
