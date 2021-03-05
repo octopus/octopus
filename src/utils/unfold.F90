@@ -42,6 +42,7 @@ program oct_unfold
   use io_oct_m
   use io_binary_oct_m
   use io_function_oct_m
+  use lattice_vectors_oct_m
   use loct_oct_m
   use math_oct_m
   use mesh_oct_m

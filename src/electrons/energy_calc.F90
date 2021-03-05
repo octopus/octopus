@@ -138,7 +138,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb%rcell_volume)
+      hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb%latt%rcell_volume)
     end if
 
     if (allocated(hm%vberry)) then

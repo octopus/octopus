@@ -457,7 +457,7 @@ contains
     end if
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%rcell_volume, &
+    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%latt%rcell_volume, &
               geo%atom, geo%natoms, geo%catom, geo%ncatoms, sb%lsize, &
               geo%ignore_external_ions, ep%eii, ep%fii, in_box=in_box)
 

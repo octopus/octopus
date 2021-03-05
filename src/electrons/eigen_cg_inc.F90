@@ -356,7 +356,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
         alpha = alpha - st%d%kweights(ik)*st%occ(ist, 1)/st%smear%el_per_state * &
-          (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
+          (integral_hartree + integral_xc) / gr%sb%latt%rcell_volume**2
       end if
 
       beta = a0 * M_TWO
