@@ -134,7 +134,7 @@ Precision: 1.35e-08
 match ;  Current      [step  75]  ; LINEFIELD(td.general/total_current, -76, 3) ; 5.2994754649099995
 Precision: 5.e-08
 match ;  Current      [step 100]  ; LINEFIELD(td.general/total_current, -51, 3) ; 5.1514369295255005
-Precision: 5.57e-09
+Precision: 1.e-08
 match ;  Current      [step 125]  ; LINEFIELD(td.general/total_current, -26, 3) ; -6.247983305868
 Precision: 3.47e-08
 match ;  Current      [step 150]  ; LINEFIELD(td.general/total_current, -1, 3) ; -2.1620703485365
