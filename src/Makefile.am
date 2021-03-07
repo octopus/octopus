@@ -474,6 +474,7 @@ noinst_HEADERS +=                                    \
 # Sources in multisystem
 multisystem_f_srcs =                                 \
 	multisystem/algorithm.F90                    \
+        multisystem/convergence_criterion.F90         \
 	multisystem/ghost_interaction.F90            \
 	multisystem/interaction.F90                  \
 	multisystem/interaction_partner.F90          \
@@ -596,7 +597,11 @@ dftbplus_srcs = $(dftplus_f_srcs)
 
 # Sources in scf
 scf_f_srcs =                                 \
+        scf/criteria_factory.F90             \
+        scf/density_criterion.F90            \
 	scf/electrons_ground_state.F90       \
+        scf/eigenval_criterion.F90           \
+        scf/energy_criterion.F90             \
 	scf/lcao.F90                         \
 	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \

@@ -213,9 +213,11 @@ contains
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
+    ! Because g_opt has the "save" atribute, we need to explicitly empty the criteria list here, or there will be a memory leak.
+    call g_opt%scfv%criterion_list%empty()
     call end_()
-    POP_SUB(geom_opt_run_legacy)
 
+    POP_SUB(geom_opt_run_legacy)
   contains
 
     ! ---------------------------------------------------------
