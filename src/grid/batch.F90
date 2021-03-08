@@ -615,7 +615,7 @@ contains
 
     PUSH_SUB(batch_write_unpacked_to_device)
 
-    call profiling_in(prof, "BATCH_PACK_COPY_CL")
+    call profiling_in(prof, "BATCH_WRITE_UNPACKED_ACCEL")
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -693,7 +693,7 @@ contains
     type(profile_t), save :: prof, prof_unpack
 
     PUSH_SUB(batch_read_device_to_unpacked)
-    call profiling_in(prof, "BATCH_UNPACK_COPY_CL")
+    call profiling_in(prof, "BATCH_READ_UNPACKED_ACCEL")
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -764,7 +764,7 @@ contains
 
     PUSH_SUB(batch_write_packed_to_device)
 
-    call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
+    call profiling_in(prof_pack, "BATCH_WRITE_PACKED_ACCEL")
     if(this%type() == TYPE_FLOAT) then
       call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
@@ -784,7 +784,7 @@ contains
 
     PUSH_SUB(batch_read_device_to_packed)
 
-    call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
+    call profiling_in(prof_unpack, "BATCH_READ_PACKED_ACCEL")
     if(this%type() == TYPE_FLOAT) then
       call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
