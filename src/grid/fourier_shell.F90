@@ -117,7 +117,7 @@ contains
           end if
 
           if(sum(gvec(1:3)**2)/M_TWO <= this%ekin_cutoff + CNST(1e-10)) then
-            INCR(ig, 1)
+            ig = ig + 1
             ucoords(1:3, ig) = (/ ix, iy, iz /)
             ured_gvec(1:3, ig) = ixx(1:3)
             modg2(ig) = sum(gvec(1:3)**2)

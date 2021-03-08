@@ -957,7 +957,7 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
     deriv = HUGE(deriv)
     done = .false.
 
-    INCR(iter, 1)
+    iter = iter + 1
     if(debug%info) then
       if(mpi_world%rank == 0) then
         write(number, '(i4)') iter

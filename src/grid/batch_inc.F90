@@ -131,7 +131,7 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, special, packed)
     call this%X(allocate_packed_host)()
     this%status_of = BATCH_PACKED
     this%status_host = BATCH_PACKED
-    INCR(this%host_buffer_count, 1)
+    this%host_buffer_count = this%host_buffer_count + 1
   else
     call this%X(allocate_unpacked_host)()
   end if

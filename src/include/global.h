@@ -197,10 +197,6 @@
 #endif
 
 
-! This was used in the past and should not be used any more.
-#define ALLOCATE(a,b) _DEPRECATED_PLEASE_USE_SAFE_ALLOCATE_
-
-
 ! The following macros facilitate the use of real or complex variables,
 ! and the possibility of compiling the code in single or double precision.
 #define REAL_DOUBLE real(8)
@@ -239,7 +235,6 @@
 ! do not use the STRINGIFY macro
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
-#define INCR(x, y) x = (x) + (y)
 
 
 ! Whenever a procedure is not called too many times, one should start it
@@ -256,9 +251,6 @@
       call pop_sub(__FILE__+"." ACARDINAL +TOSTRING(routine)); CARDINAL \
   endif; endif; \
   CARDINAL
-
-! the leading dimension of the array
-#define LD(a) ubound(a,dim=1)
 
 !! Local Variables:
 !! mode: f90

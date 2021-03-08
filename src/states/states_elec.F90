@@ -1024,7 +1024,7 @@ contains
     st%group%nblocks = 0
     bstart(1) = istmin
     do ist = istmin, istmax
-      INCR(ib, 1)
+      ib = ib + 1
 
       st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
 
@@ -1037,7 +1037,7 @@ contains
 
       if(ib == st%d%block_size .or. ist == istmax .or. .not. same_node) then
         ib = 0
-        INCR(st%group%nblocks, 1)
+        st%group%nblocks = st%group%nblocks + 1
         bend(st%group%nblocks) = ist
         if(ist /= istmax) bstart(st%group%nblocks + 1) = ist + 1
       end if

@@ -1363,18 +1363,18 @@ contains
               st%mpi_grp%comm, req(nreq + 1), mpi_err)
             call MPI_Irecv(psi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(jst), jst, &
               st%mpi_grp%comm, req(nreq + 2), mpi_err)
-            INCR(nreq, 2)
+            nreq = nreq + 2
           end if
 
           ! if I have the wave function, I send it (note: a node could be sending to itself, this is by design)
           if(st%node(ist)  == st%mpi_grp%rank) then
-            INCR(nreq, 1)
+            nreq = nreq + 1
             call states_elec_get_state(st, mesh, ist, 1, spsi1)
             call MPI_Isend(spsi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, ist, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
           
           if(st%node(jst) == st%mpi_grp%rank) then
-            INCR(nreq, 1)
+            nreq = nreq + 1
             call states_elec_get_state(st, mesh, jst, 1, spsi2)
             call MPI_Isend(spsi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, jst, st%mpi_grp%comm, req(nreq), mpi_err)
           end if

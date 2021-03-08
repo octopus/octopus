@@ -1307,7 +1307,7 @@ contains
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO 
               weights(nreduced) = kweight(ik)
-              INCR(num_symm_ops(nreduced), 1)
+              num_symm_ops(nreduced) = num_symm_ops(nreduced) + 1
               symm_ops(nreduced, num_symm_ops(nreduced)) = iop
               cycle
             end if
@@ -1324,7 +1324,7 @@ contains
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
-              INCR(num_symm_ops(nreduced), 1)
+              num_symm_ops(nreduced) = num_symm_ops(nreduced) + 1
               !We mark the symmetry+time-reversal operation as negative
               symm_ops(nreduced, num_symm_ops(nreduced)) = -iop
             end if
