@@ -141,10 +141,6 @@ module par_vec_oct_m
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, allocatable    :: local_vec(:)         !< Partition r has points
-                                                    !! local_vec(xlocal_vec(r):
-                                                    !! xlocal_vec(r)+np_local_vec(r)-1). 
-                                                    !! Global vector; np_global elements    
     integer, allocatable    :: local(:)             !< Local points of running process
                                                     !! Local vector; np_local elements
     integer, allocatable    :: recv_count(:)        !< Number of points to receive from all the other processes
@@ -440,7 +436,6 @@ contains
     subroutine init_local()
 
       integer :: sp, ep, np_tmp
-      integer, allocatable :: xlocal_tmp(:)
 
       PUSH_SUB(vec_init.init_local)
       
@@ -448,24 +443,8 @@ contains
       ep = vp%xlocal + vp%np_local + 1
       SAFE_ALLOCATE(vp%local(sp:ep))
 
-      sp = 1
-      ep = np_global
-      SAFE_ALLOCATE(vp%local_vec(sp:ep))
-
       ! Calculate the local vector in parallel
       call partition_get_local(partition, vp%local(vp%xlocal:), np_tmp)
-
-      SAFE_ALLOCATE(xlocal_tmp(1:npart))
-      xlocal_tmp = vp%xlocal_vec - 1
-      ! Gather all the local vectors in a unique big one
-      call mpi_debug_in(comm, C_MPI_ALLGATHERV)
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
-                          vp%local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
-                          comm, mpi_err)
-#endif
-      call mpi_debug_out(comm, C_MPI_GATHERV)
-      SAFE_DEALLOCATE_A(xlocal_tmp)
 
       POP_SUB(vec_init.init_local)
     end subroutine init_local
@@ -563,7 +542,6 @@ contains
     SAFE_DEALLOCATE_A(vp%np_local_vec)
     SAFE_DEALLOCATE_A(vp%xlocal_vec)
     SAFE_DEALLOCATE_A(vp%local)
-    SAFE_DEALLOCATE_A(vp%local_vec)
     SAFE_DEALLOCATE_A(vp%send_count)
     SAFE_DEALLOCATE_A(vp%recv_count)
     SAFE_DEALLOCATE_A(vp%bndry)
@@ -608,6 +586,33 @@ contains
 #endif
 
   end function vec_global2local
+
+  ! gather all local arrays into a global one
+  ! this gives the global mapping of the index in the partition to the global index
+  subroutine get_local_vec(vp, local_vec)
+    type(pv_t),           intent(in)  :: vp
+    integer, allocatable, intent(out) :: local_vec(:)
+
+    integer, allocatable :: xlocal_tmp(:)
+
+    PUSH_SUB(get_local_vec)
+
+    SAFE_ALLOCATE(local_vec(1:vp%np_global))
+
+    SAFE_ALLOCATE(xlocal_tmp(1:vp%npart))
+    xlocal_tmp = vp%xlocal_vec - 1
+    ! Gather all the local vectors in a unique big one
+    call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
+    call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
+                        local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
+                        vp%comm, mpi_err)
+#endif
+    call mpi_debug_out(vp%comm, C_MPI_GATHERV)
+    SAFE_DEALLOCATE_A(xlocal_tmp)
+
+    POP_SUB(get_local_vec)
+  end subroutine get_local_vec
 
 
 #include "undef.F90"
