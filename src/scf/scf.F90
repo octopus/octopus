@@ -523,9 +523,6 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
-#ifdef HAVE_MPI
-    logical :: forced_finish_tmp    
-#endif
     class(convergence_criterion_t), pointer    :: crit
     type(criterion_iterator_t) :: iterator
     logical :: is_crit_conv
@@ -809,12 +806,7 @@ contains
 
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(scf%forced_finish, forced_finish_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
-      scf%forced_finish = forced_finish_tmp
-#endif      
+      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm(mc%master_comm)
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
