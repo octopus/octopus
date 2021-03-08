@@ -257,6 +257,15 @@ contains
 
     PUSH_SUB(create_interaction_with_partners)
 
+    if (debug%info) then
+      if( present(interaction_type) ) then
+        write(message(1), '(a I4)') "Debug: ----  interactions_factory_abst with type ", interaction_type 
+      else
+        write(message(1), '(a)') "Debug: ----  interactions_factory_abst without type. " 
+      endif
+      call messages_info(1)
+    end if
+
     ! Loop over all available partners
     call iter%start(partners)
     do while (iter%has_next())
@@ -264,11 +273,6 @@ contains
 
       ! No self-interaction
       if (partner%namespace%get() /= namespace%get()) then
-
-        if (debug%info) then
-          write(message(1), '(a)') "Debug: ----  with " + trim(partner%namespace%get())
-          call messages_info(1)
-        end if
 
         if (present(interaction_type)) then
           ! If the partner also supports this type of interaction, then create the interaction
@@ -281,6 +285,14 @@ contains
           interaction => ghost_interaction_t(partner)
           call interactions%add(interaction)
         end if
+
+        if (debug%info) then
+          if( associated(interaction)) then
+            write(message(1), '(a)') "Debug: ----  " + trim(interaction%label) + " with " + trim(partner%namespace%get())
+          endif
+          call messages_info(1)
+        end if
+
       end if
 
     end do
