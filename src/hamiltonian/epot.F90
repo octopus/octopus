@@ -68,7 +68,8 @@ module epot_oct_m
     epot_precalc_local_potential,  &
     epot_have_lasers,              &
     epot_have_kick,                &
-    epot_have_external_potentials
+    epot_have_external_potentials, &
+    local_potential_has_density
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -392,8 +393,6 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    FLOAT,    allocatable :: density(:)
-    FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
     logical, allocatable :: in_box(:)
@@ -404,17 +403,12 @@ contains
     sb   => gr%sb
     mesh => gr%mesh
 
-    SAFE_ALLOCATE(density(1:mesh%np))
-    density = M_ZERO
-
     ! Local part
     ep%vpsl = M_ZERO
     if(ep%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
-
-      call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(ia), ia, ep%vpsl, density = density)
 
       if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
         call species_get_nlcc(geo%atom(ia)%species, geo%space, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
@@ -425,35 +419,9 @@ contains
     if(geo%atoms_dist%parallel) then
       call profiling_in(epot_reduce, "EPOT_REDUCE")
 
-      call comm_allreduce(geo%atoms_dist%mpi_grp, ep%vpsl, dim = gr%mesh%np)
       if (allocated(st%rho_core)) &
         call comm_allreduce(geo%atoms_dist%mpi_grp, st%rho_core, dim = gr%mesh%np)
-      if(ep%have_density) &
-        call comm_allreduce(geo%atoms_dist%mpi_grp, density, dim = gr%mesh%np)
       call profiling_out(epot_reduce)
-    end if
-
-    if(ep%have_density) then
-      ! now we solve the poisson equation with the density of all nodes
-
-      SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
-      if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
-      call dpoisson_solve(ep%poisson_solver, tmp, density)
-      call lalg_axpy(mesh%np, M_ONE, tmp, ep%vpsl)
-      SAFE_DEALLOCATE_A(tmp)
-
-    end if
-    SAFE_DEALLOCATE_A(density)
-
-    !This needs to be done here at the moment, as ion_interaction cannot know simul_box
-    if(geo%ignore_external_ions) then
-      SAFE_ALLOCATE(in_box(1:geo%natoms+geo%ncatoms))
-      do ia = 1, geo%natoms
-        in_box(ia) = sb%contains_point(geo%atom(ia)%x)
-      end do
-      do ia = 1, geo%ncatoms
-        in_box(geo%natoms + ia) = sb%contains_point(geo%catom(ia)%x)
-      end do
     end if
 
     ! we assume that we need to recalculate the ion-ion energy
@@ -516,7 +484,7 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, space, mesh, atom, iatom, vpsl, density)
+  subroutine epot_local_potential(ep, namespace, space, mesh, atom, iatom, vpsl)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
@@ -524,7 +492,6 @@ contains
     type(atom_t),             intent(in)    :: atom
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
-    FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
     integer :: ip
     FLOAT :: radius, r
@@ -552,22 +519,15 @@ contains
 
         call species_get_long_range_density(atom%species, space, namespace, atom%x, mesh, rho)
 
-        !In this case, we want to treat this outside of this routine to 
-        !avoid multiple calls to poisson_solve
-        if(present(density)) then
-          call lalg_axpy(mesh%np, M_ONE, rho, density)
-        else
-
-          SAFE_ALLOCATE(vl(1:mesh%np))
+        SAFE_ALLOCATE(vl(1:mesh%np))
           
-          if(poisson_solver_is_iterative(ep%poisson_solver)) then
-            ! vl has to be initialized before entering routine
-            ! and our best guess for the potential is zero
-            vl(1:mesh%np) = M_ZERO
-          end if
-
-          call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
+        if(poisson_solver_is_iterative(ep%poisson_solver)) then
+          ! vl has to be initialized before entering routine
+          ! and our best guess for the potential is zero
+          vl(1:mesh%np) = M_ZERO
         end if
+
+        call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
 
         SAFE_DEALLOCATE_A(rho)
 
