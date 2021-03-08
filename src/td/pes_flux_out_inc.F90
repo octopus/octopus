@@ -336,7 +336,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -612,7 +612,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 

@@ -750,8 +750,8 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid, namespace)
   SAFE_ALLOCATE(zpsi(1:mesh%np))
 
   do iq = 1, st%d%nik
-    ispin = states_elec_dim_get_spin_index(st%d, iq)
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
+    ispin = st%d%get_spin_index(iq)
+    ikpoint = st%d%get_kpoint_index(iq)
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 

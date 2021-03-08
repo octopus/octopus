@@ -303,7 +303,7 @@ contains
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
+        ispin = st%d%get_spin_index(ik)
         do ib = st%group%block_start, st%group%block_end
 
           call st%group%psib(ib, ik)%do_pack(copy = .true.)
@@ -379,7 +379,7 @@ contains
         ! we can use the packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_elec_dim_get_spin_index(st%d, ik)
+          ispin = st%d%get_spin_index(ik)
           do ib = st%group%block_start, st%group%block_end
 
             call st%group%psib(ib, ik)%do_pack(copy = .true.)
@@ -420,7 +420,7 @@ contains
         ! use the slow non-packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_elec_dim_get_spin_index(st%d, ik)
+          ispin = st%d%get_spin_index(ik)
           do ist = st%st_start, st%st_end
 
             ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -510,7 +510,7 @@ contains
     if(st%d%ispin /= SPINORS) then
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
+        ispin = st%d%get_spin_index(ik)
         call lalg_axpy(der%mesh%np, der%dim, M_ONE, st%current_kpt(:, :, ik), st%current(:, :, ispin))
       end do
     end if
@@ -572,7 +572,7 @@ contains
 
     cmel = M_z0
 
-    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+    ispin = hm%d%get_spin_index(ik)
     ppsi_i(:,:) = M_z0        
     ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
     ppsi_j(:,:) = M_z0        
@@ -680,7 +680,7 @@ contains
     
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       do ist = st%st_start, st%st_end
 
         if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle

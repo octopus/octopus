@@ -1065,7 +1065,7 @@ contains
               end do
 
             case (KICK_SPIN_MODE)
-              ispin = states_elec_dim_get_spin_index(st%d, iqn)
+              ispin = st%d%get_spin_index(iqn)
               do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
 

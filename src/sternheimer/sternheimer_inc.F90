@@ -149,7 +149,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
 
     do ik = st%d%kpt%start, st%d%kpt%end
       !now calculate response for each state
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
 
       do ib = st%group%block_start, st%group%block_end
         
@@ -707,7 +707,7 @@ subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpo
 
   do ik = st%d%kpt%start, st%d%kpt%end
 
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     do ist = st%st_start, st%st_end
 
       call states_elec_get_state(st, mesh, ist, ik, psi)

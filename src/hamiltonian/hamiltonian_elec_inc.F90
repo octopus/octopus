@@ -172,7 +172,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   ! apply the local potential
   if (bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
-    call X(hamiltonian_elec_base_local)(hm%hm_base, mesh, hm%d, states_elec_dim_get_spin_index(hm%d, psib%ik), epsib, hpsib)
+    call X(hamiltonian_elec_base_local)(hm%hm_base, mesh, hm%d, hm%d%get_spin_index(psib%ik), epsib, hpsib)
   else if(bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     call X(hamiltonian_elec_external)(hm, mesh, epsib, hpsib)
   end if
@@ -188,7 +188,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   
   if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_elec_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_elec_base_magnetic)(hm%hm_base, mesh, hm%der, hm%d, hm%ep, &
-             states_elec_dim_get_spin_index(hm%d, psib%ik), epsib, hpsib)
+             hm%d%get_spin_index(psib%ik), epsib, hpsib)
   end if
   
   if (bitand(TERM_OTHERS, terms_) /= 0 ) then
@@ -350,7 +350,7 @@ subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hp
 
   ASSERT(psib%nst == hpsib%nst)
 
-  ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
+  ispin = hm%d%get_spin_index(psib%ik)
 
   call hpsib%copy_to(auxpsib, copy_data=.false.)
   call hpsib%copy_to(aux2psib, copy_data=.false.)
@@ -397,7 +397,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
+  ispin = hm%d%get_spin_index(psib%ik)
 
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:mesh%np))
@@ -500,7 +500,7 @@ subroutine X(hamiltonian_elec_diagonal) (hm, mesh, diag, ik)
   select case(hm%d%ispin)
 
   case(UNPOLARIZED, SPIN_POLARIZED)
-    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+    ispin = hm%d%get_spin_index(ik)
     diag(1:mesh%np, 1) = diag(1:mesh%np, 1) + hm%vhxc(1:mesh%np, ispin) + hm%ep%vpsl(1:mesh%np)
 
   case(SPINORS)

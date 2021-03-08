@@ -371,7 +371,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start
   ! could use batches?
   ! FIXME: parallelize in states
 
-  ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
+  ispin = sys%st%d%get_spin_index(ik)
 
   do ist = st_start, st_end
     call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))

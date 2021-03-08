@@ -282,7 +282,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
     call messages_not_implemented("Dipole matrix elements with spinors", namespace=namespace)
   end if
 
-  ispin = states_elec_dim_get_spin_index(st%d, ik)
+  ispin = st%d%get_spin_index(ik)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))

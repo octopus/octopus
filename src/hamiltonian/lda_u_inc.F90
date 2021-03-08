@@ -39,7 +39,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
-  ispin = states_elec_dim_get_spin_index(d, psib%ik)
+  ispin = d%get_spin_index(psib%ik)
   if(d%ispin == UNPOLARIZED) then
     el_per_state = 2
   else
@@ -185,7 +185,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
 
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin =  states_elec_dim_get_spin_index(st%d,ik)
+    ispin =  st%d%get_spin_index(ik)
 
     do ist = st%st_start, st%st_end
 
@@ -1359,7 +1359,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets))
    SAFE_ALLOCATE(reduced(1:d%dim,1:this%maxnorbs, 1:this%norbsets))
 
-   ispin = states_elec_dim_get_spin_index(d, ik)
+   ispin = d%get_spin_index(ik)
    if(d%ispin == UNPOLARIZED) then
      el_per_state = 2
    else
@@ -1656,7 +1656,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_ALLOCATE(gdot(1:st%d%dim, 1:this%maxnorbs,1:ndim))
    SAFE_ALLOCATE(gradn(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:ndim))
 
-   ispin = states_elec_dim_get_spin_index(st%d, iq)
+   ispin = st%d%get_spin_index(iq)
 
    do ios = 1, this%norbsets 
      os => this%orbsets(ios)

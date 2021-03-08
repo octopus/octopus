@@ -172,7 +172,7 @@ contains
     end if
 
     do ik = kpt_start, kpt_end
-      ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+      ikpoint = st%d%get_kpoint_index(ik)
       kpoint = M_ZERO
       kpoint(1:sb%dim) = kpoints%get_point(ikpoint, absolute_coordinates = .false.) 
 

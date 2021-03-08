@@ -396,7 +396,7 @@ contains
 
     ! propagate the other half with H(t)
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
 
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then

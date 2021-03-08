@@ -126,7 +126,7 @@ contains
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
 
-      kpoint(1:gr%sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(d, ik))
+      kpoint(1:gr%sb%dim) = kpoints%get_point(d%get_kpoint_index(ik))
       do ip = 1, gr%mesh%np
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
       end do

@@ -356,7 +356,7 @@ contains
     
 
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
@@ -539,7 +539,7 @@ contains
 ! calculate stress from non-local pseudopotentials
     stress_t_NL = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
