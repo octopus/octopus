@@ -245,6 +245,7 @@ ions_f_srcs =                                 \
 	ions/atom.F90                         \
 	ions/box.F90                          \
 	ions/box_cylinder.F90                 \
+	ions/box_hypercube.F90                \
 	ions/box_image.F90                    \
 	ions/box_intersection.F90             \
 	ions/box_minimum.F90                  \

@@ -23,6 +23,7 @@ module simul_box_oct_m
   use atom_oct_m
   use box_oct_m
   use box_cylinder_oct_m
+  use box_hypercube_oct_m
   use box_image_oct_m
   use box_minimum_oct_m
   use box_parallelepiped_oct_m
@@ -139,6 +140,8 @@ contains
         periodic_boundaries=(sb%periodic_dim > 0))
     case (PARALLELEPIPED)
       sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+    case (HYPERCUBE)
+      sb%box => box_hypercube_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
     case (BOX_USDEF)
       sb%box => box_user_defined_t(space%dim, center, user_def, M_TWO*sb%lsize(1:space%dim))
 
@@ -553,20 +556,12 @@ contains
     class(simul_box_t), intent(in) :: this
     integer,            intent(in) :: iunit
 
-    character(len=15), parameter :: bs(6) = (/ &
-      'sphere        ', &
-      'cylinder      ', &
-      'minimum       ', &
-      'parallelepiped', &
-      'image-defined ', &
-      'hypercube     '/)
-
     PUSH_SUB(simul_box_write_info)
 
     write(iunit,'(a)') 'Simulation Box:'
 
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
+    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
       call this%box%write_info(iunit)
     end select
 
@@ -595,7 +590,7 @@ contains
     write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
     write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
     select case (this%box_shape)
-    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE, BOX_USDEF)
+    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
       call this%box%write_short_info(iunit)
 
     case(PARALLELEPIPED)
@@ -615,10 +610,6 @@ contains
       else
         call this%box%write_short_info(iunit)
       end if
-
-    case(HYPERCUBE)
-      write(iunit, '(a)') 'BoxShape = hypercube'  ! add parameters?
-
     end select
 
     POP_SUB(simul_box_write_short_info)
@@ -632,10 +623,7 @@ contains
     FLOAT,              intent(in)  :: xx(:, :) !< (1:, 1:this%dim)
     logical :: contained(1:nn)
 
-    FLOAT, parameter :: DELTA = CNST(1e-12)
-    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx_red(:, :)
-    integer :: ip
 
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx_red(1:nn, 1:this%dim))
@@ -648,20 +636,7 @@ contains
       call lalg_gemm(nn, this%dim, this%dim, M_ONE, xx, this%latt%klattice_primitive, M_ZERO, xx_red)
     end if
 
-    select case(this%box_shape)
-    case(SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
-      contained = this%box%contains_points(nn, xx_red)
-
-    case (HYPERCUBE) 
-      llimit(1:this%dim) = -this%lsize(1:this%dim) - DELTA
-      ulimit(1:this%dim) =  this%lsize(1:this%dim) + DELTA
-      ulimit(1:this%periodic_dim)  = this%lsize(1:this%periodic_dim) - DELTA
-
-      do ip = 1, nn
-        contained(ip) = all(xx_red(ip, 1:this%dim) >= llimit(1:this%dim) .and. xx_red(ip, 1:this%dim) <= ulimit(1:this%dim))
-      end do
-
-    end select
+    contained = this%box%contains_points(nn, xx_red)
 
     SAFE_DEALLOCATE_A(xx_red)
 
