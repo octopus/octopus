@@ -529,9 +529,6 @@ contains
     logical,                  intent(inout) :: fromScratch
 
     logical                      :: stopping
-#ifdef HAVE_MPI
-    logical                      :: stopping_tmp
-#endif
     integer                      :: iter, scsteps
     FLOAT                        :: etime
     type(profile_t),        save :: prof
@@ -544,12 +541,7 @@ contains
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm()
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
-      stopping = stopping_tmp
-#endif      
+      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm(mc%master_comm)
 
       call profiling_in(prof, "TIME_STEP")
 
