@@ -19,6 +19,7 @@
 #include "global.h"
 
 module mesh_init_oct_m
+  use box_hypercube_oct_m
   use checksum_interface_oct_m
   use curvilinear_oct_m
   use global_oct_m
@@ -86,7 +87,12 @@ subroutine mesh_init_stage_1(mesh, namespace, space, sb, cv, spacing, enlarge)
   mesh%use_curvilinear = mesh%use_curvilinear .or. multiresolution_use(mesh%hr_area)
 
   mesh%idx%dim = space%dim
-  mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
+  select type (box => sb%box)
+  type is (box_hypercube_t)
+    mesh%idx%is_hypercube = .true.
+  class default
+    mesh%idx%is_hypercube = .false.
+  end select
   mesh%idx%enlarge = enlarge
 
   if (multiresolution_use(mesh%hr_area)) then

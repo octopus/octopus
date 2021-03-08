@@ -37,9 +37,9 @@ module box_parallelepiped_oct_m
   !! generating the parallelepiped must be along the Cartesian axes.
   type, extends(box_shape_t) :: box_parallelepiped_t
     private
-    FLOAT, allocatable :: half_length(:) !< half the length of the parallelepiped in each direction.
+    FLOAT, allocatable, public :: half_length(:) !< half the length of the parallelepiped in each direction.
 
-    integer :: n_periodic_boundaries = 0 !< in how many directions the parallelepiped boundaries are periodic
+    integer, public :: n_periodic_boundaries = 0 !< in how many directions the parallelepiped boundaries are periodic
   contains
     procedure :: contains_points => box_parallelepiped_contains_points
     procedure :: write_info => box_parallelepiped_write_info
