@@ -45,7 +45,7 @@ match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 Input: 01-casida.02-vib_modes.inp
 Precision: 0.05
 match ;  Bond stretch    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 2254.18105202
-Precision: 2.4e-02
+Precision: 3.e-02
 match ;  Libration 1     ; LINEFIELD(vib_modes/normal_frequencies_lr, 2, 2) ; 324.127205145
 
 Precision : 0.0001

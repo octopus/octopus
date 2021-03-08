@@ -24,7 +24,7 @@ Precision: 2.e-05
 match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 87.831695965
 Precision: 1.06e-05
 match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -33.907972825
-Precision: 1.26e-07
+Precision: 2.e-07
 match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.0081189349999997
 Precision: 6.14e-05
 match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 187.59458093
