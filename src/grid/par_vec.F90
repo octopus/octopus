@@ -587,15 +587,45 @@ contains
 
   end function vec_global2local
 
-  ! gather all local arrays into a global one
+  ! gather all local arrays into a global one on rank root
   ! this gives the global mapping of the index in the partition to the global index
-  subroutine get_local_vec(vp, local_vec)
+  subroutine gather_local_vec(vp, root, local_vec)
+    type(pv_t),           intent(in)  :: vp
+    integer,              intent(in)  :: root
+    integer, allocatable, intent(out) :: local_vec(:)
+
+    integer, allocatable :: xlocal_tmp(:)
+
+    PUSH_SUB(gather_local_vec)
+
+    if (root == vp%rank) then
+      SAFE_ALLOCATE(local_vec(1:vp%np_global))
+    end if
+
+    SAFE_ALLOCATE(xlocal_tmp(1:vp%npart))
+    xlocal_tmp = vp%xlocal_vec - 1
+    ! Gather all the local vectors in a unique big one
+    call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
+    call MPI_Gatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
+                     local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
+                     root, vp%comm, mpi_err)
+#endif
+    call mpi_debug_out(vp%comm, C_MPI_GATHERV)
+    SAFE_DEALLOCATE_A(xlocal_tmp)
+
+    POP_SUB(gather_local_vec)
+  end subroutine gather_local_vec
+
+  ! gather all local arrays into a global one on all ranks
+  ! this gives the global mapping of the index in the partition to the global index
+  subroutine allgather_local_vec(vp, local_vec)
     type(pv_t),           intent(in)  :: vp
     integer, allocatable, intent(out) :: local_vec(:)
 
     integer, allocatable :: xlocal_tmp(:)
 
-    PUSH_SUB(get_local_vec)
+    PUSH_SUB(allgather_local_vec)
 
     SAFE_ALLOCATE(local_vec(1:vp%np_global))
 
@@ -611,8 +641,8 @@ contains
     call mpi_debug_out(vp%comm, C_MPI_GATHERV)
     SAFE_DEALLOCATE_A(xlocal_tmp)
 
-    POP_SUB(get_local_vec)
-  end subroutine get_local_vec
+    POP_SUB(allgather_local_vec)
+  end subroutine allgather_local_vec
 
 
 #include "undef.F90"
