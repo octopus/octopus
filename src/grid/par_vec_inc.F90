@@ -54,6 +54,9 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal_vec - 1
 
+  if (root == vp%rank) then
+    SAFE_ALLOCATE(local_vec(1:vp%np_global))
+  end if
   call gather_local_vec(vp, root, local_vec)
 
   SAFE_ALLOCATE(v_tmp(1:1))
@@ -131,6 +134,9 @@ subroutine X(vec_gather)(vp, root, v_local, v)
 #endif
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
+  if (root == vp%rank) then
+    SAFE_ALLOCATE(local_vec(1:vp%np_global))
+  end if
   call gather_local_vec(vp, root, local_vec)
 
   ! Copy values from v_tmp to their original position in v.
@@ -188,6 +194,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
 #endif
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
+  SAFE_ALLOCATE(local_vec(1:vp%np_global))
   call allgather_local_vec(vp, local_vec)
   ! Copy values from v_tmp to their original position in v.
   do ii = 1, vp%np_global
