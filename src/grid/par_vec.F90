@@ -129,8 +129,6 @@ module par_vec_oct_m
     integer                 :: npart                !< Number of partitions.
     integer                 :: comm                 !< MPI communicator to use.
     integer                 :: np_global            !< Number of points in mesh.
-    integer, allocatable    :: part_local(:)        !< Local point         -> partition
-    integer, allocatable    :: part_local_rev(:)    !< Local point`s value -> partition
 
     integer, allocatable    :: np_local_vec(:)      !< How many points has partition r?
                                                     !! Global vector; npart elements.
@@ -143,10 +141,6 @@ module par_vec_oct_m
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, allocatable    :: local_vec(:)         !< Partition r has points
-                                                    !! local_vec(xlocal_vec(r):
-                                                    !! xlocal_vec(r)+np_local_vec(r)-1). 
-                                                    !! Global vector; np_global elements    
     integer, allocatable    :: local(:)             !< Local points of running process
                                                     !! Local vector; np_local elements
     integer, allocatable    :: recv_count(:)        !< Number of points to receive from all the other processes
@@ -154,6 +148,8 @@ module par_vec_oct_m
                                                     !! in a MPI_Alltoallv.
     integer, allocatable    :: recv_disp(:)         !< Displacement of points to receive from all the other processes
     integer, allocatable    :: send_disp(:)         !< Displacement of points to send to all the other processes
+    integer, allocatable    :: sendmap(:)           !< map for packing initial global points
+    integer, allocatable    :: recvmap(:)           !< map for unpacking initial global points
                                                     !! in a MPI_Alltoallv.
     integer                 :: np_bndry             !< Number of local boundary points.
  
@@ -267,15 +263,6 @@ contains
       call iihash_insert(vp%global, vp%local(vp%xlocal + ip - 1), ip)
     end do
 
-    SAFE_ALLOCATE(points(1:vp%np_local))
-    SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
-    do ip = 1, vp%np_local
-      points(ip) = vp%xlocal + ip - 1
-    end do
-    call partition_get_partition_number(partition, vp%np_local, &
-         points, vp%part_local)
-    SAFE_DEALLOCATE_A(points)
-
     call iihash_init(boundary)
     call iihash_init(ghost)
     call iihash_init(boundary_inv)
@@ -362,8 +349,6 @@ contains
     SAFE_DEALLOCATE_A(ghost_tmp)
     SAFE_DEALLOCATE_A(part_ghost_tmp)
 
-    call init_MPI_Alltoall()
-    
 #ifdef HAVE_MPI
     call MPI_Alltoall(vp%ghost_rcounts(1), 1, MPI_INTEGER, &
          vp%ghost_scounts(1), 1, MPI_INTEGER, &
@@ -404,6 +389,7 @@ contains
       ASSERT(found)
       vp%ghost_sendmap(ip) = index
     end do
+    SAFE_DEALLOCATE_A(points)
 
     if (accel_is_enabled()) then
       ! copy maps to GPU
@@ -439,6 +425,8 @@ contains
     do ip = 1, vp%np_bndry
       call iihash_insert(vp%global, vp%bndry(ip), ip + vp%np_local + vp%np_ghost)
     end do
+
+    call init_MPI_Alltoall()
     
     SAFE_DEALLOCATE_A(part_ghost)
 
@@ -448,7 +436,6 @@ contains
     subroutine init_local()
 
       integer :: sp, ep, np_tmp
-      integer, allocatable :: xlocal_tmp(:)
 
       PUSH_SUB(vec_init.init_local)
       
@@ -456,67 +443,80 @@ contains
       ep = vp%xlocal + vp%np_local + 1
       SAFE_ALLOCATE(vp%local(sp:ep))
 
-      sp = 1
-      ep = np_global
-      SAFE_ALLOCATE(vp%local_vec(sp:ep))
-
       ! Calculate the local vector in parallel
       call partition_get_local(partition, vp%local(vp%xlocal:), np_tmp)
-
-      SAFE_ALLOCATE(xlocal_tmp(1:npart))
-      xlocal_tmp = vp%xlocal_vec - 1
-      ! Gather all the local vectors in a unique big one
-      call mpi_debug_in(comm, C_MPI_ALLGATHERV)
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
-                          vp%local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
-                          comm, mpi_err)
-#endif
-      call mpi_debug_out(comm, C_MPI_GATHERV)
-      SAFE_DEALLOCATE_A(xlocal_tmp)
 
       POP_SUB(vec_init.init_local)
     end subroutine init_local
 
     subroutine init_MPI_Alltoall()
-
-      integer :: ipg
+      integer, allocatable :: part_local(:)
 
       PUSH_SUB(vec_init.init_MPI_Alltoall)
-      
-      SAFE_ALLOCATE(vp%recv_count(1:npart))
-      SAFE_ALLOCATE(vp%send_count(1:npart))
-      SAFE_ALLOCATE(points(1:vp%np_local))
-      vp%send_count = 0
-      vp%recv_count = 0
-      do ip = 1, vp%np_local
-        ! Get the temporally global point
-        ipg = vp%local(vp%xlocal + ip - 1)
-        ! Get the destination global point
-        points(ip) = vp%local_vec(ipg)
-      end do
 
-      SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
-      ! Get the destination partitions
-      call partition_get_partition_number(partition, vp%np_local, points, vp%part_local_rev)
+      SAFE_ALLOCATE(part_local(1:vp%np_local))
+      SAFE_ALLOCATE(points(1:vp%np_local))
+      do ip = 1, vp%np_local
+        points(ip) = vp%xlocal + ip - 1
+      end do
+      call partition_get_partition_number(partition, vp%np_local, &
+           points, part_local)
       SAFE_DEALLOCATE_A(points)
 
-      do ip = 1, vp%np_local
-        ipart = vp%part_local_rev(ip)
-        vp%recv_count(ipart) = vp%recv_count(ipart) + 1
-        ipart = vp%part_local(ip)
-        vp%send_count(ipart) = vp%send_count(ipart) + 1
-      end do
-      
+      SAFE_ALLOCATE(vp%send_count(1:npart))
+      SAFE_ALLOCATE(vp%recv_count(1:npart))
       SAFE_ALLOCATE(vp%send_disp(1:npart))
       SAFE_ALLOCATE(vp%recv_disp(1:npart))
 
+      vp%send_count = 0
+      do ip = 1, vp%np_local
+        ipart = part_local(ip)
+        vp%send_count(ipart) = vp%send_count(ipart) + 1
+      end do
       vp%send_disp(1) = 0
-      vp%recv_disp(1) = 0
       do ipart = 2, npart
         vp%send_disp(ipart) = vp%send_disp(ipart - 1) + vp%send_count(ipart - 1)
+      end do
+
+#ifdef HAVE_MPI
+      call MPI_Alltoall(vp%send_count(1), 1, MPI_INTEGER, &
+           vp%recv_count(1), 1, MPI_INTEGER, &
+           comm, mpi_err)
+#endif
+
+      vp%recv_disp(1) = 0
+      do ipart = 2, npart
         vp%recv_disp(ipart) = vp%recv_disp(ipart - 1) + vp%recv_count(ipart - 1)
       end do
+
+      ! create maps
+      SAFE_ALLOCATE(vp%sendmap(1:vp%np_local))
+      SAFE_ALLOCATE(points(1:vp%npart))
+      points = 0
+      do ip = 1, vp%np_local
+        ipart = part_local(ip)
+        points(ipart) =  points(ipart) + 1
+        vp%sendmap(ip) = vp%send_disp(ipart) + points(ipart)
+      end do
+      SAFE_DEALLOCATE_A(points)
+
+      SAFE_ALLOCATE(points(1:vp%np_local))
+      do ip = 1, vp%np_local
+        points(vp%sendmap(ip)) = vp%xlocal + ip - 1
+      end do
+      SAFE_ALLOCATE(vp%recvmap(1:sum(vp%recv_count)))
+  #ifdef HAVE_MPI
+      call MPI_Alltoallv(points(1), vp%send_count(1), vp%send_disp(1), MPI_INTEGER, &
+           vp%recvmap(1), vp%recv_count(1), vp%recv_disp(1), MPI_INTEGER, &
+           vp%comm, mpi_err)
+  #endif
+      do ip = 1, sum(vp%recv_count)
+        ! get local index
+        index = iihash_lookup(vp%global, vp%recvmap(ip), found)
+        ASSERT(found)
+        vp%recvmap(ip) = index
+      end do
+      SAFE_DEALLOCATE_A(points)
       
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
@@ -537,12 +537,9 @@ contains
     SAFE_DEALLOCATE_A(vp%ghost_sendpos)    
     SAFE_DEALLOCATE_A(vp%send_disp)
     SAFE_DEALLOCATE_A(vp%recv_disp)
-    SAFE_DEALLOCATE_A(vp%part_local)
-    SAFE_DEALLOCATE_A(vp%part_local_rev)
     SAFE_DEALLOCATE_A(vp%np_local_vec)
     SAFE_DEALLOCATE_A(vp%xlocal_vec)
     SAFE_DEALLOCATE_A(vp%local)
-    SAFE_DEALLOCATE_A(vp%local_vec)
     SAFE_DEALLOCATE_A(vp%send_count)
     SAFE_DEALLOCATE_A(vp%recv_count)
     SAFE_DEALLOCATE_A(vp%bndry)
@@ -587,6 +584,57 @@ contains
 #endif
 
   end function vec_global2local
+
+  ! gather all local arrays into a global one on rank root
+  ! this gives the global mapping of the index in the partition to the global index
+  subroutine gather_local_vec(vp, root, local_vec)
+    type(pv_t), intent(in)    :: vp
+    integer,    intent(in)    :: root
+    integer,    intent(inout) :: local_vec(:)
+
+    integer, allocatable :: xlocal_tmp(:)
+
+    PUSH_SUB(gather_local_vec)
+
+    SAFE_ALLOCATE(xlocal_tmp(1:vp%npart))
+    xlocal_tmp = vp%xlocal_vec - 1
+    ! Gather all the local vectors in a unique big one
+    call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
+    call MPI_Gatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
+                     local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
+                     root, vp%comm, mpi_err)
+#endif
+    call mpi_debug_out(vp%comm, C_MPI_GATHERV)
+    SAFE_DEALLOCATE_A(xlocal_tmp)
+
+    POP_SUB(gather_local_vec)
+  end subroutine gather_local_vec
+
+  ! gather all local arrays into a global one on all ranks
+  ! this gives the global mapping of the index in the partition to the global index
+  subroutine allgather_local_vec(vp, local_vec)
+    type(pv_t), intent(in)    :: vp
+    integer,    intent(inout) :: local_vec(:)
+
+    integer, allocatable :: xlocal_tmp(:)
+
+    PUSH_SUB(allgather_local_vec)
+
+    SAFE_ALLOCATE(xlocal_tmp(1:vp%npart))
+    xlocal_tmp = vp%xlocal_vec - 1
+    ! Gather all the local vectors in a unique big one
+    call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
+    call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
+                        local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
+                        vp%comm, mpi_err)
+#endif
+    call mpi_debug_out(vp%comm, C_MPI_GATHERV)
+    SAFE_DEALLOCATE_A(xlocal_tmp)
+
+    POP_SUB(allgather_local_vec)
+  end subroutine allgather_local_vec
 
 
 #include "undef.F90"

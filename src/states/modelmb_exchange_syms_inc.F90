@@ -293,7 +293,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
 
   PUSH_SUB(X(modelmb_sym_updown))
 
-  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
 
   ! first symmetrize over pairs of particles associated in the present
@@ -303,10 +303,10 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     ipart2 = p_of_type_up(idown)
 
 
-    ! each processor needs the full map of points for send and recv
-    do ip = 1, gr%mesh%np_global
+    ! each processor needs the local map of points for send and recv
+    do ip = 1, gr%mesh%np
       ! get present position
-      call mesh_global_index_to_coords(gr%mesh, ip, ix)
+      call mesh_local_index_to_coords(gr%mesh, ip, ix)
   
       ! invert coordinates of ipart1 and ipart2
       ixp = ix
@@ -380,7 +380,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
 
   PUSH_SUB(X(modelmb_antisym_1spin))
 
-  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
   SAFE_ALLOCATE(antisymwf_acc(1:gr%mesh%np, 1, 1))
   ! for each permutation of particles of this type
@@ -388,9 +388,9 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   antisymwf_acc = R_TOTYPE(M_ZERO)
   do iperm_1spin = 1, perms_1spin%npermutations
 
-    do ip = 1, gr%mesh%np_global
+    do ip = 1, gr%mesh%np
       ! get present position
-      call mesh_global_index_to_coords(gr%mesh, ip, ix)
+      call mesh_local_index_to_coords(gr%mesh, ip, ix)
       ! initialize coordinates for all particles
       ixp = ix
       ! permute the particles labeled spin up 

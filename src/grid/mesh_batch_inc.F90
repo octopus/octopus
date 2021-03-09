@@ -713,7 +713,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   logical :: packed_on_entry
 
 #ifdef HAVE_MPI
-  integer :: ip, ipg, npart, ipart, ist, pos, nstl
+  integer :: ip, npart, ipart, ist, pos, nstl
   integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:), &
        points(:), partno(:)
   integer, allocatable :: send_count_nstl(:), recv_count_nstl(:), send_disp_nstl(:), recv_disp_nstl(:)
@@ -755,18 +755,12 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       SAFE_ALLOCATE(send_disp(1:npart))
       SAFE_ALLOCATE(recv_disp(1:npart))
       SAFE_ALLOCATE(points(1:mesh%np))
-      ASSERT(ubound(forward_map, dim = 1) == mesh%np_global)
-
-      ! get the points we send to other ranks
-      do ip = 1, mesh%np
-        points(ip) = forward_map(mesh_local2global(mesh, ip))
-      end do
+      ASSERT(ubound(forward_map, dim = 1) == mesh%np)
 
       ! get their destination
       SAFE_ALLOCATE(partno(1:mesh%np))
       call partition_get_partition_number(mesh%partition, mesh%np, &
-           points, partno)
-      SAFE_DEALLOCATE_A(points)
+           forward_map, partno)
 
       ! compute the send counts
       send_count = 0
@@ -811,7 +805,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
             send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
           end do
         end select
-        send_indices(pos) = mesh_local2global(mesh, ip)
+        send_indices(pos) = forward_map(ip)
       end do
 
       SAFE_DEALLOCATE_A(partno)
@@ -832,9 +826,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       ! unpack received data
       do pos = 1, mesh%np
-        ipg = recv_indices(pos)
-        ip = mesh_global2local(mesh, forward_map(ipg))
-        ASSERT(pos /= 0)
+        ip = mesh_global2local(mesh, recv_indices(pos))
+        ASSERT(ip /= 0)
         select case(aa%status())
         case(BATCH_NOT_PACKED)
           do ist = 1, nstl
@@ -864,19 +857,15 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(mesh%vp%recv_disp(npart) + recv_count(npart) == mesh%np)
 
       ! Pack for sending
-      send_count = 0  
       do ip = 1, mesh%np
-        ipart = mesh%vp%part_local(ip)
-        send_count(ipart) = send_count(ipart) + 1
-        pos = mesh%vp%send_disp(ipart) + send_count(ipart)
         select case(aa%status())
         case(BATCH_NOT_PACKED)
           do ist = 1, nstl
-            send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+            send_buffer(ist, mesh%vp%sendmap(ip)) = aa%X(ff_linear)(ip, ist)
           end do
         case(BATCH_PACKED)
           do ist = 1, nstl
-            send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
+            send_buffer(ist, mesh%vp%sendmap(ip)) = aa%X(ff_pack)(ist, ip)
           end do
         end select
       end do
@@ -891,20 +880,15 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 
       ! Unpack on receiving
-      recv_count = 0
       do ip = 1, mesh%np
-        ! get the destination
-        ipart = mesh%vp%part_local_rev(ip)
-        recv_count(ipart) = recv_count(ipart) + 1
-        pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
         select case(aa%status())
         case(BATCH_NOT_PACKED)
           do ist = 1, nstl
-            aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+            aa%X(ff_linear)(ip, ist) = recv_buffer(ist, mesh%vp%recvmap(ip))
           end do
         case(BATCH_PACKED)
           do ist = 1, nstl
-            aa%X(ff_pack)(ist, ip) = recv_buffer(ist, pos)
+            aa%X(ff_pack)(ist, ip) = recv_buffer(ist, mesh%vp%recvmap(ip))
           end do
         end select
       end do

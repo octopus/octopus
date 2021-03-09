@@ -31,7 +31,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   R_TYPE,                intent(out) :: gamma(:, :)
 
   integer :: icoord, icoordp, icoord_diff
-  integer :: jdim, ip_global, ip, ipp_global, ix(MAX_DIM), ixp(MAX_DIM)
+  integer :: jdim, ip_global, ip, ipp, ix(MAX_DIM), ixp(MAX_DIM)
   integer, allocatable :: ix_1part(:)
   integer, allocatable :: forward_map_gamma(:)
   integer, allocatable :: icoord_map(:)
@@ -42,7 +42,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   PUSH_SUB(X(mf_calculate_gamma))
 
   SAFE_ALLOCATE(psi_p(1:mesh%np,1,1))
-  SAFE_ALLOCATE(forward_map_gamma(1:mesh%np_global))
+  SAFE_ALLOCATE(forward_map_gamma(1:mesh%np))
   SAFE_ALLOCATE(icoord_map(1:mesh%np))
 
   volume_element = M_ONE
@@ -105,8 +105,11 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
         
       ! find new index for general point prime
-      ipp_global = mesh_global_index_from_coords(mesh, ixp)
-      forward_map_gamma(ipp_global) = ip_global
+      ipp = mesh_local_index_from_coords(mesh, ixp)
+      ! only save to map if we have the point locally
+      if (ipp > 0 .and. ipp <= mesh%np) then
+        forward_map_gamma(ipp) = ip_global
+      end if
     end do
 
     ! use map to recover the corresponding np points for psi
