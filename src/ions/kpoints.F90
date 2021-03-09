@@ -526,6 +526,8 @@ contains
       !% <br>&nbsp;&nbsp;2 | 2 | 1
       !% <br>%</tt>
       !%
+      !% At the moment, this is not compatible with k-point symmetries.
+      !%
       !%End
       this%niq_axis(:) = this%nik_axis(:)
       this%downsampling(:) = 1
@@ -549,7 +551,7 @@ contains
           this%downsampling(1:dim) = this%nik_axis(1:dim)/this%niq_axis(1:dim)
 
           if(any(this%downsampling(1:dim)/=1)) then
-            ASSERT(.not.this%use_symmetries)
+            call messages_not_implemented('QPointsGrid together with k-point symmetries', namespace=namespace)
           end if
 
           call parse_block_end(blk)
