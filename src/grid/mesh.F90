@@ -752,7 +752,7 @@ contains
     type(symmetries_t),  intent(in) :: symm
     integer,             intent(in) :: periodic_dim
 
-    integer :: iop, ip, idim, nops
+    integer :: iop, ip, idim, nops, ix(1:3)
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     !If all the axis have the same spacing and the same length
@@ -780,12 +780,8 @@ contains
       !We use floating point coordinates to check if the symmetric point 
       !belong to the grid.
       !If yes, it should have integer reduced coordinates 
-      if(mesh%parallel_in_domains) then
-        ! convert to global point
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
-      else
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
-      end if
+      call mesh_local_index_to_coords(mesh, ip, ix)
+      destpoint(1:3) = TOFLOAT(ix(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
