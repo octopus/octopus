@@ -647,17 +647,17 @@ contains
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
   ! ---------------------------------------------------------  
-  integer function mesh_periodic_point(mesh, space, ip_global, ip_local) result(ipp)
+  integer function mesh_periodic_point(mesh, space, ip) result(ipg)
     type(mesh_t),  intent(in)    :: mesh
     type(space_t), intent(in)    :: space
-    integer,       intent(in)    :: ip_global, ip_local
+    integer,       intent(in)    :: ip     !< local point for which periodic copy is searched
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
     
     ! no push_sub, called too frequently
 
-    ix = mesh%idx%lxyz(ip_global, :)
+    call mesh_local_index_to_coords(mesh, ip, ix)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
@@ -666,12 +666,12 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = mesh_global_index_from_coords(mesh, [ix(1), ix(2), ix(3)])
+    ipg = mesh_global_index_from_coords(mesh, ix)
 
     if(mesh%masked_periodic_boundaries) then
-      call mesh_r(mesh, ip_local, rr, coords = xx)
+      call mesh_r(mesh, ip, rr, coords = xx)
       call parse_expression(ufn_re, ufn_im, space%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
-      if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
+      if(int(ufn_re) == 0) ipg = mesh_local2global(mesh, ip) ! Nothing will be done
     end if 
     
   end function mesh_periodic_point
