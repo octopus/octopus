@@ -133,7 +133,7 @@ contains
     type(space_t),        intent(in)    :: space
     type(mesh_t), target, intent(in)    :: mesh
 
-    integer :: sp, ip, ip_inner, iper, ip_global, idir
+    integer :: sp, ip, ip_inner, iper, idir
     integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :), points(:), part(:), points_local(:)
     integer :: nper_recv, iper_recv
@@ -187,9 +187,7 @@ contains
       this%nper = 0
       nper_recv = 0
       do ip = sp + 1, mesh%np_part
-
-        ip_global = mesh_local2global(mesh, ip)
-        ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, space, ip)
         ip_inner = mesh_global2local(mesh, ip_inner_global)
 
         ! it is the same point, can happen for mixed periodicity
@@ -221,9 +219,7 @@ contains
       iper = 0
       iper_recv = 0
       do ip = sp + 1, mesh%np_part
-
-        ip_global = mesh_local2global(mesh, ip)
-        ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, space, ip)
         ip_inner = mesh_global2local(mesh, ip_inner_global)
         
         ! it is the same point, can happen for mixed periodicity
