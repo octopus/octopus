@@ -237,7 +237,7 @@ contains
 
     write(message(1),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
     do idir = 1, this%dim
-      write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
+      write(message(1+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
         idir2 = 1, this%dim) 
     end do
     call messages_info(1+this%dim, iunit)

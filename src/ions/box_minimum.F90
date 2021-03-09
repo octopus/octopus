@@ -195,7 +195,7 @@ contains
 
     PUSH_SUB(box_minimum_write_short_info)
 
-    write(iunit,'(a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_angstrom, this%radius), ' Ang'
+    write(iunit,'(a,f11.6,a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_angstrom, this%radius), ' Ang'
 
     POP_SUB(box_minimum_write_short_info)
   end subroutine box_minimum_write_short_info

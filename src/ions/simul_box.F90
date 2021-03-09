@@ -558,7 +558,8 @@ contains
 
     PUSH_SUB(simul_box_write_info)
 
-    write(iunit,'(a)') 'Simulation Box:'
+    message(1) = 'Simulation Box:'
+    call messages_info(1, iunit) 
 
     select case (this%box_shape)
     case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
@@ -570,7 +571,7 @@ contains
       this%periodic_dim, ' dimension(s).'
     call messages_info(2, iunit)
 
-    if(this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
+    if (this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')
       call messages_info(1, iunit)
       call this%latt%write_info(iunit)
