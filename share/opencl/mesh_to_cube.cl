@@ -20,10 +20,14 @@
 
 #include <cl_global.h>
 
+#include <cl_complex.h>
+#include <cl_rtype.h>
+
+
 #define MCM_POINT 3
 #define MCM_COUNT 4
 
-__kernel void dmesh_to_cube(const int nmap,
+__kernel void X(mesh_to_cube)(const int nmap,
 			    const int stridex,
 			    const int stridey,
 			    const int stridez,
@@ -31,8 +35,8 @@ __kernel void dmesh_to_cube(const int nmap,
 			    const int centery,
 			    const int centerz,
 			    __global int const * restrict map,
-			    __global double const * restrict mesh_function,
-			    __global double * restrict cube_function){
+			    __global rtype const * restrict mesh_function,
+			    __global rtype * restrict cube_function){
   
   const int imap = get_global_id(0);
   
@@ -50,7 +54,7 @@ __kernel void dmesh_to_cube(const int nmap,
 
 }
 
-__kernel void dcube_to_mesh(const int nmap,
+__kernel void X(cube_to_mesh)(const int nmap,
 			    const int stridex,
 			    const int stridey,
 			    const int stridez,
@@ -58,8 +62,8 @@ __kernel void dcube_to_mesh(const int nmap,
 			    const int centery,
 			    const int centerz,
 			    __global int const * restrict map,
-			    __global double const * restrict cube_function,
-			    __global double * restrict mesh_function){
+			    __global rtype const * restrict cube_function,
+			    __global rtype * restrict mesh_function){
   
   const int imap = get_global_id(0);
   

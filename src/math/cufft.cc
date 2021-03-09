@@ -72,3 +72,21 @@ extern "C" void FC_FUNC_(cuda_fft_execute_z2d, CUDA_FFT_EXECUTE_Z2D)(cufftHandle
 #endif
 
 }
+
+extern "C" void FC_FUNC_(cuda_fft_execute_z2z_forward, CUDA_FFT_EXECUTE_Z2Z_FORWARD)(cufftHandle **plan,
+                                            CUdeviceptr **idata, CUdeviceptr **odata){
+#ifdef HAVE_CUDA
+  CUFFT_SAFE_CALL(cufftExecZ2Z(**plan,  (cufftDoubleComplex *) **idata, (cufftDoubleComplex *) **odata, CUFFT_FORWARD));
+#endif
+
+}
+
+extern "C" void FC_FUNC_(cuda_fft_execute_z2z_backward, CUDA_FFT_EXECUTE_Z2Z_BACKWARD)(cufftHandle **plan,
+                                            CUdeviceptr **idata, CUdeviceptr **odata){
+#ifdef HAVE_CUDA
+  CUFFT_SAFE_CALL(cufftExecZ2Z(**plan,  (cufftDoubleComplex *) **idata, (cufftDoubleComplex *) **odata, CUFFT_INVERSE));
+#endif
+
+}
+
+

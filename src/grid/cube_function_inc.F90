@@ -229,7 +229,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   logical :: local_
   R_TYPE, pointer :: gmf(:)
   type(accel_mem_t)         :: mf_buffer
-  type(accel_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: dkernel, zkernel
   type(profile_t), save :: prof_m2c
 
   PUSH_SUB(X(mesh_to_cube))
@@ -278,22 +278,23 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     call accel_create_buffer(mf_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
     call accel_write_buffer(mf_buffer, mesh%np_global, gmf)
 
-    call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
+    call accel_kernel_start_call(X(kernel), 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)), &
+                                                               flags = '-D' + R_TYPE_CL)
     
-    call accel_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
-    call accel_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
-    call accel_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
-    call accel_set_kernel_arg(kernel, 3, cube%fft%stride_rs(3))
-    call accel_set_kernel_arg(kernel, 4, cube%center(1))
-    call accel_set_kernel_arg(kernel, 5, cube%center(2))
-    call accel_set_kernel_arg(kernel, 6, cube%center(3))
-    call accel_set_kernel_arg(kernel, 7, mesh%cube_map%map_buffer)
-    call accel_set_kernel_arg(kernel, 8, mf_buffer)
-    call accel_set_kernel_arg(kernel, 9, cf%real_space_buffer)
+    call accel_set_kernel_arg(X(kernel), 0, mesh%cube_map%nmap)
+    call accel_set_kernel_arg(X(kernel), 1, cube%fft%stride_rs(1))
+    call accel_set_kernel_arg(X(kernel), 2, cube%fft%stride_rs(2))
+    call accel_set_kernel_arg(X(kernel), 3, cube%fft%stride_rs(3))
+    call accel_set_kernel_arg(X(kernel), 4, cube%center(1))
+    call accel_set_kernel_arg(X(kernel), 5, cube%center(2))
+    call accel_set_kernel_arg(X(kernel), 6, cube%center(3))
+    call accel_set_kernel_arg(X(kernel), 7, mesh%cube_map%map_buffer)
+    call accel_set_kernel_arg(X(kernel), 8, mf_buffer)
+    call accel_set_kernel_arg(X(kernel), 9, cf%real_space_buffer)
 
-    bsize = accel_kernel_workgroup_size(kernel)
+    bsize = accel_kernel_workgroup_size(X(kernel))
 
-    call accel_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
+    call accel_kernel_run(X(kernel), (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call accel_finish()
     call accel_release_buffer(mf_buffer)
 
@@ -324,7 +325,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   R_TYPE, pointer :: gmf(:)
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
-  type(accel_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: dkernel, zkernel
   type(profile_t), save :: prof_c2m
 
   PUSH_SUB(X(cube_to_mesh))
@@ -365,22 +366,22 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
     call accel_create_buffer(mf_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
-    call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
+    call accel_kernel_start_call(X(kernel), 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)), flags = '-D' + R_TYPE_CL)
    
-    call accel_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
-    call accel_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
-    call accel_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
-    call accel_set_kernel_arg(kernel, 3, cube%fft%stride_rs(3))
-    call accel_set_kernel_arg(kernel, 4, cube%center(1))
-    call accel_set_kernel_arg(kernel, 5, cube%center(2))
-    call accel_set_kernel_arg(kernel, 6, cube%center(3))
-    call accel_set_kernel_arg(kernel, 7, mesh%cube_map%map_buffer)
-    call accel_set_kernel_arg(kernel, 8, cf%real_space_buffer)
-    call accel_set_kernel_arg(kernel, 9, mf_buffer)
+    call accel_set_kernel_arg(X(kernel), 0, mesh%cube_map%nmap)
+    call accel_set_kernel_arg(X(kernel), 1, cube%fft%stride_rs(1))
+    call accel_set_kernel_arg(X(kernel), 2, cube%fft%stride_rs(2))
+    call accel_set_kernel_arg(X(kernel), 3, cube%fft%stride_rs(3))
+    call accel_set_kernel_arg(X(kernel), 4, cube%center(1))
+    call accel_set_kernel_arg(X(kernel), 5, cube%center(2))
+    call accel_set_kernel_arg(X(kernel), 6, cube%center(3))
+    call accel_set_kernel_arg(X(kernel), 7, mesh%cube_map%map_buffer)
+    call accel_set_kernel_arg(X(kernel), 8, cf%real_space_buffer)
+    call accel_set_kernel_arg(X(kernel), 9, mf_buffer)
 
-    bsize = accel_kernel_workgroup_size(kernel)
+    bsize = accel_kernel_workgroup_size(X(kernel))
 
-    call accel_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
+    call accel_kernel_run(X(kernel), (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call accel_finish()
 
     call accel_read_buffer(mf_buffer, mesh%np_global, gmf)

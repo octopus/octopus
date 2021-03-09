@@ -127,7 +127,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
   end subroutine X(fft_forward_3d)
 
 ! ---------------------------------------------------------
-  subroutine X(fft_forward_cl)(fft, in, out)
+  subroutine X(fft_forward_accel)(fft, in, out)
     type(fft_t),       intent(in)    :: fft
     type(accel_mem_t), intent(in)    :: in
     type(accel_mem_t), intent(inout) :: out
@@ -140,16 +140,23 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
     integer(8)                 :: tmp_buf_size
 #endif
 
-    PUSH_SUB(X(fft_forward_cl))
+    PUSH_SUB(X(fft_forward_accel))
 
-    call profiling_in(prof_fw, TOSTRING(X(FFT_FORWARD_CL)))
+    call profiling_in(prof_fw, TOSTRING(X(FFT_FORWARD_ACCEL)))
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
+
+#ifdef R_TREAL
     call cuda_fft_execute_d2z(fft_array(slot)%cuda_plan_fw, in%mem, out%mem)
+#else
+    call cuda_fft_execute_z2z_forward(fft_array(slot)%cuda_plan_fw, in%mem, out%mem)
+#endif
+    call fft_operation_count(fft)
     call accel_finish()
+
 #endif
     
 #ifdef HAVE_CLFFT
@@ -181,8 +188,8 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     call profiling_out(prof_fw)
 
-    POP_SUB(X(fft_forward_cl))
-  end subroutine X(fft_forward_cl)
+    POP_SUB(X(fft_forward_accel))
+  end subroutine X(fft_forward_accel)
 
   ! ---------------------------------------------------------
 
@@ -314,7 +321,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
   ! ---------------------------------------------------------
 
-  subroutine X(fft_backward_cl)(fft, in, out)
+  subroutine X(fft_backward_accel)(fft, in, out)
     type(fft_t),       intent(in)    :: fft
     type(accel_mem_t), intent(in)    :: in
     type(accel_mem_t), intent(inout) :: out
@@ -327,16 +334,23 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
     type(accel_mem_t)         :: tmp_buf
 #endif
 
-    PUSH_SUB(X(fft_backward_cl))
+    PUSH_SUB(X(fft_backward_accel))
     
-    call profiling_in(prof_bw,TOSTRING(X(FFT_BACKWARD_CL)))
+    call profiling_in(prof_bw,TOSTRING(X(FFT_BACKWARD_ACCEL)))
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
+
+#ifdef R_TREAL
     call cuda_fft_execute_z2d(fft_array(slot)%cuda_plan_bw, in%mem, out%mem)
+#else
+    call cuda_fft_execute_z2z_backward(fft_array(slot)%cuda_plan_bw, in%mem, out%mem)
+#endif
+    call fft_operation_count(fft)
     call accel_finish()
+
 #endif
     
 #ifdef HAVE_CLFFT
@@ -367,8 +381,8 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     call profiling_out(prof_bw)
 
-    POP_SUB(X(fft_backward_cl))
-  end subroutine X(fft_backward_cl)
+    POP_SUB(X(fft_backward_accel))
+  end subroutine X(fft_backward_accel)
 
   ! ---------------------------------------------------------
   subroutine X(fft_backward_1d)(fft, in, out)

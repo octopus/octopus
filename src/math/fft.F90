@@ -132,19 +132,19 @@ module fft_oct_m
   end type fft_t
 
   interface dfft_forward
-    module procedure dfft_forward_1d, dfft_forward_cl, dfft_forward_3d
+    module procedure dfft_forward_1d, dfft_forward_accel, dfft_forward_3d
   end interface dfft_forward
 
   interface zfft_forward
-    module procedure zfft_forward_1d, zfft_forward_cl, zfft_forward_3d
+    module procedure zfft_forward_1d, zfft_forward_accel, zfft_forward_3d
   end interface zfft_forward
 
   interface dfft_backward
-    module procedure dfft_backward_1d, dfft_backward_cl, dfft_backward_3d
+    module procedure dfft_backward_1d, dfft_backward_accel, dfft_backward_3d
   end interface dfft_backward
 
   interface zfft_backward
-    module procedure zfft_backward_1d, zfft_backward_cl, zfft_backward_3d
+    module procedure zfft_backward_1d, zfft_backward_accel, zfft_backward_3d
   end interface zfft_backward
 
   logical, save, public :: fft_initialized = .false.
@@ -390,7 +390,7 @@ contains
       
       ! if we can't optimize, in some cases we can't use the library
       if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-        call messages_write('Invalid grid size for clfft. FFTW will be used instead.')
+        call messages_write('Invalid grid size for accel fft. FFTW will be used instead.')
         call messages_warning()
         library_ = FFTLIB_FFTW
       end if
@@ -651,10 +651,17 @@ contains
       end do
 
 #ifdef HAVE_CUDA
-      call cuda_fft_plan3d(fft_array(jj)%cuda_plan_fw, &
-        fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_D2Z)
-      call cuda_fft_plan3d(fft_array(jj)%cuda_plan_bw, &
-        fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2D)
+      if(type == FFT_REAL) then 
+        call cuda_fft_plan3d(fft_array(jj)%cuda_plan_fw, &
+          fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_D2Z)
+        call cuda_fft_plan3d(fft_array(jj)%cuda_plan_bw, &
+          fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2D)
+      else
+        call cuda_fft_plan3d(fft_array(jj)%cuda_plan_fw, &
+          fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2Z)
+        call cuda_fft_plan3d(fft_array(jj)%cuda_plan_bw, &
+          fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2Z)
+      end if
 #endif
       
 #ifdef HAVE_CLFFT
