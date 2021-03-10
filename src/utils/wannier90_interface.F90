@@ -193,6 +193,33 @@ program wannier90_interface
   !%End
   call parse_variable(global_namespace, 'Wannier90UseTD', .false., read_td_states)
 
+  !%Variable Wannier90UseSCDM
+  !%Type logical
+  !%Default no
+  !%Section Utilities::oct-wannier90
+  !%Description
+  !% By default oct-wannier90 uses the projection method to generate the .amn file.
+  !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
+  !%End
+  call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
+  if(w90_scdm) then
+    !%Variable SCDMsigma
+    !%Type float
+    !%Default 0.2
+    !%Section Utilities::oct-wannier90  
+    !%Description
+    !% Broadening of SCDM smearing function.
+    !%End
+    call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
+  
+    !%Variable SCDMmu
+    !%Type float
+    !%Section Utilities::oct-wannier90
+    !%Description
+    !% Energy range up to which states are considered for SCDM. 
+    !%End
+    call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
+  end if
 
   if(sys%kpoints%use_symmetries) then
     message(1) = 'oct-wannier90: k-points symmetries are not allowed'
@@ -388,33 +415,7 @@ contains
     end if
     call restart_end(restart)
 
-    !%Variable Wannier90UseSCDM
-    !%Type logical
-    !%Default no
-    !%Section Utilities::oct-wannier90
-    !%Description
-    !% By default oct-wannier90 uses the projection method to generate the .amn file.
-    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
-    !%End
-    call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
-
     if(w90_scdm) then
-      !%Variable SCDMsigma
-      !%Type float
-      !%Section Utilities::oct-wannier90  
-      !%Description
-      !% Broadening of SCDM smearing function
-      !%End
-      call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
-
-      !%Variable SCDMmu
-      !%Type float
-      !%Section Utilities::oct-wannier90
-      !%Description
-      !% Energy range up to which states are considered for SCDM 
-      !%End
-      call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
-
       nik = w90_num_kpts
       SAFE_ALLOCATE(jpvt(1:sys%gr%mesh%np_global))
       SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -712,12 +713,14 @@ contains
           scdm_proj = .true.
           read(w90_nnkp, *) w90_nproj
           w90_num_wann = w90_nproj
+
           if(.not. w90_scdm) then
             message(1) = 'oct-wannier90: Found auto_projections block. Currently the only implemeted automatic way'
             message(2) = 'oct-wannier90: to compute projections is the SCDM method.'
-            message(3) = 'oct-wannier90: Please set Wannier90Mode = w90_scdm in the inp file.'
+            message(3) = 'oct-wannier90: Please set Wannier90UseSCDM = yes in the inp file.'
             call messages_fatal(3)
           end if
+
           if(w90_nproj /= w90_num_bands) then
             message(1) = 'oct-wannier90: In auto_projections block first row needs to be equal to num_bands.'
             call messages_fatal(1)
