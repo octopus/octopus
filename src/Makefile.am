@@ -256,7 +256,6 @@ ions_f_srcs =                                 \
 	ions/box_user_defined.F90             \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
-	ions/kpoints.F90                      \
 	ions/multibox.F90                     \
 	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
@@ -545,6 +544,7 @@ electrons_f_srcs =                                 \
 	electrons/energy_calc.F90                  \
 	electrons/exponential.F90                  \
 	electrons/forces.F90                       \
+	electrons/kpoints.F90                      \
 	electrons/linear_solver.F90                \
 	electrons/magnetic.F90                     \
 	electrons/partial_charges.F90              \
