@@ -917,8 +917,8 @@ contains
     mdim = mesh%sb%dim
 
     vp = M_ZERO
-    do il = 1, hm%ep%no_lasers
-      call laser_field(hm%ep%lasers(il), vp(1:mdim), iter*dt)
+    do il = 1, hm%ext_lasers%no_lasers
+      call laser_field(hm%ext_lasers%lasers(il), vp(1:mdim), iter*dt)
     end do
     vp(1:mdim) = -vp(1:mdim)
 

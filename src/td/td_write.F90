@@ -327,7 +327,7 @@ contains
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
     if(ions_move) default = default + 2**(OUT_COORDS - 1) + 2**(OUT_TEMPERATURE - 1)
     if(with_gauge_field) default = default + 2**(OUT_GAUGE_FIELD - 1)
-    if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
+    if(hm%ext_lasers%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
     if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
     call parse_variable(namespace, 'TDOutput', default, flags)
@@ -1945,8 +1945,8 @@ contains
       call write_iter_nl(out_laser)
 
       call write_iter_header_start(out_laser)
-      do il = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(il)))
+      do il = 1, hm%ext_lasers%no_lasers
+        select case(laser_kind(hm%ext_lasers%lasers(il)))
         case(E_FIELD_ELECTRIC)
           do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'E(', idir, ')'
@@ -1975,8 +1975,8 @@ contains
       ! Note that we do not print out units of E, B, or A, but rather units of e*E, e*B, e*A.
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
       ! are ugly.
-      do il = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(il)))
+      do il = 1, hm%ext_lasers%no_lasers
+        select case(laser_kind(hm%ext_lasers%lasers(il)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_abbrev(units_out%force)) // ']'
           do idir = 1, gr%sb%dim
@@ -1999,10 +1999,10 @@ contains
 
     call write_iter_start(out_laser)
 
-    do il = 1, hm%ep%no_lasers
+    do il = 1, hm%ext_lasers%no_lasers
       field = M_ZERO
-      call laser_field(hm%ep%lasers(il), field(1:gr%sb%dim), iter*dt)
-      select case(laser_kind(hm%ep%lasers(il)))
+      call laser_field(hm%ext_lasers%lasers(il), field(1:gr%sb%dim), iter*dt)
+      select case(laser_kind(hm%ext_lasers%lasers(il)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = units_from_atomic(units_out%force, field)
         call write_iter_double(out_laser, field, gr%sb%dim)

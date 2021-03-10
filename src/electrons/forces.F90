@@ -366,11 +366,11 @@ contains
 
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
-      do j = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(j)))
+      do j = 1, hm%ext_lasers%no_lasers
+        select case(laser_kind(hm%ext_lasers%lasers(j)))
         case(E_FIELD_ELECTRIC)
           x(1:geo%space%dim) = M_ZERO
-          call laser_field(hm%ep%lasers(j), x(1:geo%space%dim), t)
+          call laser_field(hm%ext_lasers%lasers(j), x(1:geo%space%dim), t)
           do iatom = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) &
@@ -386,7 +386,7 @@ contains
 
           !TODO: Add the gauge-field here
           x(1:geo%space%dim) = M_ZERO
-          call laser_electric_field(hm%ep%lasers(j), x(1:geo%space%dim), t, dt) !convert in E field (E = -dA/ c dt)
+          call laser_electric_field(hm%ext_lasers%lasers(j), x(1:geo%space%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do iatom = 1, geo%natoms
             ! Also here the proton charge is +1
             geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) &

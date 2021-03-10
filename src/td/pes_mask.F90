@@ -748,12 +748,12 @@ contains
     SAFE_ALLOCATE(mask%vec_pot(0:max_iter,1:3))
     mask%vec_pot=M_ZERO
 
-    do il = 1, hm%ep%no_lasers
-      select case(laser_kind(hm%ep%lasers(il)))
+    do il = 1, hm%ext_lasers%no_lasers
+      select case(laser_kind(hm%ext_lasers%lasers(il)))
       case(E_FIELD_VECTOR_POTENTIAL)
         do it = 1, max_iter
           field=M_ZERO
-          call laser_field(hm%ep%lasers(il), field, it*dt)
+          call laser_field(hm%ext_lasers%lasers(il), field, it*dt)
           ! We must sum with a -1 sign to account for the 
           ! electron charge.
           mask%vec_pot(it,:)= mask%vec_pot(it,:) - field(:)           

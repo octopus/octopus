@@ -346,9 +346,9 @@ contains
     call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
       family_is_mgga_with_exc(ks%xc))
 
-    if (hm%ep%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
+    if (hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=namespace)
-      call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
+      call laser_write_info(hm%ext_lasers%lasers, stdout, td%dt, td%max_iter)
       call messages_print_stress(stdout, namespace=namespace)
     end if
 

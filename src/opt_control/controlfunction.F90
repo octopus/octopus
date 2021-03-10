@@ -178,8 +178,9 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, namespace, dt, max_iter, mode_fixed_fluence)
+  subroutine controlfunction_mod_init(ep, ext_lasers, namespace, dt, max_iter, mode_fixed_fluence)
     type(epot_t),                   intent(inout) :: ep
+    type(lasers_t),                 intent(inout) :: ext_lasers
     type(namespace_t),              intent(in)    :: namespace
     FLOAT,                          intent(in)    :: dt
     integer,                        intent(in)    :: max_iter
@@ -350,8 +351,8 @@ contains
 
 
     ! Check that there are no complex polarization vectors.
-    do il = 1, ep%no_lasers
-      pol(1:MAX_DIM) = laser_polarization(ep%lasers(il))
+    do il = 1, ext_lasers%no_lasers
+      pol(1:MAX_DIM) = laser_polarization(ext_lasers%lasers(il))
       do idir = 1, MAX_DIM
         if( aimag(pol(idir))**2 > CNST(1.0e-20) ) then
           write(message(1), '(a)') 'In QOCT runs, the polarization vector cannot be complex. Complex'
@@ -372,25 +373,25 @@ contains
     ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
     ! Here we do the transformation.
     ! It cannot be done before calling controlfunction_mod_init because we need to pass the omegamax value.
-    do il = 1, ep%no_lasers
+    do il = 1, ext_lasers%no_lasers
       select case(cf_common%mode)
       case(controlfunction_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical_all(ext_lasers%lasers(il), dt, max_iter, cf_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(il), dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical(ext_lasers%lasers(il), dt, max_iter, cf_common%omegamax)
       end select
     end do
 
     ! Fix the carrier frequency
     call messages_obsolete_variable(namespace, 'OCTCarrierFrequency')
-    cf_common%w0 = laser_carrier_frequency(ep%lasers(1))
+    cf_common%w0 = laser_carrier_frequency(ext_lasers%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions
     ! are represented directly in real time, then the number of control functions can be larger than
     ! one; it will be the number of lasers found in the input file. Otherwise, if the control function(s)
     ! are parametrized ("OCTControlRepresentation = control_function_parametrized"), we only have one
     ! control function. If there is more than one laser field in the input file, the program stops.
-    if(ep%no_lasers > 1) then
+    if(ext_lasers%no_lasers > 1) then
       write(message(1), '(a)') 'Currently octopus only accepts one control field.'
       call messages_fatal(1)
     end if
@@ -629,9 +630,9 @@ contains
   !> The external fields defined in epot_t "ep" are transferred to
   !! the control functions described in "cp". This should have been
   !! initialized previously.
-  subroutine controlfunction_set(cp, ep)
+  subroutine controlfunction_set(cp, ext_lasers)
     type(controlfunction_t), intent(inout) :: cp
-    type(epot_t), intent(in) :: ep
+    type(lasers_t),             intent(in) :: ext_lasers
 
     integer :: ipar
 
@@ -641,7 +642,7 @@ contains
     case(controlfunction_mode_epsilon, controlfunction_mode_f)
       do ipar = 1, cp%no_controlfunctions
         call tdf_end(cp%f(ipar))
-        call laser_get_f(ep%lasers(ipar), cp%f(ipar))
+        call laser_get_f(ext_lasers%lasers(ipar), cp%f(ipar))
       end do
     end select
 
@@ -851,9 +852,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_to_h(cp, ep)
+  subroutine controlfunction_to_h(cp, ext_lasers)
     type(controlfunction_t), intent(in) :: cp
-    type(epot_t), intent(inout) :: ep
+    type(lasers_t),       intent(inout) :: ext_lasers
 
     integer :: ipar
     type(controlfunction_t) :: par
@@ -865,7 +866,7 @@ contains
     select case(cf_common%mode)
     case(controlfunction_mode_epsilon, controlfunction_mode_f)
       do ipar = 1, cp%no_controlfunctions
-        call laser_set_f(ep%lasers(ipar), par%f(ipar))
+        call laser_set_f(ext_lasers%lasers(ipar), par%f(ipar))
       end do
     end select
 
@@ -876,9 +877,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_to_h_val(cp, ep, val)
+  subroutine controlfunction_to_h_val(cp, ext_lasers, val)
     type(controlfunction_t), intent(in) :: cp
-    type(epot_t), intent(inout) :: ep
+    type(lasers_t),       intent(inout) :: ext_lasers
     integer, intent(in) :: val
 
     integer :: ipar
@@ -886,7 +887,7 @@ contains
     PUSH_SUB(controlfunction_to_h_val)
 
     do ipar = 1, cp%no_controlfunctions
-      call laser_set_f_value(ep%lasers(ipar), val, tdf(cp%f(ipar), val) )
+      call laser_set_f_value(ext_lasers%lasers(ipar), val, tdf(cp%f(ipar), val) )
     end do
 
     POP_SUB(controlfunction_to_h_val)

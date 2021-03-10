@@ -86,12 +86,12 @@ contains
 
     do j = 1, 2
       ! WARNING: This should be carefully tested, and extended to allow for velocity-gauge laser fields.
-      do i = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(i)))
+      do i = 1, hm%ext_lasers%no_lasers
+        select case(laser_kind(hm%ext_lasers%lasers(i)))
         case(E_FIELD_ELECTRIC)
           SAFE_ALLOCATE(pot(1:gr%mesh%np))
           pot = M_ZERO
-          call laser_potential(hm%ep%lasers(i), gr%mesh, pot, time - dt + atime(j))
+          call laser_potential(hm%ext_lasers%lasers(i), gr%mesh, pot, time - dt + atime(j))
           do is = 1, st%d%nspin
             vaux(:, is, j) = vaux(:, is, j) + pot(:)
           end do

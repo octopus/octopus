@@ -207,8 +207,8 @@ contains
     this%surf_interp = .false.
 
 
-    do il = 1, hm%ep%no_lasers
-      if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
+    do il = 1, hm%ext_lasers%no_lasers
+      if(laser_kind(hm%ext_lasers%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
         call messages_fatal(1, namespace=namespace)
       end if
@@ -1603,8 +1603,8 @@ contains
       this%itstep = this%itstep + 1
 
       ! get and save current laser field
-      do il = 1, hm%ep%no_lasers
-        call laser_field(hm%ep%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
+      do il = 1, hm%ext_lasers%no_lasers
+        call laser_field(hm%ext_lasers%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
