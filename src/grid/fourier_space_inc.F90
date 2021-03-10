@@ -87,6 +87,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   if(cube%fft%library /= FFTLIB_ACCEL .or. .not. optional_default(in_device, .true.)) then
     this%in_device_memory = .false.
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    !$omp parallel do private(ii, jj, kk)
     do kk = 1,cube%fs_n(3)
       do jj = 1,cube%fs_n(2)
         do ii = 1,cube%fs_n(1)
@@ -103,6 +104,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
 
     SAFE_ALLOCATE(op_linear(1:size))
 
+    !$omp parallel do private(ii, jj, kk, ii_linear)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)

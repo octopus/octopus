@@ -668,6 +668,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 #ifdef R_TCOMPLEX
           SAFE_ALLOCATE(psi_sym_conj(1:mesh%np, 1:st%d%dim))
           do idim = 1, st%d%dim
+            !$omp parallel do
             do ip = 1, mesh%np
               ff_psi_sym(ip, idim)   = ff*psi_sym(ip, idim)
               psi_sym_conj(ip, idim) = conjg(psi_sym(ip, idim))
@@ -687,10 +688,12 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
            else
              do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                call batch_get_state(st%group%psib(ib2, ik2), ii2, mesh%np, psi2)
+               !$omp parallel do 
                do ip = 1, mesh%np
                  rho(ip, ii2) = psi_sym_conj(ip, 1)*psi2(ip, 1)
                end do
                do idim = 2, st%d%dim
+                 !$omp parallel do
                  do ip = 1, mesh%np
                    rho(ip, ii2) = rho(ip, ii2) + psi_sym_conj(ip, idim)*psi2(ip, idim)
                  end do
@@ -720,6 +723,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                  call batch_get_state(this%xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi(ip, idim) = xpsi(ip, idim) - ff_psi_sym(ip, idim)*pot(ip, ii2)
                    end do
@@ -728,6 +732,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                end do
 
              case(BATCH_PACKED)
+               !$omp parallel do private(ii2, idim)
                do ip = 1, mesh%np
                  do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                    do idim = 1, st%d%dim 
@@ -741,6 +746,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
              case(BATCH_NOT_PACKED)
                do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                  do idim = 1, st%d%dim
+                   !$omp parallel do  
                    do ip = 1, mesh%np
                      this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)     &
                        = this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2) &
@@ -762,6 +768,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                case(BATCH_DEVICE_PACKED)
                  call batch_get_state(st%group%psib(ib2, ik2), ii2, mesh%np, psi2)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                                                  - ff2*psi2(ip, idim)*R_CONJ(pot(ip, ii2))
@@ -769,6 +776,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                  end do
                case(BATCH_PACKED)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                        - ff2*st%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)*R_CONJ(pot(ip, ii2))
@@ -776,6 +784,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                 end do
                case(BATCH_NOT_PACKED)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                        - ff2*st%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)*R_CONJ(pot(ip, ii2))
