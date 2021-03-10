@@ -2208,17 +2208,17 @@ subroutine X(states_elec_rrqr_decomposition)(st, namespace, mesh, nst, root, ik,
     
     ! gather states in case of domain parallelization
     if (mesh%parallel_in_domains.or.st%parallel_in_states) then
-      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      SAFE_ALLOCATE(temp_state(1:mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(state_global(1:mesh%np_global))
       
       count = 0
-      do ii = 1,nst
+      do ii = 1, nst
         !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
         state_global(1:mesh%np_global) = M_ZERO
         sender = 0
         if(state_is_local(st,ii)) then
           call states_elec_get_state(st, mesh, ii, ik, temp_state)
-          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np,1), state_global)
+          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np, 1), state_global)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
         call comm_allreduce(mpi_world,sender)
@@ -2226,13 +2226,13 @@ subroutine X(states_elec_rrqr_decomposition)(st, namespace, mesh, nst, root, ik,
         call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
 #endif
         ! keep full Kohn-Sham matrix only on root
-        if (root)  KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
+        if (root)  KSt(ii,1:mesh%np_global)  = st%occ(ii, 1)*state_global(1:mesh%np_global)
       end do
       SAFE_DEALLOCATE_A(state_global)
       SAFE_DEALLOCATE_A(temp_state)
     else
       ! serial
-      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      SAFE_ALLOCATE(temp_state(1:mesh%np, st%d%dim))
       do ii = 1, nst
         ! this call is necessary becasue we want to have only np not np_part
         call states_elec_get_state(st, mesh, ii, ik, temp_state)
