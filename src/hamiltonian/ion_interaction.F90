@@ -45,6 +45,7 @@ module ion_interaction_oct_m
     ion_interaction_init,             &
     ion_interaction_end,              &
     ion_interaction_calculate,        &
+    ion_interaction_init_parallelization, &
     ion_interaction_test
 
   type ion_interaction_t
@@ -62,12 +63,11 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this, namespace, space, natoms, mc)
+  subroutine ion_interaction_init(this, namespace, space, natoms)
     type(ion_interaction_t),      intent(out)   :: this
     type(namespace_t),            intent(in)    :: namespace
     type(space_t),                intent(in)    :: space
     integer,                      intent(in)    :: natoms
-    type(multicomm_t), optional,  intent(in)    :: mc
 
     PUSH_SUB(ion_interaction_init)
 
@@ -84,11 +84,6 @@ contains
     call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
 
     call distributed_nullify(this%dist, natoms)
-    if(present(mc)) then
-      !As the code below is not parallelized with any of k-point, states nor domain
-      !we can safely parallelize it over atoms
-      call distributed_init(this%dist, natoms, mc%master_comm, "Ions")
-    end if
 
     if(space%periodic_dim == 1) then
       call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
@@ -100,7 +95,23 @@ contains
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
-  
+
+ ! ---------------------------------------------------------  
+
+  subroutine ion_interaction_init_parallelization(this, natoms, mc)
+    type(ion_interaction_t),      intent(inout) :: this
+    integer,                      intent(in)    :: natoms
+    type(multicomm_t),            intent(in)    :: mc
+
+    PUSH_SUB(ion_interaction_init_parallelization)
+
+    !As the code below is not parallelized with any of k-point, states nor domain
+    !we can safely parallelize it over atoms
+    call distributed_init(this%dist, natoms, mc%master_comm, "Ions")
+
+    POP_SUB(ion_interaction_init_parallelization)
+  end subroutine ion_interaction_init_parallelization
+
   ! ---------------------------------------------------------
   
   subroutine ion_interaction_end(this)
@@ -534,12 +545,14 @@ contains
 
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
-    do 
-      if( rcut * dz_max >= 718 ) exit  !Maximum double precision numbber
-      erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
-      if( erfc1 * exp(rcut*dz_max) < CNST(1e-10) ) exit
-      rcut = rcut * CNST(1.414)
-    end do
+    if(rcut > M_ZERO) then
+      do
+        if( rcut * dz_max >= 718 ) exit  !Maximum double precision numbber
+        erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
+        if( erfc1 * exp(rcut*dz_max) < CNST(1e-10) ) exit
+        rcut = rcut * CNST(1.414)
+      end do
+    end if
 
     ix_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 1)**2)))
     iy_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 2)**2)))
@@ -703,7 +716,8 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction, namespace, space, natoms, mc)
+    call ion_interaction_init(ion_interaction, namespace, space, natoms)
+    call ion_interaction_init_parallelization(ion_interaction, natoms, mc)
 
     SAFE_ALLOCATE(force(1:space%dim, 1:natoms))
     SAFE_ALLOCATE(force_components(1:space%dim, 1:natoms, ION_NUM_COMPONENTS))
