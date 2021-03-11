@@ -678,7 +678,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   end do
 
   ! post sends in a ring fashion
-  do irank = mpi_world%rank + mpi_world%size - 1, mpi_world%rank, - 1
+  do irank = mpi_world%rank + mpi_world%size, mpi_world%rank + 1, - 1
     rank_global = irank
     if(rank_global > mpi_world%size - 1) rank_global = rank_global - mpi_world%size
     rank_mesh = mesh_ranks(rank_global)
