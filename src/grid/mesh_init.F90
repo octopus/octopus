@@ -895,10 +895,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   call partition_set(mesh%partition, part)
   SAFE_DEALLOCATE_A(part)
 
-  print *, "Call vec_init on rank ", mesh%mpi_grp%rank
-  call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-       space, mesh%partition, mesh%vp, namespace)
-
 
   ! TODO: create global index
 
@@ -925,27 +921,30 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   !end if
 
   
-  !if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains) then
+    call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
+         space, mesh%partition, mesh%vp, namespace)
+
 
   !  call do_partition()
 
-  !else
+  else
+    ! TODO: this should be handled inside vec_init
 
-  !  ! When running serially those two are the same.
-  !  mesh%np      = mesh%np_global
-  !  mesh%np_part = mesh%np_part_global
+    ! When running serially those two are the same.
+    mesh%np      = mesh%np_global
+    mesh%np_part = mesh%np_part_global
 
-  !  ! These must be initialized for vec_gather, vec_scatter to work
-  !  ! as copy operations when running without domain parallelization.
-  !  mesh%vp%np_global = mesh%np_global
-  !  mesh%vp%np_ghost = 0
-  !  mesh%vp%np_bndry = mesh%np_part - mesh%np
-  !  mesh%vp%npart = 1
-  !  mesh%vp%xlocal = 1
-  !end if
+    ! These must be initialized for vec_gather, vec_scatter to work
+    ! as copy operations when running without domain parallelization.
+    mesh%vp%np_global = mesh%np_global
+    mesh%vp%np_ghost = 0
+    mesh%vp%np_bndry = mesh%np_part - mesh%np
+    mesh%vp%npart = 1
+    mesh%vp%xlocal = 1
+  end if
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
-  !call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np)
 
   call mesh_get_vol_pp(mesh%sb)
 

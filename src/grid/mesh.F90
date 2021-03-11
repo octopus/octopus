@@ -571,7 +571,7 @@ contains
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
         ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
         ierr = ierr + 2
-      else if (mesh%sb%box_shape /= HYPERCUBE) then
+      else if (mesh%sb%box_shape /= HYPERCUBE .or. .false.) then
 
         grid_changed = .true.
 
