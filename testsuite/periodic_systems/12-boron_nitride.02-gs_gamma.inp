@@ -18,8 +18,8 @@ lx = 3*a
 ly = sqrt(3)*a
 lz = 4.0*angstrom
 
-%Lsize
-  lx/2 | ly/2 | lz
+%LatticeParameters
+  lx | ly | 2*lz
 % 
 
 %Spacing

@@ -9,7 +9,9 @@ a = 10.2
 Spacing = a/14
 
 BoxShape = parallelepiped
-Lsize = a/2
+%LatticeParameters
+ a | a | a
+%
 
 %ReducedCoordinates
   "Si" |   0.0       | 0.0       | 0.0 
