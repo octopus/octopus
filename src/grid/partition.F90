@@ -40,6 +40,7 @@ module partition_oct_m
     partition_dump,                 &
     partition_load,                 &
     partition_get_local_size,       &
+    partition_get_local_size_vec,   &
     partition_get_global,           &
     partition_get_partition_number, &
     partition_get_np_local,         &
@@ -339,6 +340,20 @@ contains
 
     POP_SUB(partition_get_local_size)
   end subroutine partition_get_local_size
+
+  ! ---------------------------------------------------------
+  subroutine partition_get_local_size_vec(partition, istart_vec, np_local_vec)
+    type(partition_t), intent(in)  :: partition
+    integer,           intent(out) :: istart_vec(:)   !< The number of points of the partition stored in each process.
+    integer,           intent(out) :: np_local_vec(:) !< The position of the first point stored in each process.
+
+    PUSH_SUB(partition_get_local_size_vec)
+
+    istart_vec(1:partition%npart) = partition%istart_vec(1:partition%npart)
+    np_local_vec(1:partition%npart) = partition%np_local_vec(1:partition%npart)
+
+    POP_SUB(partition_get_local_size_vec)
+  end subroutine partition_get_local_size_vec
 
   ! ---------------------------------------------------------
   !> Returns the global partition. If root is present, the partition is
