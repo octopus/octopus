@@ -666,6 +666,7 @@ subroutine X(mesh_batch_codensity)(mesh, aa, psi, rho)
 
   select case(aa%status())
   case(BATCH_PACKED)
+    !$omp parallel do private(size, ii, ip, idim)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       do  ii = 1, aa%nst
@@ -681,6 +682,7 @@ subroutine X(mesh_batch_codensity)(mesh, aa, psi, rho)
     end do
 
   case(BATCH_NOT_PACKED)
+    !$omp parallel do private(size, ii, ip, idim)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       do  ii = 1, aa%nst
