@@ -19,8 +19,8 @@ TheoryLevel = independent_particles
 
 BoxShape = parallelepiped
 
-%Lsize
- 10.0
+%LatticeParameters
+ 20.0
 %
 
 %Spacing

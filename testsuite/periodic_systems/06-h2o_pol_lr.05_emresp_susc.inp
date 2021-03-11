@@ -9,7 +9,9 @@ ExperimentalFeatures = yes
 
 Spacing = 0.5
 BoxShape = parallelepiped
-Lsize = 10
+%LatticeParameters
+ 20 | 20 | 20
+%
 PeriodicDimensions = 3
 
 %KPointsGrid

@@ -10,7 +10,9 @@ fromScratch = yes
 Spacing = 0.5
 ConvRelDens = 8.0e-8
 BoxShape = parallelepiped
-Lsize = 10
+%LatticeParameters
+ 20 | 20 | 20
+%
 PeriodicDimensions = 3
 SCFCalculateDipole = yes
 

@@ -15,8 +15,8 @@ ll = 1.6
 
 BoxShape = parallelepiped
 
-%LSize
- 3.6 / 2
+%LatticeParameters
+ 3.6
 %
 
 Spacing = 0.4

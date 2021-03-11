@@ -5,7 +5,9 @@ FromScratch=yes
 PeriodicDimensions = 3
 
 a = 6.6329387
-Lsize = a/2
+%LatticeParameters
+ a | a | a
+%
 Spacing = a/10
 
 %Coordinates

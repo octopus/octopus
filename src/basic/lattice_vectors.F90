@@ -38,7 +38,7 @@ module lattice_vectors_oct_m
 
   type lattice_vectors_t
     ! Components are public by default
-    integer, private :: dim
+    type(space_t), private :: space
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -49,6 +49,7 @@ module lattice_vectors_oct_m
   contains
     procedure :: copy => lattice_vectors_copy
     generic   :: assignment(=) => copy
+    procedure :: scale => lattice_vectors_scale
     procedure :: write_info => lattice_vectors_write_info
   end type lattice_vectors_t
 
@@ -59,10 +60,9 @@ module lattice_vectors_oct_m
 contains
 
   !--------------------------------------------------------------
-  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space, lsize) result(latt)
+  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space) result(latt)
     type(namespace_t), intent(in)    :: namespace
     type(space_t),     intent(in)    :: space
-    FLOAT,             intent(inout) :: lsize(:)
 
     type(block_t) :: blk
     FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
@@ -72,116 +72,131 @@ contains
 
     PUSH_SUB(lattice_vectors_constructor)
 
-    latt%dim = space%dim
+    latt%space = space
 
     latt%alpha = CNST(90.0)
     latt%beta  = CNST(90.0)
     latt%gamma = CNST(90.0)
 
-    !%Variable LatticeParameters
-    !%Type block
-    !%Default 1 | 1 | 1
-    !%Section Mesh::Simulation Box
-    !%Description
-    !% The lattice parameters (a, b, c).
-    !% This option is incompatible with Lsize and either one of the
-    !% two must be specified in the input file for periodic systems.
-    !% A second optional line can be used tu define the angles between the lattice vectors
-    !%End
-    lparams(:) = M_ONE
     has_angles = .false.
     angles = CNST(90.0)
 
-    if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
-      do idim = 1, space%dim
-        call parse_block_float(blk, 0, idim - 1, lparams(idim))
-      end do
+    if (space%is_periodic()) then
 
-      if (parse_block_n(blk) > 1) then ! we have a shift, or even more
-        ncols = parse_block_cols(blk, 1)
-        if (ncols /= space%dim) then
-          write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', space%dim
-          call messages_fatal(1, namespace=namespace)
-        end if
-        do idim = 1, space%dim
-          call parse_block_float(blk, 1, idim - 1, angles(idim))
-        end do
-        has_angles = .true.
-      end if
-      call parse_block_end(blk)
-
-      if (parse_is_defined(namespace, 'Lsize')) then
-        message(1) = 'LatticeParameters is incompatible with Lsize'
-        call messages_print_var_info(stdout, "LatticeParameters")
-        call messages_fatal(1, namespace=namespace)
-      end if
-
-    end if
-
-    if (has_angles) then
-      latt%alpha = angles(1)
-      latt%beta  = angles(2)
-      latt%gamma = angles(3)
-
-      if (parse_is_defined(namespace, 'LatticeVectors')) then
-        message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
-        call messages_print_var_info(stdout, "LatticeParameters")
-        call messages_fatal(1, namespace=namespace)
-      end if
-
-      call build_metric_from_angles(latt, angles)
-
-    else
-
-      !%Variable LatticeVectors
+      !%Variable LatticeParameters
       !%Type block
-      !%Default simple cubic
       !%Section Mesh::Simulation Box
       !%Description
-      !% Primitive lattice vectors. Vectors are stored in rows.
-      !% Default:
-      !% <br><br><tt>%LatticeVectors
-      !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
-      !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
-      !% <br>%<br></tt>
+      !% The lattice parameters (a, b, c).
+      !% This variable is mandatory for periodic systems and is ignored otherwise.
+      !% When PeriodicDimensions = 3, a second optional line can be used to
+      !% define the angles between the lattice vectors. If the angles are not
+      !% provided, then the variable LatticeVectors must be set.
+      !% The number of parameters specified in the block must be at least equal
+      !% to the number of periodic dimensions, but it is not mandatory to
+      !% specify parameters for the non-periodic dimensions (in that case they
+      !% are set to 1).
       !%End
-      latt%rlattice_primitive = M_ZERO
-      latt%nonorthogonal = .false.
-      do idim = 1, space%dim
-        latt%rlattice_primitive(idim, idim) = M_ONE
-      end do
-
-      if (parse_block(namespace, 'LatticeVectors', blk) == 0) then
-        do idim = 1, space%dim
-          do jdim = 1, space%dim
-            call parse_block_float(blk, idim - 1,  jdim - 1, latt%rlattice_primitive(jdim, idim))
-            if (idim /= jdim .and. abs(latt%rlattice_primitive(jdim, idim)) > M_EPSILON) then
-              latt%nonorthogonal = .true.
-            end if
-          enddo
+      if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+        ncols = parse_block_cols(blk, 0) 
+        if (ncols < space%periodic_dim) then
+          call messages_input_error(namespace, 'LatticeParameters', 'The number of columns must be at least PeriodicDimensions')
+        end if
+        do idim = 1, ncols
+          call parse_block_float(blk, 0, idim - 1, lparams(idim))
         end do
+
+        ! If some parameters for non-periodic dimensions are not set in the input file, with set them to 1.
+        do idim = ncols + 1, space%dim
+          lparams(idim) = M_ONE
+        end do
+
+        ! Parse angles, if available
+        if (parse_block_n(blk) > 1) then
+          if (space%dim /= 3) then
+            call messages_input_error(namespace, 'LatticeParameters', 'Angles can only be specified when Dimensions = 3')
+          end if
+
+          ncols = parse_block_cols(blk, 1)
+          if (ncols /= space%dim) then
+            call messages_input_error(namespace, 'LatticeParameters', 'You must specify three angles')
+          end if
+          do idim = 1, space%dim
+            call parse_block_float(blk, 1, idim - 1, angles(idim))
+          end do
+          has_angles = .true.
+        end if
         call parse_block_end(blk)
 
+      else       
+        call messages_input_error(namespace, 'LatticeParameters', 'Variable is mandatory for periodic systems')
       end if
-    end if
 
-    ! Always need Lsize for periodic systems even if LatticeVectors block is not present
-    if (.not. parse_is_defined(namespace, 'Lsize') .and. space%is_periodic()) then
-      do idim = 1, space%dim
-        if (lsize(idim) == M_ZERO) then
-          lsize(idim) = lparams(idim)*M_HALF
+
+      if (has_angles) then
+        latt%alpha = angles(1)
+        latt%beta  = angles(2)
+        latt%gamma = angles(3)
+
+        if (parse_is_defined(namespace, 'LatticeVectors')) then
+          message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
+          call messages_print_var_info(stdout, "LatticeParameters")
+          call messages_fatal(1, namespace=namespace)
         end if
+
+        call build_metric_from_angles(latt, angles)
+
+      else
+
+        !%Variable LatticeVectors
+        !%Type block
+        !%Default simple cubic
+        !%Section Mesh::Simulation Box
+        !%Description
+        !% Primitive lattice vectors. Vectors are stored in rows.
+        !% Default:
+        !% <br><br><tt>%LatticeVectors
+        !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
+        !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
+        !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
+        !% <br>%<br></tt>
+        !%End
+        latt%rlattice_primitive = M_ZERO
+        latt%nonorthogonal = .false.
+        do idim = 1, space%dim
+          latt%rlattice_primitive(idim, idim) = M_ONE
+        end do
+
+        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then
+          do idim = 1, space%dim
+            do jdim = 1, space%dim
+              call parse_block_float(blk, idim - 1,  jdim - 1, latt%rlattice_primitive(jdim, idim))
+              if (idim /= jdim .and. abs(latt%rlattice_primitive(jdim, idim)) > M_EPSILON) then
+                latt%nonorthogonal = .true.
+              end if
+            enddo
+          end do
+          call parse_block_end(blk)
+
+        end if
+      end if
+
+    else
+      ! Non-periodic
+      lparams = M_ONE
+      latt%rlattice_primitive = M_ZERO
+      do idim = 1, space%dim
+        latt%rlattice_primitive(idim, idim) = M_ONE
       end do
     end if
 
     latt%rlattice = M_ZERO
     do idim = 1, space%dim
       norm = sqrt(sum(latt%rlattice_primitive(1:space%dim, idim)**2))
-      lsize(idim) = lsize(idim) * norm
+      lparams(idim) = lparams(idim)*norm
       do jdim = 1, space%dim
         latt%rlattice_primitive(jdim, idim) = latt%rlattice_primitive(jdim, idim) / norm
-        latt%rlattice(jdim, idim) = latt%rlattice_primitive(jdim, idim) * M_TWO*lsize(idim)
+        latt%rlattice(jdim, idim) = latt%rlattice_primitive(jdim, idim) * lparams(idim)
       end do
     end do
 
@@ -212,7 +227,7 @@ contains
 
     PUSH_SUB(lattice_vectors_copy)
 
-    this%dim = source%dim
+    this%space = source%space
     this%rlattice_primitive = source%rlattice_primitive
     this%rlattice = source%rlattice
     this%klattice_primitive = source%klattice_primitive
@@ -226,6 +241,27 @@ contains
     POP_SUB(lattice_vectors_copy)
   end subroutine lattice_vectors_copy
 
+    !--------------------------------------------------------------
+  subroutine lattice_vectors_scale(this, factor)
+    class(lattice_vectors_t), intent(inout) :: this
+    FLOAT,                    intent(in)    :: factor(this%space%dim)
+
+    integer :: idir
+
+    PUSH_SUB(lattice_vectors_scale)
+
+    ! Scale the lattice in real space
+    do idir = 1, this%space%dim
+      this%rlattice(1:this%space%dim, idir) = this%rlattice(1:this%space%dim, idir)*factor(idir)
+    end do
+
+    ! Regenerate the lattice in reciprocal space
+    call reciprocal_lattice(this%rlattice, this%klattice, this%rcell_volume, this%space%dim)
+    this%klattice = this%klattice * M_TWO*M_PI
+    
+    POP_SUB(lattice_vectors_scale)
+  end subroutine lattice_vectors_scale
+
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)
     class(lattice_vectors_t), intent(in) :: this
@@ -236,25 +272,25 @@ contains
     PUSH_SUB(lattice_vectors_write_info)
 
     write(message(1),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
-    do idir = 1, this%dim
+    do idir = 1, this%space%dim
       write(message(1+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
-        idir2 = 1, this%dim) 
+        idir2 = 1, this%space%dim)
     end do
-    call messages_info(1+this%dim, iunit)
+    call messages_info(1+this%space%dim, iunit)
 
     write(message(1),'(a,f18.4,3a,i1.1,a)') &
-      '  Cell volume = ', units_from_atomic(units_out%length**this%dim, this%rcell_volume), &
-      ' [', trim(units_abbrev(units_out%length**this%dim)), ']'
+      '  Cell volume = ', units_from_atomic(units_out%length**this%space%dim, this%rcell_volume), &
+      ' [', trim(units_abbrev(units_out%length**this%space%dim)), ']'
     call messages_info(1, iunit)
 
     write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
-    do idir = 1, this%dim
+    do idir = 1, this%space%dim
       write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, this%klattice(idir2, idir)), &
-        idir2 = 1, this%dim)
+        idir2 = 1, this%space%dim)
     end do
-    call messages_info(1+this%dim, iunit)
+    call messages_info(1+this%space%dim, iunit)
 
-    if (this%dim == 3) then
+    if (this%space%dim == 3) then
       write(message(1),'(a)') '  Cell angles [degree]'
       write(message(2),'(a, f8.3)') '    alpha = ', this%alpha
       write(message(3),'(a, f8.3)') '    beta  = ', this%beta
@@ -317,7 +353,7 @@ contains
     FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
     FLOAT,             intent(out) :: volume
     integer,           intent(in)  :: dim
-    type(namespace_t), intent(in)  :: namespace
+    type(namespace_t), optional, intent(in)  :: namespace
 
     integer :: ii
     FLOAT :: cross(1:3), rv3(1:3, 1:3)

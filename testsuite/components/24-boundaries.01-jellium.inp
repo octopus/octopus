@@ -5,11 +5,11 @@ TestRepetitions = 5
 
 PeriodicDimensions = 3
 
-aCell = 5
-bCell = 4
-cCell = 8
+aCell = 10
+bCell = 8
+cCell = 16
 
-%Lsize
+%LatticeParameters
  aCell | bCell | cCell
 %
 

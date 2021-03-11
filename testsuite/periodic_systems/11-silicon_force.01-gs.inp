@@ -10,7 +10,9 @@ a = 9.2
 Spacing = a/14
 
 BoxShape = parallelepiped
-Lsize = a/2
+%LatticeParameters
+ a | a | a
+%
 
 # We move the first Si atom slighly out of position to get non-zero forces
 %ReducedCoordinates

@@ -19,12 +19,12 @@ FromScratch = yes
 
 BoxShape = parallelepiped
 
-%Lsize
- 1.99932905*angstrom | 5.29*angstrom | 5.29*angstrom
+%LatticeParameters
+ 3.9986581*angstrom | 10.58*angstrom | 10.58*angstrom
 %
 
 %Spacing
- 1.99932905/6*angstrom | 0.3*angstrom | 0.3*angstrom
+  3.9986581/12*angstrom | 0.3*angstrom | 0.3*angstrom
 %
 
 %KPoints

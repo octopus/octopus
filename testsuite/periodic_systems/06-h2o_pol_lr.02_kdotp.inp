@@ -11,7 +11,9 @@ fromScratch = yes
 Spacing = 0.5
 ConvRelDens = 1.0e-4
 BoxShape = parallelepiped
-Lsize = 10
+%LatticeParameters
+ 20 | 20 | 20
+%
 PeriodicDimensions = 3
 
 

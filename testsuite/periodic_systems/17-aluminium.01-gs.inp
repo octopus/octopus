@@ -8,7 +8,9 @@ Spacing = a/16
 
 BoxShape = parallelepiped
 
-Lsize = a/2
+%LatticeParameters
+ a | a | a
+%
 
 %Coordinates
  'Al' | 0.0 | 0.0 | 0.0

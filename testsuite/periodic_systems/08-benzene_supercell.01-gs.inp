@@ -25,8 +25,11 @@ EigensolverTolerance = 1e-8
 
 BoxShape = parallelepiped
 
-LSize = 5.0
-Spacing = LSize/11
+a = 10
+%LatticeParameters
+ a | a | a
+%
+Spacing = a/22
 
 FromScratch = yes
 

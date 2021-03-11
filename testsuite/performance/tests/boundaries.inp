@@ -17,6 +17,9 @@ l3 = l1
 Spacing = l1*2 * (1 / number_gridpoints ) ^ (1./Dimensions)
 #Spacing = (l1*l2*l3*8 / number_gridpoints ) ^ (1./Dimensions)
 
+%LatticeParameters
+ 2*l1 | 2*l2 | 2*l3
+%
 %Lsize
  l1 | l2 | l3
 %

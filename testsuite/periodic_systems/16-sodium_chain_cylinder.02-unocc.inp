@@ -19,7 +19,9 @@ FromScratch = yes
 
 BoxShape = cylinder
 
-Xlength = 1.99932905*angstrom
+%LatticeParameters
+ 3.9986581*angstrom
+%
 Radius = 5.29*angstrom
 
 %Spacing
