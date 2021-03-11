@@ -563,11 +563,13 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   integer :: size_send, size_recv
   integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:), ghost_remoteindex(:)
   type(lihash_t) :: hilbert_to_ghost
+  integer :: npart
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   call mpi_grp_init(mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
+  mesh%mpi_grp = mpi_grp
   
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = (mpi_grp%size > 1)
@@ -578,17 +580,16 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   call MPI_Allgather(mpi_grp%rank, 1, MPI_INTEGER, mesh_ranks(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
 #endif
 
+  call partition_init(mesh%partition, mesh%np_global, mesh%mpi_grp)
+  npart = partition_get_npart(mesh%partition)
+
   ! redistribute points
   ! use block data decomposition of grid indices
-  SAFE_ALLOCATE(offsets(0:mpi_grp%size))
-  SAFE_ALLOCATE(sizes(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(offsets(0:npart))
+  SAFE_ALLOCATE(sizes(0:npart-1))
 
-  do rank_mesh = 0, mpi_grp%size
-    offsets(rank_mesh) = floor(mesh%np_global * TOFLOAT(rank_mesh)/mpi_grp%size)
-  end do
-  do rank_mesh = 0, mpi_grp%size - 1
-    sizes(rank_mesh) = offsets(rank_mesh + 1) - offsets(rank_mesh)
-  end do
+  call partition_get_local_size_vec(mesh%partition, offsets, sizes)
+  offsets(npart) = offsets(npart-1) + sizes(npart-1)
 
   ! now get data distributed over mpi_world to mpi_grp
   SAFE_ALLOCATE(offsets_global(0:mpi_world%size))
@@ -602,8 +603,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 
   SAFE_ALLOCATE(recvcounts(0:mpi_world%size-1))
   SAFE_ALLOCATE(rdispls(0:mpi_world%size-1))
-  SAFE_ALLOCATE(sendcounts(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(sdispls(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(sendcounts(0:npart-1))
+  SAFE_ALLOCATE(sdispls(0:npart-1))
   ! determine what to receive
   irecv = 0
   left_local = offsets(mpi_grp%rank)
@@ -636,7 +637,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   isend = 0
   left_global = offsets_global(mpi_world%rank)
   right_global = offsets_global(mpi_world%rank + 1) - 1
-  do rank_mesh = 0, mpi_grp%size - 1
+  do rank_mesh = 0, npart - 1
     left_local = offsets(rank_mesh)
     right_local = offsets(rank_mesh + 1) - 1
     if(right_local < left_global) then
@@ -903,7 +904,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   !  end do
   !end if
 
-  mesh%mpi_grp = mpi_grp 
   
   !if(mesh%parallel_in_domains) then
 
