@@ -269,9 +269,11 @@ contains
     call iihash_init(ghost_inv)
     vp%np_ghost = 0
     vp%np_bndry = 0
-    do gip = vp%xlocal, vp%xlocal + vp%np_local - 1
+    do ip = 1, vp%np_local
       ! Get coordinates of current point.
-      call index_to_coords(idx, vp%local(gip), p1)
+      !call index_to_coords(idx, vp%local(gip), p1)
+      call index_to_coords(idx, ip, p1)
+
       ! For all points in stencil.
       do jj = 1, stencil%size
         ! Get point number of possible ghost point.

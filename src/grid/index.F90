@@ -165,6 +165,7 @@ contains
       !do idir = 1, idx%dim
       !  ix(idir) = idx%lxyz(ip, idir)
       !end do
+      ASSERT(ip <= ubound(idx%grid_to_hilbert, dim=1))
       call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert(ip), ix)
     else
       call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
