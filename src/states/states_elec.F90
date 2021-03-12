@@ -1964,6 +1964,9 @@ contains
 
               do ii = 1, der%mesh%np
                 c_tmp = gwf_psi(ii, i_dim, 1)*conjg(gwf_psi(ii, i_dim, 2))
+                c_tmp = c_tmp + abs(kpoint(i_dim))**2*real(wf_psi_conj(ii, 2)*wf_psi(ii, 1))
+                c_tmp = c_tmp - M_zI * (wf_psi_conj(ii, 2)*gwf_psi(ii,i_dim,1) &
+                                      - wf_psi(ii, 1)*conjg(gwf_psi(ii,i_dim,2)))*kpoint(i_dim)
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
                 tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
               end do
