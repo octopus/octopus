@@ -59,6 +59,7 @@ module io_function_oct_m
     write_bild_forces_file,       &
     write_canonicalized_xyz_file, &
     write_xsf_geometry,           &
+    write_xsf_geometry_supercell, &
     write_xsf_geometry_file,      &
     dio_function_input,           &
     zio_function_input,           &
@@ -67,6 +68,8 @@ module io_function_oct_m
     io_function_output_vector,    &
     dio_function_output_global,   &
     zio_function_output_global,   &
+    dio_function_output_supercell,&
+    zio_function_output_supercell,&
     io_function_output_vector_BZ, &
     io_function_output_global_BZ
 
@@ -526,6 +529,85 @@ contains
 
     POP_SUB(write_xsf_geometry)
   end subroutine write_xsf_geometry
+
+! ---------------------------------------------------------
+  !> for format specification see:
+  !! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  subroutine write_xsf_geometry_supercell(iunit, geo, mesh, centers, supercell, extra_atom)
+    integer,           intent(in) :: iunit
+    type(geometry_t),  intent(in) :: geo
+    type(mesh_t),      intent(in) :: mesh
+    FLOAT,             intent(in) :: centers(:, :)
+    integer,           intent(in) :: supercell(:)
+    FLOAT, optional,   intent(in) :: extra_atom(:) !< An extra atom, with ther symbol 'X'
+
+    integer :: idir, idir2, iatom, index_
+    character(len=7) :: index_str
+    FLOAT :: offset(3)
+    integer :: irep, Nreplica
+
+    PUSH_SUB(write_xsf_geometry_supercell)
+
+    write(index_str, '(a)') ''
+    index_ = 1
+
+    Nreplica = product(supercell(1:mesh%sb%dim))
+
+    offset = M_ZERO
+    ! The corner of the cell is always (0,0,0) to XCrySDen
+    ! so the offset is applied to the atomic coordinates.
+    ! Offset in periodic directions:
+    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)*supercell(1:3))
+    ! Offset in aperiodic directions:
+    do idir = mesh%sb%periodic_dim + 1, 3
+      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
+    end do
+
+    if(simul_box_is_periodic(mesh%sb)) then
+      if(index_ == 1) then
+        select case(mesh%sb%periodic_dim)
+          case(3)
+            write(iunit, '(a)') 'CRYSTAL'
+          case(2)
+            write(iunit, '(a)') 'SLAB'
+          case(1)
+            write(iunit, '(a)') 'POLYMER'
+        end select
+      end if
+
+      write(iunit, '(a)') 'PRIMVEC'//trim(index_str)
+
+      do idir = 1, mesh%sb%dim
+        write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
+          mesh%sb%latt%rlattice(idir2, idir)*supercell(idir)), idir2 = 1, mesh%sb%dim)
+      end do
+
+      write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)
+      if(.not.present(extra_atom)) then
+        write(iunit, '(i10, a)') geo%natoms*Nreplica, ' 1'
+      else
+        write(iunit, '(i10, a)') geo%natoms*Nreplica+1, ' 1'
+      end if
+    else
+      write(iunit, '(a)') 'ATOMS'//trim(index_str)
+    end if
+
+
+    do irep = 1, Nreplica
+      ! BoxOffset should be considered here
+      do iatom = 1, geo%natoms
+        write(iunit, '(a10, 3f12.6)', advance='no') trim(geo%atom(iatom)%label), &
+          (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir) &
+                                 - centers(idir, irep)), idir = 1, mesh%sb%dim)
+        write(iunit, '()')
+      end do
+    end do
+    write(iunit, '(a10, 3f12.6)', advance='no') 'X', &
+       (units_from_atomic(units_out%length, extra_atom(idir) - offset(idir)), idir = 1, mesh%sb%dim)
+    write(iunit, '()')
+
+    POP_SUB(write_xsf_geometry_supercell)
+  end subroutine write_xsf_geometry_supercell
 
 
 #if defined(HAVE_NETCDF)

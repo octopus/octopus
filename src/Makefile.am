@@ -763,6 +763,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-conductivity \
                  oct-floquet \
                  oct-spin_susceptibility \
+                 oct-tdtdm \
                  oct-wannier90 \
                  oct-unfold
 
@@ -836,6 +837,15 @@ oct_unfold_SOURCES = utils/unfold.F90
 oct_unfold_LINK = $(FCLINK)
 oct_unfold_LDADD = $(oct_library) $(all_LIBS)
 
+oct_wannier90_SOURCES = utils/wannier90_interface.F90
+oct_wannier90_LINK = $(FCLINK)
+oct_wannier90_LDADD = $(oct_library) $(all_LIBS)
+
+oct_tdtdm_SOURCES =  utils/tdtdm.F90
+oct_tdtdm_LINK = $(FCLINK)
+oct_tdtdm_LDADD = $(oct_library) $(all_LIBS)
+
+
 utils_f_srcs = \
 	utils/casida_spectrum.F90        \
 	utils/centergeom.F90             \
@@ -853,7 +863,9 @@ utils_f_srcs = \
 	utils/propagation_spectrum.F90   \
 	utils/unfold.F90                 \
 	utils/vibrational.F90            \
-	utils/xyzanim.F90
+	utils/xyzanim.F90                \
+        utils/tdtdm.F90                  \
+        utils/wannier90_interface.F90
 
 
 include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
@@ -861,10 +873,6 @@ include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEAD
 
 include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-oct_wannier90_SOURCES = utils/wannier90_interface.F90 
-oct_wannier90_LINK = $(FCLINK)
-oct_wannier90_LDADD = $(oct_library) $(all_LIBS)
 
 
 # debug files from MacOS gcc with -g
