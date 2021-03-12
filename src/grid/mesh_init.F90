@@ -252,6 +252,10 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ip = 1
   do ihilbert = istart, iend
     call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
+    ! first check if point is outside bounding box
+    if(any(point < mesh%idx%nr(1, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM))) cycle
+    if(any(point > mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM))) cycle
+    ! then check if point is inside simulation box
     chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
     if(.not. sb%contains_point(pos)) cycle
