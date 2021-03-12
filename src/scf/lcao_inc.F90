@@ -215,8 +215,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   SAFE_DEALLOCATE_A(hpsi)
 
   if(gr%mesh%parallel_in_domains) then
-    call comm_allreduce(gr%mesh%mpi_grp, hamilt)
-    call comm_allreduce(gr%mesh%mpi_grp, overlap)
+    call gr%mesh%allreduce(hamilt)
+    call gr%mesh%allreduce(overlap)
   end if 
 
   if(debug%info .and. mpi_grp_is_root(mpi_world)) then
