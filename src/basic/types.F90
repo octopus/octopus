@@ -41,6 +41,7 @@ module types_oct_m
   type(type_t), public :: TYPE_CMPLX        = type_t(2)
   type(type_t), public :: TYPE_INTEGER      = type_t(3)
   type(type_t), public :: TYPE_BYTE         = type_t(4)
+  type(type_t), public :: TYPE_INTEGER8     = type_t(5)
 
   interface operator(==)
     module procedure types_equal
@@ -50,7 +51,7 @@ module types_oct_m
     module procedure types_not_equal
   end interface operator(/=)
 
-  integer :: sizes(6) = (/8, 16, 4, 1, 4, 8/)
+  integer :: sizes(5) = (/8, 16, 4, 1, 8/)
   
 contains
   

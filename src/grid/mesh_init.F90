@@ -886,6 +886,17 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     end if
   end do
 
+  print *, mesh%mpi_grp%rank, "min/max hilbert grid", &
+    minval(mesh%idx%grid_to_hilbert(1:mesh%np)), &
+    maxval(mesh%idx%grid_to_hilbert(1:mesh%np))
+  print *, mesh%mpi_grp%rank, "min/max hilbert ghost", &
+    minval(mesh%idx%grid_to_hilbert(mesh%np+1:mesh%np+nghost)), &
+    maxval(mesh%idx%grid_to_hilbert(mesh%np+1:mesh%np+nghost))
+  print *, mesh%mpi_grp%rank, "min/max hilbert boundary", &
+    minval(mesh%idx%grid_to_hilbert(mesh%np+nghost+1:mesh%np_part)), &
+    maxval(mesh%idx%grid_to_hilbert(mesh%np+nghost+1:mesh%np_part))
+  stop
+
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
   SAFE_DEALLOCATE_A(ghost_to_hilbert)
 
@@ -895,16 +906,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   call partition_set(mesh%partition, part)
   SAFE_DEALLOCATE_A(part)
 
-
-  ! TODO: create global index
-
-
-  SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
-  mesh%x(:, :) = M_ZERO
-  ! Do the inner points
-  do ip = 1, mesh%np_part
-    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip)
-  end do
 
 
   !if(.not. mesh%parallel_in_domains) then
@@ -924,8 +925,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   if(mesh%parallel_in_domains) then
     call vec_init(mesh%mpi_grp%comm, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
          space, mesh%partition, mesh%vp, namespace)
-
-
   !  call do_partition()
 
   else
@@ -943,6 +942,34 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     mesh%vp%npart = 1
     mesh%vp%xlocal = 1
   end if
+
+  mesh%idx_global%hypercube = mesh%idx%hypercube
+  mesh%idx_global%is_hypercube = mesh%idx%is_hypercube
+  mesh%idx_global%dim = mesh%idx%dim
+  mesh%idx_global%nr = mesh%idx%nr
+  mesh%idx_global%ll = mesh%idx%ll
+  mesh%idx_global%enlarge = mesh%idx%enlarge
+  mesh%idx_global%checksum = mesh%idx%checksum
+  mesh%idx_global%bits = mesh%idx%bits
+  mesh%idx_global%offset = mesh%idx%offset
+  SAFE_ALLOCATE(mesh%idx_global%grid_to_hilbert(1:mesh%np_global))
+  call vec_allgather(mesh%vp, mesh%idx_global%grid_to_hilbert, mesh%idx%grid_to_hilbert)
+  call lihash_init(mesh%idx_global%hilbert_to_grid)
+  do ip = 1, mesh%np_global
+    call lihash_insert(mesh%idx_global%hilbert_to_grid, mesh%idx_global%grid_to_hilbert(ip), ip)
+  end do
+
+
+  print*,'before getting x'
+  SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
+  mesh%x(:, :) = M_ZERO
+  ! Do the inner points
+  do ip = 1, mesh%np_part
+    print *, ip,  mesh_local2global(mesh, ip), mesh%np, mesh%np_part
+    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, mesh_local2global(mesh, ip))
+  end do
+  print*,'after getting x'
+
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 

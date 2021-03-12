@@ -87,7 +87,8 @@ module mesh_oct_m
     ! Components are public by default
     type(simul_box_t),   pointer :: sb  !< simulation box
     type(curvilinear_t), pointer :: cv  
-    type(index_t)                :: idx 
+    type(index_t)                :: idx          !< local index structure
+    type(index_t)                :: idx_global   !< global index structure
     logical :: use_curvilinear
     
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
@@ -836,7 +837,7 @@ contains
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ix(:)
 
-    index = index_from_coords(mesh%idx, ix)
+    index = index_from_coords(mesh%idx_global, ix)
   end function mesh_global_index_from_coords
 
   !> Given a _global_ point index, this function returns the set of
@@ -846,7 +847,7 @@ contains
     integer,       intent(in)    :: ipg
     integer,       intent(out)   :: ix(:)
 
-    call index_to_coords(mesh%idx, ipg, ix)
+    call index_to_coords(mesh%idx_global, ipg, ix)
   end subroutine mesh_global_index_to_coords
 
   !> This function returns the _local_ index of the point for a given
@@ -857,8 +858,9 @@ contains
 
     integer :: ipg
 
-    ipg = index_from_coords(mesh%idx, ix)
-    ip = mesh_global2local(mesh, ipg)
+    ip = index_from_coords(mesh%idx, ix)
+    !ipg = index_from_coords(mesh%idx, ix)
+    !ip = mesh_global2local(mesh, ipg)
   end function mesh_local_index_from_coords
 
   !> Given a _local_ point index, this function returns the set of
@@ -870,8 +872,9 @@ contains
 
     integer :: ipg
 
-    ipg = mesh_local2global(mesh, ip)
-    call index_to_coords(mesh%idx, ipg, ix)
+    !ipg = mesh_local2global(mesh, ip)
+    !call index_to_coords(mesh%idx, ipg, ix)
+    call index_to_coords(mesh%idx, ip, ix)
   end subroutine mesh_local_index_to_coords
 
   !> This function returns the global mesh index for a given local index

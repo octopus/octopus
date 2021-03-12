@@ -165,18 +165,21 @@ module par_vec_oct_m
     module procedure dvec_scatter
     module procedure zvec_scatter
     module procedure ivec_scatter
+    module procedure lvec_scatter
   end interface vec_scatter
 
   interface vec_gather
     module procedure dvec_gather
     module procedure zvec_gather
     module procedure ivec_gather
+    module procedure lvec_gather
   end interface vec_gather
 
   interface vec_allgather
     module procedure dvec_allgather
     module procedure zvec_allgather
     module procedure ivec_allgather
+    module procedure lvec_allgather
   end interface vec_allgather
   
 contains
@@ -649,6 +652,10 @@ contains
 
 #include "undef.F90"
 #include "integer.F90"
+#include "par_vec_inc.F90"
+
+#include "undef.F90"
+#include "integer8.F90"
 #include "par_vec_inc.F90"
 
 end module par_vec_oct_m
