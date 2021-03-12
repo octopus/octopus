@@ -98,6 +98,11 @@ module lcao_oct_m
     complex(4), allocatable :: zbuff(:, :, :, :) !< single-precision buffer
     logical                 :: initialized_orbitals
     FLOAT                   :: orbital_scale_factor
+ 
+    !> For optimization purposes
+    logical,    allocatable :: is_empty(:) !< True if the submesh contains zero point.
+                                           !< This occurs in domain parallelization if the atom is not
+                                           !< in the local domain
 
     !> For the alternative LCAO
     logical                 :: keep_orb     !< Whether we keep orbitals in memory.
@@ -141,9 +146,9 @@ contains
     type(states_elec_t),  intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
-    integer :: ii, ll, mm
+    integer :: ii, ll, mm, norbs
     integer :: mode_default
-    FLOAT   :: max_orb_radius
+    FLOAT   :: max_orb_radius, maxradius
     integer :: iunit_o
 
     PUSH_SUB(lcao_init)
@@ -302,6 +307,30 @@ contains
       SAFE_ALLOCATE( this%atom(1:this%maxorbs))
       SAFE_ALLOCATE(this%level(1:this%maxorbs))
       SAFE_ALLOCATE( this%ddim(1:this%maxorbs))
+
+      SAFE_ALLOCATE(this%is_empty(1:this%maxorbs))
+      this%is_empty = .false.
+
+      ! this is determined by the stencil we are using and the spacing
+      this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
+
+      ! calculate the radius of each orbital
+      SAFE_ALLOCATE(this%radius(1:geo%natoms))
+
+      do ia = 1, geo%natoms
+        norbs = species_niwfs(geo%atom(ia)%species)
+
+        maxradius = M_ZERO
+        do iorb = 1, norbs
+          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(ia)%species, ii, is = 1))
+        end do
+
+        maxradius = min(maxradius, M_TWO*maxval(gr%sb%lsize(1:gr%sb%dim)))
+
+        this%radius(ia) = maxradius
+      end do
+
 
       ! Each atom provides niwfs pseudo-orbitals (this number is given in
       ! geo%atom(ia)%species%niwfs for atom number ia). This number is

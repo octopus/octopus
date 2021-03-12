@@ -22,4 +22,3 @@ SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 StatesPack = yes
-LCAOStart = lcao_full

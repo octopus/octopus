@@ -23,7 +23,7 @@
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
 subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
-  type(lcao_t),             intent(in)    :: this
+  type(lcao_t),             intent(inout) :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(in)    :: st
@@ -84,6 +84,8 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   end if
 #endif
   
+  if(sphere%np == 0) this%is_empty(iorb) = .true.
+
   call submesh_end(sphere)
 
 
@@ -114,6 +116,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
 #endif
+  integer :: iatom, jatom
+  FLOAT :: dist2
   ! Variables used for some commented debug statements
   !character(len=256) :: filename
   !integer :: ierr
@@ -141,7 +145,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, kstart:kend))
   SAFE_ALLOCATE(hamilt(1:this%norbs, 1:this%norbs, kstart:kend))
+  hamilt = M_ZERO
   SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:spin_channels))
+  overlap = M_ZERO
+  
 
   ie = 0
   maxmtxel = this%norbs * (this%norbs + 1)/2
@@ -151,17 +158,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxmtxel)
 
-  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open('debug/lcao/hamiltonian', namespace, action='write')
-    iunit_s = io_open('debug/lcao/overlap', namespace, action='write')
-    iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
-    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-  end if
-
   do n1 = 1, this%norbs
-    
+    iatom = this%atom(n1)
+
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
       do idim = 1, st%d%dim
@@ -184,25 +183,23 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     end do
 
     do n2 = n1, this%norbs
+      jatom = this%atom(n2)
+      dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+
+      ! Note that here we are making an approximation for the Hamiltonian matrix, 
+      ! as the nonlocal part of the pseudopotential, or any nonlocal operator
+      ! might still couple the two wavefunctions (from atom i and atom j).
+      if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
+      if(this%is_empty(n2)) cycle !This orbital does not contribute to the domain
+
       do ispin = 1, spin_channels
 
         call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .true.)
 
-        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
-        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
-
-        if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
-        end if
-
+        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2, reduce=.false.)
         do ik = kstart, kend
           if(ispin /= st%d%get_spin_index(ik)) cycle
-          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
-          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
-
-          if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
-          end if
+          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2, reduce=.false.)
         end do
       end do
       
@@ -215,12 +212,47 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
+  SAFE_DEALLOCATE_A(hpsi)
+
+  if(gr%mesh%parallel_in_domains) then
+    call gr%mesh%allreduce(hamilt)
+    call gr%mesh%allreduce(overlap)
+  end if 
+
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    iunit_h = io_open('debug/lcao/hamiltonian', namespace, action='write')
+    iunit_s = io_open('debug/lcao/overlap', namespace, action='write')
+    iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
+    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+  end if
+
+  !Symmetrization and debug
+  do n1 = 1, this%norbs
+    do n2 = n1, this%norbs
+      do ispin = 1, spin_channels
+        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
+         
+        if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
+        end if
+
+        do ik = kstart, kend
+          if(ispin /= st%d%get_spin_index(ik)) cycle
+          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+          if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+          end if
+        end do
+      end do
+    end do
+  end do
+
   if(debug%info .and. mpi_grp_is_root(mpi_world)) then
     call io_close(iunit_h)
     call io_close(iunit_s)
   end if
-
-  SAFE_DEALLOCATE_A(hpsi)
 
   SAFE_ALLOCATE(ev(1:this%norbs))
   SAFE_ALLOCATE(zeropsi(1:gr%mesh%np))
@@ -276,6 +308,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! Change of basis
   do n2 = 1, this%norbs
+    
+    if(this%is_empty(n2)) cycle !No contribution on this domain
+
     !n2 fixes the spinor dimension, as we have two orbitals per spinor dimensions.
     !Otherwise we use hamilt(n2,n1,ik) twice, which is not what we want to do
     idim = this%ddim(n2)
