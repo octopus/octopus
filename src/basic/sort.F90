@@ -53,7 +53,7 @@ module sort_oct_m
   !!     ! must have the same size as a.
   !!   end subroutine sort
   interface sort
-    module procedure dsort, isort
+    module procedure dsort, isort, lsort
     module procedure dshellsort1, zshellsort1, ishellsort1
     module procedure dshellsort2, zshellsort2, ishellsort2
   end interface sort
@@ -85,6 +85,19 @@ module sort_oct_m
       integer, intent(inout) :: array(*)
       integer, intent(out)   :: indices(*)
     end subroutine isort2
+
+    subroutine lsort1(size, array)
+      implicit none
+      integer,    intent(in)    :: size
+      integer(8), intent(inout) :: array(*)
+    end subroutine lsort1
+
+    subroutine lsort2(size, array, indices)
+      implicit none
+      integer,    intent(in)    :: size
+      integer(8), intent(inout) :: array(*)
+      integer,    intent(out)   :: indices(*)
+    end subroutine lsort2
   end interface
 
 contains
@@ -130,6 +143,27 @@ contains
 
     POP_SUB(isort)
   end subroutine isort
+
+  ! ---------------------------------------------------------
+  !> Shell sort for integer(8) arrays.
+  subroutine lsort(a, ind)
+    integer(8),        intent(inout) :: a(:)
+    integer, optional, intent(out)   :: ind(:)
+
+    PUSH_SUB(lsort)
+
+    if(size(a) > 0) then
+      
+      if(.not. present(ind)) then
+        call lsort1(size(a), a)
+      else
+        call lsort2(size(a), a, ind)
+      end if
+      
+    end if
+
+    POP_SUB(lsort)
+  end subroutine lsort
 
 
 #include "undef.F90"

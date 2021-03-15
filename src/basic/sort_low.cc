@@ -79,6 +79,14 @@ extern "C" void FC_FUNC(isort2, ISORT2)(const fint * size, fint * array, fint * 
   sort2<fint>(*size, array, indices);
 }
 
+extern "C" void FC_FUNC(lsort1, LSORT1)(const fint * size, fint8 * array){
+  std::sort(array, array + *size);
+}
+
+extern "C" void FC_FUNC(lsort2, LSORT2)(const fint * size, fint8 * array, fint * indices){
+  sort2<fint8>(*size, array, indices);
+}
+
 extern "C" void FC_FUNC(dsort1, DSORT1)(const fint * size, double * array){
   std::sort(array, array + *size);
 }
