@@ -627,7 +627,7 @@ contains
 
     quality = M_ZERO
 
-    quality = quality + (maxval(nlocal) - minval(nlocal))**3
+    quality = quality + (TOFLOAT(maxval(nlocal)) - TOFLOAT(minval(nlocal)))**3
     quality = quality + (sum(TOFLOAT(nghost)**2))
 
     quality = M_ONE/(M_ONE + quality)
@@ -647,7 +647,7 @@ contains
     write(message(1),'(a)') &
       '                 Neighbours         Ghost points'
     write(message(2),'(a,i5,a,i10)') &
-      '      Average  :      ', sum(nneigh)/npart, '           ', sum(nghost)/npart
+      '      Average  :      ', nint(sum(TOFLOAT(nneigh))/npart), '           ', nint(sum(TOFLOAT(nghost))/npart)
     write(message(3),'(a,i5,a,i10)') &
       '      Minimum  :      ', minval(nneigh),    '           ', minval(nghost)
     write(message(4),'(a,i5,a,i10)') &
