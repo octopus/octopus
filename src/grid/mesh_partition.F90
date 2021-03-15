@@ -35,7 +35,7 @@ module mesh_partition_oct_m
   use stencil_star_oct_m
 
   implicit none
-  
+
   private
   public ::                      &
     mesh_partition,              &
@@ -47,14 +47,15 @@ module mesh_partition_oct_m
 
   integer, parameter ::  &
        METIS    = 1,     &
-       PARMETIS = 2
+       PARMETIS = 2,     &
+       HILBERT  = 3
 
   integer, parameter :: &
        RCB    = 1,      &
        GRAPH  = 2
 
 contains
-  
+
   ! ---------------------------------------------------------------
   !> Converts the mesh given by grid points into a graph. Each
   !! point is a vertex in the graph and closest neighbours are
@@ -82,8 +83,8 @@ contains
     integer              :: ne_global !< Global number of edges.
     integer              :: nv_global !< Global number of vertices.
     !! The global number of vertices (nv_global) is equal to the number of
-    !! points np_global and the maximum global number of edges (ne_global) 
-    !! is 2*mesh%sb%dim*np_global (there are a little fewer because points 
+    !! points np_global and the maximum global number of edges (ne_global)
+    !! is 2*mesh%sb%dim*np_global (there are a little fewer because points
     !! on the border have fewer than two neighbours per dimension).
     !! xadj_global has nv_global+1 entries because last entry contains the total
     !! number of edges.
@@ -94,12 +95,12 @@ contains
     integer, allocatable :: adjncy_global(:) !< Adjacency lists.
     integer, allocatable :: adjncy(:)        !< Local part of adjacency list
     integer, allocatable :: xadj(:)          !< Local part of xadj
-    
+
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
 #ifdef HAVE_METIS
     integer              :: edgecut        !< Number of edges cut by partitioning.
 #endif
-    REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed 
+    REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed
 
     integer              :: iunit          !< For debug output to files.
     integer, allocatable :: rcounts(:), rdispls(:)
@@ -133,8 +134,10 @@ contains
     !%Option metis 1
     !% METIS library.
     !%Option parmetis 2
-    !% (Experimental) Use ParMETIS libary to perform the mesh partition. 
+    !% (Experimental) Use ParMETIS libary to perform the mesh partition.
     !% Only available if the code was compiled with ParMETIS support.
+    !%Option part_hilbert 3
+    !% Use the ordering along the Hilbert curve for partitioning.
     !%End
     default = METIS
 #ifdef HAVE_PARMETIS
@@ -193,216 +196,223 @@ contains
     SAFE_ALLOCATE(lsize(1:npart))
     SAFE_ALLOCATE(vtxdist(1:npart+1))
     call partition_get_local_size(mesh%partition, iv, nv)
-#ifdef HAVE_MPI
-    call MPI_Allgather(iv, 1, MPI_INTEGER, istart(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-    call MPI_Allgather(nv, 1, MPI_INTEGER, lsize(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-#endif
-    vtxdist(1:npart) = istart(1:npart)
-    vtxdist(npart+1) = nv_global + 1
 
-    ! Create graph with each point being represented by a 
-    ! vertex and edges between neighbouring points.
-    SAFE_ALLOCATE(xadj(1:nv+1))
-    SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
-    ne = 1
-    ! Iterate over number of vertices.
-    do iv = 1, lsize(ipart)
-      ! Get coordinates of point iv (vertex iv).
-      call mesh_global_index_to_coords(mesh, istart(ipart)-1 + iv, ix)
-
-      ! Set entry in index table.
-      xadj(iv) = ne
-      ! Check all possible neighbours.
-      do jp = 1, stencil%size
-        if(jp == stencil%center) cycle
-
-        ! Store coordinates of possible neighbors, they
-        ! are needed several times in the check below.
-        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
-
-        if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-          ! Only points inside the mesh or its enlargement
-          ! are included in the graph.
-          inb = mesh_global_index_from_coords(mesh, jx)
-          if(inb /= 0 .and. inb <= nv_global) then
-            ! Store a new edge and increment edge counter.
-            adjncy(ne) = inb
-            ne = ne + 1
-          end if
-        end if
-      end do
-    end do
-    ! We started with ne=1 for simplicity, so ne is off by one in the end.
-    ne = ne - 1
-
-    ! Set the total number of edges plus one as last index.
-    ! (NOTE: the plus one is because we are using Fortran numbering)
-    ! The reason is: neighbours of node i are stored in adjncy(xadj(i):xadj(i+1)-1).
-    ! Setting the last index as mentioned makes special handling of last element 
-    ! unnecessary (this indexing is a METIS requirement).
-    xadj(nv+1) = ne + 1
-
-
-    if (debug%info .or. library == METIS) then
-      !Gather the global xadj and adjncy arrays
-      SAFE_ALLOCATE(rcounts(1:npart))
-      SAFE_ALLOCATE(rdispls(1:npart))
-
-      SAFE_ALLOCATE(xadj_global(1:nv_global + 1))
-      xadj_global(1) = 1
-      rcounts(1:npart) = lsize(1:npart)
-      rdispls(1:npart) = vtxdist(1:npart) - 1
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(xadj(2), lsize(ipart), MPI_INTEGER, &
-           xadj_global(2), rcounts(1), rdispls(1), MPI_INTEGER, &
-           mesh%mpi_grp%comm, mpi_err)
-#endif
-      do jpart = 2, npart
-        do iv = 1, lsize(jpart)
-          xadj_global(istart(jpart) + iv) = xadj_global(istart(jpart) + iv) + xadj_global(istart(jpart)) - 1
-        end do
-      end do
-
-      ne_global = xadj_global(nv_global + 1)
-      SAFE_ALLOCATE(adjncy_global(1:ne_global))
-      do jpart = 1, npart
-        rdispls(jpart) = xadj_global(vtxdist(jpart)) - 1
-        rcounts(jpart) = xadj_global(vtxdist(jpart+1)) - 1 - rdispls(jpart)
-      end do
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(adjncy(1), xadj(nv+1)-1, MPI_INTEGER, &
-           adjncy_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
-           mesh%mpi_grp%comm, mpi_err)
-#endif
-
-      SAFE_DEALLOCATE_A(rcounts)
-      SAFE_DEALLOCATE_A(rdispls)
-    end if
-
-
-    if(debug%info) then
-      ! DEBUG output. Write graph to file mesh_graph.txt.
-      message(1) = 'Info: Adjacency lists of the graph representing the grid'
-      message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
-      message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
-      message(4) = 'Info: First line contains number of vertices and edges.'
-      message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-      call messages_info(5)
-      if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/mesh_partition', namespace)
-        iunit = io_open('debug/mesh_partition/mesh_graph.txt', namespace, action='write')
-        write(iunit, *) nv_global, ne_global/2
-        do iv = 1, nv
-          write(iunit, *) adjncy_global(xadj_global(iv):xadj_global(iv+1) - 1)
-        end do
-        call io_close(iunit)
-      end if
-      message(1) = "Info: Done writing mesh_graph.txt."
-      call messages_info(1)
-    end if
-
-    ! The sum of all tpwgts elements has to be 1 and 
-    ! we don`t care about the weights. So; 1/npart
-    SAFE_ALLOCATE(tpwgts(1:vsize))
-    tpwgts(1:vsize) = real(1.0, 4)/real(vsize, 4)
-    
     ! Allocate local output matrix
     SAFE_ALLOCATE(part(1:nv))
+    if(library == HILBERT) then
+      part = ipart
+    else
 
-    select case(library)
-    case(METIS)
-      SAFE_ALLOCATE(options(1:40))
-      options = 0
-#ifdef HAVE_METIS
-      call oct_metis_setdefaultoptions(options(1)) ! is equal to: options = -1
+#ifdef HAVE_MPI
+      call MPI_Allgather(iv, 1, MPI_INTEGER, istart(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+      call MPI_Allgather(nv, 1, MPI_INTEGER, lsize(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
 #endif
-      options(METIS_OPTION_NUMBERING) = 1 ! Fortran style: start counting from 1
 
-      if(vsize  <  8) then
-        default_method = RCB
-      else
-        default_method = GRAPH
+      vtxdist(1:npart) = istart(1:npart)
+      vtxdist(npart+1) = nv_global + 1
+
+      ! Create graph with each point being represented by a
+      ! vertex and edges between neighbouring points.
+      SAFE_ALLOCATE(xadj(1:nv+1))
+      SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
+      ne = 1
+      ! Iterate over number of vertices.
+      do iv = 1, lsize(ipart)
+        ! Get coordinates of point iv (vertex iv).
+        call mesh_global_index_to_coords(mesh, istart(ipart)-1 + iv, ix)
+
+        ! Set entry in index table.
+        xadj(iv) = ne
+        ! Check all possible neighbours.
+        do jp = 1, stencil%size
+          if(jp == stencil%center) cycle
+
+          ! Store coordinates of possible neighbors, they
+          ! are needed several times in the check below.
+          jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
+
+          if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
+            ! Only points inside the mesh or its enlargement
+            ! are included in the graph.
+            inb = mesh_global_index_from_coords(mesh, jx)
+            if(inb /= 0 .and. inb <= nv_global) then
+              ! Store a new edge and increment edge counter.
+              adjncy(ne) = inb
+              ne = ne + 1
+            end if
+          end if
+        end do
+      end do
+      ! We started with ne=1 for simplicity, so ne is off by one in the end.
+      ne = ne - 1
+
+      ! Set the total number of edges plus one as last index.
+      ! (NOTE: the plus one is because we are using Fortran numbering)
+      ! The reason is: neighbours of node i are stored in adjncy(xadj(i):xadj(i+1)-1).
+      ! Setting the last index as mentioned makes special handling of last element
+      ! unnecessary (this indexing is a METIS requirement).
+      xadj(nv+1) = ne + 1
+
+
+      if (debug%info .or. library == METIS) then
+        !Gather the global xadj and adjncy arrays
+        SAFE_ALLOCATE(rcounts(1:npart))
+        SAFE_ALLOCATE(rdispls(1:npart))
+
+        SAFE_ALLOCATE(xadj_global(1:nv_global + 1))
+        xadj_global(1) = 1
+        rcounts(1:npart) = lsize(1:npart)
+        rdispls(1:npart) = vtxdist(1:npart) - 1
+#ifdef HAVE_MPI
+        call MPI_Allgatherv(xadj(2), lsize(ipart), MPI_INTEGER, &
+             xadj_global(2), rcounts(1), rdispls(1), MPI_INTEGER, &
+             mesh%mpi_grp%comm, mpi_err)
+#endif
+        do jpart = 2, npart
+          do iv = 1, lsize(jpart)
+            xadj_global(istart(jpart) + iv) = xadj_global(istart(jpart) + iv) + xadj_global(istart(jpart)) - 1
+          end do
+        end do
+
+        ne_global = xadj_global(nv_global + 1)
+        SAFE_ALLOCATE(adjncy_global(1:ne_global))
+        do jpart = 1, npart
+          rdispls(jpart) = xadj_global(vtxdist(jpart)) - 1
+          rcounts(jpart) = xadj_global(vtxdist(jpart+1)) - 1 - rdispls(jpart)
+        end do
+#ifdef HAVE_MPI
+        call MPI_Allgatherv(adjncy(1), xadj(nv+1)-1, MPI_INTEGER, &
+             adjncy_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
+             mesh%mpi_grp%comm, mpi_err)
+#endif
+
+        SAFE_DEALLOCATE_A(rcounts)
+        SAFE_DEALLOCATE_A(rdispls)
       end if
 
-      !%Variable MeshPartition
-      !%Type integer
-      !%Section Execution::Parallelization
-      !%Description
-      !% When using METIS to perform the mesh partitioning, decides which
-      !% algorithm is used. By default, <tt>graph</tt> partitioning 
-      !% is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
-      !%Option rcb 1
-      !% Recursive coordinate bisection partitioning.
-      !%Option graph 2
-      !% Graph partitioning (called 'k-way' by METIS).
-      !%End
-      call parse_variable(namespace, 'MeshPartition', default_method, method)
 
-      SAFE_ALLOCATE(part_global(1:nv_global))
+      if(debug%info) then
+        ! DEBUG output. Write graph to file mesh_graph.txt.
+        message(1) = 'Info: Adjacency lists of the graph representing the grid'
+        message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+        message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+        message(4) = 'Info: First line contains number of vertices and edges.'
+        message(5) = 'Info: Edges are not directed and appear twice in the lists.'
+        call messages_info(5)
+        if(mpi_grp_is_root(mpi_world)) then
+          call io_mkdir('debug/mesh_partition', namespace)
+          iunit = io_open('debug/mesh_partition/mesh_graph.txt', namespace, action='write')
+          write(iunit, *) nv_global, ne_global/2
+          do iv = 1, nv
+            write(iunit, *) adjncy_global(xadj_global(iv):xadj_global(iv+1) - 1)
+          end do
+          call io_close(iunit)
+        end if
+        message(1) = "Info: Done writing mesh_graph.txt."
+        call messages_info(1)
+      end if
 
-      !Now we can call METIS
-      select case(method)
-      case(RCB)
-        message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
-        call messages_info(1)
+      ! The sum of all tpwgts elements has to be 1 and
+      ! we don`t care about the weights. So; 1/npart
+      SAFE_ALLOCATE(tpwgts(1:vsize))
+      tpwgts(1:vsize) = real(1.0, 4)/real(vsize, 4)
+
+      select case(library)
+      case(METIS)
+        SAFE_ALLOCATE(options(1:40))
+        options = 0
 #ifdef HAVE_METIS
-        ierr = oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
-                                          tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+        call oct_metis_setdefaultoptions(options(1)) ! is equal to: options = -1
 #endif
-        call metis_error_code(ierr)
-      case(GRAPH)
-        message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
-        call messages_info(1)
+        options(METIS_OPTION_NUMBERING) = 1 ! Fortran style: start counting from 1
+
+        if(vsize  <  8) then
+          default_method = RCB
+        else
+          default_method = GRAPH
+        end if
+
+        !%Variable MeshPartition
+        !%Type integer
+        !%Section Execution::Parallelization
+        !%Description
+        !% When using METIS to perform the mesh partitioning, decides which
+        !% algorithm is used. By default, <tt>graph</tt> partitioning
+        !% is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
+        !%Option rcb 1
+        !% Recursive coordinate bisection partitioning.
+        !%Option graph 2
+        !% Graph partitioning (called 'k-way' by METIS).
+        !%End
+        call parse_variable(namespace, 'MeshPartition', default_method, method)
+
+        SAFE_ALLOCATE(part_global(1:nv_global))
+
+        !Now we can call METIS
+        select case(method)
+        case(RCB)
+          message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
+          call messages_info(1)
 #ifdef HAVE_METIS
-        ierr = oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
-                                     tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+          ierr = oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+                                            tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
 #endif
-        call metis_error_code(ierr) 
-      case default
-        message(1) = 'Selected partition method is not available in METIS 5.'
-        call messages_fatal(1)
+          call metis_error_code(ierr)
+        case(GRAPH)
+          message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
+          call messages_info(1)
+#ifdef HAVE_METIS
+          ierr = oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+                                       tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+#endif
+          call metis_error_code(ierr)
+        case default
+          message(1) = 'Selected partition method is not available in METIS 5.'
+          call messages_fatal(1)
+        end select
+
+        part(1:nv) = part_global(istart(ipart):istart(ipart) + nv - 1)
+
+        SAFE_DEALLOCATE_A(options)
+        SAFE_DEALLOCATE_A(part_global)
+
+      case(PARMETIS)
+
+        SAFE_ALLOCATE(options(1:3))
+        options = 0 ! For the moment we use default options
+
+        write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
+        call messages_info(1)
+
+        ! Call to ParMETIS with no imbalance tolerance
+#ifdef HAVE_PARMETIS
+        call oct_parmetis_v3_partkway(vtxdist(1), xadj(1), adjncy(1), &
+             1, mesh%mpi_grp%size, tpwgts(1), 1.05_4, &
+             options(1), edgecut, part(1), mesh%mpi_grp%comm)
+#endif
+
+        ! Deallocate matrices
+        SAFE_DEALLOCATE_A(options)
+
       end select
 
-      part(1:nv) = part_global(istart(ipart):istart(ipart) + nv - 1)
+      SAFE_DEALLOCATE_A(vtxdist)
 
-      SAFE_DEALLOCATE_A(options)
-      SAFE_DEALLOCATE_A(part_global)
-
-    case(PARMETIS)
-
-      SAFE_ALLOCATE(options(1:3))
-      options = 0 ! For the moment we use default options
-      
-      write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
-      call messages_info(1)
-
-      ! Call to ParMETIS with no imbalance tolerance
-#ifdef HAVE_PARMETIS
-      call oct_parmetis_v3_partkway(vtxdist(1), xadj(1), adjncy(1), & 
-           1, mesh%mpi_grp%size, tpwgts(1), 1.05_4, & 
-           options(1), edgecut, part(1), mesh%mpi_grp%comm)
-#endif
-
-      ! Deallocate matrices
-      SAFE_DEALLOCATE_A(options)
-
-    end select
-    
-    SAFE_DEALLOCATE_A(vtxdist)
+      if (debug%info .or. library == METIS) then
+        SAFE_DEALLOCATE_A(xadj_global)
+        SAFE_DEALLOCATE_A(adjncy_global)
+      end if
+      SAFE_DEALLOCATE_A(tpwgts)
+      SAFE_DEALLOCATE_A(xadj)
+      SAFE_DEALLOCATE_A(adjncy)
+      SAFE_DEALLOCATE_A(istart)
+      SAFE_DEALLOCATE_A(lsize)
+    end if
 
     ASSERT(all(part(1:nv) > 0))
     ASSERT(all(part(1:nv) <= vsize))
     call partition_set(mesh%partition, part)
 
-    if (debug%info .or. library == METIS) then
-      SAFE_DEALLOCATE_A(xadj_global)
-      SAFE_DEALLOCATE_A(adjncy_global)
-    end if
-    SAFE_DEALLOCATE_A(tpwgts)
-    SAFE_DEALLOCATE_A(xadj)
-    SAFE_DEALLOCATE_A(adjncy)   
-    SAFE_DEALLOCATE_A(istart)
-    SAFE_DEALLOCATE_A(lsize)
     SAFE_DEALLOCATE_A(part)
 
     call stencil_end(stencil)
@@ -412,7 +422,7 @@ contains
     contains
 
       subroutine metis_error_code(ierr)
-        integer, intent(in) :: ierr 
+        integer, intent(in) :: ierr
 
         PUSH_SUB(mesh_partition.metis_error_code)
 
@@ -492,12 +502,12 @@ contains
       POP_SUB(mesh_partition_dump)
       return
     end if
-    
+
     if (debug%info) then
       message(1) = "Debug: Writing mesh partition restart."
       call messages_info(1)
     end if
-    
+
     write(numstring, '(i6.6)') vsize
 
     call partition_dump(mesh%partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
@@ -511,7 +521,7 @@ contains
       message(1) = "Debug: Writing mesh partition restart done."
       call messages_info(1)
     end if
-    
+
     call profiling_out(prof)
 
     POP_SUB(mesh_partition_dump)
@@ -526,7 +536,7 @@ contains
     integer :: err
     character(len=6) :: numstring
     character(len=MAX_PATH_LEN) :: filename, dir
-    
+
     PUSH_SUB(mesh_partition_load)
 
     ierr = 0
@@ -546,7 +556,7 @@ contains
 
     write(numstring, '(i6.6)') mesh%mpi_grp%size
     dir = restart_dir(restart)
-    
+
     !Read inner partition
     filename = 'inner_partition_'//numstring//'.obf'
     if (.not. io_file_exists(trim(dir)//"/"//filename)) then
@@ -684,7 +694,7 @@ contains
   subroutine mesh_partition_messages_debug(mesh, namespace)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
-    
+
     integer              :: ii, jj         ! Counter.
     integer              :: iunit          ! For debug output to files.
     character(len=6)     :: filenum
