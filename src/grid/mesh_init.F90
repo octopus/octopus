@@ -387,7 +387,6 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
     end if
   end do
   mesh%np_part_global = mesh%np_global + sum(initial_sizes) - nduplicate
-  print *, mpi_world%rank, mesh%np_global, mesh%np_part_global, nduplicate
 
   ! get global indices
   ! inner grid
@@ -572,362 +571,45 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
-  call mpi_grp_init(mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
+  call mpi_grp_init(mesh%mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
   
   ! check if we are running in parallel in domains
-  mesh%parallel_in_domains = (mpi_grp%size > 1)
-
-  SAFE_ALLOCATE(mesh_ranks(0:mpi_world%size-1))
-  mesh_ranks = 0
-#ifdef HAVE_MPI
-  call MPI_Allgather(mpi_grp%rank, 1, MPI_INTEGER, mesh_ranks(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
-#endif
-
-  ! redistribute points
-  ! use block data decomposition of grid indices
-  SAFE_ALLOCATE(offsets(0:mpi_grp%size))
-  SAFE_ALLOCATE(sizes(0:mpi_grp%size-1))
-
-  do rank_mesh = 0, mpi_grp%size
-    offsets(rank_mesh) = floor(mesh%np_global * TOFLOAT(rank_mesh)/mpi_grp%size)
-  end do
-  do rank_mesh = 0, mpi_grp%size - 1
-    sizes(rank_mesh) = offsets(rank_mesh + 1) - offsets(rank_mesh)
-  end do
-
-  ! now get data distributed over mpi_world to mpi_grp
-  SAFE_ALLOCATE(offsets_global(0:mpi_world%size))
-  offsets_global(0) = 0
-  do rank_global = 1, mpi_world%size
-    offsets_global(rank_global) = offsets_global(rank_global - 1) + mesh%nps(rank_global)
-  end do
-
-  mesh%np = sizes(mpi_grp%rank)
-  SAFE_ALLOCATE(grid_to_hilbert(1:sizes(mpi_grp%rank)))
-
-  SAFE_ALLOCATE(recvcounts(0:mpi_world%size-1))
-  SAFE_ALLOCATE(rdispls(0:mpi_world%size-1))
-  SAFE_ALLOCATE(sendcounts(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(sdispls(0:mpi_grp%size-1))
-  ! determine what to receive
-  irecv = 0
-  left_local = offsets(mpi_grp%rank)
-  right_local = offsets(mpi_grp%rank+1) - 1
-  do rank_global = 0, mpi_world%size - 1
-    left_global = offsets_global(rank_global)
-    right_global = offsets_global(rank_global + 1) - 1
-    if(right_global < left_local) then
-      ! no overlap, global interval left of local one
-      recvcounts(rank_global) = 0
-      rdispls(rank_global) = irecv
-    else if(right_global <= right_local) then
-      ! partial overlap
-      rdispls(rank_global) = irecv
-      recvcounts(rank_global) = right_global - max(left_local, left_global) + 1
-      irecv = irecv + recvcounts(rank_global)
-    else if(left_global <= right_local) then
-      ! partial overlap or full overlap
-      rdispls(rank_global) = irecv
-      recvcounts(rank_global) = right_local - max(left_local, left_global) + 1
-      irecv = irecv + recvcounts(rank_global)
-    else
-      ! no overlap, global interval right of local one
-      recvcounts(rank_global) = 0
-      rdispls(rank_global) = irecv
-    end if
-  end do
-
-  ! determine what to send
-  isend = 0
-  left_global = offsets_global(mpi_world%rank)
-  right_global = offsets_global(mpi_world%rank + 1) - 1
-  do rank_mesh = 0, mpi_grp%size - 1
-    left_local = offsets(rank_mesh)
-    right_local = offsets(rank_mesh + 1) - 1
-    if(right_local < left_global) then
-      ! no overlap, local interval left of global one
-      sendcounts(rank_mesh) = 0
-      sdispls(rank_mesh) = isend
-    else if(right_local <= right_global) then
-      ! partial overlap
-      sdispls(rank_mesh) = isend
-      sendcounts(rank_mesh) = right_local - max(left_local, left_global) + 1
-      isend = isend + sendcounts(rank_mesh)
-    else if(left_local <= right_global) then
-      ! partial overlap or full overlap
-      sdispls(rank_mesh) = isend
-      sendcounts(rank_mesh) = right_global - max(left_local, left_global) + 1
-      isend = isend + sendcounts(rank_mesh)
-    else
-      ! no overlap, local interval right of global one
-      sendcounts(rank_mesh) = 0
-      sdispls(rank_mesh) = isend
-    end if
-  end do
-
-  ! The communication pattern is in principle a sparse alltoallv, but between
-  ! different communicators:
-  ! in the first stage, the points are distributed among all processes in
-  ! mpi_world; here, they are redistributed to the mesh communicator mpi_grp
-  ! according to the mapping in mesh_ranks
-  SAFE_ALLOCATE(requests(0:mpi_world%size*2-1))
-  ireq = 0
-  ! post receives in a ring fashion
-  do irank = mpi_world%rank, mpi_world%rank + mpi_world%size - 1
-    rank_global = irank
-    if(rank_global > mpi_world%size - 1) rank_global = rank_global - mpi_world%size
-    if(recvcounts(rank_global) == 0) cycle
-    call MPI_Irecv(grid_to_hilbert(rdispls(rank_global)+1), recvcounts(rank_global), &
-      MPI_LONG_LONG, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
-    ireq = ireq + 1
-  end do
-
-  ! post sends in a ring fashion
-  do irank = mpi_world%rank + mpi_world%size - 1, mpi_world%rank, - 1
-    rank_global = irank
-    if(rank_global > mpi_world%size - 1) rank_global = rank_global - mpi_world%size
-    rank_mesh = mesh_ranks(rank_global)
-    if(sendcounts(rank_mesh) == 0) cycle
-    call MPI_Isend(mesh%idx%grid_to_hilbert(sdispls(rank_mesh)+1), sendcounts(rank_mesh), &
-      MPI_LONG_LONG, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
-    ireq = ireq + 1
-  end do
-
-  call MPI_Waitall(ireq, requests, MPI_STATUSES_IGNORE, mpi_err)
-
-  SAFE_DEALLOCATE_A(requests)
-  SAFE_DEALLOCATE_A(mesh_ranks)
-
-  SAFE_DEALLOCATE_A(offsets_global)
-  SAFE_DEALLOCATE_A(sizes)
-  SAFE_DEALLOCATE_A(offsets)
-  SAFE_DEALLOCATE_A(recvcounts)
-  SAFE_DEALLOCATE_A(rdispls)
-  SAFE_DEALLOCATE_A(sendcounts)
-  SAFE_DEALLOCATE_A(sdispls)
-
-  ! create inverse mapping
-  do ip = 1, mesh%np
-    call lihash_insert(mesh%idx%hilbert_to_grid, grid_to_hilbert(ip), ip)
-  end do
-  size_boundary = mesh%np
-  size_ghost = mesh%np
-  SAFE_ALLOCATE(boundary_to_hilbert(1:size_boundary))
-  SAFE_ALLOCATE(ghost_to_hilbert(1:size_ghost))
-
-  ! count ghost points: all points not in grid points
-  ! afterwards, ask other processes if these points belong to them
-  ! all points that belong to other processes are ghost points, the rest is the boundary
-  ighost = 1
-  call lihash_init(hilbert_to_ghost)
-  print*, mpi_grp%rank, "Count points"
-  do ip = 1, mesh%np
-    call index_hilbert_to_point(mesh%idx, mesh%sb%dim, grid_to_hilbert(ip), point)
-    do is = 1, stencil%size
-      if(stencil%center == is) cycle
-      point_stencil(1:mesh%sb%dim) = point(1:mesh%sb%dim) + stencil%points(1:mesh%sb%dim, is)
-      if(any(point_stencil(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
-         any(point_stencil(1:mesh%sb%dim) >  mesh%idx%nr(2, 1:mesh%sb%dim))) cycle
-      call index_point_to_hilbert(mesh%idx, mesh%sb%dim, ihilbert, point_stencil)
-      ib = lihash_lookup(mesh%idx%hilbert_to_grid, ihilbert, found)
-      if(found) cycle
-      ib = lihash_lookup(hilbert_to_ghost, ihilbert, found)
-      if(found) cycle
-      ghost_to_hilbert(ighost) = ihilbert
-      call lihash_insert(hilbert_to_ghost, ihilbert, ighost)
-      ighost = ighost + 1
-      if(ighost == size_ghost) then
-        print *, mpi_grp%rank, "resizing from ", size_ghost, " to ", size_ghost*2
-        size_ghost = size_ghost * 2
-        SAFE_ALLOCATE(temp(1:size_ghost))
-        temp(1:ighost) = ghost_to_hilbert(1:ighost)
-        SAFE_DEALLOCATE_A(ghost_to_hilbert)
-        call move_alloc(temp, ghost_to_hilbert)
-      end if
-    end do
-  end do
-  print*, mpi_grp%rank, "Count points done"
-  ighost = ighost - 1
-  mesh%np_part = mesh%np + ighost
-
-  ! ghost contains ghost and boundary
-
-  SAFE_DEALLOCATE_A(mesh%idx%grid_to_hilbert)
-  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:mesh%np_part))
-
-  do ip = 1, mesh%np
-    mesh%idx%grid_to_hilbert(ip) = grid_to_hilbert(ip)
-  end do
-  SAFE_DEALLOCATE_A(grid_to_hilbert)
-
-  ! communicate ghost points
-  print*, mpi_grp%rank, "exchange Hilbert boundaries"
-  SAFE_ALLOCATE(hilbert_boundaries(0:mpi_grp%size-1))
-  call MPI_Allgather(mesh%idx%grid_to_hilbert(mesh%np), 1, MPI_LONG_LONG, &
-    hilbert_boundaries(0), 1, MPI_LONG_LONG, mpi_grp%comm, mpi_err)
-  hilbert_boundaries(mpi_grp%size - 1) = 2**(mesh%idx%dim*mesh%idx%bits)
-  print*, hilbert_boundaries
-
-  SAFE_ALLOCATE(ghost_scounts(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(ghost_sdispls(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(ghost_sindex(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(ghost_rcounts(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(ghost_rdispls(0:mpi_grp%size-1))
-  SAFE_ALLOCATE(ghost_rindex(0:mpi_grp%size-1))
-
-  SAFE_ALLOCATE(ghost_boundary_rankmap(1:ighost))
-
-  ! get number of points to send
-  ghost_scounts = 0
-  do ip = 1, ighost
-    do rank_mesh = 0, mpi_grp%size - 1
-      if(ghost_to_hilbert(ip) <= hilbert_boundaries(rank_mesh)) then
-        ghost_boundary_rankmap(ip) = rank_mesh
-        ghost_scounts(rank_mesh) = ghost_scounts(rank_mesh) + 1
-        exit
-      end if
-    end do
-  end do
-  print*, mpi_grp%rank, "computed number of points to send"
-  ghost_sdispls(0) = 0
-  do rank_mesh = 1, mpi_grp%size - 1
-    ghost_sdispls(rank_mesh) = ghost_sdispls(rank_mesh - 1) + ghost_scounts(rank_mesh - 1)
-  end do
-  size_send = ghost_sdispls(mpi_grp%size - 1) + ghost_scounts(mpi_grp%size - 1)
-  print*, mpi_grp%rank, ghost_scounts
-  ASSERT(size_send == mesh%np_part - mesh%np)
-  print*, mpi_grp%rank, "computed number of points to send done", size_send
-  SAFE_ALLOCATE(ghost_sendpos(1:size_send))
-  ghost_sindex = 0
-  do ip = 1, ighost
-    irank = ghost_boundary_rankmap(ip)
-    ghost_sendpos(1+ghost_sdispls(irank) + ghost_sindex(irank)) = ghost_to_hilbert(ip)
-    ghost_sindex(irank) = ghost_sindex(irank) + 1
-  end do
-  ASSERT(all(ghost_sindex - ghost_scounts == 0))
-
-  print*, mpi_grp%rank, "exchange sizes"
-  call MPI_Alltoall(ghost_scounts(0), 1, MPI_INTEGER, &
-       ghost_rcounts(0), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
-
-  ghost_rdispls(0) = 0
-  do rank_mesh = 1, mpi_grp%size - 1
-    ghost_rdispls(rank_mesh) = ghost_rdispls(rank_mesh - 1) + ghost_rcounts(rank_mesh - 1)
-  end do
-  size_recv = ghost_rdispls(mpi_grp%size - 1) + ghost_rcounts(mpi_grp%size - 1)
-  print*, mpi_grp%rank, "receive sizes ", ghost_rcounts, size_recv
-  SAFE_ALLOCATE(ghost_recvpos(1:size_recv))
-
-  print*, mpi_grp%rank, "exchange hilbert indices"
-  call MPI_Alltoallv(ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_LONG_LONG, &
-                     ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_LONG_LONG, &
-                     mpi_grp%comm, mpi_err)
-
-  do ip = 1, size_recv
-    ib = lihash_lookup(mesh%idx%hilbert_to_grid, ghost_recvpos(ip), found)
-    if(.not. found) then
-      ! not a local point on this processor, set to BOUNDARY = -1
-      ghost_recvpos(ip) = BOUNDARY
-    else
-      ! a local point on this processor, set to local index
-      ghost_recvpos(ip) = ib
-    end if
-  end do
-
-  print*, mpi_grp%rank, "exchange grid indices"
-  call MPI_Alltoallv(ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_LONG_LONG, &
-                     ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_LONG_LONG, &
-                     mpi_grp%comm, mpi_err)
-
-  ighost = 1
-  iboundary = 1
-  do ip = 1, size_send
-    if(ghost_sendpos(ip) == BOUNDARY) then
-      ! not on other processor, must be boundary point
-      iboundary = iboundary + 1
-    else
-      ! on other processor, thus a ghost point
-      ighost = ighost + 1
-    end if
-  end do
-  nghost = ighost - 1
-  nboundary = iboundary - 1
-  ASSERT(mesh%np_part == mesh%np + nghost + nboundary)
-
-  print *, mpi_world%rank, "np, np_part, ghost, boundary", mesh%np, mesh%np_part,  nghost, nboundary
-
-  SAFE_ALLOCATE(mesh%np_parts(1:mpi_grp%size))
-#ifdef HAVE_MPI
-  call MPI_Allgather(mesh%np_part, 1, MPI_INTEGER, mesh%np_parts(1), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
-#else
-  mesh%np_parts(1) = mesh%np_part
-#endif
-  mesh%np_part_global = sum(mesh%np_parts)
+  mesh%parallel_in_domains = (mesh%mpi_grp%size > 1)
 
 
-  SAFE_ALLOCATE(ghost_rankmap(1:nghost))
-  ighost = 1
-  iboundary = 1
-  do ip = 1, size_send
-    if(ghost_sendpos(ip) == BOUNDARY) then
-      mesh%idx%grid_to_hilbert(mesh%np+nghost+iboundary) = ghost_to_hilbert(ip)
-      call lihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+nghost+iboundary)
-      iboundary = iboundary + 1
-    else
-      mesh%idx%grid_to_hilbert(mesh%np+ighost) = ghost_to_hilbert(ip)
-      call lihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+ighost)
-      ghost_rankmap(ighost) = ghost_boundary_rankmap(ip)
-      ighost = ighost + 1
-    end if
-  end do
-
-  SAFE_DEALLOCATE_A(boundary_to_hilbert)
-  SAFE_DEALLOCATE_A(ghost_to_hilbert)
-
-  SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
-  mesh%x(:, :) = M_ZERO
-  ! Do the inner points
-  do ip = 1, mesh%np_part
-    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip)
-  end do
-
-
-  !if(.not. mesh%parallel_in_domains) then
-  !  ! When running parallel, x is computed later.
-  !  !AFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:space%dim))
-  !end if
-  !
-  !if(.not. mesh%idx%is_hypercube) then
-  !  call create_x_lxyz()
-  !else if(.not. mesh%parallel_in_domains) then
-  !  do ip = 1, mesh%np_part_global
-  !    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip, force=.true.)
-  !  end do
-  !end if
-
-  mesh%mpi_grp = mpi_grp 
+  if(.not. mesh%parallel_in_domains) then
+    ! When running parallel, x is computed later.
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:space%dim))
+  end if
   
-  !if(mesh%parallel_in_domains) then
+  if(.not. mesh%idx%is_hypercube) then
+    !call create_x_lxyz()
+  else if(.not. mesh%parallel_in_domains) then
+    do ip = 1, mesh%np_part_global
+      mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip, force=.true.)
+    end do
+  end if
 
-  !  call do_partition()
+  if(mesh%parallel_in_domains) then
 
-  !else
+    call do_partition()
 
-  !  ! When running serially those two are the same.
-  !  mesh%np      = mesh%np_global
-  !  mesh%np_part = mesh%np_part_global
+  else
 
-  !  ! These must be initialized for vec_gather, vec_scatter to work
-  !  ! as copy operations when running without domain parallelization.
-  !  mesh%vp%np_global = mesh%np_global
-  !  mesh%vp%np_ghost = 0
-  !  mesh%vp%np_bndry = mesh%np_part - mesh%np
-  !  mesh%vp%npart = 1
-  !  mesh%vp%xlocal = 1
-  !end if
+    ! When running serially those two are the same.
+    mesh%np      = mesh%np_global
+    mesh%np_part = mesh%np_part_global
 
-  !call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
-  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np)
+    ! These must be initialized for vec_gather, vec_scatter to work
+    ! as copy operations when running without domain parallelization.
+    mesh%vp%np_global = mesh%np_global
+    mesh%vp%np_ghost = 0
+    mesh%vp%np_bndry = mesh%np_part - mesh%np
+    mesh%vp%npart = 1
+    mesh%vp%xlocal = 1
+  end if
+
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call mesh_get_vol_pp(mesh%sb)
 

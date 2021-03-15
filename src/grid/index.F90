@@ -109,7 +109,7 @@ contains
     if(.not. idx%is_hypercube) then
       !index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-      index = lihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+      index = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
       if(.not. found) index = 0
     else
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
@@ -139,7 +139,7 @@ contains
         end do
         !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
         call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-        index(ip) = lihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+        index(ip) = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
         ASSERT(found)
       end do
     else
@@ -167,7 +167,7 @@ contains
       !do idir = 1, idx%dim
       !  ix(idir) = idx%lxyz(ip, idir)
       !end do
-      call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert(ip), ix)
+      call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert_global(ip), ix)
     else
       call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
     end if

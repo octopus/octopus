@@ -552,6 +552,8 @@ contains
     PUSH_SUB(mesh_check_dump_compatibility)
 
     ierr = 0
+    POP_SUB(mesh_check_dump_compatibility)
+    return
 
     grid_changed = .false.
     grid_reordered = .false.
