@@ -430,7 +430,7 @@ contains
 
     !Recollect the result
     !We have to multiply by a factor
-    factor = hgrid**3/(n1*n2*n3)
+    factor = hgrid**3/(real(n1*n2,8)*real(n3,8))
 
     ! Calling this routine gives only the Hartree potential
     call zarray_out(n01, n02, n03, nd1h, nd2, nd3, rhopot, zarray(1, 1, inzee), factor)
@@ -1684,7 +1684,7 @@ contains
     PUSH_SUB(pconvxc_off)
 
     !factor to be used to keep unitarity
-    scal=hgrid**3/real(n1*n2*n3,8)
+    scal=hgrid**3/(real(n1*n2,8)*real(n3,8))
 
     SAFE_ALLOCATE(zf(1:md1, 1:md3, 1:md2/nproc))
     SAFE_ALLOCATE(gather_arr(0:nproc-1, 1:2))
