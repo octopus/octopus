@@ -55,6 +55,8 @@ module index_oct_m
     integer(8)           :: checksum
     integer(8), allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
     type(lihash_t)       :: hilbert_to_grid    !< inverse map: Hilbert index -> local grid index
+    integer(8), allocatable :: grid_to_hilbert_global(:) !< map: global grid index -> Hilbert index
+    type(lihash_t)       :: hilbert_to_grid_global       !< inverse map: Hilbert index -> global grid index
     integer              :: bits               !< bits per dimension for Hilbert index
     integer              :: offset(MAX_DIM)    !< offset for getting the indices from the Hilbert index
   end type index_t
