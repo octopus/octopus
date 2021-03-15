@@ -40,6 +40,7 @@ module mesh_init_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use sort_oct_m
   use space_oct_m
   use stencil_oct_m
 
@@ -195,9 +196,15 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM)
   integer(8) :: global_size, local_size, sizes(1:MAX_DIM)
   integer(8) :: ihilbert, ihilbertb, istart, iend, hilbert_size
-  integer :: ip, ib, ib2, np, np_part
+  integer :: ip, ip2, ib, ib2, np, np_part, np_boundary
   FLOAT :: pos(1:MAX_DIM)
   logical :: found
+  integer :: nblocks, iblock, irank, nduplicate
+  type(lihash_t) :: hilbert_to_grid, hilbert_to_boundary
+  integer(8), allocatable :: boundary_to_hilbert(:), grid_to_hilbert(:), boundary_to_hilbert_global(:)
+  type(partition_t) :: partition
+  integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
+  integer, allocatable :: initial_sizes(:), initial_offsets(:), final_sizes(:), offsets(:)
 
   PUSH_SUB(mesh_init_stage_2)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -215,8 +222,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
     return
   end if
 
-  nr = mesh%idx%nr
-  sizes(1:MAX_DIM) = nr(2, 1:MAX_DIM) - nr(1, 1:MAX_DIM) + 1
+  sizes(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
   mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
   if(any(sizes > 2**(63/sb%dim))) then
     write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/sb%dim), &
@@ -232,30 +238,189 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   hilbert_size = 2**(sb%dim*mesh%idx%bits)
 
   ! use block data decomposition of hilbert indices
-  istart = floor(hilbert_size * TOFLOAT(mpi_world%rank)/mpi_world%size)
-  iend = floor(hilbert_size * TOFLOAT(mpi_world%rank+1)/mpi_world%size) - 1
+  istart = floor(TOFLOAT(hilbert_size) * mpi_world%rank/mpi_world%size)
+  iend = floor(TOFLOAT(hilbert_size) * (mpi_world%rank+1)/mpi_world%size) - 1
   local_size = iend - istart + 1
 
-  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:local_size * 2))
+  call lihash_init(hilbert_to_grid)
+  SAFE_ALLOCATE(grid_to_hilbert(1:local_size))
 
+  ! get grid indices
   ip = 1
   do ihilbert = istart, iend
     call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
+    ! first check if point is outside bounding box
+    if(any(point < mesh%idx%nr(1, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM))) cycle
+    if(any(point > mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM))) cycle
+    ! then check if point is inside simulation box
     chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
     if(.not. sb%contains_point(pos)) cycle
-    mesh%idx%grid_to_hilbert(ip) = ihilbert
+    grid_to_hilbert(ip) = ihilbert
+    call lihash_insert(hilbert_to_grid, ihilbert, ip)
     ip = ip + 1
   end do
-  mesh%np = ip - 1
+  np = ip - 1
 
-  SAFE_ALLOCATE(mesh%nps(1:mpi_world%size))
+  SAFE_ALLOCATE(initial_sizes(0:mpi_world%size-1))
 #ifdef HAVE_MPI
-  call MPI_Allgather(mesh%np, 1, MPI_INTEGER, mesh%nps(1), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+  call MPI_Allgather(np, 1, MPI_INTEGER, initial_sizes(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
 #else
-  mesh%nps(1) = mesh%np
+  initial_sizes(0) = np
 #endif
-  mesh%np_global = sum(mesh%nps)
+  SAFE_ALLOCATE(initial_offsets(0:mpi_world%size))
+  initial_offsets(0) = 0
+  do irank = 1, mpi_world%size
+    initial_offsets(irank) = initial_offsets(irank-1) + initial_sizes(irank-1)
+  end do
+
+  ! now distribute ordered by Hilbert index
+  ! use block data decomposition of grid indices
+  SAFE_ALLOCATE(offsets(0:mpi_world%size))
+  SAFE_ALLOCATE(final_sizes(0:mpi_world%size-1))
+
+  do irank = 0, mpi_world%size
+    offsets(irank) = floor(TOFLOAT(sum(initial_sizes)) * irank/mpi_world%size)
+  end do
+  do irank = 0, mpi_world%size - 1
+    final_sizes(irank) = offsets(irank + 1) - offsets(irank)
+  end do
+
+  SAFE_ALLOCATE(scounts(0:mpi_world%size-1))
+  SAFE_ALLOCATE(sdispls(0:mpi_world%size-1))
+  SAFE_ALLOCATE(rcounts(0:mpi_world%size-1))
+  SAFE_ALLOCATE(rdispls(0:mpi_world%size-1))
+  ! determine communication pattern
+  scounts = 0
+  do irank = 0, mpi_world%size - 1
+    ! get overlap of initial and final distribution
+    scounts(irank) = max(0, &
+      min(offsets(irank+1), initial_offsets(mpi_world%rank+1)) - &
+      max(offsets(irank), initial_offsets(mpi_world%rank)))
+  end do
+  sdispls(0) = 0
+  do irank = 1, mpi_world%size - 1
+    sdispls(irank) = sdispls(irank - 1) + scounts(irank - 1)
+  end do
+  ASSERT(sum(scounts) == initial_sizes(mpi_world%rank))
+
+  rcounts = 0
+  do irank = 0, mpi_world%size - 1
+    ! get overlap of initial and final distribution
+    rcounts(irank) = max(0, &
+      min(offsets(mpi_world%rank+1), initial_offsets(irank+1)) - &
+      max(offsets(mpi_world%rank), initial_offsets(irank)))
+  end do
+  rdispls(0) = 0
+  do irank = 1, mpi_world%size - 1
+    rdispls(irank) = rdispls(irank - 1) + rcounts(irank - 1)
+  end do
+  ASSERT(sum(rcounts) == final_sizes(mpi_world%rank))
+
+  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:final_sizes(mpi_world%rank)))
+  call MPI_Alltoallv(grid_to_hilbert(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
+                     mesh%idx%grid_to_hilbert(1), rcounts(0), rdispls(0), MPI_LONG_LONG, &
+                     mpi_world%comm, mpi_err)
+
+  SAFE_DEALLOCATE_A(grid_to_hilbert)
+
+  SAFE_DEALLOCATE_A(scounts)
+  SAFE_DEALLOCATE_A(sdispls)
+  SAFE_DEALLOCATE_A(rcounts)
+  SAFE_DEALLOCATE_A(rdispls)
+
+
+  mesh%np = final_sizes(mpi_world%rank)
+  mesh%np_global = sum(final_sizes)
+
+  ! get local boundary indices
+  call lihash_init(hilbert_to_boundary)
+  SAFE_ALLOCATE(boundary_to_hilbert(1:mesh%np*(stencil%size - 1)))
+  ib = 1
+  do ip = 1, mesh%np
+    call index_hilbert_to_point(mesh%idx, sb%dim, mesh%idx%grid_to_hilbert(ip), point)
+    do is = 1, stencil%size
+      if(stencil%center == is) cycle
+      point_stencil(1:mesh%sb%dim) = point(1:mesh%sb%dim) + stencil%points(1:mesh%sb%dim, is)
+      ! check if point is in inner part
+      call index_point_to_hilbert(mesh%idx, mesh%sb%dim, ihilbertb, point_stencil)
+      ib2 = lihash_lookup(hilbert_to_grid, ihilbertb, found)
+      if(found) cycle
+      ! then check if point is inside simulation box
+      chi(1:sb%dim) = TOFLOAT(point_stencil(1:sb%dim)) * mesh%spacing(1:sb%dim)
+      call curvilinear_chi2x(sb, cv, chi(:), pos(:))
+      if(sb%contains_point(pos)) cycle
+      ! it has to be a boundary point now
+      ! check if already counted
+      ib2 = lihash_lookup(hilbert_to_boundary, ihilbertb, found)
+      if(found) cycle
+      boundary_to_hilbert(ib) = ihilbertb
+      call lihash_insert(hilbert_to_boundary, ihilbertb, ib)
+      ib = ib + 1
+    end do
+  end do
+  call lihash_end(hilbert_to_boundary)
+  np_boundary = ib - 1
+  mesh%np_part = mesh%np + np_boundary
+
+  ! get global boundary indices
+  call MPI_Allgather(np_boundary, 1, MPI_INTEGER, initial_sizes(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+  initial_offsets(0) = 0
+  do irank = 1, mpi_world%size
+    initial_offsets(irank) = initial_offsets(irank-1) + initial_sizes(irank-1)
+  end do
+
+  ! boundary
+  SAFE_ALLOCATE(boundary_to_hilbert_global(1:sum(initial_sizes)))
+  call MPI_Allgatherv(boundary_to_hilbert(1), np_boundary, MPI_LONG_LONG, &
+    boundary_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
+    mpi_world%comm, mpi_err)
+
+  ! sort boundary
+  call sort(boundary_to_hilbert_global)
+
+  ! get number of non-unique elements (could be done in parallel)
+  nduplicate = 0
+  do ip = 1, sum(initial_sizes) - 1
+    if (boundary_to_hilbert_global(ip+1) == boundary_to_hilbert_global(ip)) then
+      nduplicate = nduplicate + 1
+    end if
+  end do
+  mesh%np_part_global = mesh%np_global + sum(initial_sizes) - nduplicate
+  print *, mpi_world%rank, mesh%np_global, mesh%np_part_global, nduplicate
+
+  ! get global indices
+  ! inner grid
+  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert_global(1:mesh%np_part_global))
+  call MPI_Allgatherv(mesh%idx%grid_to_hilbert(1), mesh%np, MPI_LONG_LONG, &
+    mesh%idx%grid_to_hilbert_global(1), final_sizes(0), offsets(0), MPI_LONG_LONG, &
+    mpi_world%comm, mpi_err)
+
+  ! add unique boundary indices
+  ip2 = mesh%np_global + 1
+  mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(1)
+  do ip = 2, sum(initial_sizes)
+    if (boundary_to_hilbert_global(ip) /= boundary_to_hilbert_global(ip-1)) then
+      mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(ip)
+      ip2 = ip2 + 1
+    end if
+  end do
+
+  ! fill global hash map
+  call lihash_init(mesh%idx%hilbert_to_grid_global)
+  do ip = 1, mesh%np_part_global
+    call lihash_insert(mesh%idx%hilbert_to_grid_global, &
+      mesh%idx%grid_to_hilbert_global(ip), ip)
+  end do
+
+
+  SAFE_DEALLOCATE_A(offsets)
+  SAFE_DEALLOCATE_A(final_sizes)
+
+
+  SAFE_DEALLOCATE_A(boundary_to_hilbert)
+  call lihash_end(hilbert_to_grid)
+
 
   print *, "Number of bits: ", mesh%idx%bits
   print *, "Total hilbert size: ", hilbert_size
@@ -263,6 +428,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
 
   print *, "Local number of points: ", mesh%np
   print *, "Global number of points: ", mesh%np_global
+  print *, "Local np_part of points: ", mesh%np_part
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)
