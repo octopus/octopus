@@ -398,6 +398,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ! add unique boundary indices
   ip2 = mesh%np_global + 1
   mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(1)
+  ip2 = ip2 + 1
   do ip = 2, sum(initial_sizes)
     if (boundary_to_hilbert_global(ip) /= boundary_to_hilbert_global(ip-1)) then
       mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(ip)
