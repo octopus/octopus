@@ -396,24 +396,6 @@ contains
 
     ! Local part
     ep%vpsl = M_ZERO
-    if(ep%nlcc) st%rho_core = M_ZERO
-
-    do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
-
-      if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
-        call species_get_nlcc(geo%atom(ia)%species, geo%space, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
-      endif
-    end do
-
-    ! reduce over atoms if required
-    if(geo%atoms_dist%parallel) then
-      call profiling_in(epot_reduce, "EPOT_REDUCE")
-
-      if (allocated(st%rho_core)) &
-        call comm_allreduce(geo%atoms_dist%mpi_grp, st%rho_core, dim = gr%mesh%np)
-      call profiling_out(epot_reduce)
-    end if
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%latt%rcell_volume, &
