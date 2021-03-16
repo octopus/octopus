@@ -20,7 +20,6 @@
 
 module index_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use iihash_oct_m
   use io_oct_m
   use io_binary_oct_m
@@ -44,8 +43,6 @@ module index_oct_m
 
   type index_t
     ! Components are public by default
-    type(hypercube_t)    :: hypercube
-    logical              :: is_hypercube     !< true if the box shape is an hypercube
     integer              :: dim              !< the dimension
     integer              :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
     integer              :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
@@ -106,14 +103,9 @@ contains
       ix2(idir) = 0
     end do
 
-    if(.not. idx%is_hypercube) then
-      !index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
-      call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-      index = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
-      if(.not. found) index = 0
-    else
-      call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
-    end if
+    call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
+    index = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
+    if(.not. found) index = 0
     
   end function index_from_coords
 
@@ -132,21 +124,15 @@ contains
     ! No PUSH SUB, called too often
     ix2 = 0
 
-    if(.not. idx%is_hypercube) then
-      do ip = 1, npoints
-        do idir = 1, idx%dim
-          ix2(idir) = ix(idir, ip)
-        end do
-        !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
-        call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-        index(ip) = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
-        ASSERT(found)
+    do ip = 1, npoints
+      do idir = 1, idx%dim
+        ix2(idir) = ix(idir, ip)
       end do
-    else
-      do ip = 1, npoints
-        call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix(:, ip), index(ip))
-      end do
-    end if
+      !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
+      call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
+      index(ip) = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
+      if(.not. found) index(ip) = 0
+    end do
     
   end subroutine index_from_coords_vec
 
@@ -163,14 +149,7 @@ contains
     ! We set all ix to zero first (otherwise the non-existent dimensions would be 
     ! undefined on exit).
     ix = 0
-    if(.not. idx%is_hypercube) then
-      !do idir = 1, idx%dim
-      !  ix(idir) = idx%lxyz(ip, idir)
-      !end do
-      call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert_global(ip), ix)
-    else
-      call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
-    end if
+    call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert_global(ip), ix)
   end subroutine index_to_coords
 
   ! --------------------------------------------------------------
@@ -190,26 +169,24 @@ contains
     POP_SUB(index_dump_lxyz)
     return
 
-    if (.not. idx%is_hypercube) then
-      if (int(np, 8)*idx%dim > huge(0)) then
-        message(1) = "Too many global mesh points to write restart file for lxyz.obf."
-        call messages_fatal(1)
+    if (int(np, 8)*idx%dim > huge(0)) then
+      message(1) = "Too many global mesh points to write restart file for lxyz.obf."
+      call messages_fatal(1)
+    end if
+    if (mpi_grp_is_root(mpi_grp)) then
+      ! lxyz is a global function and only root will write
+      ASSERT(allocated(idx%lxyz))
+      call io_binary_write(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+      if (err /= 0) then
+        ierr = ierr + 1
+        message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
+        call messages_warning(1) 
       end if
-      if (mpi_grp_is_root(mpi_grp)) then
-        ! lxyz is a global function and only root will write
-        ASSERT(allocated(idx%lxyz))
-        call io_binary_write(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
-        if (err /= 0) then
-          ierr = ierr + 1
-          message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
-          call messages_warning(1) 
-        end if
-      end if
+    end if
 
 #if defined(HAVE_MPI)
-      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
 #endif
-    end if
 
     POP_SUB(index_dump_lxyz)
   end subroutine index_dump_lxyz
@@ -231,40 +208,37 @@ contains
 
     ierr = 0
 
-    if (.not. idx%is_hypercube) then
-      ASSERT(allocated(idx%lxyz))
+    ASSERT(allocated(idx%lxyz))
 
-      if (mpi_grp_is_root(mpi_grp)) then
-        ! lxyz is a global function and only root will write
-        call io_binary_read(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
-        if (err /= 0) then
-          ierr = ierr + 1
-          message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."
-          call messages_warning(1)
-        end if
+    if (mpi_grp_is_root(mpi_grp)) then
+      ! lxyz is a global function and only root will write
+      call io_binary_read(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+      if (err /= 0) then
+        ierr = ierr + 1
+        message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."
+        call messages_warning(1)
       end if
+    end if
 
 #if defined(HAVE_MPI)
-      ! Broadcast the results and synchronize
-      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
-      if (ierr == 0) then
-        call MPI_Bcast(idx%lxyz(1,1), np*idx%dim, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
-      end if
+    ! Broadcast the results and synchronize
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+    if (ierr == 0) then
+      call MPI_Bcast(idx%lxyz(1,1), np*idx%dim, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
+    end if
 #endif
 
-      ! Compute lxyz_inv from lxyz
-      if (ierr == 0) then
-        do ip = 1, np
-          do idir = 1, idx%dim
-            ix(idir) = idx%lxyz(ip, idir)
-          end do
-          do idir=idx%dim + 1, MAX_DIM
-            ix(idir) = 0
-          end do
-          idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
+    ! Compute lxyz_inv from lxyz
+    if (ierr == 0) then
+      do ip = 1, np
+        do idir = 1, idx%dim
+          ix(idir) = idx%lxyz(ip, idir)
         end do
-      end if
-
+        do idir=idx%dim + 1, MAX_DIM
+          ix(idir) = 0
+        end do
+        idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
+      end do
     end if
 
     POP_SUB(index_load_lxyz)

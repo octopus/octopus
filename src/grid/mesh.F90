@@ -24,7 +24,6 @@ module mesh_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
@@ -500,32 +499,24 @@ contains
         read(lines(1), '(a20,i21)')  str, box_shape
       end if
 
-      if (box_shape == HYPERCUBE) then
-        ! We have a hypercube: we will assume everything is OK...
-        message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
-        call messages_warning(1)
-
+      call iopar_read(mpi_grp, iunit, lines, 4, err)
+      if (err /= 0) then
+        ierr = ierr + 4
       else
-        call iopar_read(mpi_grp, iunit, lines, 4, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-        else
-          read(lines(1), '(a20,i21)')  str, read_np_part
-          read(lines(2), '(a20,i21)')  str, read_np
-          read(lines(3), '(a20,i21)')  str, algorithm
-          read(lines(4), '(a20,i21)')  str, checksum
+        read(lines(1), '(a20,i21)')  str, read_np_part
+        read(lines(2), '(a20,i21)')  str, read_np
+        read(lines(3), '(a20,i21)')  str, algorithm
+        read(lines(4), '(a20,i21)')  str, checksum
 
-          ASSERT(read_np_part >= read_np)
-            
-          if (read_np_part == mesh%np_part_global &
-               .and. read_np == mesh%np_global &
-               .and. algorithm == 1 &
-               .and. checksum == mesh%idx%checksum) then
-            read_np_part = 0
-            read_np = 0
-          end if
+        ASSERT(read_np_part >= read_np)
+          
+        if (read_np_part == mesh%np_part_global &
+             .and. read_np == mesh%np_global &
+             .and. algorithm == 1 &
+             .and. checksum == mesh%idx%checksum) then
+          read_np_part = 0
+          read_np = 0
         end if
-
       end if
 
       call io_close(iunit, grp=mpi_grp)
@@ -620,8 +611,6 @@ contains
     PUSH_SUB(mesh_end)
 
     call mesh_cube_map_end(this%cube_map)
-
-    if(this%idx%is_hypercube) call hypercube_end(this%idx%hypercube)
 
     SAFE_DEALLOCATE_A(this%idx%lxyz)
     SAFE_DEALLOCATE_A(this%idx%lxyz_inv)

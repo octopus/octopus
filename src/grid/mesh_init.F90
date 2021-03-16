@@ -19,11 +19,9 @@
 #include "global.h"
 
 module mesh_init_oct_m
-  use box_hypercube_oct_m
   use checksum_interface_oct_m
   use curvilinear_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use iihash_oct_m
   use index_oct_m
   use math_oct_m
@@ -84,12 +82,6 @@ subroutine mesh_init_stage_1(mesh, namespace, space, sb, cv, spacing, enlarge)
   mesh%cv => cv
 
   mesh%idx%dim = space%dim
-  select type (box => sb%box)
-  type is (box_hypercube_t)
-    mesh%idx%is_hypercube = .true.
-  class default
-    mesh%idx%is_hypercube = .false.
-  end select
   mesh%idx%enlarge = enlarge
 
   ! adjust nr
@@ -213,20 +205,11 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   mesh%idx%nr(1, 1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM)
   mesh%idx%nr(2, 1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
   
-  if(mesh%idx%is_hypercube) then
-    call hypercube_init(mesh%idx%hypercube, space%dim, mesh%idx%nr, mesh%idx%enlarge(1))
-    mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
-    mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
-    call profiling_out(mesh_init_prof)
-    POP_SUB(mesh_init_stage_2)
-    return
-  end if
-
   sizes(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
   mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
-  if(any(sizes > 2**(63/sb%dim))) then
-    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/sb%dim), &
-      " points in one direction for ", sb%dim, " dimensions. This is not supported yet."
+  if(any(sizes > 2**(63/int(sb%dim,8)))) then
+    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/int(sb%dim,8)), &
+      " points in one direction for ", sb%dim, " dimensions. This is not supported."
     call messages_fatal(1)
   end if
   global_size = product(sizes)
@@ -250,8 +233,8 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   do ihilbert = istart, iend
     call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
     ! first check if point is outside bounding box
-    if(any(point < mesh%idx%nr(1, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM))) cycle
-    if(any(point > mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM))) cycle
+    if(any(point(1:sb%dim) < mesh%idx%nr(1, 1:sb%dim) + mesh%idx%enlarge(1:sb%dim))) cycle
+    if(any(point(1:sb%dim) > mesh%idx%nr(2, 1:sb%dim) - mesh%idx%enlarge(1:sb%dim))) cycle
     ! then check if point is inside simulation box
     chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
@@ -285,6 +268,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   do irank = 0, mpi_world%size - 1
     final_sizes(irank) = offsets(irank + 1) - offsets(irank)
   end do
+  print*,final_sizes
 
   SAFE_ALLOCATE(scounts(0:mpi_world%size-1))
   SAFE_ALLOCATE(sdispls(0:mpi_world%size-1))
@@ -577,9 +561,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = (mesh%mpi_grp%size > 1)
 
-  if(.not. mesh%idx%is_hypercube) then
-    !call create_x_lxyz()
-  end if
+  ! TODO: add reordering of local grid points
+  !call create_x_lxyz()
 
   if(mesh%parallel_in_domains) then
     call do_partition()

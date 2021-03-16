@@ -321,7 +321,6 @@ contains
     PUSH_SUB(multigrid_mesh_half)
 
     mesh_out%sb               => mesh_in%sb
-    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear  =  mesh_in%use_curvilinear
     mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
@@ -351,7 +350,6 @@ contains
     PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
-    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
     mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
