@@ -26,6 +26,8 @@ AdaptivelyCompressedExchange = yes
 ExperimentalFeatures = yes
 HFSingularity = none
 
+FFTLibrary = accel
+
 ConvRelDens = 1e-7
 
 
