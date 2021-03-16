@@ -311,9 +311,16 @@ contains
       call valconf_copy(ps%conf, ps_hgh%conf)
 
       ps%z        = z
+      ps%z_val    = ps_hgh%z_val
       ps%kbc      = 3
-      ps%llocal    = -1
-      ps%lmax    = ps_hgh%l_max
+      ps%llocal   = -1
+      ps%lmax     = ps_hgh%l_max
+     
+      !Get the occupations from the valence charge of the atom
+      ps%conf%occ = M_ZERO
+      call ps_guess_atomic_occupations(ps%z, ps%z_val, ps%lmax, ps%ispin, ps%conf)
+      !We need the information to solve the Schrodinder equation
+      call valconf_copy(ps_hgh%conf, ps%conf)
 
       call hgh_process(ps_hgh, namespace)
       call logrid_copy(ps_hgh%g, ps%g)
@@ -963,15 +970,9 @@ contains
     ps%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
     ps%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
 
-    ! Fixes the occupations
-    if(ps%ispin == 2) then
-      do l = 1, ps%conf%p
-        ll = ps%conf%l(l)
-        x = ps%conf%occ(l, 1)
-        ps%conf%occ(l, 1) = min(x, TOFLOAT(2*ll+1))
-        ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
-      end do
-    end if
+    !Get the occupations from the valence charge of the atom
+    ps%conf%occ = M_ZERO
+    call ps_guess_atomic_occupations(ps%z, ps%z_val, ps%lmax, ps%ispin, ps%conf)
 
     ! now we fit the splines
     call get_splines()
@@ -1318,7 +1319,7 @@ contains
 
       !Get the occupations from the valence charge of the atom
       ps%conf%occ = M_ZERO
-      call ps_guess_atomic_occupations(ps%z, ps%z_val, ps_xml%lmax, ps%ispin, ps%conf%occ)
+      call ps_guess_atomic_occupations(ps%z, ps%z_val, ps_xml%lmax, ps%ispin, ps%conf)
       !If we assigned all the valence electrons, we can compute the (spin-resolved) atomic density
       if(abs(sum(ps%conf%occ) - ps%z_val ) < M_EPSILON) then
         SAFE_ALLOCATE(dens(1:ps%g%nrval, 1:ps%ispin))
@@ -1538,12 +1539,12 @@ contains
   !> orbitals.
   !> The occupations are stored in an array of size lmax, which assumes that there is only
   !> value of the principal quantum number occupied for a given angular momentum
-  subroutine ps_guess_atomic_occupations(zval, valcharge, lmax, ispin, occ)
-   FLOAT,   intent(in)     :: zval
-   FLOAT,   intent(in)     :: valcharge
-   integer, intent(in)     :: lmax
-   integer, intent(in)     :: ispin
-   FLOAT,   intent(inout)  :: occ(:,:) !< (llmax+1, 2) 
+  subroutine ps_guess_atomic_occupations(zval, valcharge, lmax, ispin, conf)
+   FLOAT,           intent(in)     :: zval
+   FLOAT,           intent(in)     :: valcharge
+   integer,         intent(in)     :: lmax
+   integer,         intent(in)     :: ispin
+   type(valconf_t), intent(inout)  :: conf
   
    integer :: ll
    FLOAT :: val, x
@@ -1551,6 +1552,9 @@ contains
    PUSH_SUB(ps_guess_atomic_occupations)
   
    val = valcharge
+   conf%p = 0
+   conf%l = 0 
+   conf%j = M_ZERO
   
    ASSERT(valcharge <= zval)
    if(valcharge > 2) then
@@ -1903,13 +1907,13 @@ contains
       !In case of spin-polarized calculations, we properly distribute the electrons
       if(ispin == 2) then
         do ll = 0, lmax
-          x = occ(ll+1, 1)
-          occ(ll+1, 1) = min(x, TOFLOAT(2*ll+1))
-          occ(ll+1, 2) = x - occ(ll+1,1) 
+          x = conf%occ(ll+1, 1)
+          conf%occ(ll+1, 1) = min(x, TOFLOAT(2*ll+1))
+          conf%occ(ll+1, 2) = x - conf%occ(ll+1,1) 
         end do
       end if
     else
-      occ = M_ZERO
+      conf%occ = M_ZERO
     end if
   
     POP_SUB(ps_guess_atomic_occupations)
@@ -1919,32 +1923,40 @@ contains
         FLOAT, intent(inout) :: val
         integer, intent(in)    :: max_occ
   
-        occ(1,1) = min(val, real(max_occ))
-        val = val - occ(1,1)
+        conf%occ(1,1) = min(val, real(max_occ))
+        val = val - conf%occ(1,1)
+        conf%p = conf%p + 1
+        conf%l(conf%p) = 0 
       end subroutine fill_s_orbs
    
       subroutine fill_p_orbs(val,max_occ)
         FLOAT, intent(inout) :: val
         integer, intent(in)    :: max_occ
   
-        occ(2,1) = min(val, real(max_occ))
-        val = val - occ(2,1)
+        conf%occ(2,1) = min(val, real(max_occ))
+        val = val - conf%occ(2,1)
+        conf%p = conf%p + 1
+        conf%l(conf%p) = 1
       end subroutine fill_p_orbs
   
       subroutine fill_d_orbs(val,max_occ)
         FLOAT, intent(inout) :: val
         integer, intent(in)    :: max_occ
   
-        occ(3,1) = min(val, real(max_occ))
-        val = val - occ(3,1)
+        conf%occ(3,1) = min(val, real(max_occ))
+        val = val - conf%occ(3,1)
+        conf%p = conf%p + 1
+        conf%l(conf%p) = 2
       end subroutine fill_d_orbs
       
       subroutine fill_f_orbs(val,max_occ)
         FLOAT, intent(inout) :: val
         integer, intent(in)    :: max_occ
   
-        occ(4,1) = min(val, real(max_occ))
-        val = val - occ(4,1)
+        conf%occ(4,1) = min(val, real(max_occ))
+        val = val - conf%occ(4,1)
+        conf%p = conf%p + 1
+        conf%l(conf%p) = 3
     end subroutine fill_f_orbs
 
   end subroutine ps_guess_atomic_occupations

@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2020 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -48,6 +49,14 @@ module ps_hgh_oct_m
   type ps_hgh_t
     ! Components are public by default
 
+    character(len=256), private :: title
+    integer,            private :: pspdat ! date of creation of PP (DDMMYY)
+    integer,            private :: pspcod ! code for the pseudopotential (3 for .hgh)
+    integer,            private :: pspxc  ! exchange-correlation used to generate the psp
+    integer                     :: lmax   ! Maximum l to use
+    integer,            private :: mmax   ! Maximum number of points in real space grid
+    FLOAT,              private :: r2well ! ??
+
     !< HGH parameters.
     character(len=5), private :: atom_name
     integer          :: z_val
@@ -85,7 +94,7 @@ contains
     PUSH_SUB(hgh_init)
 
     iunit = io_open(trim(filename), action='read', form='formatted', status='old')
-    i = load_params(iunit, psp)
+    i = load_params(iunit, psp, namespace)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
       call messages_fatal(namespace=namespace)
@@ -112,10 +121,6 @@ contains
       psp%kbr = M_ZERO
       psp%kb = M_ZERO
     end if
-    SAFE_ALLOCATE(psp%rphi(1:psp%g%nrval, 1:psp%conf%p))
-    SAFE_ALLOCATE(psp%eigen(1:psp%conf%p))
-    psp%rphi = M_ZERO
-    psp%eigen = M_ZERO
 
     POP_SUB(hgh_init)
   end subroutine hgh_init
@@ -148,6 +153,11 @@ contains
     integer :: l, i, ierr
 
     PUSH_SUB(hgh_process)
+
+    SAFE_ALLOCATE(psp%rphi(1:psp%g%nrval, 1:psp%conf%p))
+    SAFE_ALLOCATE(psp%eigen(1:psp%conf%p))
+    psp%rphi = M_ZERO
+    psp%eigen = M_ZERO
 
 
     ! Fixes the local potential
@@ -194,13 +204,15 @@ contains
   end subroutine hgh_get_eigen
   
   ! ---------------------------------------------------------
-  function load_params(unit, params)
-    integer,        intent(in)  :: unit        ! where to read from
-    type(ps_hgh_t), intent(out) :: params      ! obvious
+  function load_params(unit, params, namespace)
+    integer,             intent(in)  :: unit        ! where to read from
+    type(ps_hgh_t),      intent(out) :: params      ! obvious
+    type(namespace_t),   intent(in)  :: namespace
+
     integer                     :: load_params ! 0 if success,
     ! 1 otherwise.
 
-    integer :: i, iostat, j, k
+    integer :: i, iostat, j, k, nn, nnonloc, lloc
     character(len=VALCONF_STRING_LENGTH) :: line
 
     PUSH_SUB(load_params)
@@ -212,83 +224,138 @@ contains
     params%h = M_ZERO
     params%k = M_ZERO
 
-    ! get valence configuration
-    read(unit,'(a)') line
-    call read_valconf(line, params%conf)
+    read(unit, *) params%title
+    read(unit, *) params%conf%z, params%z_val, params%pspdat
+    read(unit, *, iostat=iostat) params%pspcod, params%pspxc, params%l_max, lloc, params%mmax, params%r2well    
 
-    ! Reads the file in a hopefully smart way
-    iostat = 1
-    j = 5
-    read(unit,'(a)') line
-    do while((iostat /= 0) .and. (j > 0))
-      j = j - 1
-      read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal, params%c(1:j)
-    end do
-    if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
-    if( iostat /= 0 ) then
-      load_params = 1
-      POP_SUB(load_params)
-      return
-    end if
+    select case(params%pspcod)
+    case(3) 
 
-    read(unit,'(a)', iostat = iostat) line
-    if(iostat /= 0) then
-      load_params = 0
-      POP_SUB(load_params)
-      return
-    end if
-    iostat = 1
-    j = 4
-    do while((iostat /= 0) .and. (j > 0))
-      j = j - 1
-      read(line, *, iostat=iostat) params%rc(0), (params%h(0, i, i), i = 1, j)
-    end do
-    if(j < 0) then
-      load_params = 2
-      POP_SUB(load_params)
-      return
-    end if
+      ! Reads the file in a hopefully smart way
+      iostat = 1
+      j = 5
+      read(unit,'(a)') line
+      do while((iostat /= 0) .and. (j > 0))
+        j = j - 1
+        read(line, *, iostat=iostat) params%rlocal, params%c(1:j)
+      end do
+      if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
+      if( iostat /= 0 ) then
+        load_params = 1
+        POP_SUB(load_params)
+        return
+      end if
 
-    kloop: do k = 1, 3
-      read(unit, '(a)', iostat = iostat) line
-      if(iostat /= 0) exit kloop
+      read(unit,'(a)', iostat = iostat) line
+      if(iostat /= 0) then
+        load_params = 0
+        POP_SUB(load_params)
+        return
+      end if
       iostat = 1
       j = 4
       do while((iostat /= 0) .and. (j > 0))
         j = j - 1
-        read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
+        read(line, *, iostat=iostat) params%rc(0), (params%h(0, i, i), i = 1, j)
       end do
-      if(abs(params%rc(k)) <= M_EPSILON) exit kloop
-      read(unit, '(a)') line
-      iostat = 1
-      j = 4
-      do while((iostat /= 0) .and. (j>0))
-        j = j - 1
-        read(line, *, iostat = iostat) (params%k(k, i, i), i = 1, 3)
-      end do
-    end do kloop
+      if(j < 0) then
+        load_params = 2
+        POP_SUB(load_params)
+        return
+      end if
 
-    ! Fill in the rest of the parameter matrices...
-    ! Fill in the rest of the parameter matrices...
-    params%h(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%h(0, 2, 2)
-    params%h(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%h(0, 3, 3)
-    params%h(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%h(0, 3, 3)
-    params%h(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%h(1, 2, 2)
-    params%h(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%h(1, 3, 3)
-    params%h(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%h(1, 3, 3)
-    params%h(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%h(2, 2, 2)
-    params%h(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%h(2, 3, 3)
-    params%h(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%h(2, 3, 3)
+      kloop: do k = 1, 3
+        read(unit, '(a)', iostat = iostat) line
+        if(iostat /= 0) exit kloop
+        iostat = 1
+        j = 4
+        do while((iostat /= 0) .and. (j > 0))
+          j = j - 1
+          read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
+        end do
+        if(abs(params%rc(k)) <= M_EPSILON) exit kloop
+        read(unit, '(a)') line
+        iostat = 1
+        j = 4
+        do while((iostat /= 0) .and. (j>0))
+          j = j - 1
+          read(line, *, iostat = iostat) (params%k(k, i, i), i = 1, 3)
+        end do
+      end do kloop
 
-    params%k(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%k(0, 2, 2)
-    params%k(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%k(0, 3, 3)
-    params%k(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%k(0, 3, 3)
-    params%k(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%k(1, 2, 2)
-    params%k(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%k(1, 3, 3)
-    params%k(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%k(1, 3, 3)
-    params%k(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%k(2, 2, 2)
-    params%k(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%k(2, 3, 3)
-    params%k(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%k(2, 3, 3)
+      ! Fill in the rest of the parameter matrices...
+      params%h(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%h(0, 2, 2)
+      params%h(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%h(0, 3, 3)
+      params%h(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%h(0, 3, 3)
+      params%h(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%h(1, 2, 2)
+      params%h(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%h(1, 3, 3)
+      params%h(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%h(1, 3, 3)
+      params%h(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%h(2, 2, 2)
+      params%h(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%h(2, 3, 3)
+      params%h(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%h(2, 3, 3)
+
+      params%k(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%k(0, 2, 2)
+      params%k(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%k(0, 3, 3)
+      params%k(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%k(0, 3, 3)
+      params%k(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/CNST(7.0))            * params%k(1, 2, 2)
+      params%k(1, 1, 3) =  M_ONE/CNST(6.0) * sqrt(CNST(35.0)/CNST(11.0))     * params%k(1, 3, 3)
+      params%k(1, 2, 3) = -M_ONE/CNST(6.0) * (CNST(14.0) / sqrt(CNST(11.0))) * params%k(1, 3, 3)
+      params%k(2, 1, 2) = -M_HALF      * sqrt(CNST(7.0)/CNST(9.0))            * params%k(2, 2, 2)
+      params%k(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%k(2, 3, 3)
+      params%k(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%k(2, 3, 3)
+
+
+    case(10)
+
+      read(unit, *) params%rlocal, nn, params%c(1)
+      read(unit, *) nnonloc
+      read(unit, '(a)', iostat = iostat) line
+      kloop2 : do k = 0, 3
+        if(iostat /= 0) exit kloop2
+        iostat = 1
+        j = 4
+        do while((iostat /= 0) .and. (j > 0))
+          j = j - 1
+          read(line, *, iostat = iostat) params%rc(k), nn, (params%h(k, 1, i), i = 1, j)
+        end do
+        if(abs(params%rc(k)) <= M_EPSILON) exit kloop2
+        read(unit, '(a)') line
+        select case(nn)
+        case(3)
+          read(line, *) (params%h(1, 2, i), i = 2, 3)
+          read(unit, '(a)') line
+          read(line, *) params%h(1, 3, 3)
+          !Reading the k matrix, if possible
+          read(unit, '(a)', iostat=iostat) line
+          if(iostat /= 0) exit kloop2
+          read(line, *, iostat=iostat) (params%k(1, 1, i), i = 1, 3)
+          if(iostat /= 0) continue !No k matrix 
+          read(unit, '(a)') line
+          read(line, *) (params%k(1, 2, i), i = 2, 3)
+          read(unit, '(a)') line
+          read(line, *) params%k(1, 3, 3)
+          read(unit, '(a)', iostat = iostat) line
+        case(2)
+          read(line, *) params%h(0, 2, 2)
+          !Reading the k matrix, if possible
+          read(unit, '(a)', iostat=iostat) line
+          if(iostat /= 0) exit kloop2
+          read(line, *, iostat=iostat) (params%k(1, 1, i), i = 1, 2)
+          if(iostat /= 0) continue !No k matrix 
+          read(unit, '(a)') line
+          read(line, *) params%k(1, 2, 2)   
+          read(unit, '(a)', iostat = iostat) line
+        case default
+          message(1) = "Error parsing the pseudopotential"
+          call messages_fatal(1, namespace=namespace)
+        end select
+      end do kloop2
+
+    case default
+      message(1) = "Inconsistency in pseudopotential file:"
+      write(message(2),'(a,i2)') "  expecting pspcod = 3, but found ", params%pspcod
+      call messages_fatal(2, namespace=namespace)
+    end select
 
 
     ! Parameters are symmetric.
@@ -333,7 +400,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Local pseudopotential, both in real space.
+  ! Local pseudopotential, both in real and reciprocal space.
   ! See Eq. (1)
   subroutine vlocalr_scalar(r, np, p, vloc)
     type(ps_hgh_t), intent(in)    :: p
