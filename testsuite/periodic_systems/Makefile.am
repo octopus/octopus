@@ -110,6 +110,7 @@ dist_share_DATA =                                \
         22-berry.02-cubic_Si.inp                 \
         22-berry.test                            \
         23-hybrids.01-ace.inp                    \
+        23-hybrids.02-ace_accel.inp              \
         23-hybrids.test
 
 CLEANFILES = *~ *.bak
