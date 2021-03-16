@@ -886,11 +886,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         select case(aa%status())
         case(BATCH_NOT_PACKED)
           do ist = 1, nstl
-            aa%X(ff_linear)(ip, ist) = recv_buffer(ist, mesh%vp%recvmap(ip))
+            aa%X(ff_linear)(mesh%vp%recvmap(ip), ist) = recv_buffer(ist, ip)
           end do
         case(BATCH_PACKED)
           do ist = 1, nstl
-            aa%X(ff_pack)(ist, ip) = recv_buffer(ist, mesh%vp%recvmap(ip))
+            aa%X(ff_pack)(ist, mesh%vp%recvmap(ip)) = recv_buffer(ist, ip)
           end do
         end select
       end do

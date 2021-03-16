@@ -85,6 +85,7 @@ module par_vec_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
   use namespace_oct_m
+  use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -254,7 +255,9 @@ contains
     end do
     vp%xlocal = vp%xlocal_vec(vp%partno)
 
-    call init_local()
+    SAFE_ALLOCATE(vp%local(vp%xlocal:vp%xlocal + vp%np_local - 1))
+    ! Calculate the local vector in parallel
+    call partition_get_local(partition, vp%local(vp%xlocal:), tmp)
 
     ! Create hash table.
     call iihash_init(vp%global)
@@ -262,6 +265,9 @@ contains
     do ip = 1, vp%np_local
       call iihash_insert(vp%global, vp%local(vp%xlocal + ip - 1), ip)
     end do
+
+    ! reorder points if needed
+    call reorder_points()
 
     call iihash_init(boundary)
     call iihash_init(ghost)
@@ -417,6 +423,8 @@ contains
       call io_close(iunit)
     end if
 
+    call init_MPI_Alltoall()
+
     ! Insert ghost points.
     do ip = 1, vp%np_ghost
       call iihash_insert(vp%global, vp%ghost(ip), ip + vp%np_local)
@@ -425,29 +433,116 @@ contains
     do ip = 1, vp%np_bndry
       call iihash_insert(vp%global, vp%bndry(ip), ip + vp%np_local + vp%np_ghost)
     end do
-
-    call init_MPI_Alltoall()
     
     SAFE_DEALLOCATE_A(part_ghost)
 
     POP_SUB(vec_init)
 
   contains
-    subroutine init_local()
+    subroutine reorder_points()
+      integer, allocatable :: reordered(:)
+      integer :: ix, iy, iz, ixb, iyb, izb, ip, ipg, nn
+      integer :: bsize(3), order
+      type(block_t) :: blk
+      integer, parameter :: &
+        ORDER_BLOCKS     =  1, &
+        ORDER_HILBERT    =  2
 
-      integer :: sp, ep, np_tmp
+      PUSH_SUB(vec_init.reorder_points)
 
-      PUSH_SUB(vec_init.init_local)
-      
-      sp = vp%xlocal
-      ep = vp%xlocal + vp%np_local + 1
-      SAFE_ALLOCATE(vp%local(sp:ep))
+      !%Variable MeshOrder
+      !%Default blocks
+      !%Type integer
+      !%Section Execution::Optimization
+      !%Description
+      !% This variable controls how the grid points are mapped to a
+      !% linear array. This influences the performance of the code.
+      !%Option blocks 1
+      !% The grid is mapped using small parallelepipedic grids. The size
+      !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
+      !%Option hilbert 2
+      !% A Hilbert space-filling curve is used to map the grid.
+      !%End
+      call parse_variable(namespace, 'MeshOrder', ORDER_BLOCKS, order)
 
-      ! Calculate the local vector in parallel
-      call partition_get_local(partition, vp%local(vp%xlocal:), np_tmp)
+      select case(order)
+      case(ORDER_HILBERT)
+        ! nothing to do, points are ordered along a Hilbert curve by default
+      case(ORDER_BLOCKS)
+        !%Variable MeshBlockSize
+        !%Type block
+        !%Section Execution::Optimization
+        !%Description
+        !% To improve memory-access locality when calculating derivatives,
+        !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
+        !% controls the size of this blocks in the different
+        !% directions. The default is selected according to the value of
+        !% the <tt>StatesBlockSize</tt> variable. (This variable only affects the
+        !% performance of <tt>Octopus</tt> and not the results.)
+        !%End
 
-      POP_SUB(vec_init.init_local)
-    end subroutine init_local
+        ! blocking done according to layer conditions in 3d for an L2 cache
+        ! of 1024 KB for the default 25pt stencil
+        ! See J. Hammer, et al. in Tools for High Performance Computing 2016,
+        ! ISBN 978-3-319-56702-0, 1-22 (2017). Proceedings of IPTW 2016,
+        ! DOI: 10.1007/978-3-319-56702-0_1
+        ! tool: https://rrze-hpc.github.io/layer-condition
+        if (conf%target_states_block_size < 32) then
+          bsize = (/ 56, 56, 1 /) / conf%target_states_block_size
+        else
+          bsize = (/ 10, 2, 1 /)
+        end if
+
+        if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
+          nn = parse_block_cols(blk, 0)
+          do idir = 1, nn
+            call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+          end do
+        end if
+
+        ! no blocking in z direction
+        bsize(3) = idx%nr(2,3) - idx%enlarge(3)
+
+        SAFE_ALLOCATE(reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
+        ip = vp%xlocal
+        do izb = idx%nr(1,3)+idx%enlarge(3), idx%nr(2,3)-idx%enlarge(3), bsize(3)
+          do iyb = idx%nr(1,2)-idx%enlarge(2), idx%nr(2,2)-idx%enlarge(2), bsize(2)
+            do ixb = idx%nr(1,1)-idx%enlarge(1), idx%nr(2,1)-idx%enlarge(1), bsize(1)
+
+              do iz = izb, min(izb + bsize(3) - 1, idx%nr(2,3)-idx%enlarge(3))
+                do iy = iyb, min(iyb + bsize(2) - 1, idx%nr(2,2)-idx%enlarge(2))
+                  do ix = ixb, min(ixb + bsize(1) - 1, idx%nr(2,1)-idx%enlarge(1))
+                    ipg = index_from_coords(idx, [ix, iy, iz])
+                    if (ipg == 0) cycle
+                    tmp = iihash_lookup(vp%global, ipg, found)
+                    if (.not. found) cycle
+                    reordered(ip) = vp%local(vp%xlocal + tmp - 1)
+                    ASSERT(ipg == vp%local(vp%xlocal + tmp - 1))
+                    ip = ip + 1
+                  end do
+                end do
+              end do
+
+            end do
+          end do
+        end do
+        ASSERT(ip == vp%xlocal + vp%np_local)
+        do ip = vp%xlocal, vp%xlocal + vp%np_local - 1
+          vp%local(ip) = reordered(ip)
+        end do
+        SAFE_DEALLOCATE_A(reordered)
+
+        ! Recreate hash table.
+        call iihash_end(vp%global)
+        call iihash_init(vp%global)
+        ! Insert local points.
+        do ip = 1, vp%np_local
+          call iihash_insert(vp%global, vp%local(vp%xlocal + ip - 1), ip)
+        end do
+      end select
+
+      POP_SUB(vec_init.reorder_points)
+    end subroutine reorder_points
 
     subroutine init_MPI_Alltoall()
       integer, allocatable :: part_local(:)
