@@ -577,26 +577,13 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = (mesh%mpi_grp%size > 1)
 
-
-  if(.not. mesh%parallel_in_domains) then
-    ! When running parallel, x is computed later.
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:space%dim))
-  end if
-  
   if(.not. mesh%idx%is_hypercube) then
     !call create_x_lxyz()
-  else if(.not. mesh%parallel_in_domains) then
-    do ip = 1, mesh%np_part_global
-      mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip, force=.true.)
-    end do
   end if
 
   if(mesh%parallel_in_domains) then
-
     call do_partition()
-
   else
-
     ! When running serially those two are the same.
     mesh%np      = mesh%np_global
     mesh%np_part = mesh%np_part_global
@@ -609,6 +596,13 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     mesh%vp%npart = 1
     mesh%vp%xlocal = 1
   end if
+
+  ! Compute mesh%x
+  SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
+  mesh%x(:, :) = M_ZERO
+  do ip = 1, mesh%np_part
+    mesh%x(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, mesh_local2global(mesh, ip))
+  end do
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
@@ -753,15 +747,6 @@ contains
                   mesh%idx%lxyz(il, 3) = iz
 
                   mesh%idx%lxyz_inv(ix, iy, iz) = il
-
-#ifdef HAVE_MPI
-                  if(.not. mesh%parallel_in_domains) then
-#endif
-                    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-                    mesh%x(il, 1:space%dim) = xx(1:space%dim)
-#ifdef HAVE_MPI
-                  end if
-#endif                                   
                 end do
               end do
             end do
@@ -813,19 +798,6 @@ contains
         mesh%idx%lxyz(il, 3) = iz
 
         mesh%idx%lxyz_inv(ix, iy, iz) = il
-
-#ifdef HAVE_MPI
-        if(.not. mesh%parallel_in_domains) then
-#endif
-          chi(1) = TOFLOAT(ix)*mesh%spacing(1)
-          chi(2) = TOFLOAT(iy)*mesh%spacing(2)
-          chi(3) = TOFLOAT(iz)*mesh%spacing(3)
-
-          call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-          mesh%x(il, 1:space%dim) = xx(1:space%dim)
-#ifdef HAVE_MPI
-        end if
-#endif                 
       end do
 
     case(ORDER_HILBERT_2D)
@@ -878,19 +850,6 @@ contains
             mesh%idx%lxyz(il, 3) = iz
 
             mesh%idx%lxyz_inv(ix, iy, iz) = il
-
-#ifdef HAVE_MPI
-            if(.not. mesh%parallel_in_domains) then
-#endif
-              chi(1) = TOFLOAT(ix)*mesh%spacing(1)
-              chi(2) = TOFLOAT(iy)*mesh%spacing(2)
-              chi(3) = TOFLOAT(iz)*mesh%spacing(3)
-
-              call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-              mesh%x(il, 1:space%dim) = xx(1:space%dim)
-#ifdef HAVE_MPI
-            end if
-#endif          
           end do
         end do
       end do
@@ -1063,14 +1022,6 @@ contains
     ! Set local point numbers.
     mesh%np      = mesh%vp%np_local
     mesh%np_part = mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry
-
-    ! Compute mesh%x as it is done in the serial case but only for local points.
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
-    mesh%x(:, :) = M_ZERO
-    do ii = 1, mesh%np_part
-      jj = mesh_local2global(mesh, ii)
-      mesh%x(ii, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
-    end do
 
     !%Variable PartitionPrint
     !%Type logical

@@ -700,10 +700,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  function mesh_x_global(mesh, ip, force) result(xx)
+  function mesh_x_global(mesh, ip) result(xx)
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
-    logical, optional,  intent(in) :: force
     FLOAT                          :: xx(1:mesh%sb%dim)
 
     FLOAT :: chi(1:MAX_DIM)
@@ -712,18 +711,11 @@ contains
 
 ! no push_sub because function is called too frequently
 
-    force_ = .false.
-    if (present(force)) force_ = force
-      
-    !if(mesh%parallel_in_domains .or. force_) then
-      call mesh_global_index_to_coords(mesh, ip, ix)
-      chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
-      chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
-      xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
-      call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-    !else
-    !  xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-    !end if
+    call mesh_global_index_to_coords(mesh, ip, ix)
+    chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
+    chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
+    xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
+    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
 
   end function mesh_x_global
 
