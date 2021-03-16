@@ -1061,7 +1061,7 @@ contains
             write_real = em_vars%eta < M_EPSILON)
         end if
 
-        if(gr%sb%periodic_dim  ==  gr%sb%dim) then
+        if (space%periodic_dim  ==  space%dim) then
           call out_dielectric_constant()
         end if
 

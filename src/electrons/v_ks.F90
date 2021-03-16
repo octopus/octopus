@@ -736,7 +736,7 @@ contains
     end if
 
     if (calc_eigenval_) call states_elec_fermi(st, namespace, gr%mesh) ! occupations
-    call energy_calc_total(namespace, hm, gr, st)
+    call energy_calc_total(namespace, space, hm, gr, st)
 
     POP_SUB(v_ks_h_setup)
   end subroutine v_ks_h_setup
@@ -760,7 +760,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm, namespace, space)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -776,9 +776,10 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current) 
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
+    type(space_t),                     intent(in)    :: space
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_elec_t),               intent(inout) :: st
     type(geometry_t) ,         target, intent(in)    :: geo
@@ -879,8 +880,8 @@ contains
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
     if(hm%self_induced_magnetic) then
-      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
+      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:space%dim))
+      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:space%dim))
       call magnetic_induced(ks%gr%der, st, hm%psolver, hm%kpoints, ks%calc%a_ind, ks%calc%b_ind)
     end if
    
@@ -1108,7 +1109,7 @@ contains
             coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
           end do
           
-          if(simul_box_is_periodic(ks%gr%sb)) then
+          if (space%is_periodic()) then
             latvec(1:3, 1:3) = ks%gr%sb%latt%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
             call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
           else

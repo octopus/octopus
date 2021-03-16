@@ -28,9 +28,10 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
+subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
+  type(space_t),          intent(in) :: space
   character(len=*),       intent(in) :: dir
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
@@ -125,7 +126,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
       call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
-      call output_etsf_kpoints_write(kpoints, gr%sb%dim, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
     end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
@@ -140,14 +141,16 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
   ! wave-functions in fourier space
   if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
-    if(st%parallel_in_states) &
+    if (st%parallel_in_states) then
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)
-    if(st%d%kpt%parallel) &
+    end if
+    if (st%d%kpt%parallel) then
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k", namespace=namespace)
+    end if
 
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
-    call fourier_shell_init(shell, zcube, gr%mesh)
+    call fourier_shell_init(shell, space, zcube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%symm, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(kpoints, pw_dims, pw_flags)
@@ -161,7 +164,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, kpoints, geo)
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
       call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
-      call output_etsf_kpoints_write(kpoints, gr%sb%dim, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid, namespace)
@@ -269,7 +272,7 @@ subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
 
   ! Primitive vectors
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-  do idir = 1, sb%dim
+  do idir = 1, geo%space%dim
     geometry%primitive_vectors(1:3, idir) = sb%latt%rlattice(1:3, idir)
   end do
 

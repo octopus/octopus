@@ -182,9 +182,10 @@ contains
     ep%classical_pot = 0
     if(geo%ncatoms > 0) then
 
-      if(simul_box_is_periodic(gr%sb)) &
+      if (geo%space%is_periodic()) then
         call messages_not_implemented("classical atoms in periodic systems", namespace=namespace)
-      
+      end if
+
       !%Variable ClassicalPotential
       !%Type integer
       !%Default no
@@ -289,7 +290,7 @@ contains
     SAFE_ALLOCATE(ep%fii(1:gr%sb%dim, 1:geo%natoms))
     ep%fii = M_ZERO
 
-    SAFE_ALLOCATE(ep%vdw_forces(1:gr%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(ep%vdw_forces(1:geo%space%dim, 1:geo%natoms))
     ep%vdw_forces = M_ZERO
 
     call gauge_field_nullify(ep%gfield)
@@ -299,7 +300,7 @@ contains
 
     ep%have_density = .false.
     do ia = 1, geo%natoms
-      if(local_potential_has_density(gr%sb, geo%atom(ia))) then
+      if (local_potential_has_density(geo%space, geo%atom(ia))) then
         ep%have_density = .true.
         exit
       end if
@@ -464,12 +465,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical pure function local_potential_has_density(sb, atom) result(has_density)
-    type(simul_box_t),        intent(in)    :: sb
-    type(atom_t),             intent(in)    :: atom
+  logical pure function local_potential_has_density(space, atom) result(has_density)
+    type(space_t),        intent(in)    :: space
+    type(atom_t),         intent(in)    :: atom
     
-    has_density = &
-      species_has_density(atom%species) .or. (species_is_ps(atom%species) .and. simul_box_is_periodic(sb))
+    has_density = species_has_density(atom%species) .or. (species_is_ps(atom%species) .and. space%is_periodic())
 
   end function local_potential_has_density
   
@@ -504,7 +504,7 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(mesh%sb, atom)) then
+      if(local_potential_has_density(space, atom)) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
         call species_get_long_range_density(atom%species, space, namespace, atom%x, mesh, rho)

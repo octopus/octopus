@@ -144,7 +144,7 @@ contains
     if(optional_default(force_isolated, .false.)) then
       this%geocode = "F"
     else
-      select case(mesh%sb%periodic_dim)
+      select case(space%periodic_dim)
       case(0)
         ! Free BC
         this%geocode = "F"

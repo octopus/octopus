@@ -451,7 +451,7 @@ contains
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, namespace, st, gr, hm%d, hm%kpoints, td%scissor, mc)
+      call scissor_init(hm%scissor, namespace, space, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
     if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
@@ -859,7 +859,7 @@ contains
     call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
-    call energy_calc_total(namespace, hm, gr, st)
+    call energy_calc_total(namespace, space, hm, gr, st)
 
     !%Variable TDFreezeDFTUOccupations
     !%Type logical

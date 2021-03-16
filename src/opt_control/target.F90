@@ -48,6 +48,7 @@ module target_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
   use species_oct_m
   use spectrum_oct_m
   use states_abst_oct_m
@@ -411,9 +412,10 @@ contains
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(tg, namespace, hm, gr, geo, psi, time, max_time)
+  subroutine target_tdcalc(tg, namespace, space, hm, gr, geo, psi, time, max_time)
     type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
@@ -435,7 +437,7 @@ contains
     case(oct_tg_td_local)
       call target_tdcalc_tdlocal(tg, gr, psi, time)
     case(oct_tg_hhg)
-      call target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
+      call target_tdcalc_hhg(tg, namespace, space, hm, gr, geo, psi, time)
     case(oct_tg_jdensity)
       call target_tdcalc_density(tg, gr, hm%kpoints, psi, time)
     case default

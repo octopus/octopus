@@ -741,7 +741,7 @@ contains
     
     cb = .not. mesh%use_curvilinear .and. &
          .not. mesh%parallel_in_domains .and.  &
-         simul_box_has_zero_bc(mesh%sb)
+         mesh%sb%periodic_dim == 0
 
   end function mesh_compact_boundaries
 

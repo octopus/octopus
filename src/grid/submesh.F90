@@ -556,7 +556,7 @@ contains
 
     !no PUSH_SUB, called too often
 
-    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+    if (sm1%mesh%sb%periodic_dim == 0) then
       !first check the distance
       distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2

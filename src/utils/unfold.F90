@@ -286,7 +286,7 @@ program oct_unfold
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
 
-    call wfs_extract_spec_fn(sys%st, sys%gr, zcube, cf)
+    call wfs_extract_spec_fn(sys%space, sys%st, sys%gr, zcube, cf)
 
     call cube_function_free_fs(zcube, cf)
     call zcube_function_free_rs(zcube, cf)
@@ -345,7 +345,8 @@ contains
   end subroutine unfold_setup
 
   !--------------------------------------------------------------------
-  subroutine wfs_extract_spec_fn(st, gr, zcube, cf)
+  subroutine wfs_extract_spec_fn(space, st, gr, zcube, cf)
+    type(space_t),         intent(in)    :: space
     type(states_elec_t),   intent(in)    :: st
     type(grid_t),          intent(in)    :: gr
     type(cube_t),          intent(inout) :: zcube
@@ -434,7 +435,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       iq = st%d%get_kpoint_index(ik) 
 
-      call fourier_shell_init(shell, zcube, gr%mesh, kk = sys%kpoints%reduced%red_point(:, iq))  
+      call fourier_shell_init(shell, space, zcube, gr%mesh, kk = sys%kpoints%reduced%red_point(:, iq))  
 
       gmin = minval(shell%red_gvec(:,:))
       gmax = maxval(shell%red_gvec(:,:))

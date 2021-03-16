@@ -212,7 +212,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     do ip = 1, der%mesh%np
       op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
     end do
@@ -242,7 +242,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
   ! div_xyw (F)= div_uvw (BF), where B
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
     do ip = 1, der%mesh%np_part
       ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
@@ -264,7 +264,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
-  if(simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_DEALLOCATE_P(ff_uvw)
   else
     nullify(ff_uvw)
@@ -678,7 +678,7 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
     ghost_update_ = .false. ! the boundary or ghost points
   end do
 
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%latt%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal) then
     call X(batch_vector_uvw_to_xyz)(der, opffb)
   end if
 

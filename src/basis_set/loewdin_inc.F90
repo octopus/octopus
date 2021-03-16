@@ -127,7 +127,7 @@
       iorb2 = basis%global2os(2, ind2)
       os2 => basis%orbsets(ios2)
 
-      if(simul_box_is_periodic(os%sphere%mesh%sb))then
+      if (os%sphere%mesh%sb%periodic_dim > 0) then
  #ifdef R_TCOMPLEX
         overlap(ind,ind2) = M_Z0
         do idim = 1, os%ndim
