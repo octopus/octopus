@@ -446,7 +446,8 @@ contains
       type(block_t) :: blk
       integer, parameter :: &
         ORDER_BLOCKS     =  1, &
-        ORDER_HILBERT    =  2
+        ORDER_HILBERT    =  2, &
+        ORDER_CUBE       =  3
 
       PUSH_SUB(vec_init.reorder_points)
 
@@ -462,46 +463,52 @@ contains
       !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
       !%Option hilbert 2
       !% A Hilbert space-filling curve is used to map the grid.
+      !%Option order_cube 3
+      !% The grid is mapped using a full cube, i.e. without blocking.
       !%End
       call parse_variable(namespace, 'MeshOrder', ORDER_BLOCKS, order)
 
       select case(order)
       case(ORDER_HILBERT)
         ! nothing to do, points are ordered along a Hilbert curve by default
-      case(ORDER_BLOCKS)
-        !%Variable MeshBlockSize
-        !%Type block
-        !%Section Execution::Optimization
-        !%Description
-        !% To improve memory-access locality when calculating derivatives,
-        !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
-        !% controls the size of this blocks in the different
-        !% directions. The default is selected according to the value of
-        !% the <tt>StatesBlockSize</tt> variable. (This variable only affects the
-        !% performance of <tt>Octopus</tt> and not the results.)
-        !%End
-
-        ! blocking done according to layer conditions in 3d for an L2 cache
-        ! of 1024 KB for the default 25pt stencil
-        ! See J. Hammer, et al. in Tools for High Performance Computing 2016,
-        ! ISBN 978-3-319-56702-0, 1-22 (2017). Proceedings of IPTW 2016,
-        ! DOI: 10.1007/978-3-319-56702-0_1
-        ! tool: https://rrze-hpc.github.io/layer-condition
-        if (conf%target_states_block_size < 32) then
-          bsize = (/ 56, 56, 1 /) / conf%target_states_block_size
+      case(ORDER_BLOCKS, ORDER_CUBE)
+        if (order == ORDER_CUBE) then
+          bsize = idx%ll
         else
-          bsize = (/ 10, 2, 1 /)
-        end if
+          !%Variable MeshBlockSize
+          !%Type block
+          !%Section Execution::Optimization
+          !%Description
+          !% To improve memory-access locality when calculating derivatives,
+          !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
+          !% controls the size of this blocks in the different
+          !% directions. The default is selected according to the value of
+          !% the <tt>StatesBlockSize</tt> variable. (This variable only affects the
+          !% performance of <tt>Octopus</tt> and not the results.)
+          !%End
 
-        if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
-          nn = parse_block_cols(blk, 0)
-          do idir = 1, nn
-            call parse_block_integer(blk, 0, idir - 1, bsize(idir))
-          end do
-        end if
+          ! blocking done according to layer conditions in 3d for an L2 cache
+          ! of 1024 KB for the default 25pt stencil
+          ! See J. Hammer, et al. in Tools for High Performance Computing 2016,
+          ! ISBN 978-3-319-56702-0, 1-22 (2017). Proceedings of IPTW 2016,
+          ! DOI: 10.1007/978-3-319-56702-0_1
+          ! tool: https://rrze-hpc.github.io/layer-condition
+          if (conf%target_states_block_size < 32) then
+            bsize = (/ 56, 56, 1 /) / conf%target_states_block_size
+          else
+            bsize = (/ 10, 2, 1 /)
+          end if
 
-        ! no blocking in z direction
-        bsize(3) = idx%nr(2,3) - idx%enlarge(3)
+          if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
+            nn = parse_block_cols(blk, 0)
+            do idir = 1, nn
+              call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+            end do
+          end if
+
+          ! no blocking in z direction
+          bsize(3) = idx%ll(3)
+        end if
 
         SAFE_ALLOCATE(reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
         ip = vp%xlocal
