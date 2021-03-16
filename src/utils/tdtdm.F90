@@ -77,7 +77,7 @@ program tdtdm
   integer :: kpt_start, kpt_end, supercell(1:MAX_DIM), nomega
   type(block_t) :: blk
   type(symmetrizer_t) :: symmetrizer
-  FLOAT :: pos_h(MAX_DIM), ww
+  FLOAT :: pos_h(MAX_DIM), ww, norm
 
   ! Initializion
   call global_init()
@@ -236,116 +236,6 @@ program tdtdm
 
   start_time = spectrum%start_time
 
-  !%Variable TransientPopulationDelay
-  !%Type float
-  !%Default 0.
-  !%Section Utilities::oct-tdpop2exc
-  !%Description
-  !% This variable defines the starting time used to compute the Fourier transform of the 
-  !% populations. This is needed if TransientPopulationReference is used.
-  !%End
-  call parse_variable(global_namespace, 'TransientPopulationDelay', start_time, spectrum%start_time )
-
-  if(parse_is_defined(global_namespace, 'TransientPopulationReference') .and. spectrum%start_time > 0) then
-    !%Variable TransientPopulationReference
-    !%Type string
-    !%Default "."
-    !%Section Utilities::oct-tdpop2exc
-    !%Description
-    !% In case of delayed kick, the calculation of the transient populations requires 
-    !% to substract a reference calculation, containing the output of td_occup without the kick
-    !% This variables defined the directory in which the reference projections file is,
-    !% relative to the current folder
-    !%End
-
-    call parse_variable(global_namespace, 'TransientPopulationReference', '.', ref_filename)
-    ref_file = io_open(trim(ref_filename)//'/projections', action='read', status='old', die=.false.)
-    if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/projections'))//"'"
-      call messages_fatal(1)
-    end if
-    call io_skip_header(ref_file)
-    call spectrum_count_time_steps(global_namespace, ref_file, time_steps_ref, dt_ref)
-    dt_ref = units_to_atomic(units_out%time, dt_ref)
-    time_steps_ref = time_steps_ref + 1
-    if(time_steps_ref < time_steps) then
-      message(1) = "The reference calculation does not contain enought time steps"
-      call messages_fatal(1)
-    end if
-
-    if(dt_ref /= dt) then
-      message(1) = "The time step of the reference calculation is different from the current calculation"
-      call messages_fatal(1)
-    end if
-
-!    !We remove the reference
-!    !TODO: we need to count the column here, to check that enough states are propagated
-!    SAFE _ALLOCATE(tmp(1:gs_st%nst*gs_st%nst*st%d%nik*2))
-!    call io_skip_header(ref_file)
-!
-!    SAFE _ALLOCATE(proj_r_ref(1:time_steps, 1:gs_st%nst, 1:gs_st%nst, 1:st%d%nik))
-!    SAFE _ALLOCATE(proj_i_ref(1:time_steps, 1:gs_st%nst, 1:gs_st%nst, 1:st%d%nik))
-!    do ii = 1, time_steps
-!      read(ref_file, *) jj, tt, (tmp(kk), kk = 1, gs_st%nst*gs_st%nst*st%d%nik*2)
-!      do ik = 1, st%d%nik
-!        do ist = 1, gs_st%nst
-!          do uist = 1, gs_st%nst
-!            jj  = (ik-1)*gs_st%nst*gs_st%nst + (ist-1)*gs_st%nst + uist
-!            proj_r_ref(ii, uist, ist, ik) = tmp((jj-1)*2+1)
-!            proj_i_ref(ii, uist, ist, ik) = tmp((jj-1)*2+2)
-!         end do
-!       end do
-!     end do
-!    end do
-!    SAFE _DEALLOCATE_A(tmp)
-!    call io_close(ref_file)
-!
-!    !Here we use the reference calculation and we insert of closure relation
-!    !This is done to avoid propagating unoccupied states
-!    do ik = 1, st%d%nik
-!      do ist = 1, st%nst
-!        do uist = 1, gs_st%nst
-!          do uist_ref = 1, gs_st%nst ! Inner sum from the closure relation
-!            do ii = 1, time_steps
-!              proj_r_corr(ii, uist, ist, ik) = proj_r_corr(ii, uist, ist, ik) + proj_r(ii, uist_ref, ist, ik)*proj_r_ref(ii, uist_ref, uist, ik) + proj_i(ii, uist_ref, ist, ik)*proj_i_ref(ii, uist_ref, uist, ik)
-!              proj_i_corr(ii, uist, ist, ik) = proj_i_corr(ii, uist, ist, ik) - proj_r(ii, uist_ref, ist, ik)*proj_i_ref(ii, uist_ref, uist, ik) + proj_i(ii, uist_ref, ist, ik)*proj_r_ref(ii, uist_ref, uist, ik)
-!            end do
-!          end do
-!        end do
-!      end do
-!    end do
-!
-!    !We now transform the GS states into the time-evolved states at the time of the kick
-!    !Doing so, the code constructing the two-particle wavefunction remains identical to the
-!    !equilibrium case
-!    time_kick = int(spectrum%start_time / dt)
-!    SAFE _ALLOCATE(psi(1:sys%gr%mesh%np, 1:gs_st%d%dim))
-!    SAFE _ALLOCATE(upsi(1:sys%gr%mesh%np, 1:gs_st%d%dim))
-!
-!    call states_copy(ref_st, gs_st)
-!
-!    do ik = 1, st%d%nik
-!      do ist = 1, gs_st%nst
-!        psi = M_ZERO
-!        do uist = 1, gs_st%nst
-!          call states_get_state(ref_st, sys%gr%mesh, uist, ik, upsi)
-!          call lalg_axpy(sys%gr%mesh%np, TOCMPLX(proj_r_ref(time_kick, uist, ist, ik), proj_i_ref(time_kick, uist, ist, ik)), upsi(:, 1), psi(:, 1))
-!        end do
-!        call states_set_state(gs_st, sys%gr%mesh, ist, ik, psi)
-!      end do
-!    end do
-!
-!    call states_end(ref_st)
-!
-!    SAFE _DEALLOCATE_A(psi)
-!    SAFE _DEALLOCATE_A(upsi)
-!
- !   SAFE _DEALLOCATE_A(proj_r_ref)
- !   SAFE _DEALLOCATE_A(proj_i_ref)
-
-  end if
-
-
   ! Phase correction of the projections before doing the Fourier transforms
   ! See Eq. (5) of Williams et al., JCTC 17, 1795 (2021)
   ! We need to multiply C_ik(t)e^{-ie_kt} (the projection of \phi_i(t) on \phi_k^GS) 
@@ -360,8 +250,9 @@ program tdtdm
       do uist = ist+1, gs_st%nst
         jj = (ik-kpt_start)*st%nst*gs_st%nst+(ist-1)*gs_st%nst+uist
         do ii = 1, time_steps
-          proj_r_corr(ii, jj) = proj_r(ii, uist, ist, ik) * proj_r(ii, ist, ist, ik) + proj_i(ii, uist, ist, ik) * proj_i(ii, ist, ist, ik)
-          proj_i_corr(ii, jj) =-proj_r(ii, uist, ist, ik) * proj_i(ii, ist, ist, ik) + proj_i(ii, uist, ist, ik) * proj_r(ii, ist, ist, ik)
+          norm = sqrt(abs(proj_r(ii, ist, ist, ik))**2 + abs(proj_i(ii, ist, ist, ik))**2)
+          proj_r_corr(ii, jj) = (proj_r(ii, uist, ist, ik) * proj_r(ii, ist, ist, ik) + proj_i(ii, uist, ist, ik) * proj_i(ii, ist, ist, ik))/norm
+          proj_i_corr(ii, jj) =(-proj_r(ii, uist, ist, ik) * proj_i(ii, ist, ist, ik) + proj_i(ii, uist, ist, ik) * proj_r(ii, ist, ist, ik))/norm
         end do
       end do
     end do
@@ -385,9 +276,6 @@ program tdtdm
 
   write(message(1), '(a)') "oct-tdtdm: Fourier transforming real part of the projections"
   call messages_info(1)
-
-  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, projb_r)
-  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, projb_i)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
     istart, iend, spectrum%start_time, dt, projb_r, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftrealb)
@@ -441,7 +329,7 @@ program tdtdm
   write(message(1), '(a)') "oct-tdtdm: Constructing the two-particle wavefunctions."
   call messages_info(1)
 
-  !At the moment the supercell is givn by the number of k-points.
+  !At the moment the supercell is given by the number of k-points.
   supercell(1:3) = sys%kpoints%nik_axis(1:3)
   Nreplica = product(supercell(1:sys%space%dim))
 
@@ -463,32 +351,13 @@ program tdtdm
   ! The phase for each center
   SAFE_ALLOCATE(phase(kpt_start:kpt_end, 1:Nreplica))
 
-  !!In case a vector potential is present, we need to add it.
-  !vector_potential(1:sys%gr%mesh%sb%dim) = M_ZERO
-  !call laser_init(lasers, parser, n_lasers, sys%gr%mesh)
-  !do ilaser = 1, n_lasers
-  !  select case(laser_kind(lasers(ilaser)))
-  !  case(E_FIELD_VECTOR_POTENTIAL)
-  !    aa = M_ZERO
-  !    call laser_field(lasers(ilaser), aa(1:sys%gr%mesh%sb%dim), spectrum%start_time)
-  !    vector_potential(1:sys%gr%mesh%sb%dim) = vector_potential(1:sys%gr%mesh%sb%dim) - aa(1:sys%gr%mesh%sb%dim)/P_C
-  !  end select
-  !end do
-  !call laser_end(n_lasers, lasers)
-
   do irep = 1, Nreplica 
     do ik = kpt_start, kpt_end
       ikpoint = gs_st%d%get_kpoint_index(ik)
       kpoint(1:sys%space%dim) = sys%kpoints%get_point(ikpoint)
-  !    !We add the vector potential
-  !    kpoint(1:sys%space%dim) = kpoint(1:sys%space%dim) + vector_potential(1:sys%space%dim)
       phase(ik, irep) = exp(-M_zI*sum(kpoint(1:sys%space%dim)*centers(1:sys%space%dim, irep)))
     end do
   end do
-
-  !!We need to update the Hamiltonian, such as the phases are correct, in case of a laser field
-  !call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, spectrum%start_time)
-
 
   ! Position of the hole, here assumed to be on top of the first atom
   ! To be obtained from the input file
@@ -638,17 +507,6 @@ program tdtdm
 
     call tdtdm_excitonic_weight()
 
-    !call tdtdm_dielectric_function()
-
-    !write(fname, '(a, f0.4)') 'tdm_trans-0', omega(ifreq) 
-    !out_file = io_open('td.general/'//trim(fname), action='write')
-    !write(out_file, '(a)') '# Energy  |Xai(k)|^2 |Yai(k)|^2'
-    !do it = 1, Ntrans*gs_st%d%nik
-    !  write(out_file, '(3e15.6)') Et(it), TOFLOAT(Xiak(it)*conjg(Xiak(it))), &
-    !                            TOFLOAT(Yiak(it)*conjg(Yiak(it)))
-    !end do
-    !call io_close(out_file)
-
   end do ! ifreq
 
   SAFE_DEALLOCATE_A(Et)
@@ -720,17 +578,17 @@ program tdtdm
         xx_h(1:sys%space%dim) = sys%geo%atom(1)%x(1:sys%space%dim)
       end if
 
-      write(message(1), '(a, 3(1x,f7.4,a))') "oct-tdtdm: Setting the hole at (", xx_h(1), &
-                     ",", xx_h(2), ",", xx_h(3), ")."
-      call messages_info(1)
- 
       !At the moment, we ignore rankmin
       ASSERT(.not.sys%gr%mesh%parallel_in_domains)
       ip_h = mesh_nearest_point(sys%gr%mesh, xx_h, dmin, rankmin)
-     ! xx_h = matmul(xx_h(1:3), sys%gr%sb%latt%klattice)/(M_TWO*M_PI)
-     ! xx_h(1:3) = xx_h(1:3) * M_TWO*sys%gr%sb%lsize(1:3) / sys%gr%mesh%spacing(1:3)
-     ! ip_h = sys%gr%mesh%idx%lxyz_inv(nint(xx_h(1)), nint(xx_h(2)), nint(xx_h(3)))
-
+      write(message(1), '(a, 3(1x,f7.4,a))') "oct-tdtdm: Requesting the hole at (", xx_h(1), &
+                     ",", xx_h(2), ",", xx_h(3), ")."
+      call mesh_r(sys%gr%mesh, ip_h, dmin, coords=xx_h)
+      write(message(2), '(a, 3(1x,f7.4,a))') "oct-tdtdm: Setting the hole at (", xx_h(1), &
+                     ",", xx_h(2), ",", xx_h(3), ")."
+      
+      call messages_info(2)
+ 
       POP_SUB(tdtdm_get_hole_position)
     end subroutine tdtdm_get_hole_position
 
@@ -785,14 +643,15 @@ program tdtdm
       case(1)
 
         call tdtdm_get_hole_position(pos_h, ip_h)
+        irep_h = floor(supercell(1)/M_TWO)
 
         write(fname, '(a, f0.4)') 'tdm_density-0', omega(ifreq)
         call dio_function_output_supercell(io_function_fill_how("AxisX"), "td.general", fname, sys%gr%mesh, &
-            den_1D(:,ip_h,:,(supercell(1)-1)/2), centers, supercell, fn_unit, ierr, global_namespace, geo = sys%geo, grp = st%dom_st_kpt_mpi_grp)
+            den_1D(:,ip_h,:,irep_h), centers, supercell, fn_unit, ierr, global_namespace, geo = sys%geo, grp = st%dom_st_kpt_mpi_grp)
 
         write(fname, '(a, f0.4)') 'tdm_wfn-0', omega(ifreq)
         call zio_function_output_supercell(io_function_fill_how("AxisX"), "td.general", fname, sys%gr%mesh, &
-            tdm_1D(:,ip_h,:,(supercell(1)-1)/2), centers, supercell, fn_unit, ierr, global_namespace, geo = sys%geo, grp = st%dom_st_kpt_mpi_grp)
+            tdm_1D(:,ip_h,:,irep_h), centers, supercell, fn_unit, ierr, global_namespace, geo = sys%geo, grp = st%dom_st_kpt_mpi_grp)
 
         ASSERT(.not.sys%gr%mesh%parallel_in_domains)
         write(fname, '(a, f0.4)') 'td.general/tdm_density-0', omega(ifreq)
@@ -845,12 +704,11 @@ program tdtdm
 
       write(fname, '(a, f0.4)') 'td.general/tdm_weights-0', omega(ifreq)
       out_file = io_open(fname, action='write')
-      write(out_file, '(a)') '# ik kx ky kz weights(ist,ik) '
+      write(out_file, '(a)') '# ik - kx - ky - kz - sum weights - weights(ist,ik) '
       do ik = 1, st%d%nik 
         ikpoint = st%d%get_kpoint_index(ik)
-!        kpoint(1:sys%space%dim) = sys%kpoints%get_point(ikpoint, absolute_coordinates=.false.)
         kpoint(1:sys%space%dim) = sys%kpoints%reduced%point1BZ(1:sys%space%dim,ikpoint)
-        write(out_file, '(i4,3e15.6)', advance='no') ik, kpoint(1:3)
+        write(out_file, '(i4,4e15.6)', advance='no') ik, kpoint(1:3), sum(weight(ik, 1:gs_st%nst))
         do uist = 1, gs_st%nst-1
           write(out_file, '(e15.6)', advance='no') weight(ik, uist) 
         end do
@@ -862,46 +720,6 @@ program tdtdm
 
       POP_SUB(tdtdm_excitonic_weight)
     end subroutine tdtdm_excitonic_weight
-
-    ! Because we know the X and Y vectors of Casida, we can get the dielectric function
-    ! This can be useful to compare with the real-time TDDFT results
-    ! See Eq. 48 of J. Chem. Phys. 146, 064110 (2017)
-!    subroutine tdtdm_dielectric_function()
-!      CMPLX, allocatable :: eps(:)
-!      integer :: iw, nomega
-!      FLOAT :: domega
-!      CMPLX :: omega
-!
-!      PUSH_SUB(tdtdm_dielectric_function)
-! 
-!      nomega = 101
-!      domega =CNST(0.1/27.2114)
-!
-!      SAFE_ALLOCATE(eps(1:Nomega))      
-!
-!      do iw = 1, nomega
-!        eps(iw) = M_Z0
-!        omega = (iw-1)*domega + M_zI*CNST(0.1/27.2114)
-!        !Loop over optical transitions
-!        do it = 1, Ntrans*gs_st%d%nik
-!          eps(iw) = (M_ONE/(omega - Et(it)) - M_ONE/(omega + Et(it)))*(Xiak(it) + Yiak(it))*conjg(Xiak(it) + Yiak(it))
-!        end do
-!      end do
-!
-!      eps = M_ONE - M_FOUR*M_PI/sys%gr%sb%latt%rcell_volume * eps
-!
-!      out_file = io_open('td.general/tdm_dielectric_function', action='write')
-!      write(out_file, '(a)') '# Energy  Re(eps) Im(eps)'
-!      do iw = 1, Nomega
-!        write(out_file, '(3e15.6)') (iw-1)*domega, TOFLOAT(eps(iw)), aimag(eps(iw))
-!      end do
-!      call io_close(out_file)
-! 
-!
- !     SAFE_DEALLOCATE_A(eps)
- !    
- !     POP_SUB(tdtdm_dielectric_function)
- !   end subroutine tdtdm_dielectric_function
 
 end program tdtdm
 

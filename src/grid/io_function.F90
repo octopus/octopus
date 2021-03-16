@@ -557,7 +557,8 @@ contains
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
     ! Offset in periodic directions:
-    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)*supercell(1:3))
+    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
+    offset(1:3) = offset(1:3) + centers(1:3,1)
     ! Offset in aperiodic directions:
     do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
@@ -597,8 +598,8 @@ contains
       ! BoxOffset should be considered here
       do iatom = 1, geo%natoms
         write(iunit, '(a10, 3f12.6)', advance='no') trim(geo%atom(iatom)%label), &
-          (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir) &
-                                 - centers(idir, irep)), idir = 1, mesh%sb%dim)
+          (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) + centers(idir, irep) &
+                                  - offset(idir)), idir = 1, mesh%sb%dim)
         write(iunit, '()')
       end do
     end do
