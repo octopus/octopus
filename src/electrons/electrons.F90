@@ -328,7 +328,9 @@ contains
       ! get potential from the updated density
       call v_ks_calc(this%ks, this%namespace, this%space, this%hm, this%st, this%geo, &
         calc_eigenval = update_energy_, time = abs(this%prop%clock%time()), calc_energy = update_energy_)
-      if(update_energy_) call energy_calc_total(this%namespace, this%hm, this%gr, this%st, iunit = -1)
+      if (update_energy_) then
+        call energy_calc_total(this%namespace, this%space, this%hm, this%gr, this%st, iunit = -1)
+      end if
       ! update the occupation matrices
       call lda_u_update_occ_matrices(this%hm%lda_u, this%namespace, this%gr%mesh, &
         this%st, this%hm%hm_base, this%hm%energy)

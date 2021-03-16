@@ -56,8 +56,6 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_is_periodic,      &
-    simul_box_has_zero_bc,      &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
@@ -137,11 +135,11 @@ contains
       sb%box => box_sphere_t(space%dim, center, sb%rsize)
     case (CYLINDER)
       sb%box => box_cylinder_t(space%dim, center, sb%rsize, 1, M_TWO*sb%xsize, namespace, &
-        periodic_boundaries=(sb%periodic_dim > 0))
+        periodic_boundaries=(space%periodic_dim > 0))
     case (PARALLELEPIPED)
-      sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+      sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=space%periodic_dim)
     case (HYPERCUBE)
-      sb%box => box_hypercube_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=sb%periodic_dim)
+      sb%box => box_hypercube_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=space%periodic_dim)
     case (BOX_USDEF)
       sb%box => box_user_defined_t(space%dim, center, user_def, M_TWO*sb%lsize(1:space%dim))
 
@@ -210,7 +208,7 @@ contains
       !% number of dimensions.
       !%End
 
-      if(simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         default_boxshape = PARALLELEPIPED
       else
         default_boxshape = MINIMUM
@@ -219,7 +217,7 @@ contains
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error(namespace, 'BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
-        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error(namespace, 'BoxShape')
+        if(sb%dim > 1 .and. space%is_periodic()) call messages_input_error(namespace, 'BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
@@ -467,19 +465,19 @@ contains
     PUSH_SUB(simul_box_atoms_in_box)
 
     die_if_not_ = optional_default(die_if_not, .false.)
-    pd = sb%periodic_dim
+    pd = geo%space%periodic_dim
 
     do iatom = 1, geo%natoms
 
       call simul_box_periodic_atom_in_box(sb, geo, geo%atom(iatom)%x(:))
 
       if(geo%reduced_coordinates) then
-        geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
+        geo%atom(iatom)%x(pd + 1:geo%space%dim) = M_TWO*sb%lsize(pd + 1:geo%space%dim)*geo%atom(iatom)%x(pd + 1:geo%space%dim)
       end if
 
-      if( .not. sb%contains_point(geo%atom(iatom)%x)) then
+      if (.not. sb%contains_point(geo%atom(iatom)%x)) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
-        if (sb%periodic_dim /= sb%dim) then
+        if (geo%space%periodic_dim /= geo%space%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because contains_point is too strict with atoms close to
           ! the upper boundary to the cell.
@@ -506,9 +504,9 @@ contains
     FLOAT :: xx(1:MAX_DIM)
     integer :: pd, idir
 
-    pd = sb%periodic_dim
+    pd = geo%space%periodic_dim
 
-    if (simul_box_is_periodic(sb)) then
+    if (geo%space%is_periodic()) then
       if(.not. geo%reduced_coordinates) then
         !convert the position to reduced coordinates
          xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
@@ -643,24 +641,6 @@ contains
 
   end function simul_box_contains_points
 
-
-  !--------------------------------------------------------------
-  logical pure function simul_box_is_periodic(sb)
-    type(simul_box_t), intent(in) :: sb
-
-    simul_box_is_periodic = sb%periodic_dim > 0
-
-  end function simul_box_is_periodic
-
-
-  !--------------------------------------------------------------
-  logical pure function simul_box_has_zero_bc(sb)
-    type(simul_box_t), intent(in) :: sb
-
-    simul_box_has_zero_bc = .not. simul_box_is_periodic(sb)
-
-  end function simul_box_has_zero_bc
-
   ! --------------------------------------------------------------
   recursive subroutine simul_box_copy(sbout, sbin)
     type(simul_box_t), intent(out) :: sbout
@@ -744,7 +724,7 @@ contains
         call atom_get_species(geo%atom(iatom), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
         xx(:) = abs(geo%atom(iatom)%x(:) - geo%atom(jatom)%x(:))
-        do idir = 1, sb%periodic_dim
+        do idir = 1, geo%space%periodic_dim
           xx(idir) = xx(idir) - M_TWO * sb%lsize(idir) * floor(xx(idir)/(M_TWO * sb%lsize(idir)) + M_HALF)
         end do
         rmin = min(sqrt(sum(xx**2)), rmin)
@@ -753,7 +733,7 @@ contains
 
     if(.not. (geo%only_user_def .and. real_atoms_only_)) then
       ! what if the nearest neighbors are periodic images?
-      do idir = 1, sb%periodic_dim
+      do idir = 1, geo%space%periodic_dim
         rmin = min(rmin, abs(sb%lsize(idir)))
       end do
     end if

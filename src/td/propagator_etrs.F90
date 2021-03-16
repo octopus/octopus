@@ -336,7 +336,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
+    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)

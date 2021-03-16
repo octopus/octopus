@@ -17,9 +17,10 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(outp, namespace, dir, hm, st, der, geo, gr, grp)
+  subroutine output_hamiltonian(outp, namespace, space, dir, hm, st, der, geo, gr, grp)
     type(output_t),            intent(in)    :: outp
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     character(len=*),          intent(in)    :: dir
     type(hamiltonian_elec_t),  intent(in)    :: hm
     type(states_elec_t),       intent(inout) :: st
@@ -70,9 +71,9 @@
 
           SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
           v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%dim))
+          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:space%dim))
           call io_function_output_vector(outp%how, dir, 'grad_v0', namespace, &
-            der%mesh, gradvh(:, :), der%dim, units_out%force, err,&
+            der%mesh, gradvh(:, :), space%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
           SAFE_DEALLOCATE_A(v0)
           SAFE_DEALLOCATE_A(vh)
@@ -144,9 +145,9 @@
 
       if(hm%self_induced_magnetic) then
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
-        select case(der%dim)
+        select case(space%dim)
         case(3)
-          do idir = 1, der%dim
+          do idir = 1, space%dim
             call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), namespace, &
               der%mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo, grp = grp)
@@ -197,7 +198,7 @@
           end if
           
           call io_function_output_vector(outp%how, dir, fname, namespace, der%mesh, &
-            st%current(:, :, is), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
+            st%current(:, :, is), space%dim, (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
         end do
@@ -211,20 +212,20 @@
 
       if(states_are_complex(st)) then
       
-        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:der%dim)) 
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:space%dim)) 
         do ik = st%d%kpt%start,st%d%kpt%end
-          do idir = 1,der%dim
+          do idir = 1, space%dim
             current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik), reduce = .false.)
           end do
         end do
         if(der%mesh%parallel_in_domains) then
-          call der%mesh%allreduce(current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%dim/))
+          call der%mesh%allreduce(current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, space%dim/))
         end if
 
         write(fname, '(2a)') 'current_kpt'
-        call io_function_output_vector_BZ(outp%how, dir, fname, namespace, der%mesh, st%d%kpt, hm%kpoints, &
-            current_kpt(:, :), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
-            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+        call io_function_output_vector_BZ(outp%how, dir, fname, namespace, st%d%kpt, hm%kpoints, &
+          current_kpt(:, :), space%dim, (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
+          grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         SAFE_DEALLOCATE_A(current_kpt)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
@@ -236,9 +237,9 @@
       
       if(states_are_complex(st)) then
 
-        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:space%dim, 1:st%d%nspin))
       
-        call current_heat_calculate(der, hm, st, heat_current)
+        call current_heat_calculate(space, der, hm, st, heat_current)
       
         do is = 1, hm%d%nspin
           if(st%d%nspin == 1) then
@@ -248,7 +249,7 @@
           end if
         
           call io_function_output_vector(outp%how, dir, fname, namespace, der%mesh, &
-            st%current(:, :, is), der%dim, (unit_one/units_out%time)*units_out%length**(1 - der%dim), err, &
+            st%current(:, :, is), space%dim, (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         
           SAFE_DEALLOCATE_A(heat_current)

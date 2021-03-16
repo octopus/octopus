@@ -676,7 +676,7 @@ contains
     end if
     
     call output_states(outp, namespace, dir, st, gr, geo, hm)
-    call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
     call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
 
@@ -706,7 +706,7 @@ contains
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, dir, st, gr, hm%kpoints, geo)
+      call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, geo)
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -1231,25 +1231,22 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
-    if(gr%sb%dim /= 3) then
+    if (space%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if(st%d%ispin == SPINORS) &
-      call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
+    if (st%d%ispin == SPINORS) call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
 
-    if(st%parallel_in_states) &
-      call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+    if (st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
 
-    if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
+    if (st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) then
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
+    end if
 
-    if(hm%ep%nlcc) &
-      call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
+    if (hm%ep%nlcc) call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
 
@@ -1279,7 +1276,7 @@ contains
     call cube_function_alloc_fs(cube, cf)
 
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
-    call fourier_shell_init(shell_density, cube, gr%mesh)
+    call fourier_shell_init(shell_density, space, cube, gr%mesh)
     ecutrho = shell_density%ekin_cutoff
     SAFE_ALLOCATE(field_g(1:shell_density%ngvectors, 1:st%d%nspin))
 
@@ -1325,7 +1322,7 @@ contains
 
     message(1) = "BerkeleyGW output: WFN"
     write(message(2),'(a,f12.6,a)') "Wavefunction cutoff for BerkeleyGW: ", &
-      fourier_shell_cutoff(cube, gr%mesh, .true.) * M_TWO, " Ry"
+      fourier_shell_cutoff(space, cube, gr%mesh, .true.) * M_TWO, " Ry"
     call messages_info(2)
 
     if(states_are_real(st)) then
@@ -1344,7 +1341,7 @@ contains
 
     ! FIXME: is parallelization over k-points possible?
     do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
+      call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
 
       if(mpi_grp_is_root(mpi_world)) &
         call write_binary_gvectors(iunit, shell_wfn%ngvectors, shell_wfn%ngvectors, shell_wfn%red_gvec)
@@ -1439,7 +1436,7 @@ contains
 
       SAFE_ALLOCATE(ngk(1:hm%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
-        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
+        call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
         ngk(ik) = shell_wfn%ngvectors
         call fourier_shell_end(shell_wfn)

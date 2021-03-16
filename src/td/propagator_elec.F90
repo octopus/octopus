@@ -550,7 +550,7 @@ contains
 
     call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), &
       calc_energy = update_energy_)
-    if(update_energy_) call energy_calc_total(namespace, hm, gr, st, iunit = -1)
+    if(update_energy_) call energy_calc_total(namespace, space, hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
     if(move_ions_ .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
@@ -646,7 +646,7 @@ contains
     call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
-    call energy_calc_total(namespace, hm, gr, st, iunit = -1)
+    call energy_calc_total(namespace, space, hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)

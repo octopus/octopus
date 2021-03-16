@@ -43,6 +43,7 @@ module current_oct_m
   use projector_oct_m
   use scissor_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
   use string_oct_m
@@ -653,11 +654,12 @@ contains
   end subroutine current_calculate_mel
 
   ! ---------------------------------------------------------
-  subroutine current_heat_calculate(der, hm, st, current)
-    type(derivatives_t),  intent(in)    :: der
-    type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(states_elec_t),  intent(in)    :: st
-    FLOAT,                intent(out)   :: current(:, :, :)
+  subroutine current_heat_calculate(space, der, hm, st, current)
+    type(space_t),            intent(in)    :: space
+    type(derivatives_t),      intent(in)    :: der
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(states_elec_t),      intent(in)    :: st
+    FLOAT,                    intent(out)   :: current(:, :, :)
 
     integer :: ik, ist, idir, idim, ip, ispin, ndim
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
@@ -665,10 +667,10 @@ contains
 
     PUSH_SUB(current_heat_calculate)
 
-    ASSERT(simul_box_is_periodic(der%mesh%sb))
+    ASSERT(space%is_periodic())
     ASSERT(st%d%dim == 1)
 
-    ndim = der%dim
+    ndim = space%dim
     
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))

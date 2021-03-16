@@ -595,13 +595,12 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, kpoints, ff, vector_dim, &
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoints, ff, vector_dim, &
     unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
-  type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
   type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,           target,   intent(in)  :: ff(:, :)

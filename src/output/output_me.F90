@@ -283,9 +283,9 @@ contains
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+            call doutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
           else
-            call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+            call zoutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
           end if
       end do
     end if

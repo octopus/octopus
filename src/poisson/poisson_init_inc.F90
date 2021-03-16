@@ -110,9 +110,9 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
   !!End
   
   if(this%is_dressed) then
-    dim_electronic = this%der%dim -1
+    dim_electronic = space%dim -1
   else
-    dim_electronic = this%der%dim
+    dim_electronic = space%dim
   end if
   
   if(dim_electronic == 1) then
@@ -139,7 +139,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
     call messages_info(1)
     call parse_variable(namespace, 'PoissonSolverMaxIter', 500, iter)
     call parse_variable(namespace, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
-    call poisson_corrections_init(this%corrector, namespace, maxl, this%der%mesh)
+    call poisson_corrections_init(this%corrector, namespace, space, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_CG_CORRECTED)
@@ -148,7 +148,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
     call parse_variable(namespace, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
-    call poisson_corrections_init(this%corrector, namespace, maxl, this%der%mesh)
+    call poisson_corrections_init(this%corrector, namespace, space, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_MULTIGRID)
@@ -157,7 +157,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
 
-    call poisson_multigrid_init(this%mg, namespace, this%der%mesh, maxl, threshold)
+    call poisson_multigrid_init(this%mg, namespace, space, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, namespace, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
@@ -188,7 +188,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
       call parse_variable(namespace, 'PoissonSolverMaxMultipole', 2, maxl)
       write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
       call messages_info(1)
-      call poisson_corrections_init(this%corrector, namespace, maxl, this%der%mesh)
+      call poisson_corrections_init(this%corrector, namespace, space, maxl, this%der%mesh)
     end if
 
   case(POISSON_NO)

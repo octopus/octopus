@@ -51,6 +51,7 @@ module forces_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -87,7 +88,8 @@ contains
   ! ---------------------------------------------------------
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
-  subroutine total_force_calculate(gr, geo, ep, st, kpoints, x, lda_u)
+  subroutine total_force_calculate(space, gr, geo, ep, st, kpoints, x, lda_u)
+    type(space_t),       intent(in)    :: space
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(epot_t),        intent(in)    :: ep
@@ -103,9 +105,9 @@ contains
 
     x = M_ZERO
     if (states_are_real(st) ) then 
-      call dtotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
+      call dtotal_force_from_potential(space, gr, geo, ep, st, kpoints, x, lda_u)
     else
-      call ztotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
+      call ztotal_force_from_potential(space, gr, geo, ep, st, kpoints, x, lda_u)
     end if
 
     POP_SUB(total_force_calculate)
@@ -320,9 +322,9 @@ contains
     SAFE_ALLOCATE(force_nlcc(1:geo%space%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
+      call dforces_from_potential(gr, namespace, geo%space, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
+      call zforces_from_potential(gr, namespace, geo%space, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
     if (allocated(st%rho_core)) then

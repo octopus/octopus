@@ -730,7 +730,7 @@ contains
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
       ! recalculate total energy
-      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, space, hm, gr, st, iunit = 0)
 
       ! compute forces only if requested
       if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
@@ -1098,7 +1098,7 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, space, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
