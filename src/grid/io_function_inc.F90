@@ -1752,10 +1752,433 @@ end subroutine X(io_function_output_global_BZ)
 
   end subroutine X(out_cf_netcdf)
 
-
-
 #endif /*defined(HAVE_NETCDF)*/
 
+  ! ---------------------------------------------------------
+  subroutine X(io_function_output_supercell) (how, dir, fname, mesh, ff, centers, supercell, unit, ierr, &
+    namespace, geo, grp, root, is_global, extra_atom)
+    integer(8),                 intent(in)  :: how
+    character(len=*),           intent(in)  :: dir
+    character(len=*),           intent(in)  :: fname
+    type(mesh_t),               intent(in)  :: mesh
+    R_TYPE,           target,   intent(in)  :: ff(:,:)
+    FLOAT,                      intent(in)  :: centers(:,:)
+    integer,                    intent(in)  :: supercell(:)
+    type(unit_t),               intent(in)  :: unit
+    integer,                    intent(out) :: ierr
+    type(namespace_t),          intent(in)  :: namespace
+    type(geometry_t), optional, intent(in)  :: geo
+    type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+    integer,          optional, intent(in)  :: root !< which process is going to write the data
+    logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
+    FLOAT,            optional, intent(in)  :: extra_atom(:)
+  
+    integer :: Nreplica
+    logical :: is_global_
+  #if defined(HAVE_MPI)
+    logical :: i_am_root
+    integer :: root_, comm, irep
+    R_TYPE, pointer :: ff_global(:, :)
+  #endif
+  
+    PUSH_SUB(X(io_function_output_supercell))
+    ierr = 0
+    is_global_ = optional_default(is_global, .false.)
+    if (is_global_) then
+      ASSERT(ubound(ff, dim = 1) == mesh%np_global .or. ubound(ff, dim = 1) == mesh%np_part_global)
+    else
+      ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+    end if
+
+    Nreplica = product(supercell(1:mesh%sb%dim))
+  
+  #if defined(HAVE_MPI)
+  
+    i_am_root = .true.
+    comm = MPI_COMM_NULL
+    root_ = optional_default(root, 0)
+    if(mesh%parallel_in_domains) then
+      comm = mesh%vp%comm
+      i_am_root = (mesh%vp%rank == root_)
+      if (.not. is_global_) then
+        if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+          call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
+          SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:Nreplica))
+          ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
+        else
+          SAFE_ALLOCATE(ff_global(1:mesh%np_global, 1:Nreplica))
+        end if
+  
+        !note: here we are gathering data that we won`t write if grp is
+        !present, but to avoid it we will have to find out all if the
+        !processes are members of the domain line where the root of grp
+        !lives
+        do irep = 1, Nreplica
+          call vec_gather(mesh%vp, root_, ff(:,irep), ff_global(:,irep))
+        end do
+      else
+        ff_global => ff
+      end if
+    else
+      ff_global => ff
+    end if
+  
+    if(present(grp)) then
+      i_am_root = i_am_root .and. (grp%rank == root_)
+      comm = grp%comm
+    end if
+  
+    if(i_am_root) then
+      call X(io_function_output_global_supercell)(how, dir, fname, mesh, ff_global, centers, supercell, &
+                            unit, ierr, namespace, geo = geo, extra_atom=extra_atom)
+    end if
+    if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
+      ! I have to broadcast the error code
+      call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+      ! Add a barrier to ensure that the process are synchronized
+      call MPI_Barrier(comm, mpi_err)
+    end if
+  
+    if(mesh%parallel_in_domains .and. .not. is_global_) then
+      SAFE_DEALLOCATE_P(ff_global)
+    else
+      nullify(ff_global)
+    end if
+  
+  #else
+  
+    ! serial mode
+    ASSERT(.not. mesh%parallel_in_domains)
+    call X(io_function_output_global_supercell)(how, dir, fname, mesh, ff, centers, supercell, &
+                                         unit, ierr, namespace, geo = geo, extra_atom=extra_atom)
+  
+  #endif
+  
+    POP_SUB(X(io_function_output_supercell))
+  end subroutine X(io_function_output_supercell)
+
+! ---------------------------------------------------------
+subroutine X(io_function_output_global_supercell) (how, dir, fname, mesh, ff, centers, &
+                supercell, unit, ierr, namespace, geo, extra_atom)
+  integer(8),                 intent(in)  :: how
+  character(len=*),           intent(in)  :: dir, fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,                     intent(in)  :: ff(:,:)  !< (mesh%np_global or mesh%np_part_global)
+  FLOAT,                      intent(in)  :: centers(:,:)
+  integer,                    intent(in)  :: supercell(:)
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  type(namespace_t),          intent(in)  :: namespace
+  type(geometry_t), optional, intent(in)  :: geo
+  FLOAT,            optional, intent(in)  :: extra_atom(:)
+
+  character(len=512) :: filename
+  character(len=20)  :: mformat, mformat2, mfmtheader
+  integer            :: iunit, ip, idir, np_max
+  integer            :: Nreplica
+
+  call profiling_in(write_prof, "DISK_WRITE")
+  PUSH_SUB(X(io_function_output_global_supercell))
+
+  call io_mkdir(dir)
+
+  ! Define the format
+  mformat    = '(99es23.14E3)'
+  mformat2   = '(i12,99es34.24E3)'
+  mfmtheader = '(a,a10,5a23)'
+
+  ASSERT(how > 0)
+  ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
+
+  Nreplica = product(supercell(1:mesh%sb%dim))
+
+  np_max = mesh%np_global
+  ! should we output boundary points?
+  if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+    if(ubound(ff, dim = 1) >= mesh%np_part_global) then
+      np_max = mesh%np_part_global
+    else
+      write(message(1),'(2a)') trim(fname), ': not outputting boundary points; they are not available'
+      call messages_warning(1)
+      ! FIXME: in this case, one could allocate an array of the larger size and apply boundary conditions
+    endif
+  endif
+
+  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Output supercell with format binary")
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call out_axis(1, 2, 3)
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call out_axis(2, 1, 3)
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call out_axis(3, 1, 2)
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)    /= 0) call messages_not_implemented("Output supercell with integrated format")
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)    /= 0) call messages_not_implemented("Output supercell with integrated format")
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)    /= 0) call messages_not_implemented("Output supercell with integrated format")
+  if(bitand(how, OPTION__OUTPUTFORMAT__MESH_INDEX) /= 0) call messages_not_implemented("Output supercell with mesh index")
+  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Output supercell with DX format")
+  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) then
+    call out_xcrysden(.true.)
+#ifdef R_TCOMPLEX
+    call out_xcrysden(.false.)
+#endif
+  end if
+  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Output supercell with cube format")
+
+  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) then
+    call messages_not_implemented("Output supercell with matlab format")
+  end if
+
+#if defined(HAVE_NETCDF)
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Output supercell with Netcdf format")
+#endif
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Output supercell with VTK format")
+
+  POP_SUB(X(io_function_output_global_supercell))
+  call profiling_out(write_prof)
+
+contains
+  ! ---------------------------------------------------------
+  subroutine out_axis(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
+
+    integer :: ixvect(MAX_DIM), irep
+    FLOAT   :: xx(1:MAX_DIM)
+    R_TYPE  :: fu
+
+    PUSH_SUB(X(io_function_output_global_supercell).out_axis)
+
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
+    iunit = io_open(filename, action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
+
+    do irep = 1, Nreplica
+      if(abs(centers(d2,irep)) > M_EPSILON .or. abs(centers(d3,irep)) > M_EPSILON ) cycle
+      do ip = 1, np_max
+        call index_to_coords(mesh%idx, ip, ixvect)
+
+        if(ixvect(d2)==0.and.ixvect(d3)==0) then
+          xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip)) + centers(1:mesh%sb%dim, irep)
+          fu = units_from_atomic(unit, ff(ip, irep))
+          write(iunit, mformat, iostat=ierr) xx(d1), fu
+        end if
+      end do
+    end do
+
+    call io_close(iunit)
+    POP_SUB(X(io_function_output_global_supercell).out_axis)
+  end subroutine out_axis
+
+
+    ! ---------------------------------------------------------
+  subroutine out_plane(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
+
+    integer :: ix, iy, iz, jdim, irep
+    integer :: ixvect(MAX_DIM)
+    integer :: ixvect_test(MAX_DIM)
+    FLOAT   :: xx(1:MAX_DIM)
+    R_TYPE  :: fu
+
+    PUSH_SUB(X(io_function_output_global_supercell).out_plane)
+
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
+    iunit = io_open(filename, action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
+
+! here we find the indices for coordinate 0 along all directions apart from d2
+! and d3, to get a plane. Do the same as for ix, but with all the other
+! dimensions.
+
+    do irep = 1, Nreplica
+      if(abs(centers(d1, irep)) > M_EPSILON) cycle
+      ixvect=1
+      do jdim=1,mesh%sb%dim
+        if (jdim==d2 .or. jdim==d3) cycle
+
+        do ix = mesh%idx%nr(1, jdim), mesh%idx%nr(2, jdim)
+! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
+          ixvect_test = 1
+          ixvect_test(jdim) = ix
+          ip = index_from_coords(mesh%idx, ixvect_test)
+          if(ip /= 0) then 
+            call index_to_coords(mesh%idx, ip, ixvect_test)
+            if(ixvect_test(jdim) == 0) exit
+          end if
+        end do
+        ixvect(jdim) = ix
+      end do ! loop over dimensions
+
+      ! have found ix such that coordinate d1 is 0 for this value of ix
+      ! ixvect is prepared for all dimensions apart from d2 and d3
+    
+      do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
+        write(iunit, mformat, iostat=ierr)
+        do iz = mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
+
+          ixvect(d2) = iy
+          ixvect(d3) = iz
+          ip = index_from_coords(mesh%idx, ixvect)
+
+          if(ip <= np_max .and. ip > 0) then
+            xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip)+centers(1:mesh%sb%dim, irep))
+            fu = units_from_atomic(unit, ff(ip, irep))
+            write(iunit, mformat, iostat=ierr)  &
+              xx(d2), xx(d3), fu
+          end if
+        end do
+      end do
+
+    end do !irep
+
+    call io_close(iunit)
+
+    POP_SUB(X(io_function_output_global_supercell).out_plane)
+  end subroutine out_plane
+
+  ! ---------------------------------------------------------
+  !> For format specification see:
+  !! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  !! XCrySDen can only read 3D output, though it could be
+  !! extended to plot a function on a 2D plane.
+  !! Writes real part unless write_real = false and called in complex version
+  subroutine out_xcrysden(write_real)
+    logical, intent(in) :: write_real
+
+    integer :: ix, iy, iz, idir2, my_n(3)
+    integer :: ixs, iys, izs, isx, isy, isz, my_n_s(3)
+    integer :: irep
+    FLOAT :: lattice_vectors(3,3)
+    type(cube_t) :: cube
+    type(cube_function_t), allocatable :: cf(:)
+    character(len=80) :: fname_ext
+
+    PUSH_SUB(X(io_function_output_global_supercell).out_xcrysden)
+
+#ifdef R_TCOMPLEX
+    if(write_real) then
+      fname_ext = trim(fname) // '.real'
+    else
+      fname_ext = trim(fname) // '.imag'
+    end if
+#else
+    fname_ext = trim(fname)
+#endif
+
+    if(mesh%sb%dim /= 3 .and. mesh%sb%dim /= 2) then
+      write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 2D or 3D.'
+      call messages_warning(1)
+      return
+    end if
+
+    ! put values in a nice cube
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    SAFE_ALLOCATE(cf(1:Nreplica))
+    do irep = 1, Nreplica
+      call cube_function_null(cf(irep))
+      call X(cube_function_alloc_RS) (cube, cf(irep))
+      call X(mesh_to_cube) (mesh, ff(:,irep), cube, cf(irep))
+    end do
+
+    ! Note that XCrySDen uses "general" not "periodic" grids
+    ! mesh%idx%ll is "general" in aperiodic directions,
+    ! but "periodic" in periodic directions.
+    ! Making this assignment, the output grid is entirely "general"
+    !
+    !Here we do not put the +1 for my_n
+    my_n(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim)
+    my_n(mesh%sb%periodic_dim + 1:mesh%sb%dim) = mesh%idx%ll(mesh%sb%periodic_dim + 1:mesh%sb%dim)
+    if(mesh%sb%dim == 2) my_n(3) = 1
+
+    my_n_s(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim)*supercell(1:mesh%sb%periodic_dim) +1
+    my_n_s(mesh%sb%periodic_dim + 1:mesh%sb%dim) = mesh%idx%ll(mesh%sb%periodic_dim + 1:mesh%sb%dim) &
+                    * supercell(mesh%sb%periodic_dim + 1:mesh%sb%dim)
+    if(mesh%sb%dim == 2) my_n_s(3) = 1
+
+    ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
+    do idir = 1, 3
+      do idir2 = 1, 3
+        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n_s(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
+      end do
+    end do
+    
+    iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write')
+
+    ASSERT(present(geo))
+    call write_xsf_geometry_supercell(iunit, geo, mesh, centers, supercell, extra_atom)
+
+    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
+    write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
+                            ', function = ', trim(units_abbrev(unit))
+    write(iunit, '(a,i1,a)') 'BEGIN_DATAGRID_', mesh%sb%dim, 'D_function'
+    write(iunit, '(3i7)') my_n_s(1:mesh%sb%dim)
+    write(iunit, '(a)') '0.0 0.0 0.0'
+
+    do idir = 1, mesh%sb%dim
+      write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
+        lattice_vectors(idir2, idir)), idir2 = 1, 3)
+    end do
+
+    do izs = 1, my_n_s(3)
+      do iys = 1, my_n_s(2)
+        do ixs = 1, my_n_s(1)
+
+          ! this is about "general" grids also
+          if (ixs == my_n_s(1)) then
+            ix = 1
+            isx = supercell(1)-1
+          else
+            ix = modulo (ixs-1, my_n(1)) + 1
+            isx = (ixs-ix)/my_n(1)
+          end if
+
+          if (iys == my_n_s(2)) then
+            iy = 1
+            isy = supercell(2)-1
+          else
+            iy = modulo (iys-1, my_n(2)) + 1
+            isy = (iys-iy)/my_n(2)
+          end if
+
+          if (izs == my_n_s(3)) then
+            iz = 1
+            isz = supercell(3)-1
+          else
+            iz = modulo (izs-1, my_n(3)) + 1
+            isz = (izs-iz)/my_n(3)
+          end if
+
+          irep = isx*supercell(2)*supercell(3) + isy*supercell(3) + isz + 1
+
+#ifdef R_TCOMPLEX
+          if(.not. write_real) then
+            write(iunit,'(1f25.15)') aimag(units_from_atomic(unit, cf(irep)%zRS(ix, iy, iz)))
+          else
+            write(iunit,'(1f25.15)') real(units_from_atomic(unit, cf(irep)%zRS(ix, iy, iz)), REAL_PRECISION)
+          end if
+#else
+          write(iunit,'(1f25.15)') units_from_atomic(unit, cf(irep)%dRS(ix, iy, iz))
+#endif
+        end do
+      end do
+    end do
+
+    write(iunit, '(a,i1,a)') 'END_DATAGRID_', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
+
+    call io_close(iunit)
+
+    do irep = 1, Nreplica
+      call X(cube_function_free_RS)(cube, cf(irep))
+    end do
+    call cube_end(cube)
+    SAFE_DEALLOCATE_A(cf)
+
+    POP_SUB(X(io_function_output_global_supercell).out_xcrysden)
+  end subroutine out_xcrysden
+
+end subroutine X(io_function_output_global_supercell)
 
 
 !! Local Variables:
