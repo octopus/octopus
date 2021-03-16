@@ -189,6 +189,7 @@
         
         call io_skip_header(iunit)
         call spectrum_count_time_steps(global_namespace, iunit, ntime, deltat)
+        deltat = units_to_atomic(units_out%time, deltat)
         ntime = ntime + 1
 
         call io_skip_header(iunit)
@@ -199,6 +200,10 @@
         
         do iter = 1, ntime
           read(iunit, *) read_iter, time(iter), (total_current(ii, iter), ii = 1, space%dim)
+          time(iter) = units_to_atomic(units_out%time, time(iter))
+          do ii = 1, space%dim
+            total_current(ii, iter) = units_to_atomic(units_out%length/units_out%time, total_current(ii, iter)) 
+          end do
         end do
         
         call io_close(iunit)
