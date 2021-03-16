@@ -564,7 +564,7 @@ contains
     if (global_point == 0) then
       part = partition%partno
     else
-      part = floor((partition%npart*global_point - 1)/TOFLOAT(partition%np_global)) + 1
+      part = floor((partition%npart*TOFLOAT(global_point) - 1)/TOFLOAT(partition%np_global)) + 1
     end if
   end function partition_get_number
   
