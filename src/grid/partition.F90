@@ -109,8 +109,8 @@ contains
 
     ! use block data decomposition
     do ipart = 1, partition%npart
-      partition%istart_vec(ipart) = floor((ipart-1) * np_global/TOFLOAT(partition%npart)) + 1
-      iend  = floor(ipart * np_global/TOFLOAT(partition%npart))
+      partition%istart_vec(ipart) = floor((ipart-1) * TOFLOAT(np_global)/partition%npart) + 1
+      iend  = floor(ipart * TOFLOAT(np_global)/partition%npart)
       partition%np_local_vec(ipart) = iend - partition%istart_vec(ipart) + 1
     end do
     partition%istart = partition%istart_vec(partition%partno)
@@ -564,7 +564,7 @@ contains
     if (global_point == 0) then
       part = partition%partno
     else
-      part = floor((partition%npart*global_point - 1)/TOFLOAT(partition%np_global)) + 1
+      part = floor((partition%npart*TOFLOAT(global_point) - 1)/TOFLOAT(partition%np_global)) + 1
     end if
   end function partition_get_number
   
