@@ -744,7 +744,7 @@ contains
     end do ! loop over points p
 
     do i = 1, nderiv
-      call nl_operator_update_weights(op(i))
+      call nl_operator_output_weights(op(i))
     end do
 
     SAFE_DEALLOCATE_A(mat)

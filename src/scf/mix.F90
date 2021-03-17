@@ -360,7 +360,7 @@ contains
         end do
       end do
       
-      call nl_operator_update_weights(smix%preconditioner)
+      call nl_operator_output_weights(smix%preconditioner)
 
     end subroutine init_preconditioner
 
