@@ -45,7 +45,7 @@ __kernel void dmesh_to_cube(const int nmap,
   const int count = map[5*imap + MCM_COUNT];
 
   for(int ii = 0; ii < count; ii++){
-    cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez] = mesh_function[ip + ii];
+    cube_function[(ix+ii)*stridex + iy*stridey + iz*stridez] = mesh_function[ip + ii];
   }
 
 }
@@ -72,7 +72,7 @@ __kernel void dcube_to_mesh(const int nmap,
   const int count = map[5*imap + MCM_COUNT];
 
   for(int ii = 0; ii < count; ii++){
-    mesh_function[ip + ii] = cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez];
+    mesh_function[ip + ii] = cube_function[(ix+ii)*stridex + iy*stridey + iz*stridez];
   }
 
 }

@@ -266,7 +266,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
       do ii = 0, nn - 1
-        cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+        cf%X(rs)(ix + ii, iy, iz) = gmf(ip + ii)
       end do
     end do
     !$omp end parallel do
@@ -356,7 +356,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
       do ii = 0, nn - 1
-        gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+        gmf(ip + ii) = cf%X(rs)(ix + ii, iy, iz)
       end do
     end do
     !$omp end parallel do
@@ -481,7 +481,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
           iz = mesh%cube_map%map(3, im) + cube%center(3)
           do ii = 0, nn - 1
             if (iz+ii >= min_z .and. iz+ii < max_z) then
-              cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(ip + ii)
+              cf%X(rs)(ix+ii-min_x+1, iy-min_y+1, iz-min_z+1) = mf(ip + ii)
             end if
           end do
         end if
@@ -558,7 +558,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
       ixyz(1:3) = mesh%cube_map%map(1:3, im) + cube%center(1:3)
 
       do ii = 0, nn - 1
-        mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+        mf(ip + ii) = gcf(ixyz(1)+ii, ixyz(2), ixyz(3))
       end do
     end do
 

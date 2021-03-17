@@ -70,7 +70,7 @@ contains
           i1 = 0
           call index_to_coords(idx, ip, i1(1:3))
 
-          if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
+          if(any(i1(2:3) /= i2(2:3)) .or. i1(1) /= i2(1) + 1) then
             this%nmap = this%nmap + 1
             if(step == 2) then
               call index_to_coords(idx, ip, this%map(1:, this%nmap))
