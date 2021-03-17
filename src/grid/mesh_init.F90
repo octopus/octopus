@@ -170,30 +170,17 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
 
-  integer :: il, ik, ix, iy, iz, is
-  integer :: ii, jj, kk
+  integer :: is
   FLOAT   :: chi(MAX_DIM)
-  integer :: nr(1:2, 1:MAX_DIM), res
-  logical, allocatable :: in_box(:)
-  FLOAT,   allocatable :: xx(:, :)
-  FLOAT  , parameter :: DELTA = CNST(1e-12)
-  integer :: start_z, end_z
-  type(profile_t), save :: prof
-#if defined(HAVE_MPI) && defined(HAVE_MPI2)
-  type(profile_t), save :: prof_reduce
-  integer :: npoints
-  integer, allocatable :: start(:), end(:)
-#endif
   integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM)
   integer(8) :: global_size, local_size, sizes(1:MAX_DIM)
   integer(8) :: ihilbert, ihilbertb, istart, iend, hilbert_size
-  integer :: ip, ip2, ib, ib2, np, np_part, np_boundary
+  integer :: ip, ip2, ib, ib2, np, np_boundary
   FLOAT :: pos(1:MAX_DIM)
   logical :: found
-  integer :: nblocks, iblock, irank, nduplicate
+  integer :: irank, nduplicate
   type(lihash_t) :: hilbert_to_grid, hilbert_to_boundary
   integer(8), allocatable :: boundary_to_hilbert(:), grid_to_hilbert(:), boundary_to_hilbert_global(:)
-  type(partition_t) :: partition
   integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
   integer, allocatable :: initial_sizes(:), initial_offsets(:), final_sizes(:), offsets(:)
 
@@ -422,27 +409,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   type(mesh_t),    optional, intent(in)    :: parent
 
   integer :: ip
-  type(mpi_grp_t) :: mpi_grp
-  integer, allocatable :: offsets(:), sizes(:), offsets_global(:)
-  integer :: rank_mesh, rank_global, irank
-  integer(8), allocatable :: grid_to_hilbert(:)
-  integer, allocatable :: recvcounts(:), rdispls(:), sendcounts(:), sdispls(:)
-  integer, allocatable :: requests(:), mesh_ranks(:)
-  integer :: irecv, isend, right_global, left_global, right_local, left_local, ireq
-  integer :: ib, ighost, iboundary, nghost, nboundary, point(MAX_DIM), point_stencil(MAX_DIM)
-  FLOAT :: pos(MAX_DIM), chi(MAX_DIM)
-  logical :: found
-  integer :: is
-  integer(8) :: ihilbert
-  integer(8), allocatable :: boundary_to_hilbert(:), ghost_to_hilbert(:), temp(:)
-  integer :: size_boundary, size_ghost
-  integer(8), allocatable :: hilbert_boundaries(:)
-  integer, allocatable :: ghost_sdispls(:), ghost_scounts(:), ghost_sindex(:)
-  integer, allocatable :: ghost_rdispls(:), ghost_rcounts(:), ghost_rindex(:)
-  integer(8), allocatable :: ghost_sendpos(:), ghost_recvpos(:)
-  integer :: size_send, size_recv
-  integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:)
-  type(lihash_t) :: hilbert_to_ghost
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -487,7 +453,7 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #ifdef HAVE_MPI
-    integer :: ii, jj, ipart, jpart, ip
+    integer :: jj, ipart, jpart, ip
     integer, allocatable :: gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
@@ -571,7 +537,7 @@ contains
 
       ! generate a table of neighbours
 
-      SAFE_ALLOCATE(nb(1:mpi_grp%size, 1:mpi_grp%size))
+      SAFE_ALLOCATE(nb(1:mesh%mpi_grp%size, 1:mesh%mpi_grp%size))
       nb = .false.
 
       do ip = 1, mesh%np_global
@@ -589,13 +555,13 @@ contains
 
       ! now generate the information of the graph 
 
-      SAFE_ALLOCATE(gindex(1:mpi_grp%size))
+      SAFE_ALLOCATE(gindex(1:mesh%mpi_grp%size))
       SAFE_ALLOCATE(gedges(1:count(nb)))
       
      ! and now generate it
       iedge = 0
-      do ipart = 1, mpi_grp%size
-        do jpart = 1, mpi_grp%size
+      do ipart = 1, mesh%mpi_grp%size
+        do jpart = 1, mesh%mpi_grp%size
           if(nb(ipart, jpart)) then
             iedge = iedge + 1
             gedges(iedge) = jpart - 1
@@ -607,7 +573,7 @@ contains
       ASSERT(iedge == count(nb))
 
       reorder = .true.
-      call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
+      call MPI_Graph_create(mesh%mpi_grp%comm, mesh%mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
 
       ! we have a new communicator
       call mpi_grp_init(mesh%mpi_grp, graph_comm)

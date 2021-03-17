@@ -141,8 +141,6 @@ contains
     integer,       intent(in)    :: ip
     integer,       intent(out)   :: ix(:)
 
-    integer :: idir 
-
     ! We set all ix to zero first (otherwise the non-existent dimensions would be 
     ! undefined on exit).
     ix = 0
@@ -198,7 +196,7 @@ contains
     type(namespace_t), intent(in)    :: namespace
     integer,           intent(out)   :: ierr
 
-    integer :: ip, idir, ix(MAX_DIM), err
+    integer :: ip, err
     logical :: exists
 
     PUSH_SUB(index_load)

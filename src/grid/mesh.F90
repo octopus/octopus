@@ -538,7 +538,7 @@ contains
     integer, allocatable, intent(out) :: map(:)
     integer,              intent(out) :: ierr
 
-    integer :: ipg, ipg_new, read_np_part, read_np, xx(MAX_DIM), err
+    integer :: ipg, ipg_new, read_np_part, read_np, err
     integer(8), allocatable :: read_indices(:)
     logical :: found
     
@@ -690,7 +690,6 @@ contains
 
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
-    logical :: force_
 
 ! no push_sub because function is called too frequently
 
