@@ -59,7 +59,7 @@ Precision: 8.00e-18
 match ;  Eigenvalue 100      ; GREPFIELD(static/info, '100   --', 3) ; -0.007996
 Precision: 5.66e-17
 match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.056648
-Precision: 1.65e-06
+Precision: 3.e-06
 match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.1152765
 
 Precision: 8.87e-18
