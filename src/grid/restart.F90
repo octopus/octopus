@@ -519,7 +519,7 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, &
+          call index_dump(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, &
             restart%namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write index map to '"//trim(restart%pwd)//"'."
