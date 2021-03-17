@@ -193,7 +193,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   
   sizes(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
   mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
-  if(any(sizes > 2**(63/int(sb%dim,8)))) then
+  if(sb%dim > 1 .and. any(sizes > 2**(63/int(sb%dim,8)))) then
     write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/int(sb%dim,8)), &
       " points in one direction for ", sb%dim, " dimensions. This is not supported."
     call messages_fatal(1)
