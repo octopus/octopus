@@ -205,14 +205,14 @@ contains
       end do
 
       SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
+      SAFE_ALLOCATE(points(1:nper_recv))
+      SAFE_ALLOCATE(points_local(1:nper_recv))
+      SAFE_ALLOCATE(part(1:nper_recv))
 
       if(mesh%parallel_in_domains) then
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
-        SAFE_ALLOCATE(points(1:nper_recv))
-        SAFE_ALLOCATE(points_local(1:nper_recv))
-        SAFE_ALLOCATE(part(1:nper_recv))
         this%nrecv = 0
       end if
 

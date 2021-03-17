@@ -30,6 +30,7 @@ ExperimentalFeatures = yes
 %KPointsGrid
  4 | 4 | 4
 %
+Preconditioner = pre_multigrid
 
 Output = geometry + dos
 OutputFormat = xyz
