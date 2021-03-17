@@ -667,12 +667,8 @@ contains
   FLOAT pure function mesh_global_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
     
-    memory = M_ZERO
-    
-    ! lxyz_inv
-    memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    ! lxyz
-    memory = memory + SIZEOF_UNSIGNED_INT * TOFLOAT(mesh%np_part_global) * MAX_DIM
+    ! 2 global index arrays
+    memory = memory + SIZEOF_UNSIGNED_LONG_LONG * TOFLOAT(mesh%np_part_global) * 2
 
   end function mesh_global_memory
 
@@ -685,6 +681,8 @@ contains
     
     ! x
     memory = memory + REAL_PRECISION * TOFLOAT(mesh%np_part) * MAX_DIM
+    ! local index arrays
+    memory = memory + SIZEOF_UNSIGNED_LONG_LONG * TOFLOAT(mesh%np_part) * 2
   end function mesh_local_memory
 
 
