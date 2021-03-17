@@ -43,27 +43,27 @@ module io_binary_oct_m
     iwrite_header
 
   interface io_binary_write
-    module procedure dwrite_binary, zwrite_binary, iwrite_binary
-    module procedure iwrite_binary2, dwrite_binary2, zwrite_binary2
-    module procedure zwrite_binary3, dwrite_binary3, iwrite_binary3
-    module procedure zwrite_binary4, dwrite_binary4, iwrite_binary4
-    module procedure zwrite_binary5, dwrite_binary5, iwrite_binary5
+    module procedure dwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
+    module procedure zwrite_binary2, dwrite_binary2, iwrite_binary2, lwrite_binary2
+    module procedure zwrite_binary3, dwrite_binary3, iwrite_binary3, lwrite_binary3
+    module procedure zwrite_binary4, dwrite_binary4, iwrite_binary4, lwrite_binary4
+    module procedure zwrite_binary5, dwrite_binary5, iwrite_binary5, lwrite_binary5
   end interface io_binary_write
   
   interface io_binary_write_parallel
-    module procedure dwrite_parallel, zwrite_parallel, iwrite_parallel
+    module procedure dwrite_parallel, zwrite_parallel, iwrite_parallel, lwrite_parallel
   end interface io_binary_write_parallel
 
   interface io_binary_read
-    module procedure dread_binary, zread_binary, iread_binary
-    module procedure iread_binary2, zread_binary2, dread_binary2
-    module procedure zread_binary3, iread_binary3, dread_binary3
-    module procedure zread_binary4, iread_binary4, dread_binary4
-    module procedure zread_binary5, iread_binary5, dread_binary5
+    module procedure dread_binary, zread_binary, iread_binary, lread_binary
+    module procedure zread_binary2, dread_binary2, iread_binary2, lread_binary2
+    module procedure zread_binary3, dread_binary3, iread_binary3, lread_binary3
+    module procedure zread_binary4, dread_binary4, iread_binary4, lread_binary4
+    module procedure zread_binary5, dread_binary5, iread_binary5, lread_binary5
   end interface io_binary_read
 
   interface io_binary_read_parallel
-    module procedure dread_parallel, zread_parallel, iread_parallel
+    module procedure dread_parallel, zread_parallel, iread_parallel, lread_parallel
   end interface io_binary_read_parallel
 
   interface
@@ -289,6 +289,11 @@ contains
 #include "undef.F90"
 
 #include "integer.F90"
+#include "io_binary_f_inc.F90"
+
+#include "undef.F90"
+
+#include "integer8.F90"
 #include "io_binary_f_inc.F90"
 
 end module io_binary_oct_m
