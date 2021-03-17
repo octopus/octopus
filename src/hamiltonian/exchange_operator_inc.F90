@@ -260,23 +260,39 @@ subroutine X(exchange_operator_apply_ACE)(this, mesh, st_d, psib, hpsib)
     ASSERT(psib%is_packed() .eqv. hpsib%is_packed())
   end if
 
-  SAFE_ALLOCATE(psi(1:mesh%np, 1:st_d%dim))
-  SAFE_ALLOCATE(hpsi(1:mesh%np, 1:st_d%dim))
+  select case(psib%status())
+  case(BATCH_DEVICE_PACKED, BATCH_PACKED)
 
-  do ibatch = 1, psib%nst
-    call batch_get_state(psib, ibatch, mesh%np, psi)
-    call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st_d%dim))
+    SAFE_ALLOCATE(hpsi(1:mesh%np, 1:st_d%dim))
 
-    do ist = 1, this%ace%nst
-      dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
-      call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
+    do ibatch = 1, psib%nst
+      call batch_get_state(psib, ibatch, mesh%np, psi)
+      call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
+
+      do ist = 1, this%ace%nst
+        dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
+        call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
+      end do
+
+      call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
     end do
 
-    call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
-  end do
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
 
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
+  case(BATCH_NOT_PACKED)
+
+    do ibatch = 1, psib%nst
+      do ist = 1, this%ace%nst
+        dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:,:,ist,psib%ik), psib%X(ff)(1:mesh%np, 1:st_d%dim, ibatch))
+        call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:,:, ist,psib%ik), hpsib%X(ff)(1:mesh%np, 1:st_d%dim, ibatch))
+      end do
+    end do
+
+  end select
+
+
  
   call profiling_out(prof)
 
