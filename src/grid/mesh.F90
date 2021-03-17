@@ -444,12 +444,10 @@ contains
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
-        if(mesh%sb%box_shape /= HYPERCUBE) then
-          write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
-          write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
-          write(iunit, '(a20,i21)')  'algorithm=          ', 1
-          write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
-        end if
+        write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
+        write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
+        write(iunit, '(a20,i21)')  'algorithm=          ', 1
+        write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
