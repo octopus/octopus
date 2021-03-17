@@ -24,6 +24,7 @@ module mesh_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
+  use iihash_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
@@ -537,14 +538,13 @@ contains
     integer, allocatable, intent(out) :: map(:)
     integer,              intent(out) :: ierr
 
-    integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
-    integer, allocatable :: read_lxyz(:,:)
+    integer :: ipg, ipg_new, read_np_part, read_np, xx(MAX_DIM), err
+    integer(8), allocatable :: read_indices(:)
+    logical :: found
     
     PUSH_SUB(mesh_check_dump_compatibility)
 
     ierr = 0
-    POP_SUB(mesh_check_dump_compatibility)
-    return
 
     grid_changed = .false.
     grid_reordered = .false.
@@ -561,7 +561,7 @@ contains
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
         ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
         ierr = ierr + 2
-      else if (mesh%sb%box_shape /= HYPERCUBE) then
+      else
 
         grid_changed = .true.
 
@@ -571,8 +571,9 @@ contains
         grid_reordered = (read_np == mesh%np_global)
 
         ! the grid is different, so we read the coordinates.
-        SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
-        call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        SAFE_ALLOCATE(read_indices(1:read_np_part))
+        call io_binary_read(trim(io_workpath(dir, namespace))//"/indices.obf", read_np_part, &
+          read_indices, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."
@@ -581,21 +582,19 @@ contains
           ! generate the map
           SAFE_ALLOCATE(map(1:read_np))
 
-          do ip = 1, read_np
-            xx = 0
-            xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
-            if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
-                 any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
-              map(ip) = 0
+          do ipg = 1, read_np
+            ipg_new = lihash_lookup(mesh%idx%hilbert_to_grid_global, read_indices(ipg), found)
+            if(.not. found) then
+              map(ipg) = 0
               grid_reordered = .false.
             else
-              map(ip) = mesh_global_index_from_coords(mesh, [xx(1), xx(2), xx(3)])
-              if(map(ip) > mesh%np_global) map(ip) = 0
+              map(ipg) = ipg_new
+              if(map(ipg) > mesh%np_global) map(ipg) = 0
             end if
           end do
         end if
 
-        SAFE_DEALLOCATE_A(read_lxyz)
+        SAFE_DEALLOCATE_A(read_indices)
       end if
     end if
 
