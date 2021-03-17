@@ -13,7 +13,6 @@ Precision : 7.0e-6
 # First start a ground state calculation that uses the mixing of the density
 Input: 34-walltime.01-gs_walltime.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Walltimer ; GREPCOUNT(out, 'Walltimer stopping execution') ; 1
 match ; Writing States ; GREPCOUNT(out, 'Finished writing states') ; 1
 
 # Now restart the previous calculation reading the states, the density, and the mixing
@@ -24,7 +23,6 @@ match ; Initial energy ; GREPFIELD(workdir/static/info, 'Total       =', 3) ; -3
 
 # Now start a TD propagation
 Input: 34-walltime.03-td_walltime.inp
-match ; Walltimer ; GREPCOUNT(out, 'Walltimer stopping execution') ; 1
 match ; Writing States ; GREPCOUNT(out, 'Finished writing states') ; 1
 
 # Finally restart the time propagation after being stopped
