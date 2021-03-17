@@ -401,9 +401,11 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
 
   SAFE_DEALLOCATE_A(offsets)
   SAFE_DEALLOCATE_A(final_sizes)
-
+  SAFE_DEALLOCATE_A(initial_offsets)
+  SAFE_DEALLOCATE_A(initial_sizes)
 
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
+  SAFE_DEALLOCATE_A(boundary_to_hilbert_global)
   call lihash_end(hilbert_to_grid)
 
   call profiling_out(mesh_init_prof)
