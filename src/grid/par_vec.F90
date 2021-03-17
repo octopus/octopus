@@ -494,10 +494,13 @@ contains
           ! DOI: 10.1007/978-3-319-56702-0_1
           ! tool: https://rrze-hpc.github.io/layer-condition
           if (conf%target_states_block_size < 32) then
-            bsize = (/ 56, 56, 1 /) / conf%target_states_block_size
+            bsize = (/ 56, 56, 1 /) / abs(conf%target_states_block_size)
           else
             bsize = (/ 10, 2, 1 /)
           end if
+
+          ! no blocking in z direction
+          bsize(3) = idx%ll(3)
 
           if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
             nn = parse_block_cols(blk, 0)
@@ -505,16 +508,13 @@ contains
               call parse_block_integer(blk, 0, idir - 1, bsize(idir))
             end do
           end if
-
-          ! no blocking in z direction
-          bsize(3) = idx%ll(3)
         end if
 
         SAFE_ALLOCATE(reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
         ip = vp%xlocal
         do izb = idx%nr(1,3)+idx%enlarge(3), idx%nr(2,3)-idx%enlarge(3), bsize(3)
-          do iyb = idx%nr(1,2)-idx%enlarge(2), idx%nr(2,2)-idx%enlarge(2), bsize(2)
-            do ixb = idx%nr(1,1)-idx%enlarge(1), idx%nr(2,1)-idx%enlarge(1), bsize(1)
+          do iyb = idx%nr(1,2)+idx%enlarge(2), idx%nr(2,2)-idx%enlarge(2), bsize(2)
+            do ixb = idx%nr(1,1)+idx%enlarge(1), idx%nr(2,1)-idx%enlarge(1), bsize(1)
 
               do iz = izb, min(izb + bsize(3) - 1, idx%nr(2,3)-idx%enlarge(3))
                 do iy = iyb, min(iyb + bsize(2) - 1, idx%nr(2,2)-idx%enlarge(2))
