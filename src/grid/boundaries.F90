@@ -30,7 +30,6 @@ module boundaries_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m

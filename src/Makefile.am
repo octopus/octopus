@@ -301,7 +301,6 @@ grid_f_srcs =                                 \
 	grid/mesh_partition.F90               \
 	grid/modelmb_1part.F90                \
 	grid/multigrid.F90                    \
-	grid/multiresolution.F90              \
 	grid/nl_operator.F90                  \
 	grid/operate_f.F90                    \
 	grid/partition.F90                    \
