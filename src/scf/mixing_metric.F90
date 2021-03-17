@@ -104,7 +104,7 @@ contains
 
     end do
     
-    call nl_operator_update_weights(op)
+    call nl_operator_output_weights(op)
 
     POP_SUB(mixing_metric_init)
   end subroutine mixing_metric_init

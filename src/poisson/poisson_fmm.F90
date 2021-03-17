@@ -266,7 +266,7 @@ contains
       this%corrector%w_re(is, 1) = this%corrector%w_re(is, 1)*der%mesh%spacing(1)*der%mesh%spacing(2)
     end do
 
-    call nl_operator_update_weights(this%corrector)
+    call nl_operator_output_weights(this%corrector)
     POP_SUB(poisson_fmm_init)
 #endif
   end subroutine poisson_fmm_init

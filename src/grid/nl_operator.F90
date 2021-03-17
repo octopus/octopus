@@ -62,7 +62,7 @@ module nl_operator_oct_m
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
     nl_operator_get_index,      &
-    nl_operator_update_weights, &
+    nl_operator_output_weights, &
     nl_operator_np_zero_bc,         &
     nl_operator_compact_boundaries
 
@@ -624,12 +624,12 @@ contains
   end subroutine nl_operator_build
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_update_weights(this)
+  subroutine nl_operator_output_weights(this)
     type(nl_operator_t), intent(inout)  :: this
 
     integer :: istencil, idir
 
-    PUSH_SUB(nl_operator_update_weights)
+    PUSH_SUB(nl_operator_output_weights)
 
     if(debug%info) then
 
@@ -647,9 +647,9 @@ contains
       
     end if
 
-    POP_SUB(nl_operator_update_weights)
+    POP_SUB(nl_operator_output_weights)
 
-  end subroutine nl_operator_update_weights
+  end subroutine nl_operator_output_weights
 
   ! ---------------------------------------------------------
   !> opt has to be initialised and built.

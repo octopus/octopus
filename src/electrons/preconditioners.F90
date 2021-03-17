@@ -176,10 +176,10 @@ contains
       !We change the weights to be the one of the kinetic energy operator
       this%op%w = -M_HALF * this%op%w
       
-      SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
+      SAFE_ALLOCATE(this%diag_lapl(1:this%op%np))
       call dnl_operator_operate_diag(this%op, this%diag_lapl)
 
-      do ip = 1,maxp
+      do ip = 1, maxp
 
         if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
@@ -198,14 +198,17 @@ contains
             this%op%w(is, ip) = this%op%w(is, ip) + M_TWO
           end if
           this%op%w(is, ip) = this%op%w(is, ip) * omega / this%diag_lapl(ip)
-          ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+         
+          if(gr%mesh%use_curvilinear) then
+            ip2 = ip + this%op%ri(is, this%op%rimap(ip))
+            this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+          end if
         end do
       end do
 
       SAFE_DEALLOCATE_A(this%diag_lapl)
 
-      call nl_operator_update_weights(this%op)
+      call nl_operator_output_weights(this%op)
 
     case(PRE_JACOBI, PRE_MULTIGRID)
       SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
