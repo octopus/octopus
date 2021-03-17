@@ -572,7 +572,6 @@ contains
 
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
-        ASSERT(allocated(mesh%idx%lxyz))
         call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
@@ -612,8 +611,6 @@ contains
 
     call mesh_cube_map_end(this%cube_map)
 
-    SAFE_DEALLOCATE_A(this%idx%lxyz)
-    SAFE_DEALLOCATE_A(this%idx%lxyz_inv)
     SAFE_DEALLOCATE_A(this%x)
     SAFE_DEALLOCATE_A(this%vol_pp)
 

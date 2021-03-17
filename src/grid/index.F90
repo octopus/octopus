@@ -46,8 +46,6 @@ module index_oct_m
     integer              :: dim              !< the dimension
     integer              :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
     integer              :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
-    integer, allocatable :: lxyz(:,:)        !< return x, y and z for each point
-    integer, allocatable :: lxyz_inv(:,:,:)  !< return points # for each xyz
     integer              :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)           :: checksum
     integer(8), allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
@@ -128,7 +126,6 @@ contains
       do idir = 1, idx%dim
         ix2(idir) = ix(idir, ip)
       end do
-      !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
       index(ip) = lihash_lookup(idx%hilbert_to_grid_global, ihilbert, found)
       if(.not. found) index(ip) = 0
