@@ -287,9 +287,13 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ASSERT(sum(rcounts) == final_sizes(mpi_world%rank))
 
   SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:final_sizes(mpi_world%rank)))
+#ifdef HAVE_MPI
   call MPI_Alltoallv(grid_to_hilbert(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
                      mesh%idx%grid_to_hilbert(1), rcounts(0), rdispls(0), MPI_LONG_LONG, &
                      mpi_world%comm, mpi_err)
+#else
+  mesh%idx%grid_to_hilbert(1:np) = grid_to_hilbert(1:np)
+#endif
 
   SAFE_DEALLOCATE_A(grid_to_hilbert)
 
@@ -332,8 +336,12 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   np_boundary = ib - 1
   mesh%np_part = mesh%np + np_boundary
 
+#ifdef HAVE_MPI
   ! get global boundary indices
   call MPI_Allgather(np_boundary, 1, MPI_INTEGER, initial_sizes(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+  initial_sizes(0) = np_boundary
+#endif
   initial_offsets(0) = 0
   do irank = 1, mpi_world%size
     initial_offsets(irank) = initial_offsets(irank-1) + initial_sizes(irank-1)
@@ -341,9 +349,13 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
 
   ! boundary
   SAFE_ALLOCATE(boundary_to_hilbert_global(1:sum(initial_sizes)))
+#ifdef HAVE_MPI
   call MPI_Allgatherv(boundary_to_hilbert(1), np_boundary, MPI_LONG_LONG, &
     boundary_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
     mpi_world%comm, mpi_err)
+#else
+  boundary_to_hilbert_global(1:sum(initial_sizes)) = boundary_to_hilbert(1:sum(initial_sizes))
+#endif
 
   ! sort boundary
   call sort(boundary_to_hilbert_global)
@@ -360,9 +372,13 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ! get global indices
   ! inner grid
   SAFE_ALLOCATE(mesh%idx%grid_to_hilbert_global(1:mesh%np_part_global))
+#ifdef HAVE_MPI
   call MPI_Allgatherv(mesh%idx%grid_to_hilbert(1), mesh%np, MPI_LONG_LONG, &
     mesh%idx%grid_to_hilbert_global(1), final_sizes(0), offsets(0), MPI_LONG_LONG, &
     mpi_world%comm, mpi_err)
+#else
+  mesh%idx%grid_to_hilbert_global(1:mesh%np) = mesh%idx%grid_to_hilbert(1:mesh%np)
+#endif
 
   ! add unique boundary indices
   ip2 = mesh%np_global + 1
