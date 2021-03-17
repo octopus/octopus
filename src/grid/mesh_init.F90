@@ -267,7 +267,6 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   do irank = 0, mpi_world%size - 1
     final_sizes(irank) = offsets(irank + 1) - offsets(irank)
   end do
-  print*,final_sizes
 
   SAFE_ALLOCATE(scounts(0:mpi_world%size-1))
   SAFE_ALLOCATE(sdispls(0:mpi_world%size-1))
