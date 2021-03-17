@@ -1489,19 +1489,18 @@ contains
       
       PUSH_SUB(em_resp_output.out_magnetooptics)
       
+      ! This code assumes 3D
+      ASSERT(space%dim == 3)
+
       diff(:) = M_ZERO
-      epsilon_m(:) = M_ZERO
-      do idir = 1, gr%sb%dim 
+      do idir = 1, space%dim
         diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
           em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir))
-
-        epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%latt%rcell_volume
       end do
-      diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
-      epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%latt%rcell_volume
-  
+      diff(4) = (diff(1) + diff(2) + diff(3)) / M_THREE
+
       iunit = io_open(trim(dirname)//'/alpha_mo', namespace, action='write')
-  
+
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
       write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
@@ -1523,51 +1522,14 @@ contains
       end do
       write(iunit, *)
 
-      write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
-      do idir = 1, gr%sb%dim + 1
-        write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
-      end do
-      write(iunit, *)
+      if (space%is_periodic()) then
+        ! This code assumes 3D periodic
+        ASSERT(space%periodic_dim == 3)
 
-      write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
-      do idir = 1, gr%sb%dim + 1
-        write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
-      end do
-      write(iunit, *)
-
-      if(em_vars%lrc_kernel) then
-        write(iunit, '(a)')   
-        write(iunit, '(a)') '# Without the G = G'' = 0 term of the LRC kernel'
-      
-        diff(:) = M_ZERO
-        epsilon_m(:) = M_ZERO
-        do idir = 1, gr%sb%dim 
-          diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
-            em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
-
+        do idir = 1, space%dim
           epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%latt%rcell_volume
         end do
-        diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
         epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%latt%rcell_volume
-
-        write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
-        write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
-        write(iunit, '(a20)', advance = 'no') str_center("   zx,y = -xz,y", 20)
-        write(iunit, '(a20)', advance = 'no') str_center("   xy,z = -yx,z", 20)
-        write(iunit, '(a20)', advance = 'no') str_center(" Average", 20)
-        write(iunit, *)
- 
-        write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
-        do idir = 1, gr%sb%dim + 1 
-          write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
-        end do
-        write(iunit, *)
-
-        write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
-        do idir = 1, gr%sb%dim + 1
-          write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
-        end do
-        write(iunit, *)
 
         write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
         do idir = 1, gr%sb%dim + 1
@@ -1580,10 +1542,57 @@ contains
           write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
         end do
         write(iunit, *)
-      end if      
+
+        if (em_vars%lrc_kernel) then
+          write(iunit, '(a)')
+          write(iunit, '(a)') '# Without the G = G'' = 0 term of the LRC kernel'
+
+          diff(:) = M_ZERO
+          epsilon_m(:) = M_ZERO
+          do idir = 1, space%dim
+            diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
+              em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
+
+            epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%latt%rcell_volume
+          end do
+          diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
+          epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%latt%rcell_volume
+
+          write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
+          write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
+          write(iunit, '(a20)', advance = 'no') str_center("   zx,y = -xz,y", 20)
+          write(iunit, '(a20)', advance = 'no') str_center("   xy,z = -yx,z", 20)
+          write(iunit, '(a20)', advance = 'no') str_center(" Average", 20)
+          write(iunit, *)
+
+          write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
+          do idir = 1, gr%sb%dim + 1
+            write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
+          end do
+          write(iunit, *)
+
+          write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
+          do idir = 1, gr%sb%dim + 1
+            write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
+          end do
+          write(iunit, *)
+
+          write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
+          do idir = 1, gr%sb%dim + 1
+            write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
+          end do
+          write(iunit, *)
+
+          write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
+          do idir = 1, gr%sb%dim + 1
+            write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
+          end do
+          write(iunit, *)
+        end if
+      end if
       call io_close(iunit)
 
-      if(em_vars%kpt_output) then
+      if (space%is_periodic() .and. em_vars%kpt_output) then
 	iunit = io_open(trim(dirname)//'/epsilon_mo_k', namespace, action='write')
 
         write(iunit, '(a)') '# Contribution to dielectric tensor for B = 1 a.u.'
@@ -1619,9 +1628,9 @@ contains
           end do
           write(iunit, *)
         end do
-	call io_close(iunit)
+        call io_close(iunit)
       end if
-      
+
       POP_SUB(em_resp_output.out_magnetooptics)
     end subroutine out_magnetooptics
 
