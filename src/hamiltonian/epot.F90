@@ -389,9 +389,8 @@ contains
     ep%vpsl = M_ZERO
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%latt%rcell_volume, &
-              geo%atom, geo%natoms, geo%catom, geo%ncatoms, sb%lsize, &
-              ep%eii, ep%fii)
+    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, geo%atom, geo%natoms, geo%catom, geo%ncatoms, &
+      sb%lsize, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
