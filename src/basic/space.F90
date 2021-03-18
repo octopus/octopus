@@ -50,7 +50,7 @@ contains
 
     integer, parameter :: default_ndim = 3
 
-    PUSH_SUB(space_init_simple)
+    PUSH_SUB(space_init)
     
     !%Variable Dimensions
     !%Type integer
@@ -86,7 +86,7 @@ contains
       call messages_input_error(namespace, 'PeriodicDimensions')
     end if
 
-    POP_SUB(space_init_simple)
+    POP_SUB(space_init)
   end subroutine space_init
 
   !--------------------------------------------------------------
