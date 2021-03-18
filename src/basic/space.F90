@@ -39,6 +39,7 @@ module space_oct_m
 
   contains
     procedure :: is_periodic => space_is_periodic
+    procedure :: write_info => space_write_info
   end type space_t
 
 contains
@@ -97,6 +98,23 @@ contains
 
   end function space_is_periodic
 
+  !--------------------------------------------------------------
+  subroutine space_write_info(this, iunit)
+    class(space_t), intent(in) :: this
+    integer,        intent(in) :: iunit
+
+    PUSH_SUB(space_write_info)
+
+    call messages_print_stress(iunit, "Space")
+
+    write(message(1), '(a,i1,a)') 'Octopus will run in ', this%dim, ' dimension(s).'
+    write(message(2), '(a,i1,a)') 'Octopus will treat the system as periodic in ', this%periodic_dim, ' dimension(s).'
+    call messages_info(2, iunit)
+
+    call messages_print_stress(iunit)
+
+    POP_SUB(space_write_info)
+  end subroutine space_write_info
 
 end module space_oct_m
 

@@ -624,10 +624,6 @@ contains
       call this%box%write_info(iunit)
     end select
 
-    write(message(1), '(a,i1,a)') '  Octopus will run in ', this%dim, ' dimension(s).'
-    write(message(2), '(a,i1,a)') '  Octopus will treat the system as periodic in ', &
-      this%periodic_dim, ' dimension(s).'
-    call messages_info(2, iunit)
 
     if (this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
       write(message(1),'(1x)')

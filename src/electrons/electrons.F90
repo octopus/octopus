@@ -132,6 +132,7 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
+    call sys%space%write_info(stdout)
     if(sys%space%periodic_dim > 0 .and. sys%space%periodic_dim < sys%space%dim) then
       call messages_experimental('Support for mixed periodicity systems')
     end if
