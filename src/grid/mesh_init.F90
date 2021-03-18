@@ -180,7 +180,8 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   logical :: found
   integer :: irank, nduplicate
   type(lihash_t) :: hilbert_to_grid, hilbert_to_boundary
-  integer(8), allocatable :: boundary_to_hilbert(:), grid_to_hilbert(:), boundary_to_hilbert_global(:)
+  integer(8), allocatable :: boundary_to_hilbert(:), boundary_to_hilbert_global(:)
+  integer(8), allocatable :: grid_to_hilbert(:), grid_to_hilbert_initial(:)
   integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
   integer, allocatable :: initial_sizes(:), initial_offsets(:), final_sizes(:), offsets(:)
 
@@ -202,8 +203,6 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ! compute the bits per dimension: sizes(i) <= 2**bits
   mesh%idx%bits = maxval(ceiling(log(TOFLOAT(sizes))/log(2.)))
 
-  call lihash_init(mesh%idx%hilbert_to_grid)
-
   hilbert_size = 2**(sb%dim*mesh%idx%bits)
 
   ! use block data decomposition of hilbert indices
@@ -212,7 +211,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   local_size = iend - istart + 1
 
   call lihash_init(hilbert_to_grid)
-  SAFE_ALLOCATE(grid_to_hilbert(1:local_size))
+  SAFE_ALLOCATE(grid_to_hilbert_initial(1:local_size))
 
   ! get grid indices
   ip = 1
@@ -225,7 +224,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
     chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
     if(.not. sb%contains_point(pos)) cycle
-    grid_to_hilbert(ip) = ihilbert
+    grid_to_hilbert_initial(ip) = ihilbert
     call lihash_insert(hilbert_to_grid, ihilbert, ip)
     ip = ip + 1
   end do
@@ -286,16 +285,16 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   end do
   ASSERT(sum(rcounts) == final_sizes(mpi_world%rank))
 
-  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:final_sizes(mpi_world%rank)))
+  SAFE_ALLOCATE(grid_to_hilbert(1:final_sizes(mpi_world%rank)))
 #ifdef HAVE_MPI
-  call MPI_Alltoallv(grid_to_hilbert(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
-                     mesh%idx%grid_to_hilbert(1), rcounts(0), rdispls(0), MPI_LONG_LONG, &
+  call MPI_Alltoallv(grid_to_hilbert_initial(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
+                     grid_to_hilbert(1), rcounts(0), rdispls(0), MPI_LONG_LONG, &
                      mpi_world%comm, mpi_err)
 #else
-  mesh%idx%grid_to_hilbert(1:np) = grid_to_hilbert(1:np)
+  grid_to_hilbert(1:np) = grid_to_hilbert_initial(1:np)
 #endif
 
-  SAFE_DEALLOCATE_A(grid_to_hilbert)
+  SAFE_DEALLOCATE_A(grid_to_hilbert_initial)
 
   SAFE_DEALLOCATE_A(scounts)
   SAFE_DEALLOCATE_A(sdispls)
@@ -311,7 +310,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   SAFE_ALLOCATE(boundary_to_hilbert(1:mesh%np*(stencil%size - 1)))
   ib = 1
   do ip = 1, mesh%np
-    call index_hilbert_to_point(mesh%idx, sb%dim, mesh%idx%grid_to_hilbert(ip), point)
+    call index_hilbert_to_point(mesh%idx, sb%dim, grid_to_hilbert(ip), point)
     do is = 1, stencil%size
       if(stencil%center == is) cycle
       point_stencil(1:mesh%sb%dim) = point(1:mesh%sb%dim) + stencil%points(1:mesh%sb%dim, is)
@@ -373,11 +372,11 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ! inner grid
   SAFE_ALLOCATE(mesh%idx%grid_to_hilbert_global(1:mesh%np_part_global))
 #ifdef HAVE_MPI
-  call MPI_Allgatherv(mesh%idx%grid_to_hilbert(1), mesh%np, MPI_LONG_LONG, &
+  call MPI_Allgatherv(grid_to_hilbert(1), mesh%np, MPI_LONG_LONG, &
     mesh%idx%grid_to_hilbert_global(1), final_sizes(0), offsets(0), MPI_LONG_LONG, &
     mpi_world%comm, mpi_err)
 #else
-  mesh%idx%grid_to_hilbert_global(1:mesh%np) = mesh%idx%grid_to_hilbert(1:mesh%np)
+  mesh%idx%grid_to_hilbert_global(1:mesh%np) = grid_to_hilbert(1:mesh%np)
 #endif
 
   ! add unique boundary indices
@@ -407,6 +406,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
   SAFE_DEALLOCATE_A(boundary_to_hilbert_global)
   call lihash_end(hilbert_to_grid)
+  SAFE_DEALLOCATE_A(grid_to_hilbert)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)

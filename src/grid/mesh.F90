@@ -608,6 +608,9 @@ contains
 
     call mesh_cube_map_end(this%cube_map)
 
+    SAFE_DEALLOCATE_A(this%idx%grid_to_hilbert_global)
+    call lihash_end(this%idx%hilbert_to_grid_global)
+
     SAFE_DEALLOCATE_A(this%x)
     SAFE_DEALLOCATE_A(this%vol_pp)
 

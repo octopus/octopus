@@ -48,8 +48,6 @@ module index_oct_m
     integer              :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
     integer              :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)           :: checksum
-    integer(8), allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
-    type(lihash_t)       :: hilbert_to_grid    !< inverse map: Hilbert index -> local grid index
     integer(8), allocatable :: grid_to_hilbert_global(:) !< map: global grid index -> Hilbert index
     type(lihash_t)       :: hilbert_to_grid_global       !< inverse map: Hilbert index -> global grid index
     integer              :: bits               !< bits per dimension for Hilbert index
@@ -228,7 +226,7 @@ contains
     ! Broadcast the results and synchronize
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
     if (ierr == 0) then
-      call MPI_Bcast(idx%grid_to_hilbert(1), np, MPI_LONG_LONG, 0, mpi_grp%comm, mpi_err)
+      call MPI_Bcast(idx%grid_to_hilbert_global(1), np, MPI_LONG_LONG, 0, mpi_grp%comm, mpi_err)
     end if
 #endif
 
