@@ -130,8 +130,7 @@ contains
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
   subroutine ion_interaction_calculate(this, space, latt, rcell_volume, &
-       atom, natoms, catom, ncatoms, lsize, ignore_external_ions, energy, &
-      force, energy_components, force_components, in_box)
+       atom, natoms, catom, ncatoms, lsize, energy, force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
@@ -141,12 +140,10 @@ contains
     type(atom_classical_t),   intent(in)    :: catom(:)
     integer,                  intent(in)    :: ncatoms
     FLOAT,                    intent(in)    :: lsize(:)
-    logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,                    intent(out)   :: force(:, :)
     FLOAT, optional,          intent(out)   :: energy_components(:)
     FLOAT, optional,          intent(out)   :: force_components(:, :, :)
-    logical, optional,        intent(in)    :: in_box(:)
     
     FLOAT, allocatable:: r(:), f(:)
     FLOAT :: rr, dd, zi, zj
@@ -191,16 +188,8 @@ contains
       
       natom = natoms + ncatoms
 
-      if(ignore_external_ions) then
-        ASSERT(present(in_box))
-      end if
-      
       ! only interaction inside the cell
       do iatom = this%dist%start, this%dist%end
-        if(ignore_external_ions) then
-          if(.not. in_box(iatom)) cycle
-        end if
-        
         spci => atom(iatom)%species
         zi = species_zval(spci)
 
@@ -215,10 +204,6 @@ contains
         end select
         
         do jatom = iatom + 1, natoms
-
-          if(ignore_external_ions) then
-            if(.not. in_box(jatom)) cycle
-          end if
           
           spcj => atom(jatom)%species
 
@@ -242,13 +227,7 @@ contains
 
       do iatom = this%dist%start, this%dist%end
 
-        if(ignore_external_ions) then
-          if(.not. in_box(iatom)) cycle
-        end if
-        
         do jatom = 1, ncatoms
-          if(ignore_external_ions .and. .not. in_box(natoms + jatom)) cycle
-          
           r(1:space%dim) = atom(iatom)%x(1:space%dim) - catom(jatom)%x(1:space%dim)
           rr = sqrt(sum(r**2))
 
@@ -723,7 +702,7 @@ contains
     SAFE_ALLOCATE(force_components(1:space%dim, 1:natoms, ION_NUM_COMPONENTS))
     
     call ion_interaction_calculate(ion_interaction, space, latt, rcell_volume, &
-       atom, natoms, catom, ncatoms, lsize, .false., energy, force, &
+       atom, natoms, catom, ncatoms, lsize, energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')

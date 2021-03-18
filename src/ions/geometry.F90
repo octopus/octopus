@@ -97,7 +97,6 @@ module geometry_oct_m
     !> variables for passing info from XSF input to simul_box_init
     FLOAT :: lsize(MAX_DIM)
 
-    logical                 :: ignore_external_ions
     logical                 :: force_total_enforce
     type(ion_interaction_t) :: ion_interaction
   
@@ -131,24 +130,6 @@ contains
     call distributed_nullify(geo%atoms_dist, geo%natoms)
 
     call ion_interaction_init(geo%ion_interaction, namespace, geo%space, geo%natoms)
-
-    !%Variable IgnoreExternalIons
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% If this variable is set to "yes", then the ions that are outside the simulation box do not feel   any
-    !% external force (and therefore progress at constant velocity), and do not originate any force on   other
-    !% ions, or any potential on the electronic system.
-    !%
-    !% This feature is only available for finite systems; if the system is periodic in any dimension, 
-    !% this variable cannot be set to "yes".
-    !%End
-    call parse_variable(namespace, 'IgnoreExternalIons', .false., geo%ignore_external_ions)
-    if(geo%ignore_external_ions) then
-      if(geo%space%periodic_dim > 0) call messages_input_error(namespace, 'IgnoreExternalIons')
-    end if
-
 
     !%Variable ForceTotalEnforce
     !%Type logical

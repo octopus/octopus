@@ -1254,7 +1254,6 @@ contains
     ! This is not a real problem, as the multisystem framework will indeed to this anyway
     this%v_ie_loc%atoms_dist => geo%atoms_dist
     this%v_ie_loc%atom => geo%atom
-    this%v_ie_loc%ignore_external_ions = geo%ignore_external_ions
 
     call this%v_ie_loc%calculate()
     ! At the moment we need to add this to ep%vpsl, to keep the behavior of the code
