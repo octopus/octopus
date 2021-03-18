@@ -125,8 +125,7 @@ contains
 
     character(len=1)   :: char1(6), char2
     character(len=256) :: r_fmt
-    integer :: i, l
-    FLOAT   :: x
+    integer :: l
 
     PUSH_SUB(build_valconf)
 
@@ -161,14 +160,9 @@ contains
       end select
     end do
 
-    do i = 1, conf%p
-      l = conf%l(i)
-      if(ispin==2 .and. psf_file%irel /= 'isp') then
-        x = conf%occ(i, 1)
-        conf%occ(i, 1) = min(x, TOFLOAT(2*l+1))
-        conf%occ(i, 2) = x - conf%occ(i,1)
-      end if
-    end do
+    if(ispin==2 .and. psf_file%irel /= 'isp') then
+      call valconf_unpolarized_to_polarized(conf)
+    end if
 
     POP_SUB(build_valconf)
   end subroutine build_valconf 

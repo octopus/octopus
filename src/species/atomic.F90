@@ -40,6 +40,7 @@ use iso_c_binding
     valconf_copy,  &
     write_valconf, &
     read_valconf,  &
+    valconf_unpolarized_to_polarized, &
     VALCONF_STRING_LENGTH
 
   character(len=1), parameter :: &
@@ -126,6 +127,25 @@ contains
 
     POP_SUB(read_valconf)
   end subroutine read_valconf
+
+   !In case of spin-polarized calculations, we properly distribute the electrons
+  subroutine valconf_unpolarized_to_polarized(conf)
+    type(valconf_t), intent(inout) :: conf
+
+    integer :: ii, ll
+    FLOAT   :: xx
+
+    PUSH_SUB(valconf_unpolarized_to_polarized)
+
+    do ii = 1, conf%p
+      ll = conf%l(ii)
+      xx = conf%occ(ii, 1)
+      conf%occ(ii, 1) = min(xx, TOFLOAT(2*ll+1))
+      conf%occ(ii, 2) = xx - conf%occ(ii,1)
+    end do
+
+    POP_SUB(valconf_unpolarized_to_polarized)
+  end subroutine valconf_unpolarized_to_polarized
 
 
   ! ---------------------------------------------------------
