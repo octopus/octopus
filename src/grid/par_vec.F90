@@ -103,7 +103,8 @@ module par_vec_oct_m
     vec_scatter,       &
     vec_gather,        &
     vec_allgather,     &
-    vec_global2local    
+    vec_global2local,  &
+    vec_local2global
   
   !> Parallel information
   type pv_t
@@ -135,14 +136,14 @@ module par_vec_oct_m
                                                     !! Global vector; npart elements.
     integer                 :: np_local             !< How many points has running partition? 
                                                     !! Local value.
-    integer, allocatable    :: xlocal_vec(:)        !< Points of partition r start at
+    integer, allocatable, private :: xlocal_vec(:)        !< Points of partition r start at
                                                     !! xlocal_vec(r) in local. Global start point
                                                     !! of the local index.  
                                                     !! Global vector; npart elements.
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, allocatable    :: local(:)             !< Local points of running process
+    integer, allocatable, private    :: local(:)             !< Local points of running process
                                                     !! Local vector; np_local elements
     integer, allocatable    :: recv_count(:)        !< Number of points to receive from all the other processes
     integer, allocatable    :: send_count(:)        !< Number of points to send to all the other processes
@@ -154,12 +155,12 @@ module par_vec_oct_m
                                                     !! in a MPI_Alltoallv.
     integer                 :: np_bndry             !< Number of local boundary points.
  
-    integer, allocatable    :: bndry(:)             !< local to global mapping of boundary points, np_bndry elements
+    integer, allocatable, private :: bndry(:)             !< local to global mapping of boundary points, np_bndry elements
       
     type(iihash_t), private :: global               !< global contains the global -> local mapping
 
     integer                 :: np_ghost             !< number of local ghost points
-    integer, allocatable    :: ghost(:)             !< Global indices of ghost points, np_ghost elements
+    integer, allocatable, private :: ghost(:)             !< Global indices of ghost points, np_ghost elements
   end type pv_t
 
   interface vec_scatter
@@ -662,30 +663,46 @@ contains
   ! ---------------------------------------------------------
   !> Returns local number of global point ip on the local node
   !! If the result is zero, the point is not available on the local node
-  integer function vec_global2local(vp, ip)
+  integer function vec_global2local(vp, ipg) result(ip)
+    type(pv_t), intent(in) :: vp
+    integer,    intent(in) :: ipg
+
+    integer :: nn
+    logical :: found
+
+! no push_sub because called too frequently
+
+    if (vp%npart > 1) then
+      ip = 0
+      nn = iihash_lookup(vp%global, ipg, found)
+      if(found) ip = nn
+    else
+      ip = ipg
+    end if
+  end function vec_global2local
+
+  ! ---------------------------------------------------------
+  !> Returns global index of local point ip
+  integer function vec_local2global(vp, ip) result(ipg)
     type(pv_t), intent(in) :: vp
     integer,    intent(in) :: ip
 
-#ifdef HAVE_MPI
-    integer :: nn
-    logical :: found
-#endif
-    
 ! no push_sub because called too frequently
 
-#ifdef HAVE_MPI
-    
-    vec_global2local = 0
-    nn = iihash_lookup(vp%global, ip, found)
-    if(found) vec_global2local = nn
-
-#else
-
-    vec_global2local = ip
-
-#endif
-
-  end function vec_global2local
+    if (vp%npart == 1) then
+      ipg = ip
+    else
+      if (ip <= vp%np_local) then
+        ipg = vp%local(vp%xlocal + ip - 1)
+      else if (ip <= vp%np_local + vp%np_ghost) then
+        ipg = vp%ghost(ip - vp%np_local)
+      else if (ip <= vp%np_local + vp%np_ghost + vp%np_bndry) then
+        ipg = vp%bndry(ip - vp%np_local - vp%np_ghost)
+      else
+        ipg = 0
+      end if
+    end if
+  end function vec_local2global
 
   ! gather all local arrays into a global one on rank root
   ! this gives the global mapping of the index in the partition to the global index

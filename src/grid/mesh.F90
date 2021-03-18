@@ -845,19 +845,7 @@ contains
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ip
 
-    if (.not. mesh%parallel_in_domains) then
-      ipg = ip
-    else
-      if (ip <= mesh%np) then
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-      else if (ip <= mesh%np + mesh%vp%np_ghost) then
-        ipg = mesh%vp%ghost(ip - mesh%np)
-      else if (ip <= mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry) then
-        ipg = mesh%vp%bndry(ip - mesh%np - mesh%vp%np_ghost)
-      else
-        ipg = 0
-      end if
-    end if
+    ipg = vec_local2global(mesh%vp, ip)
   end function mesh_local2global
 
   !> This function returns the local mesh index for a given global index
@@ -865,11 +853,7 @@ contains
     type(mesh_t),  intent(in)    :: mesh
     integer,       intent(in)    :: ipg
 
-    if (.not. mesh%parallel_in_domains) then
-      ip = ipg
-    else
-      ip = vec_global2local(mesh%vp, ipg)
-    end if
+    ip = vec_global2local(mesh%vp, ipg)
   end function mesh_global2local
 
 #include "undef.F90"
