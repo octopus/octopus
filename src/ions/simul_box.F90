@@ -616,13 +616,7 @@ contains
 
     PUSH_SUB(simul_box_write_info)
 
-    message(1) = 'Simulation Box:'
-    call messages_info(1, iunit) 
-
-    select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
-      call this%box%write_info(iunit)
-    end select
+    call this%box%write_info(iunit)
 
     POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
