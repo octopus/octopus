@@ -270,7 +270,7 @@ contains
 
     if (space%dim == 3 .and. .not. space%is_periodic()) default_solver = POISSON_ISF
 
-    if (space%dim > 3) default_solver = POISSON_CG_CORRECTED
+    if (space%dim > 3) default_solver = POISSON_NO ! Kernel for higher dimensions is not implemented.
 
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
@@ -322,6 +322,10 @@ contains
       end select
       write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
       call messages_info(1)
+    end if
+
+    if (space%dim > 3 .and. this%method /= POISSON_NO) then
+      call messages_input_error(namespace, 'PoissonSolver', 'Currently no Poisson solver is available for Dimensions > 3')
     end if
 
     if(this%method /= POISSON_FFT) then
