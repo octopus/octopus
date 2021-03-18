@@ -271,6 +271,8 @@ contains
 
     PUSH_SUB(lattice_vectors_write_info)
 
+    call messages_print_stress(iunit, "Lattice")
+
     write(message(1),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
     do idir = 1, this%space%dim
       write(message(1+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
@@ -297,6 +299,8 @@ contains
       write(message(4),'(a, f8.3)') '    gamma = ', this%gamma
       call messages_info(4, iunit)
     end if
+
+    call messages_print_stress(iunit)
 
     POP_SUB(lattice_vectors_write_info)
   end subroutine lattice_vectors_write_info

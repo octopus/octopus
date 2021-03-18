@@ -624,13 +624,6 @@ contains
       call this%box%write_info(iunit)
     end select
 
-
-    if (this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
-      write(message(1),'(1x)')
-      call messages_info(1, iunit)
-      call this%latt%write_info(iunit)
-    end if
-
     POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
 
