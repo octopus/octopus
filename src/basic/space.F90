@@ -40,6 +40,7 @@ module space_oct_m
   contains
     procedure :: is_periodic => space_is_periodic
     procedure :: write_info => space_write_info
+    procedure :: short_info => space_short_info
   end type space_t
 
 contains
@@ -115,6 +116,18 @@ contains
 
     POP_SUB(space_write_info)
   end subroutine space_write_info
+
+  !--------------------------------------------------------------
+  character(len=40) function space_short_info(this) result(info)
+    class(space_t), intent(in) :: this
+
+    PUSH_SUB(space_short_info)
+
+    write(info, '(a,i1,a,i1)') 'Dimensions = ', this%dim, '; PeriodicDimensions = ', this%periodic_dim
+
+    POP_SUB(space_short_info)
+  end function space_short_info
+
 
 end module space_oct_m
 

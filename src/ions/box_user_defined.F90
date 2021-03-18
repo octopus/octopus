@@ -20,6 +20,7 @@
 #include "global.h"
 
 module box_user_defined_oct_m
+  use box_oct_m
   use box_parallelepiped_oct_m
   use box_shape_oct_m
   use global_oct_m
@@ -44,7 +45,7 @@ module box_user_defined_oct_m
   contains
     procedure :: contains_points => box_user_defined_contains_points
     procedure :: write_info => box_user_defined_write_info
-    procedure :: write_short_info => box_user_defined_write_short_info
+    procedure :: short_info => box_user_defined_short_info
     final     :: box_user_defined_finalize
   end type box_user_defined_t
 
@@ -128,16 +129,16 @@ contains
   end subroutine box_user_defined_write_info
 
   !--------------------------------------------------------------
-  subroutine box_user_defined_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function box_user_defined_short_info(this, unit_length) result(info)
     class(box_user_defined_t), intent(in) :: this
-    integer,                   intent(in) :: iunit
+    type(unit_t),              intent(in) :: unit_length
 
-    PUSH_SUB(box_user_defined_write_short_info)
+    PUSH_SUB(box_user_defined_short_info)
 
-    write(iunit, '(3a)') 'BoxShape = user_defined; BoxShapeUsDef = "', trim(this%expression), '"'
+    write(info,'(3a)') 'BoxShape = user_defined; BoxShapeUsDef = "', trim(this%expression), '"'
 
-    POP_SUB(box_user_defined_write_short_info)
-  end subroutine box_user_defined_write_short_info
+    POP_SUB(box_user_defined_short_info)
+  end function box_user_defined_short_info
 
 end module box_user_defined_oct_m
 
