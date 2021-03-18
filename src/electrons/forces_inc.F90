@@ -59,8 +59,8 @@ subroutine X(forces_gather)(geo, force)
 end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
-subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, force)
-  type(grid_t),                   intent(in)    :: gr
+subroutine X(forces_from_local_potential)(mesh, namespace, geo, ep, gdensity, force)
+  type(mesh_t),                   intent(in)    :: mesh
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
@@ -76,27 +76,23 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
 
   call profiling_in(prof, TOSTRING(X(FORCES_LOCAL_POT)))
 
-  SAFE_ALLOCATE(vloc(1:gr%mesh%np))
-  SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
+  SAFE_ALLOCATE(vloc(1:mesh%np))
+  SAFE_ALLOCATE(zvloc(1:mesh%np))
 
   SAFE_ALLOCATE(force_tmp(1:geo%space%dim, 1:geo%natoms))
   force_tmp = M_ZERO
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
-    if (.not. gr%sb%contains_point(geo%atom(iatom)%x) .and. geo%ignore_external_ions) then
-      cycle
-    end if
-    
-    vloc(1:gr%mesh%np) = M_ZERO
-    call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vloc)
+    vloc(1:mesh%np) = M_ZERO
+    call epot_local_potential(ep, namespace, geo%space, mesh, geo%atom(iatom), iatom, vloc)
 
-    do ip = 1, gr%mesh%np
+    do ip = 1, mesh%np
       zvloc(ip) = vloc(ip)
     end do
 
     do idir = 1, geo%space%dim
-      force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
+      force_tmp(idir, iatom) = -X(mf_dotp)(mesh, zvloc, gdensity(:, idir), reduce = .false.)
     end do
 
   end do
@@ -104,7 +100,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
-  if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(force_tmp)
+  if(mesh%parallel_in_domains) call mesh%allreduce(force_tmp)
 
   force(1:geo%space%dim, 1:geo%natoms) = force(1:geo%space%dim, 1:geo%natoms) + force_tmp(1:geo%space%dim, 1:geo%natoms)
 
@@ -367,7 +363,7 @@ subroutine X(forces_from_potential)(gr, namespace, space, geo, hm, st, force, fo
     call symmetrizer_end(symmetrizer)
   end if
 
-  call dforces_from_local_potential(gr, namespace, geo, hm%ep, grad_rho, force_loc)
+  call dforces_from_local_potential(gr%mesh, namespace, geo, hm%ep, grad_rho, force_loc)
 
   do iatom = 1, geo%natoms
     do idir = 1, space%dim
@@ -490,7 +486,7 @@ subroutine X(total_force_from_potential)(space, gr, geo, ep, st, kpoints, x, lda
   end if
 #endif
 
-  call total_force_from_local_potential(gr, ep, grad_rho, x)
+  call total_force_from_local_potential(gr%mesh, space, ep, grad_rho, x)
 
   do iatom = 1, geo%natoms
     do idir = 1, space%dim
@@ -636,7 +632,7 @@ subroutine X(forces_derivative)(gr, namespace, space, geo, ep, st, kpoints, lr, 
   
   SAFE_ALLOCATE(force_local(1:space%dim, 1:geo%natoms))
   force_local = M_ZERO
-  call zforces_from_local_potential(gr, namespace, geo, ep, grad_rho, force_local)
+  call zforces_from_local_potential(gr%mesh, namespace, geo, ep, grad_rho, force_local)
   force_deriv(:,:) = force_deriv(:,:) + force_local(:,:)
   SAFE_DEALLOCATE_A(force_local)
   SAFE_DEALLOCATE_A(grad_rho)

@@ -65,7 +65,6 @@ module ion_electron_local_potential_oct_m
     type(namespace_t), pointer :: namespace
 
     logical :: have_density
-    logical, public :: ignore_external_ions
 
   contains
     procedure :: init => ion_electron_local_potential_init
@@ -129,7 +128,6 @@ contains
 
     this%atoms_dist => geo%atoms_dist
     this%atom => geo%atom
-    this%ignore_external_ions = geo%ignore_external_ions
     this%space => geo%space
 
     this%namespace => namespace
@@ -161,10 +159,6 @@ contains
     end if
 
     do ia = this%atoms_dist%start, this%atoms_dist%end
-      ! In an improved framework, this will not be needed anymore, as the ionic system should take 
-      ! care of copying only the relevant atoms to the interaction
-      if (.not. this%mesh%sb%contains_point(this%atom(ia)%x) .and. this%ignore_external_ions) cycle
-
       ! Local potential, we can get it by solving the Poisson equation
       ! (for all-electron species or pseudopotentials in periodic
       ! systems) or by applying it directly to the grid

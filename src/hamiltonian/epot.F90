@@ -386,7 +386,6 @@ contains
     type(profile_t), save :: epot_generate_prof
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
-    logical, allocatable :: in_box(:)
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -399,8 +398,6 @@ contains
     if(ep%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
-
       if(species_has_nlcc(geo%atom(ia)%species) .and. species_is_ps(geo%atom(ia)%species)) then
         call species_get_nlcc(geo%atom(ia)%species, geo%space, geo%atom(ia)%x, mesh, st%rho_core, accumulate=.true.)
       endif
@@ -418,14 +415,11 @@ contains
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, sb%latt%rcell_volume, &
               geo%atom, geo%natoms, geo%catom, geo%ncatoms, sb%lsize, &
-              geo%ignore_external_ions, ep%eii, ep%fii, in_box=in_box)
-
-    SAFE_DEALLOCATE_A(in_box)
+              ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
       if (.not. species_is_ps(geo%atom(ia)%species)) cycle
-      if (.not. sb%contains_point(geo%atom(ia)%x) .and. geo%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), geo%atom(ia), namespace, st%d%dim, ep%reltype)
     end do
