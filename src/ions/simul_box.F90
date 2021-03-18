@@ -125,9 +125,9 @@ contains
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
-    call read_box()                        ! Parameters defining the simulation box.
+    sb%latt = lattice_vectors_t(namespace, space) ! Build lattice vectors.
 
-    sb%latt = lattice_vectors_t(namespace, space, sb%lsize) ! Build lattice vectors.
+    call read_box()                        ! Parameters defining the simulation box.
 
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
     select case (sb%box_shape)
@@ -165,7 +165,7 @@ contains
     subroutine read_box()
       type(block_t) :: blk
 
-      FLOAT :: default
+      FLOAT :: default, factor(space%dim)
       integer :: default_boxshape, idir, iatom, ispec
 
       PUSH_SUB(simul_box_init.read_box)
@@ -312,6 +312,7 @@ contains
         !%Section Mesh::Simulation Box
         !%Description
         !% If <tt>BoxShape</tt> is <tt>cylinder</tt>, the total length of the cylinder is twice <tt>Xlength</tt>.
+        !% Note that when PeriodicDimensions = 1, then the length of the cylinder is determined from the lattice vectors.
         !%End
         if(sb%rsize > M_ZERO) then
           default = sb%rsize
@@ -319,9 +320,14 @@ contains
           default = def_rsize
         end if
 
-        call parse_variable(namespace, 'Xlength', default, sb%xsize, units_inp%length)
-        if(def_rsize > M_ZERO .and. space%periodic_dim == 0) &
-          call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
+        if (space%is_periodic()) then
+          sb%xsize = sqrt(sum(sb%latt%rlattice(1:space%periodic_dim, 1)**2))/M_TWO
+        else
+          call parse_variable(namespace, 'Xlength', default, sb%xsize, units_inp%length)
+          if (def_rsize > M_ZERO .and. space%periodic_dim == 0) then
+            call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
+          end if
+        end if
       end if
 
       sb%lsize = M_ZERO
@@ -347,30 +353,84 @@ contains
         !% single variable.
         !%End
 
-        if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
+        if (all(geo%lsize(1:sb%dim) > M_ZERO)) then
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
-        else if(parse_block(namespace, 'Lsize', blk) == 0) then
-          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(namespace, 'LatticeVectors')) &
-              call messages_input_error(namespace, 'Lsize')
-          do idir = 1, sb%dim
-            call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
-            if(def_rsize > M_ZERO .and. space%periodic_dim < idir) &
-              call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
-          end do
-          call parse_block_end(blk)
-        else if ((parse_is_defined(namespace, 'Lsize'))) then
-          call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
-          if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
-            call messages_input_error(namespace, 'Lsize')
-          end if
-          if(def_rsize > M_ZERO .and. space%periodic_dim < sb%dim) &
-            call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
-          sb%lsize(1:sb%dim) = sb%lsize(1)
+
         else
-          message(1) = "Lsize was not found in input file. Continuing anyway."
-          call messages_warning(1, namespace=namespace)
+          ! lsize along the periodic dimensions must always be set from the norm of the lattice vectors
+          do idir = 1, space%periodic_dim
+            sb%lsize(idir) = sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))/M_TWO
+          end do
+
+          if (space%is_periodic()) then
+            ! For mixed-periodicity, lsize along the non-periodic dimensions is
+            ! by default set from the lattice parameters (this can still be
+            ! overriden by setting Lsize, see bellow).
+            do idir = space%periodic_dim + 1, space%dim
+              sb%lsize(idir) = sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))/M_TWO
+            end do
+
+            ! Now we renormalize the lattice parameters along the non-periodic dimensions
+            do idir = 1, space%periodic_dim
+              factor(idir) = M_ONE
+            end do
+            do idir = space%periodic_dim + 1, space%dim
+              factor(idir) = M_ONE/sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))
+            end do
+            call sb%latt%scale(factor)
+
+          else
+            ! Lsize must be set for finite systems, as in that case we do not have the lattice parameters
+            if (.not. parse_is_defined(namespace, 'Lsize')) then
+              call messages_input_error(namespace, 'Lsize', 'Lsize is required for finite systems')
+            end if
+          end if
+
+          ! Note that for cases with mixed-periodicidy, the user still has the
+          ! option to set Lsize to override the size of the box along the
+          ! non-periodic dimensions given by the lattice parameters. This
+          ! requires the user to also set Lsize for the periodic dimensions,
+          ! which at the moment must match exactly the corresponding values
+          ! given by the lattice vectors.
+          if (parse_block(namespace, 'Lsize', blk) == 0) then
+            ! Lsize is specified as a block
+            if (parse_block_cols(blk, 0) < space%dim) then
+              call messages_input_error(namespace, 'Lsize')
+            end if
+
+            do idir = 1, space%dim
+              call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
+              if (def_rsize > M_ZERO) then
+                call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
+              end if              
+            end do
+            call parse_block_end(blk)
+
+          else if (parse_is_defined(namespace, 'Lsize')) then
+            ! Lsize is specified as a scalar
+            call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
+            if (abs(sb%lsize(1) + M_ONE) <= M_EPSILON) then
+              call messages_input_error(namespace, 'Lsize')
+            end if
+            if (def_rsize > M_ZERO) then
+              call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
+            end if
+            do idir = 2, space%dim
+              sb%lsize(idir) = sb%lsize(1)
+            end do
+
+          end if
+
+          ! Check that lsize is consistent with the lattice vectors along the periodic dimensions
+          do idir = 1, space%periodic_dim
+            if (abs(M_TWO*sb%lsize(idir) - sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))) > M_EPSILON) then
+              call messages_input_error(namespace, 'Lsize', &
+                'Lsize must be exactly half the length of the lattice vectors along periodic dimensions')
+            end if
+          end do
         end if
+
       else
         ! if not a compatible box-shape
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
