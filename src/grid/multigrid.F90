@@ -332,7 +332,8 @@ contains
     mesh_out%cv               => mesh_in%cv
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
-    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
+    mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))/2
+    mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))/2
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
@@ -359,7 +360,8 @@ contains
     mesh_out%cv             => mesh_in%cv
 
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
-    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
+    mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))*2
+    mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))*2
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
