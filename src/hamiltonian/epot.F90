@@ -93,7 +93,6 @@ module epot_oct_m
 
     ! External e-m fields
     FLOAT, allocatable     :: E_field(:)           !< static electric field
-    FLOAT, allocatable     :: v_static(:)          !< static scalar potential
     FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
     FLOAT, allocatable     :: B_field(:)           !< static magnetic field
     FLOAT, allocatable     :: A_static(:,:)        !< static vector potential
@@ -348,7 +347,6 @@ contains
 
     ! the macroscopic fields
     SAFE_DEALLOCATE_A(ep%E_field)
-    SAFE_DEALLOCATE_A(ep%v_static)
     SAFE_DEALLOCATE_A(ep%v_ext)
     SAFE_DEALLOCATE_A(ep%B_field)
     SAFE_DEALLOCATE_A(ep%A_static)
@@ -418,15 +416,6 @@ contains
       call projector_build(ep%proj(ia), geo%atom(ia), ep%so_strength)
       if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
-
-    ! add static electric fields
-    if (ep%classical_pot > 0) then
-      call lalg_axpy(mesh%np, M_ONE, ep%Vclassical, ep%vpsl) 
-    end if
-
-    if (allocated(ep%e_field) .and. sb%periodic_dim < sb%dim) then
-      call lalg_axpy(mesh%np, M_ONE, ep%v_static, ep%vpsl)
-    end if
 
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
@@ -623,7 +612,7 @@ contains
 
     epot_have_external_potentials =  .false.
 
-    if( allocated(ep%v_static) .or. allocated(ep%E_field) ) epot_have_external_potentials = .true.
+    if( allocated(ep%E_field) ) epot_have_external_potentials = .true.
 
     POP_SUB(epot_have_external_potentials)
 

@@ -52,9 +52,9 @@
           der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
       end if
 
-      if (allocated(hm%ep%v_static)) then
+      if (allocated(hm%v_static)) then
         call dio_function_output(outp%how, dir, "vext", namespace, &
-          der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
+          der%mesh, hm%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
