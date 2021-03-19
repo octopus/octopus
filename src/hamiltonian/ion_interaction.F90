@@ -129,12 +129,11 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, space, latt, rcell_volume, &
-       atom, natoms, catom, ncatoms, lsize, energy, force, energy_components, force_components)
+  subroutine ion_interaction_calculate(this, space, latt, atom, natoms, catom, ncatoms, lsize, energy, force, &
+    energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
-    FLOAT,                    intent(in)    :: rcell_volume
     type(atom_t),             intent(in)    :: atom(:)
     integer,                  intent(in)    :: natoms
     type(atom_classical_t),   intent(in)    :: catom(:)
@@ -180,8 +179,7 @@ contains
         energy = energy + &
           M_PI*species_zval(spci)**2/(M_FOUR*lsize(1)*lsize(2))*(lsize(3) - species_jthick(spci)/M_THREE)
       else
-        call ion_interaction_periodic(this, space, latt, atom, natoms, &
-                        rcell_volume, lsize, energy, force, energy_components, force_components)
+        call ion_interaction_periodic(this, space, latt, atom, natoms, lsize, energy, force, energy_components, force_components)
       end if
 
     else
@@ -257,14 +255,12 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, rcell_volume, lsize, &
-                        energy, force, energy_components, force_components)
+  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, lsize, energy, force, energy_components, force_components)
     type(ion_interaction_t),   intent(in)    :: this
     type(space_t),             intent(in)    :: space
     type(lattice_vectors_t),   intent(in)    :: latt
     type(atom_t),              intent(in)    :: atom(:)
     integer,                   intent(in)    :: natoms
-    FLOAT,                     intent(in)    :: rcell_volume
     FLOAT,                     intent(in)    :: lsize(:)
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< (space%dim, natoms)
@@ -349,11 +345,11 @@ contains
     select case(space%periodic_dim)
     case(1)
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
-      call Ewald_long_3D(this, space, latt, atom, natoms, rcell_volume, efourier, force, charge)
+      call Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
     case(2)
       call Ewald_long_2D(this, space, latt, atom, natoms, efourier, force)
     case(3)
-      call Ewald_long_3D(this, space, latt, atom, natoms, rcell_volume, efourier, force, charge)
+      call Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
     end select
 
 
@@ -382,7 +378,7 @@ contains
              zi = species_zval(atom(iatom)%species)
              spec_ps => species_ps(atom(iatom)%species)
              epseudo = epseudo + M_PI*zi*&
-                  (spec_ps%sigma_erf*sqrt(M_TWO))**2/rcell_volume*charge
+                  (spec_ps%sigma_erf*sqrt(M_TWO))**2/latt%rcell_volume*charge
           end if
        end do
        call comm_allreduce(this%dist%mpi_grp, epseudo)
@@ -397,15 +393,14 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine Ewald_long_3D(this, space, latt, atom, natoms, rcell_volume, efourier, force, charge)
+  subroutine Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
     type(ion_interaction_t),   intent(in)   :: this
     type(space_t),             intent(in)   :: space
     type(lattice_vectors_t),   intent(in)   :: latt
     type(atom_t),              intent(in)   :: atom(:)
     integer,                   intent(in)   :: natoms
-    FLOAT,                     intent(in)   :: rcell_volume
-    FLOAT,                  intent(inout)   :: efourier
-    FLOAT,                  intent(inout)   :: force(:, :) !< (space%dim, natoms)
+    FLOAT,                     intent(inout) :: efourier
+    FLOAT,                     intent(inout) :: force(:, :) !< (space%dim, natoms)
     FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
@@ -434,7 +429,7 @@ contains
     isph = ceiling(CNST(9.5)*this%alpha/rcut)
 
     ! First the G = 0 term (charge was calculated previously)
-    efourier = -M_PI*charge**2/(M_TWO*this%alpha**2*rcell_volume)
+    efourier = -M_PI*charge**2/(M_TWO*this%alpha**2*latt%rcell_volume)
 
     do ix = -isph, isph
       do iy = -isph, isph
@@ -456,7 +451,7 @@ contains
 
           if(gx < CNST(-36.0)) cycle
 
-          factor = M_TWO*M_PI/rcell_volume*exp(gx)/gg2
+          factor = M_TWO*M_PI/latt%rcell_volume*exp(gx)/gg2
 
           if(factor < epsilon(factor)) cycle
 
@@ -674,11 +669,10 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(space, latt, rcell_volume, atom, natoms, catom, ncatoms, lsize, &
+  subroutine ion_interaction_test(space, latt, atom, natoms, catom, ncatoms, lsize, &
                 namespace, mc)
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
-    FLOAT,                    intent(in)    :: rcell_volume
     type(atom_t),             intent(in)    :: atom(:)
     integer,                  intent(in)    :: natoms
     type(atom_classical_t),   intent(in)    :: catom(:)
@@ -701,8 +695,7 @@ contains
     SAFE_ALLOCATE(force(1:space%dim, 1:natoms))
     SAFE_ALLOCATE(force_components(1:space%dim, 1:natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, space, latt, rcell_volume, &
-       atom, natoms, catom, ncatoms, lsize, energy, force, &
+    call ion_interaction_calculate(ion_interaction, space, latt, atom, natoms, catom, ncatoms, lsize, energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')
