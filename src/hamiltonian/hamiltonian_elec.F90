@@ -53,6 +53,7 @@ module hamiltonian_elec_oct_m
   use multicomm_oct_m
   use multigrid_oct_m
   use namespace_oct_m
+  use nlcc_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -179,6 +180,7 @@ module hamiltonian_elec_oct_m
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
     
     type(ion_electron_local_potential_t) :: v_ie_loc !< Ion-electron local potential interaction
+    type(nlcc_t) :: nlcc !< Ion-electron NLCC interaction
 
     ! At the moment this is not treated as an external potential
     class(lasers_t), pointer :: ext_lasers => null()      !< lasers 
@@ -326,10 +328,15 @@ contains
     end if
   
     ! Initialize external potential
-    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
+    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
-    !Temporary construction of the ion-electron local potential interaction
+    !Temporary construction of the ion-electron interactions
     call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo, namespace)
+    if(hm%ep%nlcc) then
+      call hm%nlcc%init(gr%mesh, hm%geo)
+      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
+      st%rho_core(:) = M_ZERO
+    end if
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, hm%kpoints)
@@ -830,6 +837,7 @@ contains
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
     call hm%v_ie_loc%end()   
+    call hm%nlcc%end()
 
     call iter%start(hm%external_potentials)
     do while (iter%has_next())
@@ -1248,16 +1256,25 @@ contains
     PUSH_SUB(hamiltonian_elec_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, namespace, gr, this%geo, st)
+    call epot_generate(this%ep, namespace, gr, this%geo, this%d)
     
     ! Here we need to pass this again, else test are failing.
     ! This is not a real problem, as the multisystem framework will indeed to this anyway
     this%v_ie_loc%atoms_dist => geo%atoms_dist
     this%v_ie_loc%atom => geo%atom
-
     call this%v_ie_loc%calculate()
+
     ! At the moment we need to add this to ep%vpsl, to keep the behavior of the code
     call lalg_axpy(gr%mesh%np, M_ONE, this%v_ie_loc%potential(:,1), this%ep%vpsl)
+
+    ! Here we need to pass this again, else test are failing.
+    ! This is not a real problem, as the multisystem framework will indeed to this anyway
+    if(this%ep%nlcc) then
+      this%nlcc%atoms_dist => geo%atoms_dist
+      this%nlcc%atom => geo%atom
+      call this%nlcc%calculate()
+      call lalg_copy(gr%mesh%np, this%nlcc%density(:,1), st%rho_core)
+    end if
 
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, time)
