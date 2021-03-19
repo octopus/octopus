@@ -328,11 +328,15 @@ contains
     end if
   
     ! Initialize external potential
-    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
+    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     !Temporary construction of the ion-electron interactions
     call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo, namespace)
-    call hm%nlcc%init(gr%mesh, hm%geo)
+    if(hm%ep%nlcc) then
+      call hm%nlcc%init(gr%mesh, hm%geo)
+      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
+      st%rho_core(:) = M_ZERO
+    end if
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, hm%kpoints)
@@ -1252,7 +1256,7 @@ contains
     PUSH_SUB(hamiltonian_elec_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, namespace, gr, this%geo, st)
+    call epot_generate(this%ep, namespace, gr, this%geo, this%d)
     
     ! Here we need to pass this again, else test are failing.
     ! This is not a real problem, as the multisystem framework will indeed to this anyway

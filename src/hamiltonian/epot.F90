@@ -46,7 +46,6 @@ module epot_oct_m
   use species_pot_oct_m
   use splines_oct_m
   use spline_filter_oct_m
-  use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
   use tdfunction_oct_m
@@ -128,11 +127,10 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, xc_family, mc, kpoints)
+  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, xc_family, mc, kpoints)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
-    type(states_elec_t),                intent(inout) :: st
     type(geometry_t),                   intent(inout) :: geo
     type(poisson_t),  target,           intent(in)    :: psolver
     integer,                            intent(in)    :: ispin
@@ -317,11 +315,6 @@ contains
     do ia = 1, geo%nspecies
       ep%nlcc = (ep%nlcc.or.species_has_nlcc(geo%species(ia)))
     end do
-    if(ep%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
-      st%rho_core(:) = M_ZERO
-    end if
-
 
     POP_SUB(epot_init)
   end subroutine epot_init
@@ -373,12 +366,12 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, namespace, gr, geo, st)
+  subroutine epot_generate(ep, namespace, gr, geo, st_d)
     type(epot_t),             intent(inout) :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
-    type(states_elec_t),      intent(inout) :: st
+    type(states_elec_dim_t),  intent(inout) :: st_d
 
     integer :: ia
     type(mesh_t),      pointer :: mesh
@@ -404,7 +397,7 @@ contains
     do ia = 1, geo%natoms
       if (.not. species_is_ps(geo%atom(ia)%species)) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), geo%atom(ia), namespace, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), geo%atom(ia), namespace, st_d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end

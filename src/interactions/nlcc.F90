@@ -101,8 +101,6 @@ contains
     type(geometry_t), target, intent(in) :: geo
 
 
-    integer :: ia
-
     PUSH_SUB(nlcc_init)
 
     this%mesh => mesh
