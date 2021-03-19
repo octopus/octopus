@@ -26,7 +26,7 @@ typedef long long checksum_t;
    with the same numbers but in different orders. For more serious
    applications a better function must be used. */
 
-void FC_FUNC_(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, const checksum_t * narray, const unsigned int * array, checksum_t * sum){
+void FC_FUNC_(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, const checksum_t * narray, const checksum_t * array, checksum_t * sum){
   int i;
   checksum_t mult;
   *sum = 0;
@@ -35,5 +35,4 @@ void FC_FUNC_(checksum_calculate, CHECKSUM_CALCULATE)(const int * algorithm, con
     *sum += mult*array[i];
     mult++;
   }
-  *sum %= (1<<31);
 }

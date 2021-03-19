@@ -452,7 +452,7 @@ contains
 
       PUSH_SUB(vec_init.reorder_points)
 
-      !%Variable MeshOrder
+      !%Variable MeshLocalOrder
       !%Default blocks
       !%Type integer
       !%Section Execution::Optimization
@@ -467,7 +467,7 @@ contains
       !%Option order_cube 3
       !% The grid is mapped using a full cube, i.e. without blocking.
       !%End
-      call parse_variable(namespace, 'MeshOrder', ORDER_BLOCKS, order)
+      call parse_variable(namespace, 'MeshLocalOrder', ORDER_BLOCKS, order)
 
       select case(order)
       case(ORDER_HILBERT)
@@ -476,7 +476,7 @@ contains
         if (order == ORDER_CUBE) then
           bsize = idx%ll
         else
-          !%Variable MeshBlockSize
+          !%Variable MeshLocalBlockSize
           !%Type block
           !%Section Execution::Optimization
           !%Description
@@ -503,7 +503,7 @@ contains
           ! no blocking in z direction
           bsize(3) = idx%ll(3)
 
-          if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
+          if(parse_block(namespace, 'MeshLocalBlockSize', blk) == 0) then
             nn = parse_block_cols(blk, 0)
             do idir = 1, nn
               call parse_block_integer(blk, 0, idir - 1, bsize(idir))

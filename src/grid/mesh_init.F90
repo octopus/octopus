@@ -163,8 +163,9 @@ end subroutine mesh_init_stage_1
 ! ---------------------------------------------------------
 !> This subroutine creates the global array of Hilbert indices
 !! and the inverse mapping.
-subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
+subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   type(mesh_t),        intent(inout) :: mesh
+  type(namespace_t),   intent(in)    :: namespace
   type(space_t),       intent(in)    :: space
   type(simul_box_t),   intent(in)    :: sb
   type(curvilinear_t), intent(in)    :: cv
@@ -397,6 +398,9 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
       mesh%idx%grid_to_hilbert_global(ip), ip)
   end do
 
+  call reorder_points()
+
+  call checksum_calculate(1, int(mesh%np_part_global, 8), mesh%idx%grid_to_hilbert_global(1), mesh%idx%checksum)
 
   SAFE_DEALLOCATE_A(offsets)
   SAFE_DEALLOCATE_A(final_sizes)
@@ -410,6 +414,123 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)
+contains
+    subroutine reorder_points()
+      integer(8), allocatable :: reordered(:)
+      integer :: ix, iy, iz, ixb, iyb, izb, ip_inner, ip_boundary, ipg, nn, idir
+      integer :: bsize(3), order
+      type(block_t) :: blk
+      integer, parameter :: &
+        ORDER_BLOCKS     =  1, &
+        ORDER_HILBERT    =  2, &
+        ORDER_CUBE       =  3
+
+      PUSH_SUB(mesh_init_stage_2.reorder_points)
+
+      !%Variable MeshOrder
+      !%Default blocks
+      !%Type integer
+      !%Section Execution::Optimization
+      !%Description
+      !% This variable controls how the grid points are mapped to a
+      !% linear array. This influences the performance of the code.
+      !%Option blocks 1
+      !% The grid is mapped using small parallelepipedic grids. The size
+      !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
+      !%Option hilbert 2
+      !% A Hilbert space-filling curve is used to map the grid.
+      !%Option order_cube 3
+      !% The grid is mapped using a full cube, i.e. without blocking.
+      !%End
+      call parse_variable(namespace, 'MeshOrder', ORDER_BLOCKS, order)
+
+      select case(order)
+      case(ORDER_HILBERT)
+        ! nothing to do, points are ordered along a Hilbert curve by default
+      case(ORDER_BLOCKS, ORDER_CUBE)
+        if (order == ORDER_CUBE) then
+          bsize = mesh%idx%ll
+        else
+          !%Variable MeshBlockSize
+          !%Type block
+          !%Section Execution::Optimization
+          !%Description
+          !% To improve memory-access locality when calculating derivatives,
+          !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
+          !% controls the size of this blocks in the different
+          !% directions. The default is selected according to the value of
+          !% the <tt>StatesBlockSize</tt> variable. (This variable only affects the
+          !% performance of <tt>Octopus</tt> and not the results.)
+          !%End
+
+          ! blocking done according to layer conditions in 3d for an L2 cache
+          ! of 1024 KB for the default 25pt stencil
+          ! See J. Hammer, et al. in Tools for High Performance Computing 2016,
+          ! ISBN 978-3-319-56702-0, 1-22 (2017). Proceedings of IPTW 2016,
+          ! DOI: 10.1007/978-3-319-56702-0_1
+          ! tool: https://rrze-hpc.github.io/layer-condition
+          if (conf%target_states_block_size < 32) then
+            bsize = (/ 56, 56, 1 /) / abs(conf%target_states_block_size)
+          else
+            bsize = (/ 10, 2, 1 /)
+          end if
+
+          ! no blocking in z direction
+          bsize(3) = mesh%idx%ll(3)
+
+          if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
+            nn = parse_block_cols(blk, 0)
+            do idir = 1, nn
+              call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+            end do
+          end if
+        end if
+
+        SAFE_ALLOCATE(reordered(1:mesh%np_part_global))
+        ip_inner = 1
+        ip_boundary = 1
+        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
+          do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
+            do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
+
+              do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
+                do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
+                  do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
+                    ipg = index_from_coords(mesh%idx, [ix, iy, iz])
+                    if (ipg == 0) cycle
+                    if (ipg <= mesh%np_global) then
+                      reordered(ip_inner) = mesh%idx%grid_to_hilbert_global(ipg)
+                      ip_inner = ip_inner + 1
+                    else
+                      reordered(mesh%np_global+ip_boundary) = mesh%idx%grid_to_hilbert_global(ipg)
+                      ip_boundary = ip_boundary + 1
+                    end if
+                  end do
+                end do
+              end do
+
+            end do
+          end do
+        end do
+        ASSERT(ip_inner - 1 == mesh%np_global)
+        ASSERT(ip_inner + ip_boundary - 2 == mesh%np_part_global)
+        do ipg = 1, mesh%np_part_global
+          mesh%idx%grid_to_hilbert_global(ipg) = reordered(ipg)
+        end do
+        SAFE_DEALLOCATE_A(reordered)
+
+        ! Recreate hash table.
+        call lihash_end(mesh%idx%hilbert_to_grid_global)
+        call lihash_init(mesh%idx%hilbert_to_grid_global)
+        ! Insert points
+        do ipg = 1, mesh%np_part_global
+          call lihash_insert(mesh%idx%hilbert_to_grid_global, &
+            mesh%idx%grid_to_hilbert_global(ipg), ipg)
+        end do
+      end select
+
+      POP_SUB(mesh_init_stage_2.reorder_points)
+    end subroutine reorder_points
 end subroutine mesh_init_stage_2
 
 ! ---------------------------------------------------------

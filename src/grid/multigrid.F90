@@ -169,7 +169,7 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
-      call multigrid_mesh_half(space, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
+      call multigrid_mesh_half(space, namespace, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
       call derivatives_init(mgrid%level(i)%der, namespace, space, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
@@ -311,8 +311,9 @@ contains
   !> Creates a mesh that has twice the spacing betwen the points than the in mesh.
   !! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_half(space, cv, mesh_in, mesh_out, stencil)
+  subroutine multigrid_mesh_half(space, namespace, cv, mesh_in, mesh_out, stencil)
     type(space_t),              intent(in)    :: space
+    type(namespace_t),          intent(in)    :: namespace
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -333,14 +334,15 @@ contains
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, space, mesh_out%sb, cv, stencil)
+    call mesh_init_stage_2(mesh_out, namespace, space, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_double(space, cv, mesh_in, mesh_out, stencil)
+  subroutine multigrid_mesh_double(space, namespace, cv, mesh_in, mesh_out, stencil)
     type(space_t),              intent(in)    :: space
+    type(namespace_t),          intent(in)    :: namespace
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -373,7 +375,7 @@ contains
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, space, mesh_out%sb, cv, stencil)
+    call mesh_init_stage_2(mesh_out, namespace, space, mesh_out%sb, cv, stencil)
 
     POP_SUB(multigrid_mesh_double)
   end subroutine multigrid_mesh_double

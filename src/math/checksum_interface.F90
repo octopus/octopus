@@ -26,7 +26,7 @@ module checksum_interface_oct_m
       implicit none
       integer,    intent(in)  :: algorithm
       integer(8), intent(in)  :: narray
-      integer,    intent(in)  :: array
+      integer(8), intent(in)  :: array
       integer(8), intent(out) :: checksum
     end subroutine checksum_calculate
   end interface

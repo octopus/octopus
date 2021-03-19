@@ -213,7 +213,7 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     call mesh_init_stage_1(gr%mesh, namespace, space, gr%sb, gr%cv, grid_spacing, enlarge)
-    call mesh_init_stage_2(gr%mesh, space, gr%sb, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%mesh, namespace, space, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
   end subroutine grid_init_stage_1
@@ -264,7 +264,7 @@ contains
         SAFE_ALLOCATE(gr%fine%mesh)
         SAFE_ALLOCATE(gr%fine%der)
 
-        call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+        call multigrid_mesh_double(space, namespace, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
         call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
