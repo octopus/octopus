@@ -351,6 +351,7 @@ contains
     type(mesh_t),               intent(inout) :: mesh_out
     type(stencil_t),            intent(in)    :: stencil
 
+    integer :: idim
     PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
@@ -362,6 +363,17 @@ contains
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
     mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))*2
     mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))*2
+    ! We need to make the possible number of grid points larger by one for
+    ! the non-periodic dimensions because the spacing is only half of the
+    ! original mesh and thus we could get points in the new boundary
+    ! that are still inside the simulation box.
+    ! For the periodic dimensions, we are anyway commensurate with the size
+    ! of the box, so we are still commensurate when taking twice the number
+    ! of points.
+    do idim = space%periodic_dim, space%dim
+      mesh_out%idx%nr(1,:) = mesh_out%idx%nr(1,:) - 1
+      mesh_out%idx%nr(2,:) = mesh_out%idx%nr(2,:) + 1
+    end do
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
