@@ -1312,6 +1312,56 @@ contains
 
     POP_SUB(test_dense_eigensolver)
   end subroutine test_dense_eigensolver
+
+  subroutine test_batch_set_gaussian(psib, mesh)
+    class(batch_t), intent(inout) :: psib
+    type(mesh_t),   intent(in)    :: mesh
+
+    FLOAT, allocatable :: dff(:)
+    CMPLX, allocatable :: zff(:)
+    integer :: ist, ip
+    FLOAT :: da, db, dc
+    CMPLX :: za, zb, zc
+
+    PUSH_SUB(test_batch_set_gaussian)
+
+    ! use a similar function as in the derivatives test
+    da = CNST(1.0)/mesh%sb%lsize(1)
+    db = CNST(10.0)
+    dc = CNST(100.0)
+
+    if(type_is_complex(psib%type())) then
+      ! we make things more "complex"
+      za = da + M_ZI*CNST(0.01)
+      zb = db*exp(M_ZI*CNST(0.345))
+      zc = dc - M_ZI*CNST(50.0)
+
+      SAFE_ALLOCATE(zff(mesh%np))
+      do ist = 1, psib%nst_linear
+        za = za * ist
+        zb = zb / ist
+        do ip = 1, mesh%np
+          zff(ip) = zb*exp(-za*sum(mesh%x(ip, :)**2)) + zc
+        end do
+        call batch_set_state(psib, ist, mesh%np, zff)
+      end do
+      SAFE_DEALLOCATE_A(zff)
+    else
+      SAFE_ALLOCATE(dff(mesh%np))
+      do ist = 1, psib%nst_linear
+        da = da * ist
+        db = db / ist
+        do ip = 1, mesh%np
+          dff(ip) = db*exp(-da*sum(mesh%x(ip, :)**2)) + dc
+        end do
+        call batch_set_state(psib, ist, mesh%np, dff)
+      end do
+      SAFE_DEALLOCATE_A(dff)
+    end if
+
+    POP_SUB(test_batch_set_gaussian)
+  end subroutine test_batch_set_gaussian
+
 end module test_oct_m
 
 !! Local Variables:
