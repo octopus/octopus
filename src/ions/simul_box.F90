@@ -802,7 +802,7 @@ contains
         end do
 
         if(iatom_symm > geo%natoms) then
-          write(message(1),'(a,i6)') 'Internal error: could not find symlatt partner for atom number', iatom
+          write(message(1),'(a,i6)') 'Internal error: could not find symetric partner for atom number', iatom
           write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
           call messages_fatal(2, namespace=namespace)
         end if
