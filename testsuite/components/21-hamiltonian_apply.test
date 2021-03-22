@@ -5,7 +5,6 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 1
 Input: 21-hamiltonian_apply.01-Si.inp
 match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.502536
 match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.506436

@@ -5,7 +5,6 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 2
 Input: 26-batch_ops.01-jellium.inp
 match ; Norm state axpy 1; GREPFIELD(out, 'Norm state axpy 1', 5) ; 0.150000E+01
 match ; Norm state axpy 2; GREPFIELD(out, 'Norm state axpy 2', 5) ; 0.150000E+01
@@ -51,7 +50,6 @@ match ; Dotp_self states  3  4; GREPFIELD(out, 'Dotp_self states  3  4', 5) ;   
 match ; Dotp_self states  4  4; GREPFIELD(out, 'Dotp_self states  4  4', 5) ;   0.100000E+01
 
 
-Processors: 2
 Input: 26-batch_ops.02-jellium-complex.inp
 match ; Norm state axpy 1; GREPFIELD(out, 'Norm state axpy 1', 5) ; 0.150000E+01
 match ; Norm state axpy 2; GREPFIELD(out, 'Norm state axpy 2', 5) ; 0.150000E+01
@@ -104,7 +102,6 @@ match ; Dotp_self states  4  3; GREPFIELD(out, 'Dotp_self states  4  3', 5) ;   
 match ; Dotp_self states  4  4; GREPFIELD(out, 'Dotp_self states  4  4', 5) ;   0.100000E+01
 
 
-Processors: 2
 Input: 26-batch_ops.03-jellium-spinor.inp
 match ; Norm state axpy 1; GREPFIELD(out, 'Norm state axpy 1', 5) ; 0.150000E+01
 match ; Norm state axpy 2; GREPFIELD(out, 'Norm state axpy 2', 5) ; 0.150000E+01

@@ -5,7 +5,6 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 1
 Input: 29-linear_solver.01-real.inp
 match ; Norm sol CG ; GREPFIELD(out, 'Norm solution CG', 5)  ; 0.101326E+00
 match ; Norm sol QMR; GREPFIELD(out, 'Norm solution QMR', 5) ; 0.101326E+00
