@@ -747,7 +747,7 @@ contains
     if (td%iter >= td%max_iter) then
       message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
       call messages_info(1)
-      POP_SUB(td_run.init_wfs)
+      POP_SUB(td_init_wfs)
       return
     end if
 
