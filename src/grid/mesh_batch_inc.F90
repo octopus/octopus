@@ -1205,6 +1205,30 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   call profiling_out(prof)
 end subroutine X(mesh_batch_orthogonalization)
 
+! ---------------------------------------------------------
+!> Normalize a batch
+subroutine X(mesh_batch_normalize)(mesh, psib, norm)
+  type(mesh_t),      intent(in)    :: mesh
+  class(batch_t),    intent(inout) :: psib
+  FLOAT, optional,   intent(out)   :: norm(:)
+
+  FLOAT, allocatable :: nrm2(:)
+  R_TYPE, allocatable :: factor(:)
+
+  PUSH_SUB(X(mesh_batch_normalize))
+
+  SAFE_ALLOCATE(nrm2(1:psib%nst))
+
+  call mesh_batch_nrm2(mesh, psib, nrm2)
+  if(present(norm)) then
+    norm(1:psib%nst) = nrm2(1:psib%nst)
+  end if
+  call batch_scal(mesh%np, R_TOTYPE(M_ONE/nrm2(1:psib%nst)), psib, a_full=.false.)
+
+  SAFE_DEALLOCATE_A(nrm2)
+
+  POP_SUB(X(mesh_batch_normalize))
+end subroutine X(mesh_batch_normalize)
 
 !! Local Variables:
 !! mode: f90

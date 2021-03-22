@@ -62,7 +62,9 @@ module mesh_batch_oct_m
     dmesh_batch_mf_dotp,            &
     zmesh_batch_mf_dotp,            &
     dmesh_batch_codensity,          &
-    zmesh_batch_codensity
+    zmesh_batch_codensity,          &
+    dmesh_batch_normalize,          &
+    zmesh_batch_normalize
 
 contains
 
