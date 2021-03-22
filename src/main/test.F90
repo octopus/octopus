@@ -406,7 +406,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     ! Initialize external potential
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
@@ -460,7 +460,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
@@ -570,7 +570,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
@@ -632,7 +632,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -670,7 +670,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -708,7 +708,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
@@ -757,7 +757,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
@@ -839,7 +839,7 @@ contains
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%kpoints)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_AXPY) /= 0) then
@@ -1345,6 +1345,7 @@ contains
         end do
         call batch_set_state(psib, ist, mesh%np, zff)
       end do
+      call zmesh_batch_normalize(mesh, psib)
       SAFE_DEALLOCATE_A(zff)
     else
       SAFE_ALLOCATE(dff(mesh%np))
@@ -1356,6 +1357,7 @@ contains
         end do
         call batch_set_state(psib, ist, mesh%np, dff)
       end do
+      call dmesh_batch_normalize(mesh, psib)
       SAFE_DEALLOCATE_A(dff)
     end if
 
