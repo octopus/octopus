@@ -28,73 +28,62 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   type(xc_oep_t),           intent(inout) :: oep
   logical,                  intent(in)    :: first
 
-  integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
-  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
+  integer :: ip, ist, jst, kssi, kssj
+  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-  R_TYPE, allocatable :: psi(:, :), bb(:,:)
-  R_TYPE, allocatable :: phi1(:,:,:)
+  R_TYPE, allocatable :: psi(:, :)
 
   ASSERT(.not. oep%has_photons) 
+  ASSERT(st%d%ispin /= SPINORS)
  
   call profiling_in(C_PROFILING_XC_KLI, TOSTRING(X(XC_KLI)))
 
   PUSH_SUB(X(xc_KLI_solve))
-  ! some intermediate quantities
-  ! vxc contains the Slater part!
+  
+  oep%vxc(:, :) = M_ZERO
+
   SAFE_ALLOCATE(rho_sigma(1:mesh%np))
-  SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
+  rho_sigma(:) = M_ZERO
+
+  SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
+  ! We start by computing the Slater part
   do ist = st%st_start, st%st_end
-    call states_elec_get_state(st, mesh, ist, is, psi)
-    sqphi(1:mesh%np, 1:st%d%dim, ist) = abs(psi(1:mesh%np, 1:st%d%dim))**2
-  end do
+    if(abs(st%occ(ist, is)) < M_EPSILON) cycle
 
-  do ip = 1, mesh%np
-    rho_sigma(ip) = max(sum(oep%socc * st%occ(st%st_start:st%st_end, is) * sqphi(ip, 1, st%st_start:st%st_end)), CNST(1e-20))
-  end do
-
-#if defined(HAVE_MPI)
-  if(st%parallel_in_states) then
-    SAFE_ALLOCATE(dd(1:mesh%np))
-    call MPI_Allreduce(rho_sigma(1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    rho_sigma(1:mesh%np) = dd(1:mesh%np)
-  end if
-#endif
-
-  ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
-  ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
-
-  oep%vxc(1:mesh%np, 1) = CNST(0.0)
-
-  do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
     do ip = 1, mesh%np
-      oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
-    end do
-  end do
+      sqphi(ip, ist) = R_REAL(R_CONJ(psi(ip, 1))*psi(ip, 1))
+      rho_sigma(ip) = rho_sigma(ip) + st%occ(ist, is) * sqphi(ip, ist)
 
-  do ip = 1, mesh%np
-    oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
+      ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
+      ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
+      ! Given the definition of lxc = \delta Exc / \delta \phi^* \phi, which is not Eq. 4 of the Kuemmel paper
+      ! there is a complex conjuguate here
+      oep%vxc(ip, 1) = oep%vxc(ip, 1) + st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
+    end do
   end do
 
   SAFE_DEALLOCATE_A(psi)
   
-#if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    oep%vxc(1:mesh%np,1) = dd(1:mesh%np)
-    SAFE_DEALLOCATE_A(dd)
+    call comm_allreduce(st%st_kpt_mpi_grp, rho_sigma)
+    call comm_allreduce(st%st_kpt_mpi_grp, oep%vxc(1:mesh%np,1))
   end if
-#endif
-  
-  eigen_n = oep%eigen_n
 
+  ! This is the first term in Eq. 6 of the Kuemmel paper
+  do ip = 1, mesh%np
+    rho_sigma(ip) = max(rho_sigma(ip), CNST(1e-20))
+    oep%vxc(ip, 1) = oep%vxc(ip, 1) / rho_sigma(ip)
+  end do
+
+  ! We now compute \bar{v}_i = <\phi_i | Vxc |\phi_i> for all occupied states
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
   v_bar_S = M_ZERO
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then
-      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
+      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, ist), oep%vxc(:,1), reduce = .false.)
     end if
   end do
   if(mesh%parallel_in_domains) call mesh%allreduce(v_bar_S, dim = st%st_end)
@@ -105,71 +94,74 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
     do ist = 1, st%nst
       call MPI_Bcast(v_bar_S(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
     end do
-    do ist = 1, eigen_n
+    do ist = 1, oep%eigen_n
       kssi = oep%eigen_index(ist)
-      call MPI_Bcast(sqphi(1, 1, kssi), mesh%np, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
+      call MPI_Bcast(sqphi(1, kssi), mesh%np, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
     end do
   end if
 #endif
+
   ! If there is more than one state, then solve linear equation.
-  linear_equation: if(eigen_n > 0) then
+  linear_equation: if(oep%eigen_n > 0) then
     SAFE_ALLOCATE(dd(1:mesh%np))
-    SAFE_ALLOCATE(xx(1:eigen_n, 1:1))
-    SAFE_ALLOCATE(Ma(1:eigen_n, 1:eigen_n))
-    SAFE_ALLOCATE(yy(1:eigen_n, 1:1))
+    SAFE_ALLOCATE(xx(1:oep%eigen_n, 1:1))
+    SAFE_ALLOCATE(Ma(1:oep%eigen_n, 1:oep%eigen_n))
+    SAFE_ALLOCATE(yy(1:oep%eigen_n, 1:1))
     xx = M_ZERO
     yy = M_ZERO
     Ma = M_ZERO
     dd = M_ZERO
-    proc = st%mpi_grp%rank
 
-    i_loop: do ist = 1, eigen_n
+    ! We start by constructing the matrix Mij = \int n_i(r) n_j(r) / n(r)
+    ! See Eq. 62 of the KLI paper PRA 45, 101 (1992)
+    do ist = 1, oep%eigen_n
       kssi = oep%eigen_index(ist)
-      if(proc  ==  st%node(kssi)) then
-        dd(1:mesh%np) = sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
-        j_loop: do jst = ist, eigen_n
-          kssj = oep%eigen_index(jst)
-          Ma(ist, jst) = - dmf_dotp(mesh, dd, sqphi(:, 1, kssj) )
-        end do j_loop
-        Ma(ist, ist) = M_ONE + Ma(ist, ist)
-        yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi, is)
-      end if
-    end do i_loop
+      if(st%mpi_grp%rank /= st%node(kssi)) cycle
+
+      dd(1:mesh%np) = sqphi(1:mesh%np, kssi) / (rho_sigma(1:mesh%np))
+
+      do jst = ist, oep%eigen_n
+        kssj = oep%eigen_index(jst)
+        Ma(ist, jst) = -dmf_dotp(mesh, dd, sqphi(:, kssj) ) / oep%socc
+      end do
+
+      Ma(ist, ist) = M_ONE + Ma(ist, ist) ! See Eq. 65
+      yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi, is)
+    end do 
 
 #if defined(HAVE_MPI)
     if(st%parallel_in_states) then
-      do ist = 1, eigen_n
+      do ist = 1, oep%eigen_n
         kssi = oep%eigen_index(ist)
         call MPI_Bcast(yy(ist, 1), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
-        do jst = 1, eigen_n
+        do jst = 1, oep%eigen_n
            call MPI_Bcast(Ma(ist, jst), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
         end do
      end do
     end if
 #endif
 
-    do ist = 1, eigen_n
-      do jst = ist, eigen_n
+    ! Symmetrize the matrix
+    do ist = 1, oep%eigen_n
+      do jst = ist, oep%eigen_n
         Ma(jst, ist) = Ma(ist, jst)
       end do
     end do
 
-    call lalg_linsyssolve(eigen_n, 1, Ma, yy, xx)
+    ! We solve Eq. 63
+    call lalg_linsyssolve(oep%eigen_n, 1, Ma, yy, xx)
 
-    do ist = 1, eigen_n
+    ! We add the result to the Slater potential, see Eq. 40
+    do ist = 1, oep%eigen_n
       kssi = oep%eigen_index(ist)
-      oep%vxc(1:mesh%np,1) = oep%vxc(1:mesh%np,1) + &
-        oep%socc * st%occ(kssi, is) * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
+      oep%vxc(1:mesh%np, 1) = oep%vxc(1:mesh%np, 1) + &
+             st%occ(kssi, is) * xx(ist, 1) * sqphi(1:mesh%np, kssi) / rho_sigma(1:mesh%np)
     end do
 
     SAFE_DEALLOCATE_A(dd)
     SAFE_DEALLOCATE_A(xx)
     SAFE_DEALLOCATE_A(Ma)
     SAFE_DEALLOCATE_A(yy)
-    if (oep%has_photons) then
-      SAFE_DEALLOCATE_A(phi1)
-      SAFE_DEALLOCATE_A(bb)
-    end if
 
   end if linear_equation
   ! The previous stuff is only needed if eigen_n>0.
