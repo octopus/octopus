@@ -97,7 +97,7 @@ module simul_box_oct_m
   contains
     procedure :: contains_points => simul_box_contains_points
     procedure :: write_info => simul_box_write_info
-    procedure :: write_short_info => simul_box_write_short_info
+    procedure :: short_info => simul_box_short_info
   end type simul_box_t
 
 contains
@@ -616,63 +616,21 @@ contains
 
     PUSH_SUB(simul_box_write_info)
 
-    message(1) = 'Simulation Box:'
-    call messages_info(1, iunit) 
-
-    select case (this%box_shape)
-    case (SPHERE, CYLINDER, PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
-      call this%box%write_info(iunit)
-    end select
-
-    write(message(1), '(a,i1,a)') '  Octopus will run in ', this%dim, ' dimension(s).'
-    write(message(2), '(a,i1,a)') '  Octopus will treat the system as periodic in ', &
-      this%periodic_dim, ' dimension(s).'
-    call messages_info(2, iunit)
-
-    if (this%periodic_dim > 0 .or. this%box_shape == PARALLELEPIPED) then
-      write(message(1),'(1x)')
-      call messages_info(1, iunit)
-      call this%latt%write_info(iunit)
-    end if
+    call this%box%write_info(iunit)
 
     POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
 
-  subroutine simul_box_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function simul_box_short_info(this, unit_length) result(info)
     class(simul_box_t), intent(in) :: this
-    integer,            intent(in) :: iunit
+    type(unit_t),       intent(in) :: unit_length
 
-    integer :: idir1, idir2
+    PUSH_SUB(simul_box_short_info)
 
-    PUSH_SUB(simul_box_write_short_info)
+    info = this%box%short_info(unit_length)
 
-    write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', this%dim, '; '
-    write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', this%periodic_dim, '; '
-    select case (this%box_shape)
-    case (SPHERE, CYLINDER, MINIMUM, BOX_IMAGE, BOX_USDEF, HYPERCUBE)
-      call this%box%write_short_info(iunit)
-
-    case(PARALLELEPIPED)
-      if (this%periodic_dim > 0) then
-        write(iunit, '(a)', advance='no') 'BoxShape = parallelepiped; LatticeVectors[Ang] = '
-        do idir1 = 1, this%dim
-          write(iunit, '(a)', advance='no') '['
-          do idir2 = 1, this%dim
-            write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, this%latt%rlattice(idir2, idir1))
-          end do
-          write(iunit, '(a)', advance='no') ']'
-          if(idir1 < this%dim) then
-            write(iunit, '(a)', advance='no') ', '
-          end if
-        end do
-        write(iunit,'()')
-      else
-        call this%box%write_short_info(iunit)
-      end if
-    end select
-
-    POP_SUB(simul_box_write_short_info)
-  end subroutine simul_box_write_short_info
+    POP_SUB(simul_box_short_info)
+  end function simul_box_short_info
 
   !--------------------------------------------------------------
   !> Checks if a group of mesh points belong to the actual mesh.

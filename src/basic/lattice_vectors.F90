@@ -51,6 +51,7 @@ module lattice_vectors_oct_m
     generic   :: assignment(=) => copy
     procedure :: scale => lattice_vectors_scale
     procedure :: write_info => lattice_vectors_write_info
+    procedure :: short_info => lattice_vectors_short_info
   end type lattice_vectors_t
 
   interface lattice_vectors_t
@@ -271,6 +272,8 @@ contains
 
     PUSH_SUB(lattice_vectors_write_info)
 
+    call messages_print_stress(iunit, "Lattice")
+
     write(message(1),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
     do idir = 1, this%space%dim
       write(message(1+idir),'(9f12.6)') (units_from_atomic(units_out%length, this%rlattice(idir2, idir)), &
@@ -298,8 +301,35 @@ contains
       call messages_info(4, iunit)
     end if
 
+    call messages_print_stress(iunit)
+
     POP_SUB(lattice_vectors_write_info)
   end subroutine lattice_vectors_write_info
+
+  !--------------------------------------------------------------
+  character(len=140) function lattice_vectors_short_info(this, unit_length) result(info)
+    class(lattice_vectors_t), intent(in) :: this
+    type(unit_t),             intent(in) :: unit_length
+
+    integer :: idir1, idir2
+
+    PUSH_SUB(lattice_vectors_short_info)
+
+    write(info, '(a,a,a)') 'LatticeVectors [', trim(units_abbrev(unit_length)), '] = '
+
+    do idir1 = 1, this%space%dim
+      write(info, '(a,a)') trim(info), '['
+      do idir2 = 1, this%space%dim
+        write(info, '(a,x,f11.6)') trim(info), units_from_atomic(unit_length, this%rlattice(idir2, idir1))
+      end do
+      write(info, '(a,a)') trim(info), ']'
+      if (idir1 < this%space%dim) then
+        write(info, '(a,a)') trim(info), ', '
+      end if
+    end do
+
+    POP_SUB(lattice_vectors_short_info)
+  end function lattice_vectors_short_info
 
   !--------------------------------------------------------------
   subroutine build_metric_from_angles(this, angles)

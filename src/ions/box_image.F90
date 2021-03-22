@@ -20,6 +20,7 @@
 #include "global.h"
 
 module box_image_oct_m
+  use box_oct_m
   use box_shape_oct_m
   use iso_c_binding
   use gdlib_oct_m
@@ -28,6 +29,7 @@ module box_image_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use unit_oct_m
 
   implicit none
 
@@ -43,7 +45,7 @@ module box_image_oct_m
   contains
     procedure :: contains_points => box_image_contains_points
     procedure :: write_info => box_image_write_info
-    procedure :: write_short_info => box_image_write_short_info
+    procedure :: short_info => box_image_short_info
     final     :: box_image_finalize
   end type box_image_t
 
@@ -176,16 +178,16 @@ contains
   end subroutine box_image_write_info
 
   !--------------------------------------------------------------
-  subroutine box_image_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function box_image_short_info(this, unit_length) result(info)
     class(box_image_t), intent(in) :: this
-    integer,            intent(in) :: iunit
+    type(unit_t),       intent(in) :: unit_length
 
-    PUSH_SUB(box_image_write_short_info)
+    PUSH_SUB(box_image_short_info)
 
-    write(iunit, '(2a)') 'BoxShape = box_image; BoxShapeImage = ', trim(this%filename)
+    write(info, '(2a)') 'BoxShape = box_image; BoxShapeImage = ', trim(this%filename)
 
-    POP_SUB(box_image_write_short_info)
-  end subroutine box_image_write_short_info
+    POP_SUB(box_image_short_info)
+  end function box_image_short_info
 
 end module box_image_oct_m
 

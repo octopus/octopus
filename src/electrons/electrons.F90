@@ -132,12 +132,16 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
+    call sys%space%write_info(stdout)
     if(sys%space%periodic_dim > 0 .and. sys%space%periodic_dim < sys%space%dim) then
       call messages_experimental('Support for mixed periodicity systems')
     end if
-    
+
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
+    if (sys%space%is_periodic()) then
+      call sys%gr%sb%latt%write_info(stdout)
+    end if
 
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
