@@ -370,9 +370,9 @@ contains
     ! For the periodic dimensions, we are anyway commensurate with the size
     ! of the box, so we are still commensurate when taking twice the number
     ! of points.
-    do idim = space%periodic_dim, space%dim
-      mesh_out%idx%nr(1,:) = mesh_out%idx%nr(1,:) - 1
-      mesh_out%idx%nr(2,:) = mesh_out%idx%nr(2,:) + 1
+    do idim = space%periodic_dim + 1, space%dim
+      mesh_out%idx%nr(1, idim) = mesh_out%idx%nr(1, idim) - 1
+      mesh_out%idx%nr(2, idim) = mesh_out%idx%nr(2, idim) + 1
     end do
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
