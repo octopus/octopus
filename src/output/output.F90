@@ -304,6 +304,8 @@ contains
     !%Option photon_correlator bit(34)
     !% Outputs the electron-photon correlation function. The output file is
     !% called <tt>photon_correlator</tt>.
+    !%Option xc_torque bit(35)
+    !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -326,6 +328,17 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
+    end if
+
+    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
+      if(st%d%ispin /= SPINORS) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed for spinors.'
+        call messages_fatal(1, namespace=namespace)
+      end if
+      if(space%dim /= 3) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed in the 3D case.'
+        call messages_fatal(1, namespace=namespace)
+      end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
@@ -743,6 +756,8 @@ contains
         end if
       end if
     end if
+
+    call output_xc_torque(outp, namespace, dir, gr%mesh, hm, st, geo, geo%space)
 
     call profiling_out(prof)
     POP_SUB(output_all)

@@ -1106,6 +1106,11 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
+      if(st%d%ispin == SPINORS .and. space%dim == 3) then
+        call write_total_xc_torque(iunit, gr%mesh, hm, st)
+        if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
+      end if
+
       if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, iunit)
           call lda_u_write_V(hm%lda_u, iunit)

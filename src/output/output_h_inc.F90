@@ -356,6 +356,43 @@
     POP_SUB(output_kick)
   end subroutine output_kick
 
+  ! ---------------------------------------------------------
+  subroutine output_xc_torque(outp, namespace, dir, mesh, hm, st, geo, space)
+    type(output_t),           intent(in) :: outp
+    type(namespace_t),        intent(in) :: namespace
+    character(len=*),         intent(in) :: dir
+    type(mesh_t),             intent(in) :: mesh
+    type(hamiltonian_elec_t), intent(in) :: hm
+    type(states_elec_t),      intent(in) :: st
+    type(geometry_t),         intent(in) :: geo
+    type(space_t),            intent(in) :: space
+ 
+
+    FLOAT, allocatable :: torque(:,:)
+    FLOAT :: mag(3), Bxc(3)
+    type(unit_t) :: fn_unit
+    integer :: err, ip
+
+    PUSH_SUB(output_xc_torque)
+
+    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
+
+      SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
+
+      call calc_xc_torque(mesh, hm, st, torque)
+
+      fn_unit = units_out%length**(1 - 2*space%dim)
+      call io_function_output_vector(outp%how, dir, 'xc_torque', namespace, mesh, &
+              torque, space%dim, fn_unit, err, geo = geo, &
+              grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+
+      SAFE_DEALLOCATE_A(torque)
+
+    end if
+
+    POP_SUB(output_xc_torque)
+  end subroutine output_xc_torque
+
 
 !! Local Variables:
 !! mode: f90
