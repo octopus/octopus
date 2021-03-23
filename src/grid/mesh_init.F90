@@ -391,6 +391,9 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
     end if
   end do
 
+  SAFE_DEALLOCATE_A(initial_offsets)
+  SAFE_DEALLOCATE_A(initial_sizes)
+
   ! fill global hash map
   call lihash_init(mesh%idx%hilbert_to_grid_global)
   do ip = 1, mesh%np_part_global
@@ -404,8 +407,6 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
 
   SAFE_DEALLOCATE_A(offsets)
   SAFE_DEALLOCATE_A(final_sizes)
-  SAFE_DEALLOCATE_A(initial_offsets)
-  SAFE_DEALLOCATE_A(initial_sizes)
 
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
   SAFE_DEALLOCATE_A(boundary_to_hilbert_global)
@@ -418,6 +419,7 @@ contains
     subroutine reorder_points()
       integer(8), allocatable :: reordered(:)
       integer :: ix, iy, iz, ixb, iyb, izb, ip_inner, ip_boundary, ipg, nn, idir
+      integer :: boundary_start
       integer :: bsize(3), order
       type(block_t) :: blk
       integer, parameter :: &
@@ -486,7 +488,25 @@ contains
           end if
         end if
 
-        SAFE_ALLOCATE(reordered(1:mesh%np_part_global))
+        ! do the global reordering in parallel
+        ! use block data decomposition of global indices
+        SAFE_ALLOCATE(initial_offsets(0:mpi_world%size))
+        SAFE_ALLOCATE(initial_sizes(0:mpi_world%size-1))
+        do irank = 0, mpi_world%size
+          initial_offsets(irank) = floor(TOFLOAT(mesh%np_part_global) * irank/mpi_world%size)
+        end do
+        do irank = 0, mpi_world%size - 1
+          initial_sizes(irank) = initial_offsets(irank+1) - initial_offsets(irank)
+        end do
+        istart = initial_offsets(mpi_world%rank) + 1
+        iend = initial_offsets(mpi_world%rank + 1)
+        local_size = iend - istart + 1
+        boundary_start = max(mesh%np_global-istart+1, 0)
+        ASSERT(local_size == initial_sizes(mpi_world%rank))
+
+        ! now comes the reordering loop
+        SAFE_ALLOCATE(reordered(1:local_size))
+        reordered = 0
         ip_inner = 1
         ip_boundary = 1
         do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
@@ -497,12 +517,12 @@ contains
                 do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
                   do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
                     ipg = index_from_coords(mesh%idx, [ix, iy, iz])
-                    if (ipg == 0) cycle
+                    if (ipg < istart .or. ipg > iend) cycle
                     if (ipg <= mesh%np_global) then
                       reordered(ip_inner) = mesh%idx%grid_to_hilbert_global(ipg)
                       ip_inner = ip_inner + 1
                     else
-                      reordered(mesh%np_global+ip_boundary) = mesh%idx%grid_to_hilbert_global(ipg)
+                      reordered(boundary_start+ip_boundary) = mesh%idx%grid_to_hilbert_global(ipg)
                       ip_boundary = ip_boundary + 1
                     end if
                   end do
@@ -512,12 +532,21 @@ contains
             end do
           end do
         end do
-        ASSERT(ip_inner - 1 == mesh%np_global)
-        ASSERT(ip_inner + ip_boundary - 2 == mesh%np_part_global)
+        ASSERT(ip_inner + ip_boundary - 2 == local_size)
+        ASSERT(all(reordered > 0))
+        ! gather the reordered index
+#ifdef HAVE_MPI
+        call MPI_Allgatherv(reordered(1), local_size, MPI_LONG_LONG, &
+          mesh%idx%grid_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
+          mpi_world%comm, mpi_err)
+#else
         do ipg = 1, mesh%np_part_global
           mesh%idx%grid_to_hilbert_global(ipg) = reordered(ipg)
         end do
+#endif
         SAFE_DEALLOCATE_A(reordered)
+        SAFE_DEALLOCATE_A(initial_offsets)
+        SAFE_DEALLOCATE_A(initial_sizes)
 
         ! Recreate hash table.
         call lihash_end(mesh%idx%hilbert_to_grid_global)
