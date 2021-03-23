@@ -477,7 +477,7 @@ contains
     integer(8), allocatable :: reordered(:)
     integer :: ix, iy, iz, ixb, iyb, izb, ip_inner, ip_boundary, ipg, nn, idir
     integer :: boundary_start, istart, iend, local_size, irank
-    integer :: bsize(3), order
+    integer :: bsize(3), order, default
     type(block_t) :: blk
     integer, parameter :: &
       ORDER_BLOCKS     =  1, &
@@ -487,12 +487,15 @@ contains
     PUSH_SUB(mesh_init_stage_3.reorder_points)
 
     !%Variable MeshOrder
-    !%Default blocks
     !%Type integer
     !%Section Execution::Optimization
     !%Description
     !% This variable controls how the grid points are mapped to a
-    !% linear array. This influences the performance of the code.
+    !% linear array for global arrays. For runs that are parallel
+    !% in domains, the local mesh order may be different (see
+    !% <tt>MeshLocalOrder</tt>).
+    !% The default is blocks when serial in domains and cube when
+    !% parallel in domains with the local mesh order set to blocks.
     !%Option blocks 1
     !% The grid is mapped using small parallelepipedic grids. The size
     !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
@@ -501,7 +504,12 @@ contains
     !%Option order_cube 3
     !% The grid is mapped using a full cube, i.e. without blocking.
     !%End
-    call parse_variable(namespace, 'MeshOrder', ORDER_BLOCKS, order)
+    if (.not. mesh%parallel_in_domains) then
+      default = ORDER_BLOCKS
+    else
+      default = ORDER_CUBE
+    end if
+    call parse_variable(namespace, 'MeshOrder', default, order)
 
     select case(order)
     case(ORDER_HILBERT)
