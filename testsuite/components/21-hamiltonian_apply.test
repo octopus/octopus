@@ -6,7 +6,8 @@ TestGroups : short-run, components
 Enabled    : Yes
 
 Input: 21-hamiltonian_apply.01-Si.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.502536
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.506436
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.503322
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.486444
+Precision: 5e-16
+match ;  Norm state  1 ; GREPFIELD(out, 'Norm state  1', 4) ; 0.49921
+match ;  Norm state  2 ; GREPFIELD(out, 'Norm state  2', 4) ; 0.495093
+match ;  Norm state  3 ; GREPFIELD(out, 'Norm state  3', 4) ; 0.493136
+match ;  Norm state  4 ; GREPFIELD(out, 'Norm state  4', 4) ; 0.492938

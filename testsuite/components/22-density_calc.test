@@ -6,4 +6,5 @@ TestGroups : short-run, components
 Enabled    : Yes
 
 Input: 22-density_calc.01-Si.inp
-match ; Norm density; GREPFIELD(out, 'Norm density', 3) ; 0.521379
+Precision: 4.87e-16
+match ;  Norm density ; GREPFIELD(out, 'Norm density', 3) ; 0.486806
