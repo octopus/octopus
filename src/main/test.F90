@@ -985,7 +985,7 @@ contains
           do jst = 1, nst
             write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
           end do
-          call messages_info(nst*nst)
+          call messages_info(nst)
         end do
         SAFE_DEALLOCATE_A(ddot)
       else
@@ -995,7 +995,7 @@ contains
           do jst = 1, nst
             write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
           end do
-          call messages_info(nst*nst)
+          call messages_info(nst)
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
