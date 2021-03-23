@@ -448,7 +448,8 @@ contains
       integer, parameter :: &
         ORDER_BLOCKS     =  1, &
         ORDER_HILBERT    =  2, &
-        ORDER_CUBE       =  3
+        ORDER_CUBE       =  3, &
+        ORDER_GLOBAL     =  4
 
       PUSH_SUB(vec_init.reorder_points)
 
@@ -462,16 +463,16 @@ contains
       !%Option blocks 1
       !% The grid is mapped using small parallelepipedic grids. The size
       !% of the blocks is controlled by <tt>MeshBlockSize</tt>.
-      !%Option hilbert 2
-      !% A Hilbert space-filling curve is used to map the grid.
       !%Option order_cube 3
       !% The grid is mapped using a full cube, i.e. without blocking.
+      !%Option global 4
+      !% Use the ordering from the global mesh
       !%End
       call parse_variable(namespace, 'MeshLocalOrder', ORDER_BLOCKS, order)
 
       select case(order)
-      case(ORDER_HILBERT)
-        ! nothing to do, points are ordered along a Hilbert curve by default
+      case(ORDER_GLOBAL)
+        ! nothing to do, points are ordered along the global distribution by default
       case(ORDER_BLOCKS, ORDER_CUBE)
         if (order == ORDER_CUBE) then
           bsize = idx%ll
