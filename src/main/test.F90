@@ -449,7 +449,9 @@ contains
 
     PUSH_SUB(test_dft_u)
 
-    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_unset_parallelization(P_STRATEGY_STATES)
+    call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS)
+    call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true.)
 
     call messages_write('Info: Testing some DFT+U routines')
     call messages_new_line()
