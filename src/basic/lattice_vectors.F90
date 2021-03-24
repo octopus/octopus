@@ -24,6 +24,7 @@ module lattice_vectors_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use profiling_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -38,10 +39,10 @@ module lattice_vectors_oct_m
   type lattice_vectors_t
     ! Components are public by default
     type(space_t), private :: space
-    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
-    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
-    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
-    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
+    FLOAT, allocatable :: rlattice_primitive(:,:)  !< lattice primitive vectors
+    FLOAT, allocatable :: rlattice          (:,:)  !< lattice vectors
+    FLOAT, allocatable :: klattice_primitive(:,:)  !< reciprocal-lattice primitive vectors
+    FLOAT, allocatable :: klattice          (:,:)  !< reciprocal-lattice vectors
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal = .false.
@@ -51,6 +52,7 @@ module lattice_vectors_oct_m
     procedure :: scale => lattice_vectors_scale
     procedure :: write_info => lattice_vectors_write_info
     procedure :: short_info => lattice_vectors_short_info
+    final :: lattice_vectors_finalize
   end type lattice_vectors_t
 
   interface lattice_vectors_t
@@ -66,10 +68,10 @@ contains
     character(len=*),  optional, intent(in)    :: variable_prefix
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
+    FLOAT :: norm, lparams(space%dim), volume_element, rlatt(space%dim, space%dim)
     integer :: idim, jdim, ncols
     logical :: has_angles
-    FLOAT :: angles(1:MAX_DIM)
+    FLOAT :: angles(1:space%dim)
     character(len=:), allocatable :: prefix
 
     PUSH_SUB(lattice_vectors_constructor)
@@ -81,6 +83,11 @@ contains
     end if
 
     latt%space = space
+
+    SAFE_ALLOCATE(latt%rlattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
 
     latt%alpha = CNST(90.0)
     latt%beta  = CNST(90.0)
@@ -237,10 +244,10 @@ contains
     PUSH_SUB(lattice_vectors_copy)
 
     this%space = source%space
-    this%rlattice_primitive = source%rlattice_primitive
-    this%rlattice = source%rlattice
-    this%klattice_primitive = source%klattice_primitive
-    this%klattice = source%klattice
+    SAFE_ALLOCATE_SOURCE_A(this%rlattice_primitive, source%rlattice_primitive)
+    SAFE_ALLOCATE_SOURCE_A(this%rlattice, source%rlattice)
+    SAFE_ALLOCATE_SOURCE_A(this%klattice_primitive, source%klattice_primitive)
+    SAFE_ALLOCATE_SOURCE_A(this%klattice, source%klattice)
     this%alpha = source%alpha
     this%beta = source%beta
     this%gamma = source%gamma
@@ -250,7 +257,22 @@ contains
     POP_SUB(lattice_vectors_copy)
   end subroutine lattice_vectors_copy
 
-    !--------------------------------------------------------------
+  !--------------------------------------------------------------
+  subroutine lattice_vectors_finalize(this)
+    type(lattice_vectors_t), intent(inout) :: this
+
+    PUSH_SUB(lattice_vectors_finalize)
+
+    SAFE_DEALLOCATE_A(this%rlattice_primitive)
+    SAFE_DEALLOCATE_A(this%rlattice)
+    SAFE_DEALLOCATE_A(this%klattice_primitive)
+    SAFE_DEALLOCATE_A(this%klattice)
+    this%nonorthogonal = .false.
+
+    POP_SUB(lattice_vectors_finalize)
+  end subroutine lattice_vectors_finalize
+
+  !--------------------------------------------------------------
   subroutine lattice_vectors_scale(this, factor)
     class(lattice_vectors_t), intent(inout) :: this
     FLOAT,                    intent(in)    :: factor(this%space%dim)
@@ -387,8 +409,8 @@ contains
 
   !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume, dim, namespace)
-    FLOAT,             intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,             intent(in)  :: rv(:,:) !< (1:dim, 1:dim)
+    FLOAT,             intent(out) :: kv(:,:) !< (1:dim, 1:dim)
     FLOAT,             intent(out) :: volume
     integer,           intent(in)  :: dim
     type(namespace_t), optional, intent(in)  :: namespace
