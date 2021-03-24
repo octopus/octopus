@@ -33,8 +33,7 @@ module lattice_vectors_oct_m
   private
 
   public ::                   &
-    lattice_vectors_t,        &
-    reciprocal_lattice
+    lattice_vectors_t
 
   type lattice_vectors_t
     ! Components are public by default
@@ -61,17 +60,25 @@ module lattice_vectors_oct_m
 contains
 
   !--------------------------------------------------------------
-  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space) result(latt)
-    type(namespace_t), intent(in)    :: namespace
-    type(space_t),     intent(in)    :: space
+  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space, variable_prefix) result(latt)
+    type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
+    character(len=*),  optional, intent(in)    :: variable_prefix
 
     type(block_t) :: blk
     FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM)
+    character(len=:), allocatable :: prefix
 
     PUSH_SUB(lattice_vectors_constructor)
+
+    if (present(variable_prefix)) then
+      prefix = variable_prefix
+    else
+      prefix = ''
+    end if
 
     latt%space = space
 
@@ -98,10 +105,11 @@ contains
       !% specify parameters for the non-periodic dimensions (in that case they
       !% are set to 1).
       !%End
-      if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
+      if (parse_block(namespace, prefix//'LatticeParameters', blk) == 0) then
         ncols = parse_block_cols(blk, 0) 
         if (ncols < space%periodic_dim) then
-          call messages_input_error(namespace, 'LatticeParameters', 'The number of columns must be at least PeriodicDimensions')
+          call messages_input_error(namespace, prefix//'LatticeParameters', &
+            'The number of columns must be at least PeriodicDimensions')
         end if
         do idim = 1, ncols
           call parse_block_float(blk, 0, idim - 1, lparams(idim))
@@ -115,12 +123,12 @@ contains
         ! Parse angles, if available
         if (parse_block_n(blk) > 1) then
           if (space%dim /= 3) then
-            call messages_input_error(namespace, 'LatticeParameters', 'Angles can only be specified when Dimensions = 3')
+            call messages_input_error(namespace, prefix//'LatticeParameters', 'Angles can only be specified when Dimensions = 3')
           end if
 
           ncols = parse_block_cols(blk, 1)
           if (ncols /= space%dim) then
-            call messages_input_error(namespace, 'LatticeParameters', 'You must specify three angles')
+            call messages_input_error(namespace, prefix//'LatticeParameters', 'You must specify three angles')
           end if
           do idim = 1, space%dim
             call parse_block_float(blk, 1, idim - 1, angles(idim))
@@ -130,7 +138,7 @@ contains
         call parse_block_end(blk)
 
       else       
-        call messages_input_error(namespace, 'LatticeParameters', 'Variable is mandatory for periodic systems')
+        call messages_input_error(namespace, prefix//'LatticeParameters', 'Variable is mandatory for periodic systems')
       end if
 
 
@@ -139,9 +147,9 @@ contains
         latt%beta  = angles(2)
         latt%gamma = angles(3)
 
-        if (parse_is_defined(namespace, 'LatticeVectors')) then
+        if (parse_is_defined(namespace, prefix//'LatticeVectors')) then
           message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
-          call messages_print_var_info(stdout, "LatticeParameters")
+          call messages_print_var_info(stdout, prefix//"LatticeParameters")
           call messages_fatal(1, namespace=namespace)
         end if
 
@@ -168,7 +176,7 @@ contains
           latt%rlattice_primitive(idim, idim) = M_ONE
         end do
 
-        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then
+        if (parse_block(namespace, prefix//'LatticeVectors', blk) == 0) then
           do idim = 1, space%dim
             do jdim = 1, space%dim
               call parse_block_float(blk, idim - 1,  jdim - 1, latt%rlattice_primitive(jdim, idim))
