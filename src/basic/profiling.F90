@@ -666,7 +666,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often    
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + 4*TOFLOAT(trf)
   end subroutine profiling_count_tran_int
 
 
@@ -679,7 +679,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + 4*TOFLOAT(trf)
 
   end subroutine profiling_count_tran_real_4
 
@@ -693,7 +693,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + 8*TOFLOAT(trf)
 
   end subroutine profiling_count_tran_real_8
 
@@ -707,7 +707,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + 8*TOFLOAT(trf)
 
   end subroutine profiling_count_tran_complex_4
 
@@ -721,7 +721,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(16*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + 16*TOFLOAT(trf)
 
   end subroutine profiling_count_tran_complex_8
 
