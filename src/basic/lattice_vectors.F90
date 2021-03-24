@@ -394,11 +394,9 @@ contains
     type(namespace_t), optional, intent(in)  :: namespace
 
     integer :: ii
-    FLOAT :: cross(1:3), rv3(1:3, 1:3)
+    FLOAT :: cross(1:3)
 
     PUSH_SUB(reciprocal_lattice)
-
-    kv(:,:) = M_ZERO
 
     select case (dim)
     case (3)
@@ -409,14 +407,11 @@ contains
       kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
       kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
     case (2)
-      rv3(1:3, 1:3) = M_ZERO
-      rv3(1:2, 1:2) = rv(1:2, 1:2)
-      rv3(3, 3) = M_ONE
-      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2)) 
-      volume = dot_product(rv3(1:3, 3), cross(1:3))
-
-      kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
-      kv(1:3, 2) = dcross_product(rv3(:, 3), rv3(:, 1))/volume
+      volume = rv(1, 1)*rv(2, 2) - rv(2, 1)*rv(1, 2)
+      kv(1, 1) =  rv(2, 2)/volume
+      kv(2, 1) = -rv(1, 2)/volume
+      kv(1, 2) = -rv(2, 1)/volume
+      kv(2, 2) =  rv(1, 1)/volume
     case (1)
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
@@ -424,6 +419,7 @@ contains
       message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
       call messages_warning(1, namespace=namespace)
       volume = M_ONE
+      kv(:,:) = M_ZERO
       do ii = 1, dim
         kv(ii, ii) = M_ONE/rv(ii,ii)
         !  At least initialize the thing
