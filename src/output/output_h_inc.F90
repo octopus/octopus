@@ -379,7 +379,7 @@
 
       SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
 
-      call calc_xc_torque(mesh, hm, st, torque)
+      call calc_xc_torque(mesh, hm%vxc, st, torque)
 
       fn_unit = units_out%length**(1 - 2*space%dim)
       call io_function_output_vector(outp%how, dir, 'xc_torque', namespace, mesh, &

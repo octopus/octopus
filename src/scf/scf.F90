@@ -1107,7 +1107,7 @@ contains
       end if
 
       if(st%d%ispin == SPINORS .and. space%dim == 3) then
-        call write_total_xc_torque(iunit, gr%mesh, hm, st)
+        call write_total_xc_torque(iunit, gr%mesh, hm%vxc, st)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 

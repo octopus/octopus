@@ -24,7 +24,6 @@ module magnetic_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_elec_oct_m
   use kpoints_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
@@ -348,10 +347,10 @@ contains
     POP_SUB(magnetic_induced)
   end subroutine magnetic_induced
 
-  subroutine write_total_xc_torque(iunit, mesh, hm, st)
+  subroutine write_total_xc_torque(iunit, mesh, vxc, st)
     integer,                  intent(in) :: iunit
     type(mesh_t),             intent(in) :: mesh
-    type(hamiltonian_elec_t), intent(in) :: hm
+    FLOAT,                    intent(in) :: vxc(:,:)
     type(states_elec_t),      intent(in) :: st
 
     FLOAT, allocatable :: torque(:,:)
@@ -361,7 +360,7 @@ contains
 
     SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
 
-    call calc_xc_torque(mesh, hm, st, torque)
+    call calc_xc_torque(mesh, vxc, st, torque)
 
     tt(1) = dmf_integrate(mesh, torque(:,1))
     tt(2) = dmf_integrate(mesh, torque(:,2))
@@ -378,9 +377,9 @@ contains
   end subroutine write_total_xc_torque
 
   ! ---------------------------------------------------------
-  subroutine calc_xc_torque(mesh, hm, st, torque)
+  subroutine calc_xc_torque(mesh, vxc, st, torque)
     type(mesh_t),             intent(in) :: mesh
-    type(hamiltonian_elec_t), intent(in) :: hm
+    FLOAT,                    intent(in) :: vxc(:,:)
     type(states_elec_t),      intent(in) :: st
     FLOAT,                 intent(inout) :: torque(:,:)
 
@@ -390,13 +389,15 @@ contains
 
     PUSH_SUB(calc_xc_torque)
 
+    ASSERT(st%d%ispin == SPINORS)
+
     do ip = 1, mesh%np
       mag(1) =  M_TWO * st%rho(ip, 3)
       mag(2) = -M_TWO * st%rho(ip, 4)
       mag(3) = st%rho(ip, 1) - st%rho(ip, 2)
-      Bxc(1) = -M_TWO * hm%vxc(ip, 3)
-      Bxc(2) =  M_TWO * hm%vxc(ip, 4)
-      Bxc(3) = -(hm%vxc(ip, 1) - hm%vxc(ip, 2))
+      Bxc(1) = -M_TWO * vxc(ip, 3)
+      Bxc(2) =  M_TWO * vxc(ip, 4)
+      Bxc(3) = -(vxc(ip, 1) - vxc(ip, 2))
       torque(ip, 1) = mag(2) * Bxc(3) - mag(3) * Bxc(2)
       torque(ip, 2) = mag(3) * Bxc(1) - mag(1) * Bxc(3)
       torque(ip, 3) = mag(1) * Bxc(2) - mag(2) * Bxc(1)
