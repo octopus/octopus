@@ -177,10 +177,9 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   type(stencil_t),     intent(in)    :: stencil
 
   integer :: il, ik, ix, iy, iz, is
-  integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
-  integer :: jx, jy, jz, res_counter, j_counter
+  integer :: ii, jj, kk
   FLOAT   :: chi(MAX_DIM)
-  integer :: nr(1:2, 1:MAX_DIM), res, n_mod
+  integer :: nr(1:2, 1:MAX_DIM), res
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
   FLOAT  , parameter :: DELTA = CNST(1e-12)
