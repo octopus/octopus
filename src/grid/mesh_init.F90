@@ -484,7 +484,6 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 contains
   subroutine reorder_points()
     integer, allocatable :: initial_sizes(:), initial_offsets(:)
-    integer(8), allocatable :: reordered(:)
     integer :: ipg, nn, idir, irank
     integer :: bsize(space%dim), order, default
     type(block_t) :: blk
@@ -611,7 +610,7 @@ contains
         mpi_world%comm, mpi_err)
 #else
       do ipg = 1, mesh%np_part_global
-        mesh%idx%grid_to_hilbert_global(ipg) = reordered(ipg)
+        mesh%idx%grid_to_hilbert_global(ipg) = args%reordered(ipg)
       end do
 #endif
       SAFE_DEALLOCATE_A(args%reordered)
