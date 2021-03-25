@@ -103,9 +103,17 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 #if defined(HAVE_MPI) 
   if(st%parallel_in_states) then
     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-    do ist = 1, st%nst
-      call MPI_Bcast(oep%uxc_bar(ist, isp), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
-    end do
+    if(st%d%ispin == SPIN_POLARIZED) then
+      do isp = 1, 2
+        do ist = 1, st%nst
+          call MPI_Bcast(oep%uxc_bar(ist, isp), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
+        end do
+      end do
+    else
+      do ist = 1, st%nst
+        call MPI_Bcast(oep%uxc_bar(ist, 1), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
+      end do
+    end if
   end if
 #endif
 
@@ -123,10 +131,10 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       if(present(vxc)) then
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
-          oep%vxc = M_ZERO
+          oep%vxc(:,is) = M_ZERO
           call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
           if(present(vxc)) then
-            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
           end if
         end if
         ! if asked, solve the full OEP equation
