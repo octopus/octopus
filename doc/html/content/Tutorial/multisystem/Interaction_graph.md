@@ -7,10 +7,11 @@ The code can generate interaction graphs, which can help debugging, if results a
 
 The following input file 
 
-{{% expand "input file" }}
+{{% expand "input file" %}}
 {{< code-block >}}
 #include_input testsuite/multisystem/02-interaction_graph.01-three_body.inp
 {{< /code-block >}}
 {{% /expand %}}
+
 gives rise to the following graph:
 {{% graphviz-file "/static/interaction_graph.dot" %}}
