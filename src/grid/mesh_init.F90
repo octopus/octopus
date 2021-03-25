@@ -195,16 +195,16 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   
   sizes(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
   mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
-  if(sb%dim > 1 .and. any(sizes > 2**(63/int(sb%dim,8)))) then
-    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/int(sb%dim,8)), &
-      " points in one direction for ", sb%dim, " dimensions. This is not supported."
+  if(space%dim > 1 .and. any(sizes > 2**(63/int(space%dim,8)))) then
+    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/int(space%dim,8)), &
+      " points in one direction for ", space%dim, " dimensions. This is not supported."
     call messages_fatal(1)
   end if
   global_size = product(sizes)
   ! compute the bits per dimension: sizes(i) <= 2**bits
   mesh%idx%bits = maxval(ceiling(log(TOFLOAT(sizes))/log(2.)))
 
-  hilbert_size = 2**(sb%dim*mesh%idx%bits)
+  hilbert_size = 2**(space%dim*mesh%idx%bits)
 
   ! use block data decomposition of hilbert indices
   istart = floor(TOFLOAT(hilbert_size) * mpi_world%rank/mpi_world%size)
@@ -217,12 +217,12 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   ! get grid indices
   ip = 1
   do ihilbert = istart, iend
-    call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
+    call index_hilbert_to_point(mesh%idx, space%dim, ihilbert, point)
     ! first check if point is outside bounding box
-    if(any(point(1:sb%dim) < mesh%idx%nr(1, 1:sb%dim) + mesh%idx%enlarge(1:sb%dim))) cycle
-    if(any(point(1:sb%dim) > mesh%idx%nr(2, 1:sb%dim) - mesh%idx%enlarge(1:sb%dim))) cycle
+    if(any(point(1:space%dim) < mesh%idx%nr(1, 1:space%dim) + mesh%idx%enlarge(1:space%dim))) cycle
+    if(any(point(1:space%dim) > mesh%idx%nr(2, 1:space%dim) - mesh%idx%enlarge(1:space%dim))) cycle
     ! then check if point is inside simulation box
-    chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
+    chi(1:space%dim) = TOFLOAT(point(1:space%dim)) * mesh%spacing(1:space%dim)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
     if(.not. sb%contains_point(pos)) cycle
     grid_to_hilbert_initial(ip) = ihilbert
@@ -311,16 +311,16 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   SAFE_ALLOCATE(boundary_to_hilbert(1:mesh%np*(stencil%size - 1)))
   ib = 1
   do ip = 1, mesh%np
-    call index_hilbert_to_point(mesh%idx, sb%dim, grid_to_hilbert(ip), point)
+    call index_hilbert_to_point(mesh%idx, space%dim, grid_to_hilbert(ip), point)
     do is = 1, stencil%size
       if(stencil%center == is) cycle
-      point_stencil(1:mesh%sb%dim) = point(1:mesh%sb%dim) + stencil%points(1:mesh%sb%dim, is)
+      point_stencil(1:space%dim) = point(1:space%dim) + stencil%points(1:space%dim, is)
       ! check if point is in inner part
-      call index_point_to_hilbert(mesh%idx, mesh%sb%dim, ihilbertb, point_stencil)
+      call index_point_to_hilbert(mesh%idx, space%dim, ihilbertb, point_stencil)
       ib2 = lihash_lookup(hilbert_to_grid, ihilbertb, found)
       if(found) cycle
       ! then check if point is inside simulation box
-      chi(1:sb%dim) = TOFLOAT(point_stencil(1:sb%dim)) * mesh%spacing(1:sb%dim)
+      chi(1:space%dim) = TOFLOAT(point_stencil(1:space%dim)) * mesh%spacing(1:space%dim)
       call curvilinear_chi2x(sb, cv, chi(:), pos(:))
       if(sb%contains_point(pos)) cycle
       ! it has to be a boundary point now
@@ -461,7 +461,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
   mesh%x(:, :) = M_ZERO
   do ip = 1, mesh%np_part
-    mesh%x(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, mesh_local2global(mesh, ip))
+    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, mesh_local2global(mesh, ip))
   end do
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
@@ -820,8 +820,8 @@ contains
 
     do ip = 1, np
       call mesh_local_index_to_coords(mesh, ip, jj)
-      chi(1:space%dim) = jj(1:sb%dim)*mesh%spacing(1:space%dim)
-      mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
+      chi(1:space%dim) = jj(1:space%dim)*mesh%spacing(1:space%dim)
+      mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:space%dim), chi(1:space%dim))
     end do
 
     if(mesh%use_curvilinear) then
