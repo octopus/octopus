@@ -1213,7 +1213,6 @@ subroutine X(mesh_batch_normalize)(mesh, psib, norm)
   FLOAT, optional,   intent(out)   :: norm(:)
 
   FLOAT, allocatable :: nrm2(:)
-  R_TYPE, allocatable :: factor(:)
 
   PUSH_SUB(X(mesh_batch_normalize))
 
