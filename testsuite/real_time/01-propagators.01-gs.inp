@@ -23,4 +23,5 @@ MixField = density
 
 ConvRelDens = 1e-8
 EigensolverTolerance = 1e-9
+ConvEigenError = yes
 StatesPack = yes
