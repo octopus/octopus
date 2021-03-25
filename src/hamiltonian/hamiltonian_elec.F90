@@ -178,6 +178,7 @@ module hamiltonian_elec_oct_m
 
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
+    FLOAT, allocatable, public  :: v_static(:)   !< static scalar potential
     
     type(ion_electron_local_potential_t) :: v_ie_loc !< Ion-electron local potential interaction
     type(nlcc_t) :: nlcc !< Ion-electron NLCC interaction
@@ -684,15 +685,15 @@ contains
 
             !In the fully periodic case, we use Berry phases
             if (space%periodic_dim < space%dim) then
-              if (.not. allocated(hm%ep%v_static)) then
-                SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
-                hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+              if (.not. allocated(hm%v_static)) then
+                SAFE_ALLOCATE(hm%v_static(1:gr%mesh%np))
+                hm%v_static(1:gr%mesh%np) = M_ZERO
               end if
               if (.not. allocated(hm%ep%v_ext)) then
                 SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
                 hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
               end if     
-              call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
+              call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_static)
               call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
             end if
           end select
@@ -751,7 +752,9 @@ contains
         end if
       end if
 
-      external_potentials_present = epot_have_external_potentials(hm%ep) .or. (hm%ext_lasers%no_lasers > 0)
+      external_potentials_present = epot_have_external_potentials(hm%ep) .or. (hm%ext_lasers%no_lasers > 0) &
+                                    .or. allocated(hm%v_static) 
+      
 
       kick_present = epot_have_kick(hm%ep)
 
@@ -845,6 +848,7 @@ contains
       SAFE_DEALLOCATE_P(potential)
     end do
     call hm%external_potentials%empty()
+    SAFE_DEALLOCATE_A(hm%v_static)
 
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end
@@ -1257,7 +1261,18 @@ contains
 
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, this%d)
-    
+
+    ! Interation terms are treated below
+
+    ! First we add the static electric fields
+    if (this%ep%classical_pot > 0) then
+      call lalg_axpy(gr%mesh%np, M_ONE, this%ep%Vclassical, this%ep%vpsl)
+    end if
+
+    if (allocated(this%ep%e_field) .and. gr%sb%periodic_dim < gr%sb%dim) then
+      call lalg_axpy(gr%mesh%np, M_ONE, this%v_static, this%ep%vpsl)
+    end if
+
     ! Here we need to pass this again, else test are failing.
     ! This is not a real problem, as the multisystem framework will indeed to this anyway
     this%v_ie_loc%atoms_dist => geo%atoms_dist
@@ -1315,7 +1330,7 @@ contains
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
       !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
-      if (this%pcm%localf .and. allocated(this%ep%v_static)) then
+      if (this%pcm%localf .and. allocated(this%v_static)) then
         call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
       end if
 
