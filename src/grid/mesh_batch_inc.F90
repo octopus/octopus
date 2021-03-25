@@ -146,7 +146,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, reduce)
 
       call profiling_in(prof_gemmcl, TOSTRING(X(DOTP_BATCH_CL_GEMM)))
       
-      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
+      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_C, &
         M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
         A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
         B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
@@ -1205,6 +1205,29 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   call profiling_out(prof)
 end subroutine X(mesh_batch_orthogonalization)
 
+! ---------------------------------------------------------
+!> Normalize a batch
+subroutine X(mesh_batch_normalize)(mesh, psib, norm)
+  type(mesh_t),      intent(in)    :: mesh
+  class(batch_t),    intent(inout) :: psib
+  FLOAT, optional,   intent(out)   :: norm(:)
+
+  FLOAT, allocatable :: nrm2(:)
+
+  PUSH_SUB(X(mesh_batch_normalize))
+
+  SAFE_ALLOCATE(nrm2(1:psib%nst))
+
+  call mesh_batch_nrm2(mesh, psib, nrm2)
+  if(present(norm)) then
+    norm(1:psib%nst) = nrm2(1:psib%nst)
+  end if
+  call batch_scal(mesh%np, R_TOTYPE(M_ONE/nrm2(1:psib%nst)), psib, a_full=.false.)
+
+  SAFE_DEALLOCATE_A(nrm2)
+
+  POP_SUB(X(mesh_batch_normalize))
+end subroutine X(mesh_batch_normalize)
 
 !! Local Variables:
 !! mode: f90
