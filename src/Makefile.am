@@ -23,6 +23,7 @@ include common-rules.make
 noinst_HEADERS =                          \
 	include/global.h                  \
 	include/integer.F90               \
+	include/integer8.F90              \
 	include/real.F90                  \
 	include/complex.F90               \
 	include/complex.F90               \
