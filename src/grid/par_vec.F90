@@ -91,6 +91,7 @@ module par_vec_oct_m
   use space_oct_m
   use stencil_oct_m
   use types_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -163,6 +164,14 @@ module par_vec_oct_m
     integer, allocatable, private :: ghost(:)             !< Global indices of ghost points, np_ghost elements
   end type pv_t
 
+  ! derived type for the callback in the blocked loop doing the mesh reordering
+  type :: local_reorder_arguments_t
+    integer(8), allocatable :: reordered(:)
+    integer :: ip
+    type(pv_t), pointer :: vp
+    type(index_t), pointer :: idx
+  end type local_reorder_arguments_t
+
   interface vec_scatter
     module procedure dvec_scatter
     module procedure zvec_scatter
@@ -191,17 +200,17 @@ contains
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, np_global, np_part_global, idx, stencil, space, partition, vp, namespace)
-    integer,         intent(in)  :: comm         !< Communicator to use.
+    integer,               intent(in)  :: comm         !< Communicator to use.
 
     !> The next seven entries come from the mesh.
-    integer,           intent(in)    :: np_global      !< mesh%np_global
-    integer,           intent(in)    :: np_part_global !< mesh%np_part_global
-    type(index_t),     intent(in)    :: idx
-    type(stencil_t),   intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
-    type(space_t),     intent(in)    :: space
-    type(partition_t), intent(in)    :: partition
-    type(pv_t),        intent(inout) :: vp             !< Description of partition.
-    type(namespace_t), intent(in)    :: namespace
+    integer,               intent(in)    :: np_global      !< mesh%np_global
+    integer,               intent(in)    :: np_part_global !< mesh%np_part_global
+    type(index_t), target, intent(in)    :: idx
+    type(stencil_t),       intent(in)    :: stencil        !< The stencil for which to calculate ghost points.
+    type(space_t),         intent(in)    :: space
+    type(partition_t),     intent(in)    :: partition
+    type(pv_t), target,    intent(inout) :: vp             !< Description of partition.
+    type(namespace_t),     intent(in)    :: namespace
 
     ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -441,13 +450,12 @@ contains
 
   contains
     subroutine reorder_points()
-      integer, allocatable :: reordered(:)
-      integer :: ix, iy, iz, ixb, iyb, izb, ip, ipg, nn
-      integer :: bsize(3), order
+      integer :: ip, nn
+      integer :: bsize(space%dim), order
+      type(local_reorder_arguments_t) :: args
       type(block_t) :: blk
       integer, parameter :: &
         ORDER_BLOCKS     =  1, &
-        ORDER_HILBERT    =  2, &
         ORDER_CUBE       =  3, &
         ORDER_GLOBAL     =  4
 
@@ -469,13 +477,17 @@ contains
       !% Use the ordering from the global mesh
       !%End
       call parse_variable(namespace, 'MeshLocalOrder', ORDER_BLOCKS, order)
+      ! no reordering in 1D necessary
+      if (space%dim == 1) then
+        order = ORDER_GLOBAL
+      end if
 
       select case(order)
       case(ORDER_GLOBAL)
         ! nothing to do, points are ordered along the global distribution by default
       case(ORDER_BLOCKS, ORDER_CUBE)
         if (order == ORDER_CUBE) then
-          bsize = idx%ll
+          bsize(1:space%dim) = idx%nr(2, 1:space%dim) - idx%nr(1, 1:space%dim) + 1
         else
           !%Variable MeshLocalBlockSize
           !%Type block
@@ -496,50 +508,47 @@ contains
           ! DOI: 10.1007/978-3-319-56702-0_1
           ! tool: https://rrze-hpc.github.io/layer-condition
           if (conf%target_states_block_size < 32) then
-            bsize = (/ 56, 56, 1 /) / abs(conf%target_states_block_size)
+            bsize(1) = 56 / abs(conf%target_states_block_size)
+            bsize(2) = 56 / abs(conf%target_states_block_size)
           else
-            bsize = (/ 10, 2, 1 /)
+            bsize(1) = 10
+            bsize(2) = 2
           end if
 
-          ! no blocking in z direction
-          bsize(3) = idx%ll(3)
+          ! no blocking in higher dimensions
+          do idir = 3, space%dim
+            bsize(idir) = idx%nr(2, idir) - idx%nr(1, idir) + 1
+          end do
 
           if(parse_block(namespace, 'MeshLocalBlockSize', blk) == 0) then
             nn = parse_block_cols(blk, 0)
+            if (nn /= space%dim) then
+              message(1) = "Error: number of entries in MeshBlockSize must match the  umber of dimensions."
+              call messages_fatal(1)
+            end if
             do idir = 1, nn
               call parse_block_integer(blk, 0, idir - 1, bsize(idir))
             end do
           end if
         end if
 
-        SAFE_ALLOCATE(reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
-        ip = vp%xlocal
-        do izb = idx%nr(1,3)+idx%enlarge(3), idx%nr(2,3)-idx%enlarge(3), bsize(3)
-          do iyb = idx%nr(1,2)+idx%enlarge(2), idx%nr(2,2)-idx%enlarge(2), bsize(2)
-            do ixb = idx%nr(1,1)+idx%enlarge(1), idx%nr(2,1)-idx%enlarge(1), bsize(1)
-
-              do iz = izb, min(izb + bsize(3) - 1, idx%nr(2,3)-idx%enlarge(3))
-                do iy = iyb, min(iyb + bsize(2) - 1, idx%nr(2,2)-idx%enlarge(2))
-                  do ix = ixb, min(ixb + bsize(1) - 1, idx%nr(2,1)-idx%enlarge(1))
-                    ipg = index_from_coords(idx, [ix, iy, iz])
-                    if (ipg == 0) cycle
-                    tmp = iihash_lookup(vp%global, ipg, found)
-                    if (.not. found) cycle
-                    reordered(ip) = vp%local(vp%xlocal + tmp - 1)
-                    ASSERT(ipg == vp%local(vp%xlocal + tmp - 1))
-                    ip = ip + 1
-                  end do
-                end do
-              end do
-
-            end do
-          end do
-        end do
-        ASSERT(ip == vp%xlocal + vp%np_local)
+        args%vp => vp
+        args%idx => idx
+        SAFE_ALLOCATE(args%reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
+        args%reordered = 0
+        args%ip = vp%xlocal
+        ! here is the reordering loop: a blocked loop over space%dim dimensions
+        call blocked_loop(space%dim, idx%nr(1, :)+idx%enlarge(:), idx%nr(2, :)-idx%enlarge(:), &
+          bsize, reorder_add_index, args)
+        nullify(args%vp)
+        nullify(args%idx)
+        ! make sure the number of points is correct
+        ASSERT(args%ip == vp%xlocal + vp%np_local)
+        ! assign the reordered points
         do ip = vp%xlocal, vp%xlocal + vp%np_local - 1
-          vp%local(ip) = reordered(ip)
+          vp%local(ip) = args%reordered(ip)
         end do
-        SAFE_DEALLOCATE_A(reordered)
+        SAFE_DEALLOCATE_A(args%reordered)
 
         ! Recreate hash table.
         call iihash_end(vp%global)
@@ -552,6 +561,28 @@ contains
 
       POP_SUB(vec_init.reorder_points)
     end subroutine reorder_points
+
+    ! callback routine for blocked loop doing the mesh reordering
+    subroutine reorder_add_index(index, arguments)
+      integer, intent(in)    :: index(:)
+      class(*), intent(inout) :: arguments
+
+      integer :: ipg, tmp
+      logical :: found
+
+      select type(a => arguments)
+        class is (local_reorder_arguments_t)
+          ipg = index_from_coords(a%idx, index)
+          if (ipg == 0) return
+          tmp = iihash_lookup(vp%global, ipg, found)
+          if (.not. found) return
+          a%reordered(a%ip) = a%vp%local(a%vp%xlocal + tmp - 1)
+          ASSERT(ipg == a%vp%local(a%vp%xlocal + tmp - 1))
+          a%ip = a%ip + 1
+        class default
+          ASSERT(.false.)
+      end select
+    end subroutine reorder_add_index
 
     subroutine init_MPI_Alltoall()
       integer, allocatable :: part_local(:)
