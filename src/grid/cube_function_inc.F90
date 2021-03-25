@@ -1,5 +1,6 @@
 !! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio,
 !! G. Bertsch, M. Oliveira, J. Alberdi-Rodriguez, P. Garcia Risueño
+!! Copyright (C) 2021 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
