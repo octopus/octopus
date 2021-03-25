@@ -316,7 +316,7 @@ subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
   SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:geo%natoms))
 
   offset = M_ZERO
-  offset(1:geo%space%dim) = -matmul(sb%latt%rlattice_primitive(1:geo%space%dim, 1:geo%space%dim), sb%lsize(1:geo%space%dim))
+  offset(1:geo%space%dim) = -M_HALF*sum(sb%latt%rlattice, dim=2)
 
   do i = 1, geo%natoms
     ! this is only valid if the primitive vectors are along the x, y, and z directions.

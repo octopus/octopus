@@ -865,7 +865,7 @@ contains
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, cube%fs_n_global(1)
       ixx = pad_feq(ix, cube%rs_n_global(1), .true.)
-      g = (ixx + coulb%qq(1))*M_PI/mesh%sb%lsize(1)
+      g = (ixx + coulb%qq(1))*M_TWO*M_PI/abs(mesh%sb%latt%rlattice(1,1))
       if(abs(g) > CNST(1e-6)) then
         fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*abs(g))
       end if

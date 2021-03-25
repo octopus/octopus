@@ -1162,7 +1162,7 @@ contains
   !> Writes real and imaginary parts
   subroutine out_dx()
     integer :: ix, iy, iz, idir
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     character(len=40) :: nitems
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1176,10 +1176,10 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
-
-    do idir = mesh%sb%periodic_dim+1, 3
+    do idir = 1, mesh%sb%periodic_dim
+      offset(idir) = units_from_atomic(units_out%length, -M_HALF*sum(mesh%sb%latt%rlattice(idir,1:mesh%sb%periodic_dim)))
+    end do
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
     end do
 
@@ -1231,7 +1231,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=8) :: fmt
@@ -1247,10 +1247,10 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
-
-    do idir = mesh%sb%periodic_dim+1, 3
+    do idir = 1, mesh%sb%periodic_dim
+      offset(idir) = -M_HALF*sum(mesh%sb%latt%rlattice(idir, 1:mesh%sb%periodic_dim))
+    end do
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
