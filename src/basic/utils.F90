@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2021 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -44,7 +45,8 @@ module utils_oct_m
     leading_dimension_is_known,   &
     lead_dim,                     &
     get_config_opts,              &
-    get_optional_libraries
+    get_optional_libraries,       &
+    blocked_loop
 
   interface leading_dimension_is_known
     module procedure dleading_dimension_is_known, zleading_dimension_is_known
@@ -463,6 +465,84 @@ contains
     
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function zlead_dim2
+
+  ! ---------------------------------------------------------
+  ! function to do a blocked loop over an arbitrary number of dimensions,
+  ! calling the callback function for each index in the innermost loop
+  subroutine blocked_loop(dimensions, lower_bound, upper_bound, blocksize, callback, arguments)
+    integer, intent(in)    :: dimensions                !< number of dimensions to execute the loop for
+    integer, intent(in)    :: lower_bound(1:dimensions) !< lower bounds of the loop
+    integer, intent(in)    :: upper_bound(1:dimensions) !< upper bounds of the loop
+    integer, intent(in)    :: blocksize(1:dimensions)   !< blocking factor in each dimension
+    interface
+      subroutine callback(index, arguments)
+        integer,  intent(in)    :: index(:)   !< 1:dimensions, index in the innermost loop
+        class(*), intent(inout) :: arguments  !< arguments are passed through, can be a custom derived type
+      end subroutine callback
+    end interface
+    class(*), intent(inout) :: arguments                !< arguments that are passed through to the callback routine
+
+    integer :: outer_index(1:dimensions), inner_index(1:dimensions)
+
+    ! use internal subroutine with more arguments to do the actual work
+    call blocked_loop_body(dimensions, dimensions, lower_bound, upper_bound, blocksize, &
+      callback, arguments, outer_index, inner_index)
+
+  end subroutine blocked_loop
+
+  ! ---------------------------------------------------------
+  ! internal subroutine that executes the logic of the nested blocked loop
+  recursive subroutine blocked_loop_body(level, max_level, lower_bound, upper_bound, blocksize, &
+      callback, arguments, outer_index, inner_index, inner)
+    integer,           intent(in)    :: level                    !< the current level of the nesting
+    integer,           intent(in)    :: max_level                !< maximum number of levels
+    integer,           intent(in)    :: lower_bound(1:max_level) !< lower bound of indices
+    integer,           intent(in)    :: upper_bound(1:max_level) !< upper bound of indices
+    integer,           intent(in)    :: blocksize(1:max_level)   !< blocking factor
+    interface
+      subroutine callback(index, arguments)
+        integer,  intent(in)    :: index(:)   !< 1:dimensions, index in the innermost loop
+        class(*), intent(inout) :: arguments  !< arguments are passed through, can be a custom derived type
+      end subroutine callback
+    end interface
+    class(*),          intent(inout) :: arguments                !< arguments that are passed through to the callback routine
+    integer,           intent(inout) :: outer_index(:)           !< current index in outer loops
+    integer,           intent(inout) :: inner_index(:)           !< current index in inner loops
+    logical, optional, intent(in)    :: inner                    !< true if in inner loops
+
+    integer :: ii
+    logical :: process_outer_loops
+
+    process_outer_loops = .not. optional_default(inner, .false.)
+    if (process_outer_loops) then
+      ! outer loops are blocked by blocksize
+      do ii = lower_bound(level), upper_bound(level), blocksize(level)
+        outer_index(level) = ii
+        if (level > 1) then
+          ! stay in outer loops and recurse one level down
+          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index)
+        else
+          ! last level in outer loops, go to inner loops
+          call blocked_loop_body(max_level, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
+        end if
+      end do
+    else
+      ! do the inner loop here
+      do ii = outer_index(level), min(outer_index(level)+blocksize(level)-1, upper_bound(level))
+        inner_index(level) = ii
+        if (level > 1) then
+          ! stay in inner loops and recurse one level down
+          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
+        else
+          ! last level in inner loop, call callback routine
+          call callback(inner_index, arguments)
+        end if
+      end do
+    end if
+  end subroutine blocked_loop_body
 
 end module utils_oct_m
 

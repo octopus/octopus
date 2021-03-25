@@ -42,6 +42,7 @@ module mesh_init_oct_m
   use sort_oct_m
   use space_oct_m
   use stencil_oct_m
+  use utils_oct_m
 
   implicit none
   
@@ -57,6 +58,7 @@ module mesh_init_oct_m
   integer, parameter :: ENLARGEMENT_POINT = 2
   integer, parameter :: BOUNDARY = -1
 
+  ! derived type for the callback in the blocked loop doing the mesh reordering
   type :: reorder_arguments_t
     integer :: istart, iend, local_size
     integer :: ip_inner, ip_boundary, boundary_start
@@ -629,70 +631,7 @@ contains
     POP_SUB(mesh_init_stage_3.reorder_points)
   end subroutine reorder_points
 
-  subroutine blocked_loop(dimensions, lower_bound, upper_bound, blocksize, callback, arguments)
-    integer, intent(in)    :: dimensions
-    integer, intent(in)    :: lower_bound(:)
-    integer, intent(in)    :: upper_bound(:)
-    integer, intent(in)    :: blocksize(:)
-    interface
-      subroutine callback(index, arguments)
-        integer, intent(in)    :: index(:)
-        class(*), intent(inout) :: arguments
-      end subroutine callback
-    end interface
-    class(*), intent(inout) :: arguments
-
-    integer :: outer_index(1:dimensions), inner_index(1:dimensions)
-
-    call blocked_loop_body(dimensions, dimensions, lower_bound, upper_bound, blocksize, &
-      callback, arguments, outer_index, inner_index)
-
-  end subroutine blocked_loop
-
-  recursive subroutine blocked_loop_body(level, max_level, lower_bound, upper_bound, blocksize, &
-      callback, arguments, outer_index, inner_index, inner)
-    integer,           intent(in)    :: level
-    integer,           intent(in)    :: max_level
-    integer,           intent(in)    :: lower_bound(:)
-    integer,           intent(in)    :: upper_bound(:)
-    integer,           intent(in)    :: blocksize(:)
-    interface
-      subroutine callback(index, arguments)
-        integer, intent(in)    :: index(:)
-        class(*), intent(inout) :: arguments
-      end subroutine callback
-    end interface
-    class(*),           intent(inout) :: arguments
-    integer,           intent(inout) :: outer_index(:)
-    integer,           intent(inout) :: inner_index(:)
-    logical, optional, intent(in)    :: inner
-
-    integer :: ii
-
-    if (.not. optional_default(inner, .false.)) then
-      do ii = lower_bound(level), upper_bound(level), blocksize(level)
-        outer_index(level) = ii
-        if (level > 1) then
-          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
-            blocksize, callback, arguments, outer_index, inner_index)
-        else
-          call blocked_loop_body(max_level, max_level, lower_bound, upper_bound, &
-            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
-        end if
-      end do
-    else
-      do ii = outer_index(level), min(outer_index(level)+blocksize(level)-1, upper_bound(level))
-        inner_index(level) = ii
-        if (level > 1) then
-          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
-            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
-        else
-          call callback(inner_index, arguments)
-        end if
-      end do
-    end if
-  end subroutine blocked_loop_body
-
+  ! callback routine for blocked loop doing the mesh reordering
   subroutine reorder_add_index(index, arguments)
     integer, intent(in)    :: index(:)
     class(*), intent(inout) :: arguments
