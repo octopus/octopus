@@ -23,6 +23,7 @@ module time_dependent_oct_m
   use global_oct_m
   use messages_oct_m
   use multisystem_basic_oct_m
+  use multisystem_debug_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -86,7 +87,10 @@ contains
 
     call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
 
+
     call systems%propagation_start()
+
+    call multisystem_debug_start_log()
 
     ! The full TD loop
     do while (.not. systems%has_reached_final_propagation_time(final_time))
@@ -103,6 +107,7 @@ contains
 
       write (message(1), '(a)') repeat ('-', 71)
       call messages_info(1)
+
     end do
 
     call systems%propagation_finish()

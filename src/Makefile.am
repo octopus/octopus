@@ -480,6 +480,7 @@ multisystem_f_srcs =                                 \
 	multisystem/interactions_factory_abst.F90    \
 	multisystem/multisystem.F90                  \
 	multisystem/multisystem_basic.F90            \
+	multisystem/multisystem_debug.F90            \
 	multisystem/propagator.F90                   \
 	multisystem/propagator_beeman.F90            \
 	multisystem/propagator_exp_mid.F90           \

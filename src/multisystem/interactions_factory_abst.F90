@@ -255,21 +255,16 @@ contains
     class(interaction_partner_t), pointer :: partner
     class(interaction_t), pointer :: interaction
 
-    PUSH_SUB(create_interaction_with_partners)
+    logical :: interaction_used
 
-    if (debug%info) then
-      if( present(interaction_type) ) then
-        write(message(1), '(a I4)') "Debug: ----  interactions_factory_abst with type ", interaction_type 
-      else
-        write(message(1), '(a)') "Debug: ----  interactions_factory_abst without type. " 
-      endif
-      call messages_info(1)
-    end if
+    PUSH_SUB(create_interaction_with_partners)
 
     ! Loop over all available partners
     call iter%start(partners)
     do while (iter%has_next())
       partner => iter%get_next()
+
+      interaction_used = .false.
 
       ! No self-interaction
       if (partner%namespace%get() /= namespace%get()) then
@@ -279,16 +274,20 @@ contains
           if (partner%supported_interactions_as_partner%has(interaction_type)) then
             interaction => this%create(interaction_type, partner)
             call interactions%add(interaction)
+            interaction_used = .true.
           end if
         else
           ! Create a ghost interaction if no interaction type was given
           interaction => ghost_interaction_t(partner)
           call interactions%add(interaction)
+          interaction_used = .true.
         end if
 
-        if (debug%info) then
-          if( associated(interaction)) then
+        if (debug%info .and. interaction_used) then
+          if( associated(interaction) ) then
             write(message(1), '(a)') "Debug: ----  " + trim(interaction%label) + " with " + trim(partner%namespace%get())
+          else
+            write(message(1), '(a)') "Debug: ----  interaction was not associated."
           endif
           call messages_info(1)
         end if

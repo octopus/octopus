@@ -30,6 +30,7 @@ module system_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
+  use multisystem_debug_oct_m
   use linked_list_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -172,13 +173,18 @@ contains
     type(algorithmic_operation_t) :: tdop
     logical :: all_updated
 
+    type(event_handle_t) :: debug_handle
+
     PUSH_SUB(system_dt_operation)
 
     tdop = this%prop%get_td_operation()
 
     if (debug%info) then
-      write(message(1), '(a,a,1X,a)') "Debug: ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "'"
+      write(message(1), '(a,a,1X,a)') "Debug: Start  ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "'"
       call messages_info(1)
+
+      debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("dt_operation", tdop),    &
+                                                      system_clock=this%clock, prop_clock=this%prop%clock)
     end if
 
     select case (tdop%id)
@@ -267,6 +273,13 @@ contains
       call this%prop%next()
     end select
 
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a, l)') "Debug: Finish ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "' ", &
+                                         this%prop%step_is_done()
+      call messages_info(1)
+      call multisystem_debug_write_event_out(debug_handle, system_clock=this%clock, prop_clock=this%prop%clock)
+    end if
+
     POP_SUB(system_dt_operation)
   end subroutine system_dt_operation
 
@@ -311,11 +324,19 @@ contains
     logical :: ahead_in_time, right_on_time, need_to_copy
     integer :: iq, q_id
 
+    type(event_handle_t) :: debug_handle
+
     PUSH_SUB(system_update_exposed_quantities)
 
     if (debug%info) then
       write(message(1), '(a,a,a)') "Debug: -- Updating exposed quantities for partner '", trim(partner%namespace%get()), "'"
       call messages_info(1)
+
+      debug_handle = multisystem_debug_write_event_in(system = partner, &
+                                                      event = event_function_call_t("system_update_exposed_quantities"), &
+                                                      partner_clock = partner%clock, &
+                                                      requested_clock = requested_time, &
+                                                      interaction_clock = interaction%clock )
     end if
 
     select type (interaction)
@@ -392,6 +413,11 @@ contains
       write(message(1), '(a,a,a)') "Debug: -- Finished updating exposed quantities for partner '", &
         trim(partner%namespace%get()), "'"
       call messages_info(1)
+      call multisystem_debug_write_event_out(debug_handle, update=allowed_to_update, &
+                                                           partner_clock = partner%clock, &
+                                                           requested_clock = requested_time, &
+                                                           interaction_clock = interaction%clock )
+
     end if
 
     POP_SUB(system_update_exposed_quantities)
@@ -443,6 +469,11 @@ contains
 
     PUSH_SUB(system_init_all_interactions)
 
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Start  init_all_interactions for "+ trim(this%namespace%get()) + "'"
+      call messages_info(1)
+    end if
+
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
@@ -453,6 +484,11 @@ contains
         call this%init_interaction(interaction)
       end select
     end do
+    
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Finish init_all_interactions for "+ trim(this%namespace%get()) + "'"
+      call messages_info(1)
+    end if
 
     POP_SUB(system_init_all_interactions)
   end subroutine system_init_all_interactions
@@ -702,6 +738,11 @@ contains
 
     PUSH_SUB(system_propagation_start)
 
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Start  propagation_start for '" + trim(this%namespace%get()) + "'"
+      call messages_info(1)
+    end if
+
     ! Update interactions at initial time
     all_updated = this%update_interactions()
     if (.not. all_updated) then
@@ -717,6 +758,11 @@ contains
 
     ! Write information for first iteration
     call this%iteration_info()
+
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Finish propagation_start for '" + trim(this%namespace%get()) + "'"
+      call messages_info(1)
+    end if
 
     POP_SUB(system_propagation_start)
   end subroutine system_propagation_start

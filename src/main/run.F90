@@ -36,6 +36,7 @@ module run_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multisystem_basic_oct_m
+  use multisystem_debug_oct_m
   use namespace_oct_m
   use opt_control_oct_m
   use parser_oct_m
@@ -121,6 +122,9 @@ contains
 
     PUSH_SUB(run)
 
+    call multisystem_debug_init("debug_multisystem.txt", global_namespace)
+
+
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
     call messages_print_stress(stdout)
@@ -184,12 +188,15 @@ contains
     select type (systems)
     class is (multisystem_basic_t)
       ! Write the interaction graph as a DOT graph for debug
-      if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+      if ( (debug%interaction_graph .or. debug%interaction_graph_full) .and. mpi_grp_is_root(mpi_world)) then
         iunit_out = io_open('debug/interaction_graph.dot', systems%namespace, action='write')
         write(iunit_out, '(a)') 'digraph {'
-        call systems%write_interaction_graph(iunit_out)
+        call systems%write_interaction_graph(iunit_out, debug%interaction_graph_full)
         write(iunit_out, '(a)') '}'
         call io_close(iunit_out)
+      end if
+      if(debug%info) then
+        
       end if
     end select
 
@@ -278,6 +285,8 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_statistics()
 #endif
+
+    call multisystem_debug_end()
 
     POP_SUB(run)
 

@@ -29,6 +29,7 @@ module multisystem_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_debug_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -206,7 +207,16 @@ contains
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
 
+    type(event_handle_t) :: debug_handle
+
     PUSH_SUB(multisystem_dt_operation)
+
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Start multisystem_dt_operation for '" + trim(this%namespace%get()) + "'"
+      call messages_info(1)
+      debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("multisystem_dt_operation"), &
+                                                      system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     ! Multisystem
     call system_dt_operation(this)
@@ -217,6 +227,12 @@ contains
       system => iter%get_next()
       call system%dt_operation()
     end do
+
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: Finish multisystem_dt_operation for '" + trim(this%namespace%get()) + "'"
+      call messages_info(1)
+      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     POP_SUB(multisystem_dt_operation)
   end subroutine multisystem_dt_operation
@@ -405,8 +421,9 @@ contains
   end subroutine multisystem_init_interaction
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_write_interaction_graph(this, iunit)
+  recursive subroutine multisystem_write_interaction_graph(this, iunit, include_ghosts)
     class(multisystem_t), intent(in) :: this
+    logical, optional                :: include_ghosts
     integer,              intent(in) :: iunit
 
     class(system_t), pointer :: system
@@ -429,6 +446,10 @@ contains
         ! Write interaction to DOT graph if this interaction has a partner
         select type (interaction)
         type is (ghost_interaction_t)
+          if(optional_default(include_ghosts, .false.)) then
+            write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &
+            '" [label="'+ interaction%label + '"];'
+          endif
           ! Do not include systems connected by ghost interactions
         class is (interaction_with_partner_t)
           write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &

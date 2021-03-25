@@ -40,6 +40,7 @@ module debug_oct_m
     logical, public :: trace_file
     logical :: extra_checks
     logical, public :: interaction_graph
+    logical, public :: interaction_graph_full
     integer :: bits    
   end type debug_t
 
@@ -77,6 +78,8 @@ contains
     !% code correctness, that might be too costly for regular runs.
     !%Option interaction_graph 32
     !% Octopus generates a dot file containing the graph for a multisystem run.
+    !%Option interaction_graph_full 64
+    !% Octopus generates a dot file containing the graph for a multisystem run.
     !%End
     call parse_variable(namespace, 'Debug', OPTION__DEBUG__NO, this%bits)
 
@@ -94,6 +97,7 @@ contains
     this%trace_term = .true.
     this%trace_file = .true.
     this%interaction_graph = .true.
+    this%interaction_graph_full = .true.
     
   end subroutine debug_enable
 
@@ -117,6 +121,7 @@ contains
     this%trace        = (bitand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
     this%extra_checks = (bitand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
     this%interaction_graph = (bitand(this%bits, OPTION__DEBUG__INTERACTION_GRAPH)   /= 0)
+    this%interaction_graph_full = (bitand(this%bits, OPTION__DEBUG__INTERACTION_GRAPH_FULL)   /= 0)
 
   end subroutine from_bits
   
