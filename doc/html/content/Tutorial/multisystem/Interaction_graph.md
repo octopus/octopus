@@ -11,6 +11,6 @@ The following input file
 {{< code-block >}}
 #include_input testsuite/multisystem/02-interaction_graph.01-three_body.inp
 {{< /code-block >}}
-{{% /expand }}
+{{% /expand %}}
 gives rise to the following graph:
 {{% graphviz-file "/static/interaction_graph.dot" %}}
