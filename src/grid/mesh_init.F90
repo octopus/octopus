@@ -602,7 +602,6 @@ contains
       nullify(args%mesh)
 
       ASSERT(args%ip_inner + args%ip_boundary - 2 == args%local_size)
-      ASSERT(all(args%reordered > 0))
       ! gather the reordered index
 #ifdef HAVE_MPI
       call MPI_Allgatherv(args%reordered(1), args%local_size, MPI_LONG_LONG, &
