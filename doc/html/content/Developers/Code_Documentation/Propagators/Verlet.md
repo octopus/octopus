@@ -106,10 +106,6 @@ sequenceDiagram
 -->
 <!--{{% sequence-diag %}}-->
 
-{{< d3-sequence "/develop/test.json" >}}
+{{< d3-sequence "/develop/propagation.json" >}}
 
 
-And another example with 3 systems.
-
-
-{{< d3-sequence "/develop/test-3.json" >}}
