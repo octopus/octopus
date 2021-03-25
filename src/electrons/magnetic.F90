@@ -384,8 +384,7 @@ contains
     FLOAT,                 intent(inout) :: torque(:,:)
 
     FLOAT :: mag(3), Bxc(3)
-    type(unit_t) :: fn_unit
-    integer :: err, ip
+    integer :: ip
 
     PUSH_SUB(calc_xc_torque)
 

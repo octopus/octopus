@@ -369,9 +369,8 @@
  
 
     FLOAT, allocatable :: torque(:,:)
-    FLOAT :: mag(3), Bxc(3)
     type(unit_t) :: fn_unit
-    integer :: err, ip
+    integer :: err
 
     PUSH_SUB(output_xc_torque)
 
