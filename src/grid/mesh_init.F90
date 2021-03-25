@@ -56,6 +56,13 @@ module mesh_init_oct_m
   integer, parameter :: INNER_POINT = 1
   integer, parameter :: ENLARGEMENT_POINT = 2
   integer, parameter :: BOUNDARY = -1
+
+  type :: reorder_arguments_t
+    integer :: istart, iend, local_size
+    integer :: ip_inner, ip_boundary, boundary_start
+    integer(8), allocatable :: reordered(:)
+    type(mesh_t), pointer :: mesh
+  end type reorder_arguments_t
   
 contains
 
@@ -421,7 +428,7 @@ end subroutine mesh_init_stage_2
 !! this mesh.
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
-  type(mesh_t),              intent(inout) :: mesh
+  type(mesh_t), target,      intent(inout) :: mesh
   type(namespace_t),         intent(in)    :: namespace
   type(space_t),             intent(in)    :: space
   type(stencil_t),           intent(in)    :: stencil
@@ -476,10 +483,10 @@ contains
   subroutine reorder_points()
     integer, allocatable :: initial_sizes(:), initial_offsets(:)
     integer(8), allocatable :: reordered(:)
-    integer :: ix, iy, iz, ixb, iyb, izb, ip_inner, ip_boundary, ipg, nn, idir
-    integer :: boundary_start, istart, iend, local_size, irank
-    integer :: bsize(3), order, default
+    integer :: ipg, nn, idir, irank
+    integer :: bsize(space%dim), order, default
     type(block_t) :: blk
+    type(reorder_arguments_t) :: args
     integer, parameter :: &
       ORDER_BLOCKS     =  1, &
       ORDER_HILBERT    =  2, &
@@ -511,13 +518,17 @@ contains
       default = ORDER_CUBE
     end if
     call parse_variable(namespace, 'MeshOrder', default, order)
+    ! no reordering in 1D necessary
+    if (space%dim == 1) then
+      order = ORDER_HILBERT
+    end if
 
     select case(order)
     case(ORDER_HILBERT)
       ! nothing to do, points are ordered along a Hilbert curve by default
     case(ORDER_BLOCKS, ORDER_CUBE)
       if (order == ORDER_CUBE) then
-        bsize = mesh%idx%ll
+        bsize(1:space%dim) = mesh%idx%nr(2, 1:space%dim) - mesh%idx%nr(1, 1:space%dim) + 1
       else
         !%Variable MeshBlockSize
         !%Type block
@@ -538,16 +549,24 @@ contains
         ! DOI: 10.1007/978-3-319-56702-0_1
         ! tool: https://rrze-hpc.github.io/layer-condition
         if (conf%target_states_block_size < 32) then
-          bsize = (/ 56, 56, 1 /) / abs(conf%target_states_block_size)
+          bsize(1) = 56 / abs(conf%target_states_block_size)
+          bsize(2) = 56 / abs(conf%target_states_block_size)
         else
-          bsize = (/ 10, 2, 1 /)
+          bsize(1) = 10
+          bsize(2) = 2
         end if
 
-        ! no blocking in z direction
-        bsize(3) = mesh%idx%ll(3)
+        ! no blocking in higher dimensions
+        do idir = 3, space%dim
+          bsize(idir) = mesh%idx%nr(2, idir) - mesh%idx%nr(1, idir) + 1
+        end do
 
         if(parse_block(namespace, 'MeshBlockSize', blk) == 0) then
           nn = parse_block_cols(blk, 0)
+          if (nn /= space%dim) then
+            message(1) = "Error: number of entries in MeshBlockSize must match the  umber of dimensions."
+            call messages_fatal(1)
+          end if
           do idir = 1, nn
             call parse_block_integer(blk, 0, idir - 1, bsize(idir))
           end do
@@ -564,45 +583,28 @@ contains
       do irank = 0, mpi_world%size - 1
         initial_sizes(irank) = initial_offsets(irank+1) - initial_offsets(irank)
       end do
-      istart = initial_offsets(mpi_world%rank) + 1
-      iend = initial_offsets(mpi_world%rank + 1)
-      local_size = iend - istart + 1
-      boundary_start = max(mesh%np_global-istart+1, 0)
-      ASSERT(local_size == initial_sizes(mpi_world%rank))
 
-      ! now comes the reordering loop
-      SAFE_ALLOCATE(reordered(1:local_size))
-      reordered = 0
-      ip_inner = 1
-      ip_boundary = 1
-      do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
-        do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
-          do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
+      ! set arguments for callback function
+      args%istart = initial_offsets(mpi_world%rank) + 1
+      args%iend = initial_offsets(mpi_world%rank + 1)
+      args%local_size = args%iend - args%istart + 1
+      ASSERT(args%local_size == initial_sizes(mpi_world%rank))
+      args%ip_inner = 1
+      args%ip_boundary = 1
+      args%boundary_start = max(mesh%np_global-args%istart+1, 0)
+      args%mesh => mesh
+      SAFE_ALLOCATE(args%reordered(1:args%local_size))
+      args%reordered = 0
+      ! here is the reordering loop: a blocked loop over space%dim dimensions
+      call blocked_loop(space%dim, mesh%idx%nr(1, :), mesh%idx%nr(2, :), bsize, &
+        reorder_add_index, args)
+      nullify(args%mesh)
 
-            do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
-              do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
-                do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
-                  ipg = index_from_coords(mesh%idx, [ix, iy, iz])
-                  if (ipg < istart .or. ipg > iend) cycle
-                  if (ipg <= mesh%np_global) then
-                    reordered(ip_inner) = mesh%idx%grid_to_hilbert_global(ipg)
-                    ip_inner = ip_inner + 1
-                  else
-                    reordered(boundary_start+ip_boundary) = mesh%idx%grid_to_hilbert_global(ipg)
-                    ip_boundary = ip_boundary + 1
-                  end if
-                end do
-              end do
-            end do
-
-          end do
-        end do
-      end do
-      ASSERT(ip_inner + ip_boundary - 2 == local_size)
-      ASSERT(all(reordered > 0))
+      ASSERT(args%ip_inner + args%ip_boundary - 2 == args%local_size)
+      ASSERT(all(args%reordered > 0))
       ! gather the reordered index
 #ifdef HAVE_MPI
-      call MPI_Allgatherv(reordered(1), local_size, MPI_LONG_LONG, &
+      call MPI_Allgatherv(args%reordered(1), args%local_size, MPI_LONG_LONG, &
         mesh%idx%grid_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
         mpi_world%comm, mpi_err)
 #else
@@ -610,7 +612,7 @@ contains
         mesh%idx%grid_to_hilbert_global(ipg) = reordered(ipg)
       end do
 #endif
-      SAFE_DEALLOCATE_A(reordered)
+      SAFE_DEALLOCATE_A(args%reordered)
       SAFE_DEALLOCATE_A(initial_offsets)
       SAFE_DEALLOCATE_A(initial_sizes)
 
@@ -626,6 +628,92 @@ contains
 
     POP_SUB(mesh_init_stage_3.reorder_points)
   end subroutine reorder_points
+
+  subroutine blocked_loop(dimensions, lower_bound, upper_bound, blocksize, callback, arguments)
+    integer, intent(in)    :: dimensions
+    integer, intent(in)    :: lower_bound(:)
+    integer, intent(in)    :: upper_bound(:)
+    integer, intent(in)    :: blocksize(:)
+    interface
+      subroutine callback(index, arguments)
+        integer, intent(in)    :: index(:)
+        class(*), intent(inout) :: arguments
+      end subroutine callback
+    end interface
+    class(*), intent(inout) :: arguments
+
+    integer :: outer_index(1:dimensions), inner_index(1:dimensions)
+
+    call blocked_loop_body(dimensions, dimensions, lower_bound, upper_bound, blocksize, &
+      callback, arguments, outer_index, inner_index)
+
+  end subroutine blocked_loop
+
+  recursive subroutine blocked_loop_body(level, max_level, lower_bound, upper_bound, blocksize, &
+      callback, arguments, outer_index, inner_index, inner)
+    integer,           intent(in)    :: level
+    integer,           intent(in)    :: max_level
+    integer,           intent(in)    :: lower_bound(:)
+    integer,           intent(in)    :: upper_bound(:)
+    integer,           intent(in)    :: blocksize(:)
+    interface
+      subroutine callback(index, arguments)
+        integer, intent(in)    :: index(:)
+        class(*), intent(inout) :: arguments
+      end subroutine callback
+    end interface
+    class(*),           intent(inout) :: arguments
+    integer,           intent(inout) :: outer_index(:)
+    integer,           intent(inout) :: inner_index(:)
+    logical, optional, intent(in)    :: inner
+
+    integer :: ii
+
+    if (.not. optional_default(inner, .false.)) then
+      do ii = lower_bound(level), upper_bound(level), blocksize(level)
+        outer_index(level) = ii
+        if (level > 1) then
+          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index)
+        else
+          call blocked_loop_body(max_level, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
+        end if
+      end do
+    else
+      do ii = outer_index(level), min(outer_index(level)+blocksize(level)-1, upper_bound(level))
+        inner_index(level) = ii
+        if (level > 1) then
+          call blocked_loop_body(level - 1, max_level, lower_bound, upper_bound, &
+            blocksize, callback, arguments, outer_index, inner_index, inner=.true.)
+        else
+          call callback(inner_index, arguments)
+        end if
+      end do
+    end if
+  end subroutine blocked_loop_body
+
+  subroutine reorder_add_index(index, arguments)
+    integer, intent(in)    :: index(:)
+    class(*), intent(inout) :: arguments
+
+    integer :: ipg
+
+    select type(a => arguments)
+      class is (reorder_arguments_t)
+        ipg = index_from_coords(a%mesh%idx, index)
+        if (ipg < a%istart .or. ipg > a%iend) return
+        if (ipg <= a%mesh%np_global) then
+          a%reordered(a%ip_inner) = a%mesh%idx%grid_to_hilbert_global(ipg)
+          a%ip_inner = a%ip_inner + 1
+        else
+          a%reordered(a%boundary_start+a%ip_boundary) = a%mesh%idx%grid_to_hilbert_global(ipg)
+          a%ip_boundary = a%ip_boundary + 1
+        end if
+      class default
+        ASSERT(.false.)
+    end select
+  end subroutine reorder_add_index
 
   ! ---------------------------------------------------------
   subroutine do_partition()
