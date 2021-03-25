@@ -4,10 +4,9 @@ XYZCoordinates = "10-vdw_d3_dna.xyz"
 
 PeriodicDimensions = 3
 
-%LatticeVectors 
- 8.0 * angstrom | 0.0            | 0.0 
- 0.0            | 8.0 * angstrom | 0.0
- 0.0            | 0.0            | 15.0 * angstrom
+%LatticeParameters
+ 8.0 * angstrom | 8.0 * angstrom | 15.0 * angstrom
+ 90 | 90 | 90
 %
 
 BoxShape = parallelepiped
@@ -26,4 +25,3 @@ VDWD3Functional = 'dftb3'
 
 ExperimentalFeatures = yes
 StatesPack = yes
-LCAOStart = lcao_full

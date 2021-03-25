@@ -137,7 +137,7 @@ contains
     PUSH_SUB(density_calc_state)
     call profiling_in(prof, "CALC_STATE_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     istin_= 0
 
@@ -332,7 +332,7 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
     do ist = 1, psib%nst
@@ -561,7 +561,7 @@ contains
     ! reduce over states and k-points
     if((this%st%parallel_in_states .or. this%st%d%kpt%parallel) .and. optional_default(allreduce, .true.)) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
+      call comm_allreduce(this%st%st_kpt_mpi_grp, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
     end if
 
@@ -843,7 +843,7 @@ contains
     end do
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
+      call comm_allreduce(st%st_kpt_mpi_grp, st%qtot)
     end if
 
 

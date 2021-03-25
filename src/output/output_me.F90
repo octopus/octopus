@@ -283,9 +283,9 @@ contains
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+            call doutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
           else
-            call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+            call zoutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
           end if
       end do
     end if
@@ -450,7 +450,7 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
@@ -590,7 +590,7 @@ contains
       if(st%d%nik > ns) then
 
         kpoint = M_ZERO
-        kpoint(1:gr%sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
         
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
         do idir = 1, gr%sb%dim

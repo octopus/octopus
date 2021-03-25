@@ -19,6 +19,7 @@
 #include "global.h"
 
 module td_calc_oct_m
+  use derivatives_oct_m
   use iso_c_binding 
   use forces_oct_m
   use geometry_oct_m
@@ -34,6 +35,7 @@ module td_calc_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_elec_calc_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -59,8 +61,9 @@ contains
 !! \warning This subroutine only works if ions are not
 !!          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
+subroutine td_calc_tacc(namespace, space, gr, geo, st, hm, acc, time)
   type(namespace_t),        intent(in)  :: namespace
+  type(space_t),            intent(in)  :: space
   type(grid_t),             intent(in)  :: gr
   type(geometry_t),         intent(in)  :: geo
   type(states_elec_t),      intent(in)  :: st
@@ -81,14 +84,14 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
-  call total_force_calculate(gr, geo, hm%ep, st, hm%kpoints, acc, hm%lda_u_level)
+  call total_force_calculate(space, gr, geo, hm%ep, st, hm%kpoints, acc, hm%lda_u_level)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
   field = M_ZERO
-  do j = 1, hm%ep%no_lasers
-    call laser_electric_field(hm%ep%lasers(j), field(1:gr%sb%dim), time, CNST(0.001))
-    acc(1:gr%sb%dim) = acc(1:gr%sb%dim) - st%qtot*field(1:gr%sb%dim)
+  do j = 1, hm%ext_lasers%no_lasers
+    call laser_electric_field(hm%ext_lasers%lasers(j), field(1:space%dim), time, CNST(0.001))
+    acc(1:space%dim) = acc(1:space%dim) - st%qtot*field(1:space%dim)
   end do
 
   if(.not. hm%ep%non_local) then
@@ -106,19 +109,19 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
     do ist = st%st_start, st%st_end
 
       call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
-      
+
       call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, zpsi, hzpsi, ist, ik)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
       xzpsi = M_z0
       do k = 1, gr%mesh%np
-        do j = 1, gr%sb%dim
+        do j = 1, space%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*zpsi(k, 1:st%d%dim)
         end do
       end do
 
-      do j = 1, gr%sb%dim
+      do j = 1, space%dim
         call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
           terms = TERM_NON_LOCAL_POTENTIAL)
 
@@ -129,12 +132,12 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
 
       xzpsi = M_z0
       do k = 1, gr%mesh%np
-        do j = 1, gr%sb%dim
+        do j = 1, space%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
       end do
 
-      do j = 1, gr%sb%dim
+      do j = 1, space%dim
         call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
           terms = TERM_NON_LOCAL_POTENTIAL)
 
@@ -152,7 +155,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(x(1), y(1), gr%sb%dim, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(x(1), y(1), space%dim, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     x = y
   end if
 #endif
@@ -168,8 +171,9 @@ end subroutine td_calc_tacc
 !! d<x>/dt = <p>
 !! \f]
 ! ---------------------------------------------------------
-subroutine td_calc_tvel(gr, st, kpoints, vel)
-  type(grid_t),        intent(in)  :: gr
+subroutine td_calc_tvel(space, der, st, kpoints, vel)
+  type(space_t),       intent(in)  :: space
+  type(derivatives_t), intent(in)  :: der
   type(states_elec_t), intent(in)  :: st
   type(kpoints_t),     intent(in)  :: kpoints
   FLOAT,               intent(out) :: vel(MAX_DIM)
@@ -178,16 +182,16 @@ subroutine td_calc_tvel(gr, st, kpoints, vel)
   
   PUSH_SUB(td_calc_tvel)
 
-  SAFE_ALLOCATE(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call states_elec_calc_momentum(st, gr%der, kpoints, momentum)
+  SAFE_ALLOCATE(momentum(1:space%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+  call states_elec_calc_momentum(st, der, kpoints, momentum)
 
-  momentum(1:gr%sb%dim, st%st_start:st%st_end, 1) = & 
-    sum(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
-  momentum(1:gr%sb%dim, 1, 1) = & 
-    sum(momentum(1:gr%sb%dim, st%st_start:st%st_end, 1), 2)
-  vel = momentum(1:gr%sb%dim, 1, 1)
+  momentum(1:space%dim, st%st_start:st%st_end, 1) = & 
+    sum(momentum(1:space%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
+  momentum(1:space%dim, 1, 1) = sum(momentum(1:space%dim, st%st_start:st%st_end, 1), 2)
+  vel = momentum(1:space%dim, 1, 1)
 
   SAFE_DEALLOCATE_A(momentum)
+
   POP_SUB(td_calc_tvel)
 end subroutine td_calc_tvel
 

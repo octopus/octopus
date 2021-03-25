@@ -20,6 +20,7 @@
 #include "global.h"
 
 module box_parallelepiped_oct_m
+  use box_oct_m
   use box_shape_oct_m
   use global_oct_m
   use messages_oct_m
@@ -37,13 +38,13 @@ module box_parallelepiped_oct_m
   !! generating the parallelepiped must be along the Cartesian axes.
   type, extends(box_shape_t) :: box_parallelepiped_t
     private
-    FLOAT, allocatable :: half_length(:) !< half the length of the parallelepiped in each direction.
+    FLOAT, allocatable, public :: half_length(:) !< half the length of the parallelepiped in each direction.
 
-    integer :: n_periodic_boundaries = 0 !< in how many directions the parallelepiped boundaries are periodic
+    integer, public :: n_periodic_boundaries = 0 !< in how many directions the parallelepiped boundaries are periodic
   contains
     procedure :: contains_points => box_parallelepiped_contains_points
     procedure :: write_info => box_parallelepiped_write_info
-    procedure :: write_short_info => box_parallelepiped_write_short_info
+    procedure :: short_info => box_parallelepiped_short_info
     final     :: box_parallelepiped_finalize
   end type box_parallelepiped_t
 
@@ -131,29 +132,30 @@ contains
 
     PUSH_SUB(box_parallelepiped_write_info)
 
-    write(iunit,'(2x,a)') 'Type = parallelepiped'
-    write(iunit,'(2x,3a, 99(f8.3,a))') 'Lengths [', trim(units_abbrev(units_out%length)), '] = (', &
+    write(message(1),'(2x,a)') 'Type = parallelepiped'
+    write(message(2),'(2x,3a, 99(f8.3,a))') 'Lengths [', trim(units_abbrev(units_out%length)), '] = (', &
       (units_from_atomic(units_out%length, M_TWO*this%half_length(idir)), ',', idir = 1, this%dim - 1), &
       units_from_atomic(units_out%length, M_TWO*this%half_length(this%dim)), ')'
+    call messages_info(2, iunit)
 
-      POP_SUB(box_parallelepiped_write_info)
+    POP_SUB(box_parallelepiped_write_info)
   end subroutine box_parallelepiped_write_info
 
   !--------------------------------------------------------------
-  subroutine box_parallelepiped_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function box_parallelepiped_short_info(this, unit_length) result(info)
     class(box_parallelepiped_t), intent(in) :: this
-    integer,                     intent(in) :: iunit
+    type(unit_t),                intent(in) :: unit_length
 
     integer :: idir
 
-    PUSH_SUB(box_parallelepiped_write_short_info)
+    PUSH_SUB(box_parallelepiped_short_info)
 
-    write(iunit, '(a,99(f11.6,a))', advance='no') 'BoxShape = parallelepiped; Lengths [Ang] = [', &
-      (units_from_atomic(units_out%length, M_TWO*this%half_length(idir)), ',', idir = 1, this%dim - 1), &
-      units_from_atomic(units_out%length, M_TWO*this%half_length(this%dim)), ']'
+    write(info, '(a,a,a,99(f11.6,a))') 'BoxShape = parallelepiped; Lengths [', trim(units_abbrev(unit_length)),'] = [', &
+      (units_from_atomic(unit_length, M_TWO*this%half_length(idir)), ',', idir = 1, this%dim - 1), &
+      units_from_atomic(unit_length, M_TWO*this%half_length(this%dim)), ']'
 
-    POP_SUB(box_parallelepiped_write_short_info)
-  end subroutine box_parallelepiped_write_short_info
+    POP_SUB(box_parallelepiped_short_info)
+  end function box_parallelepiped_short_info
 
 end module box_parallelepiped_oct_m
 

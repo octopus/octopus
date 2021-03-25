@@ -22,9 +22,14 @@ module scf_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use berry_oct_m
+  use convergence_criterion_oct_m
+  use criteria_factory_oct_m
   use density_oct_m
+  use density_criterion_oct_m
   use eigensolver_oct_m
+  use eigenval_criterion_oct_m
   use energy_calc_oct_m
+  use energy_criterion_oct_m
   use forces_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -52,7 +57,6 @@ module scf_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use space_oct_m
@@ -103,10 +107,6 @@ module scf_oct_m
     FLOAT, public :: lmm_r
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
-    FLOAT :: conv_energy_diff
-    FLOAT :: energy_diff
     logical :: conv_eigen_error
     logical :: check_conv
 
@@ -123,6 +123,9 @@ module scf_oct_m
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
     type(berry_t) :: berry
+
+    type(criterion_list_t), public :: criterion_list
+    FLOAT :: energy_in, energy_diff, abs_dens_diff, evsum_in, evsum_out, evsum_diff
   end type scf_t
 
 contains
@@ -142,6 +145,8 @@ contains
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iter
 
     PUSH_SUB(scf_init)
 
@@ -164,100 +169,24 @@ contains
       call berry_init(scf%berry, namespace)
     end if
     
-    !%Variable ConvEnergy
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Stop the SCF when the magnitude of change in energy during at
-    !% one SCF iteration is smaller than this value.
-    !%
-    !%A zero value (the default) means do not use this criterion.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
-    
-    !%Variable ConvAbsDens
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the density: 
-    !%
-    !% <math>\varepsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
-    !%
-    !% A zero value (the default) means do not use this criterion.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
+    !Create the list of convergence criteria
+    call criteria_factory_init(scf%criterion_list, namespace, scf%max_iter, scf%check_conv)
+    !Setting the pointers
+    call iter%start(scf%criterion_list)
+    do while (iter%has_next())
+      crit => iter%get_next()
+      select type (crit)
+      type is (energy_criterion_t)
+        call crit%set_pointers(scf%energy_diff, scf%energy_in)
+      type is (density_criterion_t)
+        call crit%set_pointers(scf%abs_dens_diff, st%qtot)
+      type is (eigenval_criterion_t)
+        call crit%set_pointers(scf%evsum_diff, scf%evsum_out)
+      class default
+        ASSERT(.false.)
+      end select
+    end do
 
-    !%Variable ConvRelDens
-    !%Type float
-    !%Default 1e-6
-    !%Section SCF::Convergence
-    !%Description
-    !% Relative convergence of the density: 
-    !%
-    !% <math>\varepsilon = \frac{1}{N} \mathrm{ConvAbsDens}</math>.
-    !% 
-    !% <i>N</i> is the total number of electrons in the problem.  A
-    !% zero value means do not use this criterion.
-    !%
-    !% If you reduce this value, you should also reduce
-    !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
-    !% <tt>ConvRelDens</tt> to avoid convergence problems.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), scf%conv_rel_dens)
-
-    !%Variable ConvAbsEv
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the sum of the eigenvalues:
-    !%
-    !% <math> \varepsilon = \left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} -
-    !% \sum_{j=1}^{N_{occ}} \varepsilon_j^{inp} \right| </math>
-    !%
-    !% A zero value (the default) means do not use this criterion.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
-
-    !%Variable ConvRelEv
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Relative convergence of the sum of the eigenvalues:
-    !%
-    !% <math>\varepsilon = \frac{ \left| \sum_{j=1}^{N_{occ}} ( \varepsilon_j^{out} -  \varepsilon_j^{inp} ) \right|}
-    !% {\left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} \right|} </math>
-    !%
-    !%A zero value (the default) means do not use this criterion.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev)
-
-    call messages_obsolete_variable(namespace, 'ConvAbsForce')
-    call messages_obsolete_variable(namespace, 'ConvRelForce')
-    call messages_obsolete_variable(namespace, 'ConvForce')
-
-    scf%check_conv = &
-      scf%conv_energy_diff > M_ZERO .or. &
-      scf%conv_abs_dens > M_ZERO .or. scf%conv_rel_dens > M_ZERO .or. &
-      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO 
 
     if(.not. scf%check_conv .and. scf%max_iter < 0) then
       call messages_write("All convergence criteria are disabled. Octopus is cowardly refusing")
@@ -528,6 +457,9 @@ contains
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
     type(scf_t),  intent(inout) :: scf
+
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iter
     
     PUSH_SUB(scf_end)
 
@@ -539,6 +471,11 @@ contains
 
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
 
+    call iter%start(scf%criterion_list)
+    do while (iter%has_next())
+      crit => iter%get_next()
+      SAFE_DEALLOCATE_P(crit)
+    end do
 
     POP_SUB(scf_end)
   end subroutine scf_end
@@ -579,18 +516,16 @@ contains
 
     logical :: finish, converged_current, converged_last, gs_run_
     integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
-    FLOAT, allocatable :: tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
-#ifdef HAVE_MPI
-    logical :: forced_finish_tmp    
-#endif
+    class(convergence_criterion_t), pointer    :: crit
+    type(criterion_iterator_t) :: iterator
+    logical :: is_crit_conv
 
     PUSH_SUB(scf_run)
 
@@ -708,8 +643,6 @@ contains
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
-    evsum_in = states_elec_eigenvalues_sum(st)
-
     call create_convergence_file(STATIC_DIR, "convergence")
     
     if ( verbosity_ /= VERB_NO ) then
@@ -730,16 +663,21 @@ contains
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
-      ! reset scdm flag
-      scdm_is_local = .false.
-       
       ! this initialization seems redundant but avoids improper optimization at -O3 by PGI 7 on chum,
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
       scf%eigens%converged = 0
 
-      scf%energy_diff = hm%energy%total
+      !We update the quantities at the begining of the scf cycle
+      if(iter == 1) then
+        scf%evsum_in = states_elec_eigenvalues_sum(st)
+      end if
+      call iterator%start(scf%criterion_list)
+      do while (iterator%has_next())
+        crit => iterator%get_next()
+        call scf_update_initial_quantity(scf, hm, crit)
+      end do
 
-      !Used for the contribution to the forces
+      !Used for computing the imperfect convegence contribution to the forces
       if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       end if
@@ -791,53 +729,37 @@ contains
       
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
-      evsum_out = states_elec_eigenvalues_sum(st)
-
       ! recalculate total energy
-      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, space, hm, gr, st, iunit = 0)
 
-      ! compute convergence criteria
-      scf%energy_diff = hm%energy%total - scf%energy_diff
-      scf%abs_dens = M_ZERO
-      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
-      do is = 1, nspin
-        tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
-        scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
-      end do
-      SAFE_DEALLOCATE_A(tmp)
-
-      ! compute forces only if they are used as convergence criterion
+      ! compute forces only if requested
       if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
          .and. outp%output_interval /= 0 &
          .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
-      if(abs(st%qtot) <= M_EPSILON) then
-        scf%rel_dens = M_HUGE
-      else
-        scf%rel_dens = scf%abs_dens / st%qtot
-      end if
-
-      scf%abs_ev = abs(evsum_out - evsum_in)
-      if(abs(evsum_out) <= M_EPSILON) then
-        scf%rel_ev = M_HUGE
-      else
-        scf%rel_ev = scf%abs_ev / abs(evsum_out)
-      end if
-
-      scf%eigens%current_rel_dens_error = scf%rel_dens
-
+      !We update the quantities at the end of the scf cycle
+      call iterator%start(scf%criterion_list)
+      do while (iterator%has_next())
+        crit => iterator%get_next()
+        call scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, crit)
+      end do
+      
       ! are we finished?
       converged_last = converged_current
+
       converged_current = scf%check_conv .and. &
-        (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
-        (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
-        (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
-        (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
-        (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
-      ! only finish if the convergence criterion is fulfilled in two
+      !Loop over the different criteria
+      call iterator%start(scf%criterion_list)
+      do while (iterator%has_next())
+        crit => iterator%get_next()
+        call crit%is_converged(is_crit_conv)
+        converged_current = converged_current .and. is_crit_conv
+      end do
+
+      ! only finish if the convergence criteria are fulfilled in two
       ! consecutive iterations
       finish = converged_last .and. converged_current
 
@@ -884,12 +806,7 @@ contains
 
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(scf%forced_finish, forced_finish_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
-      scf%forced_finish = forced_finish_tmp
-#endif      
+      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm(mc%master_comm)
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
@@ -985,8 +902,6 @@ contains
       end select
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
-      evsum_in = evsum_out
-
       if(scf%forced_finish) then
         call profiling_out(prof)
         exit
@@ -1080,9 +995,11 @@ contains
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
-          ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
+          ' abs_ev   = ', units_from_atomic(units_out%energy, scf%evsum_diff), &
+          ' rel_ev   = ', scf%evsum_diff/abs(scf%evsum_out)
         write(message(2),'(a,es15.2,2(a,es9.2))') &
-          ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
+          ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens_diff, &
+          ' rel_dens = ', scf%abs_dens_diff/st%qtot
         call messages_info(2)
 
         if(.not.scf%lcao_restricted) then
@@ -1122,7 +1039,7 @@ contains
         write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
           'iter ', iter, &
           ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-          ' : abs_dens', scf%abs_dens, &
+          ' : abs_dens', scf%abs_dens_diff, &
           ' : etime ', etime, 's'
         call messages_info(1)
       end if
@@ -1181,11 +1098,16 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, space, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
         call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
+        if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
+      end if
+
+      if(st%d%ispin == SPINORS .and. space%dim == 3) then
+        call write_total_xc_torque(iunit, gr%mesh, hm%vxc, st)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
@@ -1203,16 +1125,11 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         if(scf%max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
-            ' (', scf%conv_abs_dens, ')'
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
-            ' (', scf%conv_rel_dens, ')'
-          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', &
-                  units_from_atomic(units_out%energy, scf%abs_ev), &
-            ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
-            ' [',  trim(units_abbrev(units_out%energy)), ']'
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
-            ' (', scf%conv_rel_ev, ')'
+          call iterator%start(scf%criterion_list)
+          do while (iterator%has_next())
+            crit => iterator%get_next()
+            call crit%write_info(iunit)
+          end do
           write(iunit,'(1x)')
         end if
         ! otherwise, these values are uninitialized, and unknown.
@@ -1344,11 +1261,21 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
-        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)
-        write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
-        write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
-        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
-        write(iunit, '(es13.5)', advance = 'no') scf%rel_ev
+        call iterator%start(scf%criterion_list)
+        do while (iterator%has_next())
+          crit => iterator%get_next()
+          select type (crit)
+          type is (energy_criterion_t)
+            write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
+          type is (density_criterion_t)
+            write(iunit, '(2es13.5)', advance = 'no') crit%val_abs, crit%val_rel           
+          type is (eigenval_criterion_t)
+            write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
+            write(iunit, '(es13.5)', advance = 'no') crit%val_rel
+          class default 
+            ASSERT(.false.)
+          end select
+        end do
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) &
             write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
@@ -1399,6 +1326,70 @@ contains
 
     POP_SUB(scf_print_mem_use)
   end subroutine scf_print_mem_use
+
+  ! --------------------------------------------------------
+  !> Update the quantity at the begining of a SCF cycle
+  subroutine scf_update_initial_quantity(scf, hm, criterion)
+    type(scf_t),                    intent(inout) :: scf 
+    type(hamiltonian_elec_t),       intent(in)    :: hm
+    class(convergence_criterion_t), intent(in)    :: criterion
+
+    PUSH_SUB(scf_update_initial_quantity)
+
+    select type (criterion)
+    type is (energy_criterion_t)
+      scf%energy_in = hm%energy%total
+    type is (density_criterion_t)
+      !Do nothing here
+    type is (eigenval_criterion_t)
+      !Setting of the value is done in the scf_update_diff_quantity routine
+    class default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(scf_update_initial_quantity)
+  end subroutine scf_update_initial_quantity
+
+  ! --------------------------------------------------------
+  !> Update the quantity at the begining of a SCF cycle
+  subroutine scf_update_diff_quantity(scf, hm, st, gr, rhoout, rhoin, criterion)
+    type(scf_t),                    intent(inout) :: scf
+    type(hamiltonian_elec_t),       intent(in)    :: hm
+    type(states_elec_t),            intent(in)    :: st
+    type(grid_t),                   intent(in)    :: gr
+    FLOAT,                          intent(in)    :: rhoout(:,:,:), rhoin(:,:,:)
+    class(convergence_criterion_t), intent(in)    :: criterion
+  
+    integer :: is
+    FLOAT, allocatable :: tmp(:)
+  
+    PUSH_SUB(scf_update_diff_quantity)
+
+    select type (criterion)
+    type is (energy_criterion_t)
+      scf%energy_diff = abs(hm%energy%total - scf%energy_in)
+
+    type is (density_criterion_t)
+      scf%abs_dens_diff = M_ZERO
+      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
+      do is = 1, st%d%nspin
+        tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
+        scf%abs_dens_diff = scf%abs_dens_diff + dmf_integrate(gr%fine%mesh, tmp)
+      end do
+      SAFE_DEALLOCATE_A(tmp)
+
+    type is (eigenval_criterion_t)
+      scf%evsum_out = states_elec_eigenvalues_sum(st)
+      scf%evsum_diff = abs(scf%evsum_out - scf%evsum_in)
+      scf%evsum_in = scf%evsum_out
+
+    class default
+      ASSERT(.false.)
+    end select
+  
+    POP_SUB(scf_update_diff_quantity)
+  end subroutine scf_update_diff_quantity
+
 
 end module scf_oct_m
 

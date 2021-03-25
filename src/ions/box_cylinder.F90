@@ -19,6 +19,7 @@
 #include "global.h"
 
 module box_cylinder_oct_m
+  use box_oct_m
   use box_shape_oct_m
   use global_oct_m
   use messages_oct_m
@@ -45,7 +46,7 @@ module box_cylinder_oct_m
   contains
     procedure :: contains_points => box_cylinder_contains_points
     procedure :: write_info => box_cylinder_write_info
-    procedure :: write_short_info => box_cylinder_write_short_info
+    procedure :: short_info => box_cylinder_short_info
     final     :: box_cylinder_finalize
   end type box_cylinder_t
 
@@ -153,27 +154,29 @@ contains
 
     PUSH_SUB(box_cylinder_write_info)
 
-    write(iunit,'(2x,a)') 'Type = cylinder'
-    write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+    write(message(1),'(2x,a)') 'Type = cylinder'
+    write(message(2),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
       units_from_atomic(units_out%length, this%radius)
-    write(iunit,'(2x,3a,f7.3)') 'Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
+    write(message(3),'(2x,3a,f7.3)') 'Xlength [', trim(units_abbrev(units_out%length)), '] = ', &
       units_from_atomic(units_out%length, this%half_length)
+    call messages_info(3, iunit)
 
-      POP_SUB(box_cylinder_write_info)
+    POP_SUB(box_cylinder_write_info)
   end subroutine box_cylinder_write_info
 
   !--------------------------------------------------------------
-  subroutine box_cylinder_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function box_cylinder_short_info(this, unit_length) result(info)
     class(box_cylinder_t), intent(in) :: this
-    integer,               intent(in) :: iunit
+    type(unit_t),          intent(in) :: unit_length
 
-    PUSH_SUB(box_cylinder_write_short_info)
+    PUSH_SUB(box_cylinder_short_info)
 
-    write(iunit, '(a,f11.6,a,f11.6,a)') 'BoxShape = cylinder, Radius =', units_from_atomic(unit_angstrom, this%radius), &
-      ' Ang; Xlength =', units_from_atomic(unit_angstrom, this%half_length), ' Ang'
+    write(info, '(a,f11.6,a,a,a,f11.6,a,a)') 'BoxShape = cylinder, Radius =', units_from_atomic(unit_length, this%radius), ' ', &
+      trim(units_abbrev(unit_length)), '; Xlength =', units_from_atomic(unit_length, this%half_length), ' ', &
+      trim(units_abbrev(unit_length))
 
-    POP_SUB(box_cylinder_write_short_info)
-  end subroutine box_cylinder_write_short_info
+    POP_SUB(box_cylinder_short_info)
+  end function box_cylinder_short_info
 
 end module box_cylinder_oct_m
 

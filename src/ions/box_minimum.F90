@@ -20,6 +20,7 @@
 #include "global.h"
 
 module box_minimum_oct_m
+  use box_oct_m
   use box_shape_oct_m
   use global_oct_m
   use lookup_oct_m
@@ -51,7 +52,7 @@ module box_minimum_oct_m
   contains
     procedure :: contains_points => box_minimum_contains_points
     procedure :: write_info => box_minimum_write_info
-    procedure :: write_short_info => box_minimum_write_short_info
+    procedure :: short_info => box_minimum_short_info
     final     :: box_minimum_finalize
   end type box_minimum_t
 
@@ -171,14 +172,17 @@ contains
 
     PUSH_SUB(box_minimum_write_info)
 
-    write(iunit, '(2x,a)') 'Type = minimum'
+    write(message(1), '(2x,a)') 'Type = minimum'
+    call messages_info(1, iunit)
     if (this%radius > M_ZERO) then
-      write(iunit,'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+      write(message(1),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, this%radius)
+      call messages_info(1, iunit)
     else
       do itype = 1, this%n_site_types
-        write(iunit,'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(itype)), 'Radius = ', &
+        write(message(1),'(2x,a,a5,5x,a,f7.3,2a)') 'Species = ', trim(this%site_type_label(itype)), 'Radius = ', &
           units_from_atomic(units_out%length, this%site_type_radius(itype)), ' ', trim(units_abbrev(units_out%length))
+        call messages_info(1, iunit)
       end do
     end if
 
@@ -186,16 +190,17 @@ contains
   end subroutine box_minimum_write_info
 
   !--------------------------------------------------------------
-  subroutine box_minimum_write_short_info(this, iunit)
+  character(len=BOX_INFO_LEN) function box_minimum_short_info(this, unit_length) result(info)
     class(box_minimum_t), intent(in) :: this
-    integer,             intent(in) :: iunit
+    type(unit_t),         intent(in) :: unit_length
 
-    PUSH_SUB(box_minimum_write_short_info)
+    PUSH_SUB(box_minimum_short_info)
 
-    write(iunit,'(a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_angstrom, this%radius), ' Ang'
+    write(info,'(a,f11.6,a,a)') 'BoxShape = minimum; Radius =', units_from_atomic(unit_length, this%radius), ' ', &
+      trim(units_abbrev(unit_length))
 
-    POP_SUB(box_minimum_write_short_info)
-  end subroutine box_minimum_write_short_info
+    POP_SUB(box_minimum_short_info)
+  end function box_minimum_short_info
 
 end module box_minimum_oct_m
 

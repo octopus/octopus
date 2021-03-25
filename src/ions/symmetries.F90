@@ -497,7 +497,7 @@ contains
     call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
-      message(1) = "Symmetries are disabled since non-spherically symlatt species may be present."
+      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1,iunit = iunit)
       call messages_print_stress(iunit, namespace=namespace)
     end if

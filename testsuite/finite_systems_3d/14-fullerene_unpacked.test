@@ -10,7 +10,7 @@ Input: 14-fullerene_unpacked.01-gs.inp
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 1.65e-08
+Precision: 4.e-08
 match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -318.47818505500004
 Precision: 3.71e-12
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 3706.61771965

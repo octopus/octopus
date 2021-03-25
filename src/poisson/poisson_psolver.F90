@@ -144,7 +144,7 @@ contains
     if(optional_default(force_isolated, .false.)) then
       this%geocode = "F"
     else
-      select case(mesh%sb%periodic_dim)
+      select case(space%periodic_dim)
       case(0)
         ! Free BC
         this%geocode = "F"
@@ -209,9 +209,9 @@ contains
 #ifdef HAVE_PSOLVER
     call dict_set(this%inputs//'setup'//'verbose', debug%info)
 
-    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
-    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
-    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+    alpha = mesh%sb%latt%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%latt%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%latt%gamma*M_PI/(CNST(180.0))
 
     ! Previously, pkernel_init set the communicator used within PSolver to comm_world.
     ! This can be overwritten by passing an optional argument of type(mpi_environment)
@@ -291,9 +291,9 @@ contains
 #endif
 
     !We might change the cell angles
-    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
-    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
-    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+    alpha = mesh%sb%latt%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%latt%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%latt%gamma*M_PI/(CNST(180.0))
 
 #ifdef HAVE_PSOLVER
     call dict_set(this%inputs//'kernel'//'screening',mu)

@@ -81,9 +81,7 @@ match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) 
 Precision : 0.00001
 match ; Mag.-opt. Re alpha w=0.0   ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re alpha', 4) ; -0.37818360E-02
 match ; Mag.-opt. av Re w=0.0      ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re alpha', 7) ; -0.48816670E-02 
-match ; Mag.-opt. Re eps w=0.0     ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re epsilon', 7) ; -0.10777214E-04
 match ; Mag.-opt. Re alpha w=0.1   ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 4) ; -0.22068077E-02
 match ; Mag.-opt. av Im w=0.1      ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im alpha', 7) ; 0.55214813E-01
-match ; Mag.-opt. Re eps w=0.1     ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re epsilon', 8) ; -0.36387449E-04
-match ; Mag.-opt. Im eps w=0.1     ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 9) ;  0.12637596E-03
+
 

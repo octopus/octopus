@@ -526,6 +526,8 @@ contains
       !% <br>&nbsp;&nbsp;2 | 2 | 1
       !% <br>%</tt>
       !%
+      !% At the moment, this is not compatible with k-point symmetries.
+      !%
       !%End
       this%niq_axis(:) = this%nik_axis(:)
       this%downsampling(:) = 1
@@ -549,7 +551,7 @@ contains
           this%downsampling(1:dim) = this%nik_axis(1:dim)/this%niq_axis(1:dim)
 
           if(any(this%downsampling(1:dim)/=1)) then
-            ASSERT(.not.this%use_symmetries)
+            call messages_not_implemented('QPointsGrid together with k-point symmetries', namespace=namespace)
           end if
 
           call parse_block_end(blk)
@@ -576,7 +578,7 @@ contains
       this%full%weight = M_ONE / this%full%npoints
 
       if(this%use_symmetries) then
-        message(1) = "Checking if the generated full k-point grid is symlatt";
+        message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
         call kpoints_check_symmetries(this%full, symm, dim, this%use_time_reversal, namespace)
       end if
@@ -1307,7 +1309,7 @@ contains
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO 
               weights(nreduced) = kweight(ik)
-              INCR(num_symm_ops(nreduced), 1)
+              num_symm_ops(nreduced) = num_symm_ops(nreduced) + 1
               symm_ops(nreduced, num_symm_ops(nreduced)) = iop
               cycle
             end if
@@ -1324,7 +1326,7 @@ contains
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
-              INCR(num_symm_ops(nreduced), 1)
+              num_symm_ops(nreduced) = num_symm_ops(nreduced) + 1
               !We mark the symmetry+time-reversal operation as negative
               symm_ops(nreduced, num_symm_ops(nreduced)) = -iop
             end if
@@ -1626,7 +1628,7 @@ contains
       call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
-    !A simple map to tell if the k-point as a matching symlatt point or not
+    !A simple map to tell if the k-point as a matching symmetric point or not
     SAFE_ALLOCATE(kmap(kpt_dist%start:kpt_dist%end))
 
     do iop = 1, symmetries_number(symm)
@@ -1645,7 +1647,7 @@ contains
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
         end do
 
-        ! remove (mark) k-points which already have a symlatt point
+        ! remove (mark) k-points which already have a symmetric point
         do ik2 = 1, nk
 
           if(iop /= symmetries_identity_index(symm)) then
@@ -1653,7 +1655,7 @@ contains
             do idim = 1, dim
               diff(idim)=diff(idim)-anint(diff(idim))
             end do
-            !We found point corresponding to the symlatt kpoint
+            !We found point corresponding to the symmetric kpoint
             if(sum(abs(diff(1:dim))) < symprec ) then
               kmap(ik) = -ik2
               exit
@@ -1665,7 +1667,7 @@ contains
             do idim = 1, dim
               diff(idim)=diff(idim)-anint(diff(idim))
             end do
-            !We found point corresponding to the symlatt kpoint
+            !We found point corresponding to the symmetric kpoint
             if(sum(abs(diff(1:dim))) < symprec ) then
               kmap(ik) = -ik2
               exit
@@ -1677,7 +1679,7 @@ contains
         if(kmap(ik) == ik) then
           write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
            grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
-           ") ", "has no symlatt in the k-point grid for the following symmetry"
+           ") ", "has no symmetric in the k-point grid for the following symmetry"
           write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', transpose(symm_op_rotation_matrix_red(symm%ops(iop)))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
           call messages_fatal(3, namespace=namespace)

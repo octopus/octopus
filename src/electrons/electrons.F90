@@ -54,7 +54,6 @@ module electrons_oct_m
   use propagator_exp_mid_oct_m
   use propagation_ops_elec_oct_m
   use profiling_oct_m
-  use scdm_oct_m
   use space_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
@@ -133,12 +132,16 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
+    call sys%space%write_info(stdout)
     if(sys%space%periodic_dim > 0 .and. sys%space%periodic_dim < sys%space%dim) then
       call messages_experimental('Support for mixed periodicity systems')
     end if
-    
+
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
+    if (sys%space%is_periodic()) then
+      call sys%gr%sb%latt%write_info(stdout)
+    end if
 
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
@@ -329,7 +332,9 @@ contains
       ! get potential from the updated density
       call v_ks_calc(this%ks, this%namespace, this%space, this%hm, this%st, this%geo, &
         calc_eigenval = update_energy_, time = abs(this%prop%clock%time()), calc_energy = update_energy_)
-      if(update_energy_) call energy_calc_total(this%namespace, this%hm, this%gr, this%st, iunit = -1)
+      if (update_energy_) then
+        call energy_calc_total(this%namespace, this%space, this%hm, this%gr, this%st, iunit = -1)
+      end if
       ! update the occupation matrices
       call lda_u_update_occ_matrices(this%hm%lda_u, this%namespace, this%gr%mesh, &
         this%st, this%hm%hm_base, this%hm%energy)

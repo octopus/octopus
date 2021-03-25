@@ -207,8 +207,8 @@ contains
     this%surf_interp = .false.
 
 
-    do il = 1, hm%ep%no_lasers
-      if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
+    do il = 1, hm%ext_lasers%no_lasers
+      if(laser_kind(hm%ext_lasers%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
         call messages_fatal(1, namespace=namespace)
       end if
@@ -1603,8 +1603,8 @@ contains
       this%itstep = this%itstep + 1
 
       ! get and save current laser field
-      do il = 1, hm%ep%no_lasers
-        call laser_field(hm%ep%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
+      do il = 1, hm%ext_lasers%no_lasers
+        call laser_field(hm%ext_lasers%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
@@ -1619,7 +1619,7 @@ contains
             
             if(this%surf_shape == PES_PLANE) then
               ! Apply the phase containing kpoint only
-              kpoint(1:mdim) = hm%kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
+              kpoint(1:mdim) = hm%kpoints%get_point(st%d%get_kpoint_index(ik))
 
               !$omp parallel do schedule(static)
               do ip = 1, mesh%np_part
@@ -1662,9 +1662,9 @@ contains
                 end if
               end do
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
+                call mesh%allreduce(this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
                 do imdim = 1, mdim
-                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
+                  call mesh%allreduce(this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
                 end do
               end if
             end if
@@ -2153,7 +2153,7 @@ contains
 
     if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
                                       .or. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 )) then
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+      call mesh%allreduce(spctramp_cub)
     end if
 
 
@@ -2257,8 +2257,8 @@ contains
             end do
 
             if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
-              call comm_allreduce(mesh%mpi_grp%comm, s1_act)
-              call comm_allreduce(mesh%mpi_grp%comm, s2_act)
+              call mesh%allreduce(s1_act)
+              call mesh%allreduce(s2_act)
             end if
 
             if(itstep == tdstep_on_node) then
@@ -2332,8 +2332,8 @@ contains
               end do
 
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, integ11_t)
-                call comm_allreduce(mesh%mpi_grp%comm, integ21_t)
+                call mesh%allreduce(integ11_t)
+                call mesh%allreduce(integ21_t)
               end if
 
               ! multiply with Bessel function & sum over all ll
@@ -2378,8 +2378,8 @@ contains
     SAFE_DEALLOCATE_A(phase_act)
 
     if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev)
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
+      call mesh%allreduce(this%conjgphase_prev)
+      call mesh%allreduce(spctramp_sph)
     end if
 
     this%spctramp_sph(:, :, :, 1:this%nk, :) = this%spctramp_sph(:, :, :, 1:this%nk, :) & 
@@ -2577,8 +2577,8 @@ contains
       end do
 
       if(mesh%parallel_in_domains) then
-        call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
-        call comm_allreduce(mesh%mpi_grp%comm, which_surface)
+        call mesh%allreduce(this%nsrfcpnts)
+        call mesh%allreduce(which_surface)
       end if
 
       SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))

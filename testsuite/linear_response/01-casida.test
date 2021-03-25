@@ -45,7 +45,7 @@ match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 Input: 01-casida.02-vib_modes.inp
 Precision: 0.05
 match ;  Bond stretch    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 2254.18105202
-Precision: 2.4e-02
+Precision: 4.e-02
 match ;  Libration 1     ; LINEFIELD(vib_modes/normal_frequencies_lr, 2, 2) ; 324.127205145
 
 Precision : 0.0001
@@ -255,11 +255,14 @@ match ;   eps_diff spectrum y      ; LINEFIELD(casida/spectrum.eps_diff, 532, 3)
 match ;   eps_diff spectrum z      ; LINEFIELD(casida/spectrum.eps_diff, 532, 4) ; 5.882595
 match ;   eps_diff spectrum tot    ; LINEFIELD(casida/spectrum.eps_diff, 532, 5) ; 3.992136
 
-Precision: 2e-5
-match ;   Petersilka spectrum x     ; LINEFIELD(casida/spectrum.petersilka, 532, 2) ; 0.1787432
-match ;   Petersilka spectrum y     ; LINEFIELD(casida/spectrum.petersilka, 532, 3) ; 13.76347
-match ;   Petersilka spectrum z     ; LINEFIELD(casida/spectrum.petersilka, 532, 4) ; 13.76347
-match ;   Petersilka spectrum tot   ; LINEFIELD(casida/spectrum.petersilka, 532, 5) ; 9.235227
+Precision: 1.79e-16
+match ;   Petersilka spectrum x     ; LINEFIELD(casida/spectrum.petersilka, 532, 2) ; 0.1787434
+Precision: 8.33e-03
+match ;   Petersilka spectrum y     ; LINEFIELD(casida/spectrum.petersilka, 532, 3) ; 13.771004999999999
+Precision: 8.80e-04
+match ;   Petersilka spectrum z     ; LINEFIELD(casida/spectrum.petersilka, 532, 4) ; 13.76423
+Precision: 3.07e-03
+match ;   Petersilka spectrum tot   ; LINEFIELD(casida/spectrum.petersilka, 532, 5) ; 9.2379925
 
 Precision: 2e-4
 match ;   Casida spectrum x      ; LINEFIELD(casida/spectrum.casida, 532, 2) ; 0.6114891

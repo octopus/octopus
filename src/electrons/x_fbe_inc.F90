@@ -233,8 +233,8 @@ subroutine X(fbe) (namespace, mesh, der, psolver, st, isp, ex, vxc)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     if(present(vxc)) then
-      call comm_allreduce(st%mpi_grp%comm, tmp_vxc)
-      call comm_allreduce(st%mpi_grp%comm, div)
+      call comm_allreduce(st%mpi_grp, tmp_vxc)
+      call comm_allreduce(st%mpi_grp, div)
     end if
   end if
 #endif

@@ -32,6 +32,7 @@ module poisson_corrections_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -68,21 +69,23 @@ module poisson_corrections_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_corrections_init(this, namespace, ml, mesh)
+  subroutine poisson_corrections_init(this, namespace, space, ml, mesh)
     type(poisson_corr_t), intent(out) :: this
     type(namespace_t),    intent(in)  :: namespace
+    type(space_t),        intent(in)  :: space
     integer,              intent(in)  :: ml
     type(mesh_t),         intent(in)  :: mesh
 
-    FLOAT :: alpha, gamma, ylm, rr, xx(mesh%sb%dim)
+    FLOAT :: alpha, gamma, ylm, rr, xx(space%dim)
     integer :: ip, ll, add_lm, lldfac, jj, mm
 
     PUSH_SUB(poisson_corrections_init)
 
-    ASSERT(mesh%sb%dim == 3)
+    ASSERT(space%dim == 3)
 
-    if(simul_box_is_periodic(mesh%sb)) &
+    if (space%is_periodic()) then
       call messages_not_implemented("Poisson boundary corrections for periodic systems")
+    end if
 
     !%Variable PoissonSolverBoundaries
     !%Type integer

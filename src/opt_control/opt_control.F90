@@ -138,16 +138,17 @@ contains
     call oct_read_inp(oct, sys%namespace)
 
     ! Read info about, and prepare, the control functions
-    call controlfunction_mod_init(sys%hm%ep, sys%namespace, td%dt, td%max_iter, oct%mode_fixed_fluence)
+    call controlfunction_mod_init(sys%hm%ep, sys%hm%ext_lasers, sys%namespace, td%dt, &
+                                     td%max_iter, oct%mode_fixed_fluence)
     call controlfunction_init(par, td%dt, td%max_iter)
-    call controlfunction_set(par, sys%hm%ep)
+    call controlfunction_set(par, sys%hm%ext_lasers)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
     call controlfunction_write(OCT_DIR//'initial_laser_inp', par, sys%namespace)
     call controlfunction_prepare_initial(par)
-    call controlfunction_to_h(par, sys%hm%ep)
+    call controlfunction_to_h(par, sys%hm%ext_lasers)
     call messages_print_stress(stdout, "TD ext. fields after processing")
-    call laser_write_info(sys%hm%ep%lasers, stdout)
+    call laser_write_info(sys%hm%ext_lasers%lasers, stdout)
     call messages_print_stress(stdout)
     call controlfunction_write(OCT_DIR//'initial_laser', par, sys%namespace)
 

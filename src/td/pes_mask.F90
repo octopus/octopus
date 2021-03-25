@@ -42,7 +42,6 @@ module pes_mask_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
@@ -424,13 +423,8 @@ contains
     mask%ll = 1
     mask%spacing = -M_ONE
     
-    if (multiresolution_use(mesh%hr_area)) then ! multiresolution 
-      mask%spacing(1:sb%dim) = mesh%spacing(1:sb%dim)*2**(mesh%hr_area%num_radii)
-      mask%ll(1:sb%dim) = int(M_TWO*sb%rsize/mask%spacing(1:sb%dim)) + 1
-    else 
-      mask%spacing(1:3) = mesh%spacing(1:3)
-      mask%ll(1:3) = mesh%idx%ll(1:3)    
-    end if
+    mask%spacing(1:3) = mesh%spacing(1:3)
+    mask%ll(1:3) = mesh%idx%ll(1:3)    
     
     !Enlarge the cube region
     mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge(1:sb%dim))
@@ -748,12 +742,12 @@ contains
     SAFE_ALLOCATE(mask%vec_pot(0:max_iter,1:3))
     mask%vec_pot=M_ZERO
 
-    do il = 1, hm%ep%no_lasers
-      select case(laser_kind(hm%ep%lasers(il)))
+    do il = 1, hm%ext_lasers%no_lasers
+      select case(laser_kind(hm%ext_lasers%lasers(il)))
       case(E_FIELD_VECTOR_POTENTIAL)
         do it = 1, max_iter
           field=M_ZERO
-          call laser_field(hm%ep%lasers(il), field, it*dt)
+          call laser_field(hm%ext_lasers%lasers(il), field, it*dt)
           ! We must sum with a -1 sign to account for the 
           ! electron charge.
           mask%vec_pot(it,:)= mask%vec_pot(it,:) - field(:)           
@@ -1372,7 +1366,7 @@ contains
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
               call pes_mask_Volkov_time_evolution_wf(mask, space, mesh, kpoints, dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
-                                                     states_elec_dim_get_kpoint_index(st%d, ik))
+                                                     st%d%get_kpoint_index(ik))
                                                      
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                 + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)

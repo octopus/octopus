@@ -42,7 +42,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   FLOAT    :: es(2), cg0, e0, res, alpha, beta, theta, old_res, old_energy, first_delta_e, lam, lam_conj, cg_phi
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
-  FLOAT    :: integral_hartree, integral_xc, tmp
+  FLOAT    :: integral_hartree, integral_xc
   integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(2)
   FLOAT    :: a0, b0, dsb(3)
@@ -247,7 +247,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       if(gr%mesh%parallel_in_domains) then
         sb(1) = gg1
         sb(2) = gg
-        call comm_allreduce(gr%mesh%mpi_grp%comm, sb, dim = 2)
+        call gr%mesh%allreduce(sb, dim = 2)
         gg1 = sb(1)
         gg  = sb(2)
       end if
@@ -319,7 +319,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         dsb(1) = a0
         dsb(2) = b0
         dsb(3) = cg0
-        call comm_allreduce(gr%mesh%mpi_grp%comm, dsb, dim = 3)
+        call gr%mesh%allreduce(dsb, dim = 3)
         a0 = dsb(1)
         b0 = dsb(2)
         cg0 = dsb(3)
@@ -333,30 +333,29 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * (e0 - b0)
 
-      if (additional_terms) then
+      !No contribution from unoccupied states
+      if (additional_terms .and. abs(st%d%kweights(ik)*st%occ(ist, ik)) > M_EPSILON) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
-        tmp = M_TWO/cg0
         do idim = 1, st%d%dim
           !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
-            chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
+            chi(ip, idim) = R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
           end do
         end do
         call dpoisson_solve(hm%psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
-        integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
+        integral_hartree = M_TWO/cg0*dmf_dotp(gr%mesh, st%d%dim, chi, omega)
 
         ! exchange term
         ! TODO: adapt to different spin cases
         if(add_xc_term) then
-          integral_xc = dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
+          integral_xc = (M_TWO/cg0)**2*dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
         else
           integral_xc = M_ZERO
         end if
 
         ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
-        alpha = alpha - st%d%kweights(ik)*st%occ(ist, 1)/st%smear%el_per_state * &
-          (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
+        alpha = alpha - (st%d%kweights(ik)*st%occ(ist, ik))**2 * (integral_hartree + integral_xc) 
       end if
 
       beta = a0 * M_TWO

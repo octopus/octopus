@@ -42,8 +42,8 @@ match ;  U 3p Si1   ; LINEFIELD(static/effectiveU, 3, 4) ; 0.161347
 match ;  U 3p Si2   ; LINEFIELD(static/effectiveU, 4, 4) ; 0.161347
 
 Precision: 5.50e-09
-match ;  Occupation Ni2 up-down 3d5  ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.191776755
-Precision: 1.19e-15
+match ;  Occupation Ni2 up-down 3d4  ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.19177653
+Precision: 1.1e-8
 match ;  Occupation Ni2 up-down 3d5  ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.19177676
 
 Input      : 08-loewdin.02-intersite.inp

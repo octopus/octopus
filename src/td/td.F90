@@ -58,7 +58,6 @@ module td_oct_m
   use propagator_elec_oct_m
   use propagator_base_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scf_oct_m
   use scissor_oct_m
   use simul_box_oct_m
@@ -347,9 +346,9 @@ contains
     call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
       family_is_mgga_with_exc(ks%xc))
 
-    if (hm%ep%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
+    if (hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=namespace)
-      call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
+      call laser_write_info(hm%ext_lasers%lasers, stdout, td%dt, td%max_iter)
       call messages_print_stress(stdout, namespace=namespace)
     end if
 
@@ -414,18 +413,12 @@ contains
       call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks, space)
     end if
 
-    if (hm%scdm_EXX) then
-      call scdm_init(hm%scdm, namespace, st, gr%der, hm%psolver%cube, operate_on_scdm = .true.)
-      ! make sure scdm is constructed as soon as it is needed
-      scdm_is_local = .false.
-    end if
-
     if (gauge_field_is_applied(hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
+      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 
@@ -458,7 +451,7 @@ contains
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, namespace, st, gr, hm%d, hm%kpoints, td%scissor, mc)
+      call scissor_init(hm%scissor, namespace, space, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
     if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
@@ -536,9 +529,6 @@ contains
     logical,                  intent(inout) :: fromScratch
 
     logical                      :: stopping
-#ifdef HAVE_MPI
-    logical                      :: stopping_tmp
-#endif
     integer                      :: iter, scsteps
     FLOAT                        :: etime
     type(profile_t),        save :: prof
@@ -551,12 +541,7 @@ contains
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm()
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
-      stopping = stopping_tmp
-#endif      
+      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm(mc%master_comm)
 
       call profiling_in(prof, "TIME_STEP")
 
@@ -573,9 +558,6 @@ contains
           if (gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
         end if
       end if
-
-      ! in case use scdm localized states for exact exchange and request a new localization
-      if (hm%scdm_EXX) scdm_is_local = .false.
 
       ! time iterate the system, one time step.
       select case(td%dynamics)
@@ -765,7 +747,7 @@ contains
     if (td%iter >= td%max_iter) then
       message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
       call messages_info(1)
-      POP_SUB(td_run.init_wfs)
+      POP_SUB(td_init_wfs)
       return
     end if
 
@@ -877,7 +859,7 @@ contains
     call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
-    call energy_calc_total(namespace, hm, gr, st)
+    call energy_calc_total(namespace, space, hm, gr, st)
 
     !%Variable TDFreezeDFTUOccupations
     !%Type logical

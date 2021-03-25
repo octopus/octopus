@@ -12,13 +12,13 @@ else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4.0
 
-  Precision: 4.e-05
+  Precision: 6.e-05
   match ;  Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -246.88939736999998
   Precision: 1.77e-13
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
   Precision: 2.26e-05
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -33.201233779999995
-  Precision: 1.53e-05
+  Precision: 4.e-05
   match ;  Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 46.46823441
   Precision: 6.e-06
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -27.714387125000002
@@ -26,11 +26,11 @@ else
   match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.036993905
   Precision: 4.e-05
   match ;  Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 123.31366579499999
-  Precision: 2.85e-05
+  Precision: 9.e-05
   match ;  External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -210.12057776
-  Precision: 1.02e-06
+  Precision: 3.e-06
   match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.21352892499999998
-  Precision: 4.18e-16
+  Precision: 2.e-06
   match ;  Fermi energy        ; GREPFIELD(static/info, 'Fermi energy =', 4) ; 0.417533
 
   Precision: 2.42e-05
@@ -44,13 +44,13 @@ else
   match ;  k-point 1 (x)  ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
   match ;  k-point 1 (y)  ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
   match ;  k-point 1 (z)  ; GREPFIELD(static/info, '#k =   1', 9) ; 0.0
-  Precision: 1.10e-06
+  Precision: 3.e-06
   match ;  Eigenvalue  1  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -3.0733059999999996
   match ;  Eigenvalue  8  ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -2.9445285
   match ;  Eigenvalue 16  ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.4379505
   match ;  Eigenvalue 17  ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.1656445
 
-  Precision: 1.5e-06
+  Precision: 2.e-06
   match ;  Occupation Ni2 down 3d4  ; LINEFIELD(static/occ_matrices, -2, 7) ; 0.871377465
   match ;  Occupation Ni2 down 3d5  ; LINEFIELD(static/occ_matrices, -1, 9) ; 0.8864645099999999
 

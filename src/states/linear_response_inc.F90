@@ -165,7 +165,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     do ist  = st%st_start, st%st_end
 
       call states_elec_get_state(st, mesh, ist, ik, psi)
@@ -197,7 +197,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! reduce
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     do isigma = 1, nsigma
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr(isigma)%X(dl_rho))
+      call comm_allreduce(st%st_kpt_mpi_grp, lr(isigma)%X(dl_rho))
     end do
   end if
 
@@ -213,7 +213,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     end do
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       do ist  = st%st_start, st%st_end
         xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
         weight = st%d%kweights(ik)*smear_delta_function(st%smear, xx)*st%smear%el_per_state

@@ -91,34 +91,27 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
     ! get the point indices (this could be done in a loop with bit tricks)
     
-    pt(i000) = mesh_global_index_from_coords(mesh, [0 + nm(1), 0 + nm(2), 0 + nm(3)])
-    pt(i100) = mesh_global_index_from_coords(mesh, [1 + nm(1), 0 + nm(2), 0 + nm(3)])
+    pt(i000) = mesh_local_index_from_coords(mesh, [0 + nm(1), 0 + nm(2), 0 + nm(3)])
+    pt(i100) = mesh_local_index_from_coords(mesh, [1 + nm(1), 0 + nm(2), 0 + nm(3)])
 
     if(mesh%sb%dim >= 2) then
-      pt(i010) = mesh_global_index_from_coords(mesh, [0 + nm(1), 1 + nm(2), 0 + nm(3)])
-      pt(i110) = mesh_global_index_from_coords(mesh, [1 + nm(1), 1 + nm(2), 0 + nm(3)])
+      pt(i010) = mesh_local_index_from_coords(mesh, [0 + nm(1), 1 + nm(2), 0 + nm(3)])
+      pt(i110) = mesh_local_index_from_coords(mesh, [1 + nm(1), 1 + nm(2), 0 + nm(3)])
     end if
 
     if(mesh%sb%dim >= 3) then
-      pt(i001) = mesh_global_index_from_coords(mesh, [0 + nm(1), 0 + nm(2), 1 + nm(3)])
-      pt(i101) = mesh_global_index_from_coords(mesh, [1 + nm(1), 0 + nm(2), 1 + nm(3)])
-      pt(i011) = mesh_global_index_from_coords(mesh, [0 + nm(1), 1 + nm(2), 1 + nm(3)])
-      pt(i111) = mesh_global_index_from_coords(mesh, [1 + nm(1), 1 + nm(2), 1 + nm(3)])
+      pt(i001) = mesh_local_index_from_coords(mesh, [0 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i101) = mesh_local_index_from_coords(mesh, [1 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i011) = mesh_local_index_from_coords(mesh, [0 + nm(1), 1 + nm(2), 1 + nm(3)])
+      pt(i111) = mesh_local_index_from_coords(mesh, [1 + nm(1), 1 + nm(2), 1 + nm(3)])
     end if
 
-     if(mesh%parallel_in_domains) then
-       do ipt = 1, npt
-         pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
-         lvalues(ipt) = CNST(0.0)
-         boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
-         inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
-         if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
-      end do
-    else
-      do ipt=1, npt
-        lvalues(ipt) = values(pt(ipt))
-      end do
-    end if
+    do ipt = 1, npt
+      lvalues(ipt) = M_ZERO
+      boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
+      inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
+      if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
+    end do
 
     select case(mesh%sb%dim)
     case(3)
@@ -154,7 +147,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
   end do
 
-  call comm_allreduce(mesh%mpi_grp%comm, interpolated_values, npoints)
+  call mesh%allreduce(interpolated_values, npoints)
   
   POP_SUB(X(mesh_interpolation_evaluate))
 
@@ -218,7 +211,7 @@ subroutine X(mesh_interpolation_test)(mesh)
 
   if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call MPI_Bcast(xx, MAX_DIM*ntest_points, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(xx, MAX_DIM*ntest_points, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
 

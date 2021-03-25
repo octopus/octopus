@@ -118,7 +118,7 @@ contains
 
       do ik = 1, st%d%nik, ns
         if (space%is_periodic()) then
-          ikk = states_elec_dim_get_kpoint_index(st%d, ik)
+          ikk = st%d%get_kpoint_index(ik)
           kpoint(1:space%dim) = kpoints%get_point(ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
           do idir = 1, space%dim
@@ -210,8 +210,8 @@ contains
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
-        ik = states_elec_dim_get_kpoint_index(st%d, iqn)
-        is = states_elec_dim_get_spin_index(st%d, iqn)
+        ik = st%d%get_kpoint_index(iqn)
+        is = st%d%get_spin_index(iqn)
 
         print_eigenval = iflat <= print_range
         print_eigenval = print_eigenval .or. st%d%nik*nst - iflat < print_range
@@ -833,7 +833,7 @@ contains
        end do !norb
 
        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
+         call comm_allreduce(st%st_kpt_mpi_grp, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
        end if
      end do !ia
 
@@ -846,16 +846,14 @@ contains
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik + is), &
-                                                   absolute_coordinates=.false.)
+        red_kpoint(1:sb%dim) = kpoints%get_point(st%d%get_kpoint_index(ik + is), absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         if(st%d%nik > npath) then
           write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, & 
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is) &
-                                              -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
+                              st%d%get_kpoint_index(ik + is)-st%d%get_kpoint_index(st%d%nik -npath)) 
         else
           write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, &
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is))
+                                               st%d%get_kpoint_index(ik + is))
         end if
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)

@@ -522,7 +522,7 @@ subroutine X(calc_properties_linear)(em_vars, namespace, space, gr, kpoints, st,
           do idir = 1, space%dim
             do idir2 = 1, space%dim
               lrc_coef(idir, idir2) = M_ONE/(M_ONE - M_HALF * xc%kernel_lrc_alpha * &
-                (em_vars%alpha(idir, idir, ifactor) + em_vars%alpha(idir2, idir2, ifactor)) / gr%sb%rcell_volume)
+                (em_vars%alpha(idir, idir, ifactor) + em_vars%alpha(idir2, idir2, ifactor)) / gr%sb%latt%rcell_volume)
             end do
           end do
           do idir = 1, space%dim
@@ -542,7 +542,7 @@ subroutine X(calc_properties_linear)(em_vars, namespace, space, gr, kpoints, st,
         message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
         call messages_info(1)
       
-        call X(forces_born_charges)(gr, namespace, geo, hm%ep, st, kpoints, &
+        call X(forces_born_charges)(gr, namespace, space, geo, hm%ep, st, kpoints, &
           lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
           Born_charges = em_vars%Born_charges(ifactor), lda_u_level= hm%lda_u_level)
       end if

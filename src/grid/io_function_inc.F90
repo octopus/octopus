@@ -595,13 +595,12 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, kpoints, ff, vector_dim, &
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoints, ff, vector_dim, &
     unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
-  type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
   type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,           target,   intent(in)  :: ff(:, :)
@@ -618,6 +617,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root
   integer :: root_, comm
+  type(mpi_grp_t) :: grp_
 
   PUSH_SUB(X(io_function_output_vector_BZ))
 
@@ -630,31 +630,30 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   ierr = 0
   ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
 
-  i_am_root = .true.
-#ifdef HAVE_MPI
-  comm = MPI_COMM_NULL
-#endif
   root_ = optional_default(root, 0)
+  if(present(grp)) then
+    call mpi_grp_copy(grp_, grp)
+  else
+#ifdef HAVE_MPI
+    comm = MPI_COMM_NULL
+#else
+    comm = -1
+#endif
+    call mpi_grp_init(grp_, comm)
+  end if
+
+  i_am_root = grp%rank == root_
 
   if(kpt%parallel) then
-    comm = grp%comm
-
-    i_am_root = (grp%rank == root_)
-
     SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:vector_dim))
     ff_global(1:kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
  
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
-    call comm_allreduce(comm, ff_global)
+    call comm_allreduce(grp_, ff_global)
   else
     ff_global => ff
-  end if
-
-  if(present(grp)) then
-    i_am_root = i_am_root .and. (grp%rank == root_)
-    comm = grp%comm
   end if
 
   if(i_am_root) then
@@ -677,9 +676,9 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   end if
 
 #ifdef HAVE_MPI
-  if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
+  if(grp_%comm /= MPI_COMM_NULL .and. grp_%comm /= 0 ) then
     ! I have to broadcast the error code
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
   end if
 #endif
   

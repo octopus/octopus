@@ -331,7 +331,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
   
   pesK = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -599,11 +599,11 @@ subroutine pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
 
 
 !   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-!     call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
+!     call comm_allreduce(st%st_kpt_mpi_grp, pesKloc)
 !   end if
 
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, pesKloc)
+    call comm_allreduce(st%mpi_grp, pesKloc)
   end if
 
   

@@ -26,6 +26,7 @@ module fourier_shell_oct_m
   use messages_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use sort_oct_m
   
   implicit none
@@ -47,7 +48,8 @@ module fourier_shell_oct_m
 
 contains
 
-  FLOAT function fourier_shell_cutoff(cube, mesh, is_wfn, dg)
+  FLOAT function fourier_shell_cutoff(space, cube, mesh, is_wfn, dg)
+    type(space_t),   intent(in)    :: space
     type(cube_t),    intent(in)  :: cube
     type(mesh_t),    intent(in)  :: mesh
     logical,         intent(in)  :: is_wfn
@@ -60,7 +62,7 @@ contains
     ! FIXME: what about anisotropic spacing?
     dg_(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
     if(present(dg)) dg(1:3) = dg_(1:3)
-    if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
+    if (is_wfn .and. space%is_periodic()) then
       fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2-2))**2/M_TWO
     else
       fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2))**2/M_TWO
@@ -69,8 +71,9 @@ contains
     POP_SUB(fourier_shell_cutoff)
   end function fourier_shell_cutoff
 
-  subroutine fourier_shell_init(this, cube, mesh, kk)
+  subroutine fourier_shell_init(this, space, cube, mesh, kk)
     type(fourier_shell_t), intent(inout) :: this
+    type(space_t),         intent(in)    :: space
     type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
     FLOAT, optional,       intent(in)    :: kk(:) !< (3)
@@ -83,7 +86,7 @@ contains
 
     PUSH_SUB(fourier_shell_init)
 
-    this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk), dg = dg)
+    this%ekin_cutoff = fourier_shell_cutoff(space, cube, mesh, present(kk), dg = dg)
 
     ! make sure we do not run into integer overflow here
     number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
@@ -117,7 +120,7 @@ contains
           end if
 
           if(sum(gvec(1:3)**2)/M_TWO <= this%ekin_cutoff + CNST(1e-10)) then
-            INCR(ig, 1)
+            ig = ig + 1
             ucoords(1:3, ig) = (/ ix, iy, iz /)
             ured_gvec(1:3, ig) = ixx(1:3)
             modg2(ig) = sum(gvec(1:3)**2)

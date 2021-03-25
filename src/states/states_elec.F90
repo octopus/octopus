@@ -1024,7 +1024,7 @@ contains
     st%group%nblocks = 0
     bstart(1) = istmin
     do ist = istmin, istmax
-      INCR(ib, 1)
+      ib = ib + 1
 
       st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
 
@@ -1037,7 +1037,7 @@ contains
 
       if(ib == st%d%block_size .or. ist == istmax .or. .not. same_node) then
         ib = 0
-        INCR(st%group%nblocks, 1)
+        st%group%nblocks = st%group%nblocks + 1
         bend(st%group%nblocks) = ist
         if(ist /= istmax) bstart(st%group%nblocks + 1) = ist + 1
       end if
@@ -1480,7 +1480,7 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
-        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+        ikpoint = st%d%get_kpoint_index(ik)
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
@@ -1522,7 +1522,7 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
-          ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+          ikpoint = st%d%get_kpoint_index(ik)
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
@@ -1658,7 +1658,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi)
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+        call comm_allreduce(st%st_kpt_mpi_grp, st%spin)
       end if
             
     end if
@@ -1689,7 +1689,7 @@ contains
       end if
     end do
 
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp, tot)
 
     POP_SUB(states_elec_eigenvalues_sum)
   end function states_elec_eigenvalues_sum
@@ -1845,8 +1845,8 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%dim) = kpoints%get_point(states_elec_dim_get_kpoint_index(st%d, ik))
-      is = states_elec_dim_get_spin_index(st%d, ik)
+      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
+      is = st%d%get_spin_index(ik)
 
       do ist = st%st_start, st_end_
         ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -1964,6 +1964,9 @@ contains
 
               do ii = 1, der%mesh%np
                 c_tmp = gwf_psi(ii, i_dim, 1)*conjg(gwf_psi(ii, i_dim, 2))
+                c_tmp = c_tmp + abs(kpoint(i_dim))**2*real(wf_psi_conj(ii, 2)*wf_psi(ii, 1))
+                c_tmp = c_tmp - M_zI * (wf_psi_conj(ii, 2)*gwf_psi(ii,i_dim,1) &
+                                      - wf_psi(ii, 1)*conjg(gwf_psi(ii,i_dim,2)))*kpoint(i_dim)
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
                 tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
               end do
@@ -2122,15 +2125,15 @@ contains
 
       PUSH_SUB(states_elec_calc_quantities.reduce_all)
 
-      if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
+      if(associated(tau)) call comm_allreduce(grp, tau, dim = (/der%mesh%np, st%d%nspin/))
 
-      if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
+      if (present(density_laplacian)) call comm_allreduce(grp, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
 
       do is = 1, st%d%nspin
-        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
+        if(associated(jp)) call comm_allreduce(grp, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
 
         if(present(density_gradient)) &
-          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
+          call comm_allreduce(grp, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
       end do
 
       POP_SUB(states_elec_calc_quantities.reduce_all)
@@ -2578,7 +2581,7 @@ end subroutine  states_elec_set_phase
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
+      call comm_allreduce(st%st_kpt_mpi_grp, st%st_kpt_task)
     end if
 
     POP_SUB(states_elec_kpoints_distribution)

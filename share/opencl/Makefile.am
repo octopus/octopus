@@ -34,7 +34,6 @@ dist_opencl_DATA =              \
 	pack.cl                 \
 	copy.cl                 \
 	mesh_batch_single.cl	\
-	subarray.cl             \
 	density.cl              \
 	phase.cl                \
 	phase_spiral.cl         \
@@ -46,6 +45,7 @@ dist_opencl_DATA =              \
 	mesh_to_cube.cl         \
 	convert.cl              \
 	boundaries.cl           \
+	ghost.cl                \
 	forces.cl               \
 	mod_sqr.cl              \
 	uvw_to_xyz.cl           \

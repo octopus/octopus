@@ -239,7 +239,7 @@ contains
         rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii), reduce = .false.)
       end do
       if(sys%gr%mesh%parallel_in_domains) then
-        call comm_allreduce(sys%gr%mesh%mpi_grp%comm, rr)
+        call sys%gr%mesh%allreduce(rr)
       end if
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)

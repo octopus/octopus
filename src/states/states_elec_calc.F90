@@ -43,6 +43,7 @@ module states_elec_calc_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use namespace_oct_m
+  use par_vec_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m
@@ -89,7 +90,9 @@ module states_elec_calc_oct_m
     dstates_elec_me_one_body,            &
     zstates_elec_me_one_body,            &
     dstates_elec_me_two_body,            &
-    zstates_elec_me_two_body
+    zstates_elec_me_two_body,            &
+    dstates_elec_rrqr_decomposition,     &
+    zstates_elec_rrqr_decomposition
 
   interface states_elec_rotate
     module procedure dstates_elec_rotate, zstates_elec_rotate

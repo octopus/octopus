@@ -51,6 +51,7 @@ module forces_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -87,7 +88,8 @@ contains
   ! ---------------------------------------------------------
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
-  subroutine total_force_calculate(gr, geo, ep, st, kpoints, x, lda_u)
+  subroutine total_force_calculate(space, gr, geo, ep, st, kpoints, x, lda_u)
+    type(space_t),       intent(in)    :: space
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(epot_t),        intent(in)    :: ep
@@ -103,9 +105,9 @@ contains
 
     x = M_ZERO
     if (states_are_real(st) ) then 
-      call dtotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
+      call dtotal_force_from_potential(space, gr, geo, ep, st, kpoints, x, lda_u)
     else
-      call ztotal_force_from_potential(gr, geo, ep, st, kpoints, x, lda_u)
+      call ztotal_force_from_potential(space, gr, geo, ep, st, kpoints, x, lda_u)
     end if
 
     POP_SUB(total_force_calculate)
@@ -239,7 +241,7 @@ contains
       do m = 1, ubound(res, 1)
         res(m) = TOFLOAT( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.))
       end do
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
+      if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(res)
 
       call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
       pdot3 = TOFLOAT(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)))
@@ -320,9 +322,9 @@ contains
     SAFE_ALLOCATE(force_nlcc(1:geo%space%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
+      call dforces_from_potential(gr, namespace, geo%space, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
+      call zforces_from_potential(gr, namespace, geo%space, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
     if (allocated(st%rho_core)) then
@@ -366,11 +368,11 @@ contains
 
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
-      do j = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(j)))
+      do j = 1, hm%ext_lasers%no_lasers
+        select case(laser_kind(hm%ext_lasers%lasers(j)))
         case(E_FIELD_ELECTRIC)
           x(1:geo%space%dim) = M_ZERO
-          call laser_field(hm%ep%lasers(j), x(1:geo%space%dim), t)
+          call laser_field(hm%ext_lasers%lasers(j), x(1:geo%space%dim), t)
           do iatom = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) &
@@ -386,7 +388,7 @@ contains
 
           !TODO: Add the gauge-field here
           x(1:geo%space%dim) = M_ZERO
-          call laser_electric_field(hm%ep%lasers(j), x(1:geo%space%dim), t, dt) !convert in E field (E = -dA/ c dt)
+          call laser_electric_field(hm%ext_lasers%lasers(j), x(1:geo%space%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do iatom = 1, geo%natoms
             ! Also here the proton charge is +1
             geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) &
@@ -561,7 +563,7 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(gr%mesh%mpi_grp%comm, force_nlcc)
+    call gr%mesh%allreduce(force_nlcc)
     call profiling_out(prof_comm)
   end if
  
@@ -627,7 +629,7 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(gr%mesh%mpi_grp%comm, force_scf)
+    call gr%mesh%allreduce(force_scf)
     call profiling_out(prof_comm)
   end if
 
@@ -637,23 +639,25 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 end subroutine forces_from_scf
 
 !---------------------------------------------------------------------------
-subroutine total_force_from_local_potential(gr, ep, gdensity, force)
-  type(grid_t),                   intent(in)    :: gr
+subroutine total_force_from_local_potential(mesh, space, ep, gdensity, force)
+  type(mesh_t),                   intent(in)    :: mesh
+  type(space_t),                  intent(in)    :: space
   type(epot_t),                   intent(in)    :: ep
   FLOAT,                          intent(in)    :: gdensity(:, :)
   FLOAT,                          intent(inout) :: force(:)
 
   integer            :: idir
-  FLOAT              :: force_tmp(1:MAX_DIM)
+  FLOAT              :: force_tmp(1:space%dim)
 
   PUSH_SUB(total_force_from_local_potential)
 
-  do idir = 1, gr%sb%dim
-    force_tmp(idir) = dmf_dotp(gr%mesh, ep%vpsl(1:gr%mesh%np), gdensity(:, idir), reduce = .false.)
+  do idir = 1, space%dim
+    force_tmp(idir) = dmf_dotp(mesh, ep%vpsl(1:mesh%np), gdensity(:, idir), reduce = .false.)
   end do
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%sb%dim)
-  force(1:gr%sb%dim) = force(1:gr%sb%dim) + force_tmp(1:gr%sb%dim)
+  if(mesh%parallel_in_domains) call mesh%allreduce(force_tmp)
+
+  force(1:space%dim) = force(1:space%dim) + force_tmp(1:space%dim)
 
   POP_SUB(total_force_from_local_potential)
 end subroutine total_force_from_local_potential

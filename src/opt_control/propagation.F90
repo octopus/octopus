@@ -155,7 +155,7 @@ contains
     message(1) = "Info: Forward propagation."
     call messages_info(1)
 
-    call controlfunction_to_h(par, sys%hm%ep)
+    call controlfunction_to_h(par, sys%hm%ext_lasers)
 
     write_iter_ = .false.
     if(present(write_iter)) write_iter_ = write_iter
@@ -198,7 +198,7 @@ contains
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 
-    call target_tdcalc(tg, sys%namespace, sys%hm, sys%gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, 0, td%max_iter)
 
     if (present(prop)) then
       call oct_prop_dump_states(prop, 0, psi, sys%gr, sys%kpoints, ierr)
@@ -228,12 +228,12 @@ contains
 
       ! update
       call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, time = istep*td%dt)
-      call energy_calc_total(sys%namespace, sys%hm, sys%gr, psi)
+      call energy_calc_total(sys%namespace, sys%space, sys%hm, sys%gr, psi)
 
       if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(sys%gr%mesh, sys%hm, psi)
 
       ! if td_target
-      call target_tdcalc(tg, sys%namespace, sys%hm, sys%gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, istep, td%max_iter)
 
       ! only write in final run
       if(write_iter_) then
@@ -428,7 +428,7 @@ contains
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, &
         sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
-      call target_tdcalc(tg, sys%namespace, sys%hm, sys%gr, sys%geo, psi, i, td%max_iter) 
+      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
@@ -849,7 +849,7 @@ contains
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call controlfunction_to_h_val(par_chi, hm%ep, j+1)
+        call controlfunction_to_h_val(par_chi, hm%ext_lasers, j+1)
       end if
     end do
 
@@ -894,7 +894,7 @@ contains
 
     do j = iter - 2, iter + 2
       if(j >= 0 .and. j<=td%max_iter) then
-        call controlfunction_to_h_val(par, hm%ep, j+1)
+        call controlfunction_to_h_val(par, hm%ext_lasers, j+1)
       end if
     end do
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
@@ -911,7 +911,7 @@ contains
   ! ---------------------------------------------------------
   subroutine calculate_g(gr, hm, psi, chi, dl, dq)
     type(grid_t),                   intent(inout) :: gr
-    type(hamiltonian_elec_t),            intent(in)    :: hm
+    type(hamiltonian_elec_t),       intent(in)    :: hm
     type(states_elec_t),            intent(inout) :: psi
     type(states_elec_t),            intent(inout) :: chi
     CMPLX,                          intent(inout) :: dl(:), dq(:)
@@ -921,7 +921,7 @@ contains
 
     PUSH_SUB(calculate_g)
 
-    no_parameters = hm%ep%no_lasers
+    no_parameters = hm%ext_lasers%no_lasers
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:chi%d%dim))
     SAFE_ALLOCATE(zoppsi(1:gr%mesh%np_part, 1:chi%d%dim))
@@ -936,10 +936,10 @@ contains
           
           zoppsi = M_z0
           if (allocated(hm%ep%a_static)) then
-            call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+            call vlaser_operator_linear(hm%ext_lasers%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else
-            call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+            call vlaser_operator_linear(hm%ext_lasers%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio)
           end if
 
@@ -949,7 +949,7 @@ contains
       end do
 
       ! The quadratic part should only be computed if necessary.
-      if(laser_kind(hm%ep%lasers(j)) == E_FIELD_MAGNETIC ) then
+      if(laser_kind(hm%ext_lasers%lasers(j)) == E_FIELD_MAGNETIC ) then
 
         dq(j) = M_z0
         do ik = 1, psi%d%nik
@@ -957,7 +957,7 @@ contains
             zoppsi = M_z0
 
             call states_elec_get_state(psi, gr%mesh, p, ik, zpsi)
-            call vlaser_operator_quadratic(hm%ep%lasers(j), gr%der, zpsi, zoppsi)
+            call vlaser_operator_quadratic(hm%ext_lasers%lasers(j), gr%der, zpsi, zoppsi)
 
             call states_elec_get_state(chi, gr%mesh, p, ik, zpsi)
             dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, zpsi, zoppsi)
@@ -1051,7 +1051,7 @@ contains
 
     ! This is for the classical target.
     if(dir == 'b') then
-      pol = laser_polarization(hm%ep%lasers(1))
+      pol = laser_polarization(hm%ext_lasers%lasers(1))
       do iatom = 1, geo%natoms
         d(1) = d(1) - species_zval(geo%atom(iatom)%species) * &
           TOFLOAT(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)))

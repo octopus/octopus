@@ -1,4 +1,5 @@
 !! Copyright (C) 2005-2020 Florian Lorenzen, Heiko Appel, Martin Lueders
+!! Copyright (C) 2021 Sebastian Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -27,16 +28,19 @@ subroutine X(vec_ghost_update)(vp, v_local)
   R_TYPE,     intent(inout) :: v_local(:)
 
   R_TYPE,  allocatable :: ghost_send(:)
-  integer              :: nsend
+  integer :: ip
   type(profile_t), save :: prof_update
   
   call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
   PUSH_SUB(X(vec_ghost_update))
 
-  nsend = subarray_size(vp%ghost_spoints)
-  SAFE_ALLOCATE(ghost_send(1:nsend))
-  call X(subarray_gather)(vp%ghost_spoints, v_local, ghost_send)
+  SAFE_ALLOCATE(ghost_send(1:vp%ghost_scount))
+
+  ! pack data for sending
+  do ip = 1, vp%ghost_scount
+    ghost_send(ip) = v_local(vp%ghost_sendmap(ip))
+  end do
 
 #ifdef HAVE_MPI
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
@@ -60,7 +64,8 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   class(batch_t), target,   intent(inout) :: v_local
   type(pv_handle_batch_t),  intent(out)   :: handle
 
-  integer :: ipart, pos, ii, tag, nn, offset
+  integer :: ipart, pos, ii, tag, nn, ip, ipart2
+  integer :: offset, dim2, dim3, localsize
   type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
   call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
@@ -75,9 +80,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
   call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
-  ! first post the receptions
-  select case(v_local%status())
 
+  ! first post the receptions
+  ! the communication scheme is in principle a sparse alltoallv:
+  ! we use a ring scheme to post the receives and the sends which has
+  ! the advantage that matching messages are posted at the same time,
+  ! facilitating the matching of those messages
+  select case(v_local%status())
   case(BATCH_DEVICE_PACKED)
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack_size(1)*vp%np_ghost))
@@ -86,11 +95,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       ! get device pointer for CUDA-aware MPI
       call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%ff_device, &
         [product(v_local%pack_size)])
-      ! offset needed because the device pointer represents the full vector
-      offset = v_local%pack_size(1)*vp%np_local
+      offset = vp%np_local*v_local%pack_size(1)
     end if
 
-    do ipart = 1, vp%npart
+    ! ring scheme: count upwards from local rank for receiving
+    do ipart2 = vp%partno, vp%partno + vp%npart - 1
+      ipart = ipart2
+      if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
@@ -104,7 +115,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
-    do ipart = 1, vp%npart
+    do ipart2 = vp%partno, vp%partno + vp%npart - 1
+      ipart = ipart2
+      if(ipart > vp%npart) ipart = ipart - vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
@@ -118,7 +131,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
+      do ipart2 = vp%partno, vp%partno + vp%npart - 1
+        ipart = ipart2
+        if(ipart > vp%npart) ipart = ipart - vp%npart
         if(vp%ghost_rcounts(ipart) == 0) cycle
         
         handle%nnb = handle%nnb + 1
@@ -134,13 +149,46 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   end select
   call profiling_out(prof_irecv)
 
-  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
+  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, vp%ghost_scount, &
     packed=v_local%status()==BATCH_PACKED)
 
   if(v_local%status()==BATCH_DEVICE_PACKED) call handle%ghost_send%do_pack(copy = .false.)
 
-  !now collect the data for sending
-  call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
+  ! now pack the data for sending
+  select case(handle%ghost_send%status())
+  case(BATCH_PACKED)
+    do ip = 1, vp%ghost_scount
+      do ii = 1, handle%ghost_send%nst_linear
+        handle%ghost_send%X(ff_pack)(ii, ip) = v_local%X(ff_pack)(ii, vp%ghost_sendmap(ip))
+      end do
+    end do
+  case(BATCH_NOT_PACKED)
+    do ii = 1, handle%ghost_send%nst_linear
+      do ip = 1, vp%ghost_scount
+        handle%ghost_send%X(ff_linear)(ip, ii) = v_local%X(ff_linear)(vp%ghost_sendmap(ip), ii)
+      end do
+    end do
+  case(BATCH_DEVICE_PACKED)
+    offset = 0
+    call accel_set_kernel_arg(kernel_ghost_reorder, 0, handle%vp%ghost_scount)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 1, offset)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 2, vp%buff_sendmap)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 3, handle%v_local%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 4, log2(handle%v_local%pack_size_real(1)))
+    call accel_set_kernel_arg(kernel_ghost_reorder, 5, handle%ghost_send%ff_device)
+    call accel_set_kernel_arg(kernel_ghost_reorder, 6, log2(handle%ghost_send%pack_size_real(1)))
+
+    localsize = accel_kernel_workgroup_size(kernel_ghost_reorder)/handle%ghost_send%pack_size_real(1)
+
+    dim3 = handle%vp%ghost_scount/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(handle%vp%ghost_scount, localsize))
+
+    call accel_kernel_run(kernel_ghost_reorder, &
+      (/handle%ghost_send%pack_size_real(1), dim2, dim3/), &
+      (/handle%ghost_send%pack_size_real(1), localsize, 1/))
+
+    call accel_finish()
+  end select
 
   if(v_local%status() == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack_size(1:2))
@@ -154,26 +202,30 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   call profiling_in(prof_isend, TOSTRING(X(GHOST_UPDATE_ISEND)))
   select case(v_local%status())
-
   case(BATCH_DEVICE_PACKED)
-    do ipart = 1, vp%npart
+    ! ring scheme: count downwards from local rank for sending
+    do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
+      ipart = ipart2
+      if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
 #ifdef HAVE_MPI
-      call MPI_Isend(handle%X(send_buffer)(1 + (vp%ghost_sendpos(ipart) - 1)*v_local%pack_size(1)), &
+      call MPI_Isend(handle%X(send_buffer)(1 + vp%ghost_sdispls(ipart)*v_local%pack_size(1)), &
         vp%ghost_scounts(ipart)*v_local%pack_size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
 
   case(BATCH_PACKED)
-    do ipart = 1, vp%npart
+    do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
+      ipart = ipart2
+      if(ipart < 1) ipart = ipart + vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
 #ifdef HAVE_MPI
-      call MPI_Isend(handle%ghost_send%X(ff_pack)(1, vp%ghost_sendpos(ipart)), &
+      call MPI_Isend(handle%ghost_send%X(ff_pack)(1, vp%ghost_sdispls(ipart)+1), &
         vp%ghost_scounts(ipart)*v_local%pack_size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
@@ -181,12 +233,14 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
-      do ipart = 1, vp%npart
+      do ipart2 = vp%partno, vp%partno - vp%npart + 1, -1
+        ipart = ipart2
+        if(ipart < 1) ipart = ipart + vp%npart
         if(vp%ghost_scounts(ipart) == 0) cycle
         handle%nnb = handle%nnb + 1
         tag = ii
 #ifdef HAVE_MPI
-        call MPI_Isend(handle%ghost_send%X(ff_linear)(vp%ghost_sendpos(ipart), ii), &
+        call MPI_Isend(handle%ghost_send%X(ff_linear)(vp%ghost_sdispls(ipart)+1, ii), &
              vp%ghost_scounts(ipart), R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
@@ -219,21 +273,22 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_A(handle%requests)
 
-  if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
+  if (handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
     ! synchronize the operate_map kernel for the inner points
     call accel_finish()
 
+    ! copy to GPU if not using CUDA aware MPI
     if(.not. accel%cuda_mpi) then
       call accel_write_buffer(handle%v_local%ff_device, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
-        handle%X(recv_buffer), offset = handle%v_local%pack_size(1)*handle%vp%np_local)
+        handle%X(recv_buffer), handle%v_local%pack_size(1)*handle%vp%np_local)
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
     else
       nullify(handle%X(send_buffer))
       nullify(handle%X(recv_buffer))
     end if
-  end if
+    end if
 
   call handle%ghost_send%end()
 
@@ -263,18 +318,13 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
 
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
+  bndry_start = boundaries%mesh%np + 1
+  bndry_end   = boundaries%mesh%np_part
   if(boundaries%mesh%parallel_in_domains) then
-    bndry_start = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + 1
-    bndry_end   = boundaries%mesh%vp%np_local + boundaries%mesh%vp%np_ghost + boundaries%mesh%vp%np_bndry
-  else
-    bndry_start = boundaries%mesh%np + 1
-    bndry_end   = boundaries%mesh%np_part
+    bndry_start = bndry_start + boundaries%mesh%vp%np_ghost
   end if
     
   if (.not. boundaries%fully_periodic) call zero_boundaries()
-  if (multiresolution_use(boundaries%mesh%hr_area)) then
-    call multiresolution()
-  end if
   if (boundaries%periodic) then
     call periodic()
   end if
@@ -317,64 +367,6 @@ contains
 
     POP_SUB(X(boundaries_set_batch).zero_boundaries)
   end subroutine zero_boundaries
-
-
-  ! ---------------------------------------------------------
-  subroutine multiresolution()
-    integer :: ist, ip
-    integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
-    FLOAT :: weight
-    R_TYPE, allocatable :: ff(:)
-    integer :: idx(1:3)
-
-    PUSH_SUB(X(boundaries_set_batch).multiresolution)
-
-    SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
-    ASSERT(boundaries%mesh%idx%dim == 3)
-    
-    do ist = 1, ffb%nst_linear
-      call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
-      
-      do ip = bndry_start, bndry_end
-        call mesh_local_index_to_coords(boundaries%mesh, ip, idx)
-        ix = idx(1)
-        iy = idx(2)
-        iz = idx(3)
-
-        i_lev = boundaries%mesh%resolution(ix,iy,iz)
-
-        ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-        if(i_lev /= 2**boundaries%mesh%hr_area%num_radii) then
-          dx = abs(mod(ix, 2**(i_lev)))
-          dy = abs(mod(iy, 2**(i_lev)))
-          dz = abs(mod(iz, 2**(i_lev)))
-
-          do ii = 1, boundaries%mesh%hr_area%interp%nn
-            do jj = 1, boundaries%mesh%hr_area%interp%nn
-              do kk = 1, boundaries%mesh%hr_area%interp%nn
-                weight = boundaries%mesh%hr_area%interp%ww(ii) * &
-                  boundaries%mesh%hr_area%interp%ww(jj) *        &
-                  boundaries%mesh%hr_area%interp%ww(kk)
-
-                ff(ip) = ff(ip) + weight * ff(mesh_local_index_from_coords(boundaries%mesh, [ &
-                  ix + boundaries%mesh%hr_area%interp%posi(ii) * dx,   &
-                  iy + boundaries%mesh%hr_area%interp%posi(jj) * dy,   &
-                  iz + boundaries%mesh%hr_area%interp%posi(kk) * dz]))
-              end do
-            end do
-          end do
-        end if
-
-      end do ! ip
-
-      call batch_set_state(ffb, ist, boundaries%mesh%np_part, ff)
-    end do ! ist
-
-    SAFE_DEALLOCATE_A(ff)
-    
-    POP_SUB(X(boundaries_set_batch).multiresolution)
-  end subroutine multiresolution
-
 
   ! ---------------------------------------------------------
   subroutine periodic()

@@ -186,7 +186,7 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
 
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(VNLPSI_REDUCE_BATCH)))
-    call comm_allreduce(mesh%mpi_grp%comm, reduce_buffer)
+    call mesh%allreduce(reduce_buffer)
     call profiling_out(reduce_prof)
   end if
 

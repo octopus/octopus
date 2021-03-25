@@ -20,6 +20,7 @@
 
 module mesh_oct_m
   use basis_set_abst_oct_m
+  use comm_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -30,7 +31,6 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
@@ -103,11 +103,9 @@ module mesh_oct_m
     logical         :: parallel_in_domains 
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
-    type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
-    type(partition_t) :: bndry_partition   !< describes how the boundary points are assigned to the domains
+    type(partition_t) :: partition         !< describes how the inner points are assigned to the domains
 
     FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
-    integer, allocatable :: resolution(:, :, :)
     FLOAT                :: volume_element    !< The global volume element.
     FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
@@ -117,11 +115,22 @@ module mesh_oct_m
     logical :: masked_periodic_boundaries
     character(len=256) :: periodic_boundary_mask
 
-    type(multiresolution_t) :: hr_area !< high-resolution areas
   contains
     procedure :: end => mesh_end
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
+    procedure :: dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    procedure :: dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    procedure :: dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    procedure :: dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    procedure :: dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    procedure :: dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
+    generic :: allreduce => dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    generic :: allreduce => dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    generic :: allreduce => dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    generic :: allreduce => dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    generic :: allreduce => dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    generic :: allreduce => dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -610,7 +619,6 @@ contains
 
     if(this%idx%is_hypercube) call hypercube_end(this%idx%hypercube)
 
-    SAFE_DEALLOCATE_A(this%resolution)
     SAFE_DEALLOCATE_A(this%idx%lxyz)
     SAFE_DEALLOCATE_A(this%idx%lxyz_inv)
     SAFE_DEALLOCATE_A(this%x)
@@ -618,14 +626,9 @@ contains
 
     if(this%parallel_in_domains) then
       call vec_end(this%vp)
-      call partition_end(this%inner_partition)
-      call partition_end(this%bndry_partition)
+      call partition_end(this%partition)
     end if
 
-    if (multiresolution_use(this%hr_area)) then
-      call multiresolution_end(this%hr_area)
-    end if
-    
     POP_SUB(mesh_end)
   end subroutine mesh_end
 
@@ -636,17 +639,17 @@ contains
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
   ! ---------------------------------------------------------  
-  integer function mesh_periodic_point(mesh, space, ip_global, ip_local) result(ipp)
+  integer function mesh_periodic_point(mesh, space, ip) result(ipg)
     type(mesh_t),  intent(in)    :: mesh
     type(space_t), intent(in)    :: space
-    integer,       intent(in)    :: ip_global, ip_local
+    integer,       intent(in)    :: ip     !< local point for which periodic copy is searched
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
     
     ! no push_sub, called too frequently
 
-    ix = mesh%idx%lxyz(ip_global, :)
+    call mesh_local_index_to_coords(mesh, ip, ix)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
@@ -655,12 +658,13 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = mesh_global_index_from_coords(mesh, [ix(1), ix(2), ix(3)])
+    ipg = mesh_global_index_from_coords(mesh, ix)
+    ASSERT(ipg > 0)
 
     if(mesh%masked_periodic_boundaries) then
-      call mesh_r(mesh, ip_local, rr, coords = xx)
+      call mesh_r(mesh, ip, rr, coords = xx)
       call parse_expression(ufn_re, ufn_im, space%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
-      if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
+      if(int(ufn_re) == 0) ipg = mesh_local2global(mesh, ip) ! Nothing will be done
     end if 
     
   end function mesh_periodic_point
@@ -674,10 +678,6 @@ contains
     
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    ! resolution
-    if (multiresolution_use(mesh%hr_area)) then
-      memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    end if
     ! lxyz
     memory = memory + SIZEOF_UNSIGNED_INT * TOFLOAT(mesh%np_part_global) * MAX_DIM
 
@@ -730,7 +730,7 @@ contains
     
     cb = .not. mesh%use_curvilinear .and. &
          .not. mesh%parallel_in_domains .and.  &
-         simul_box_has_zero_bc(mesh%sb)
+         mesh%sb%periodic_dim == 0
 
   end function mesh_compact_boundaries
 
@@ -741,7 +741,7 @@ contains
     type(symmetries_t),  intent(in) :: symm
     integer,             intent(in) :: periodic_dim
 
-    integer :: iop, ip, idim, nops
+    integer :: iop, ip, idim, nops, ix(1:3)
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     !If all the axis have the same spacing and the same length
@@ -769,12 +769,8 @@ contains
       !We use floating point coordinates to check if the symmetric point 
       !belong to the grid.
       !If yes, it should have integer reduced coordinates 
-      if(mesh%parallel_in_domains) then
-        ! convert to global point
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
-      else
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
-      end if
+      call mesh_local_index_to_coords(mesh, ip, ix)
+      destpoint(1:3) = TOFLOAT(ix(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
@@ -876,9 +872,9 @@ contains
       if (ip <= mesh%np) then
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
       else if (ip <= mesh%np + mesh%vp%np_ghost) then
-        ipg = mesh%vp%ghost(mesh%vp%xghost + ip - mesh%np - 1)
+        ipg = mesh%vp%ghost(ip - mesh%np)
       else if (ip <= mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry) then
-        ipg = mesh%vp%bndry(mesh%vp%xbndry + ip - mesh%np - mesh%vp%np_ghost - 1)
+        ipg = mesh%vp%bndry(ip - mesh%np - mesh%vp%np_ghost)
       else
         ipg = 0
       end if
@@ -893,9 +889,22 @@ contains
     if (.not. mesh%parallel_in_domains) then
       ip = ipg
     else
-      ip = vec_global2local(mesh%vp, ipg, mesh%vp%partno)
+      ip = vec_global2local(mesh%vp, ipg)
     end if
   end function mesh_global2local
+
+#include "undef.F90"
+#include "real.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
+#include "mesh_inc.F90"
+
 end module mesh_oct_m
 
 

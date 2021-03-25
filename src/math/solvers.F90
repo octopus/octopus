@@ -35,12 +35,8 @@ module solvers_oct_m
   public ::                     &
     dconjugate_gradients,       &
     zconjugate_gradients,       &
-    zqmr_sym_spec_dotu,         &
-    dqmr_sym_spec_dotu,         &
     zqmr_sym_gen_dotu,          &
     dqmr_sym_gen_dotu,          &
-    zqmr_spec_dotu,             &
-    dqmr_spec_dotu,             &
     zqmr_gen_dotu,              &
     dqmr_gen_dotu,              &
     didrs,                      &

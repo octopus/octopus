@@ -336,7 +336,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
+    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
@@ -396,7 +396,7 @@ contains
 
     ! propagate the other half with H(t)
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
 
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then

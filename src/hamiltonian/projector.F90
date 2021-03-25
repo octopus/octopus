@@ -217,7 +217,7 @@ contains
     end do
 
     do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_elec_dim_get_kpoint_index(std, iq)
+      ikpoint = std%get_kpoint_index(iq)
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(kpoints))

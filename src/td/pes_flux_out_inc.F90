@@ -336,7 +336,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -612,7 +612,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -1001,7 +1001,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
   end do
   
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
+    call comm_allreduce(st%st_kpt_mpi_grp, spctrout)
   end if
   
   
@@ -1175,13 +1175,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     ! total spectrum = sum over all states
     if(this%surf_shape == PES_SPHERICAL) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
+      call comm_allreduce(st%st_kpt_mpi_grp, spctrout_sph)
     else
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
+      call comm_allreduce(st%st_kpt_mpi_grp, spctrout_cub)
     end if
 
     ! orbital spectra
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
+    call comm_allreduce(st%st_kpt_mpi_grp, spctrsum)
   end if
 
 

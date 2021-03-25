@@ -120,7 +120,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
   SAFE_ALLOCATE(pot(1:mesh%np))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st_d%dim))
 
-  ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
+  ikpoint = st_d%get_kpoint_index(psib%ik)
 
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
@@ -136,9 +136,9 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
 
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+      if(st_d%get_spin_index(ik2) /= st_d%get_spin_index(psib%ik)) cycle
 
-      ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
+      ikpoint2 = st_d%get_kpoint_index(ik2)
       !Down-sampling and q-grid
       if(st_d%nik > st_d%spin_channels) then
         if(.not.kpoints_is_compatible_downsampling(kpoints, ikpoint, ikpoint2)) cycle
@@ -150,7 +150,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
         call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
-          -(kpoints%full%npoints - npath)*mesh%sb%rcell_volume*(this%singul%Fk(ik2) - this%singul%FF))
+          -(kpoints%full%npoints - npath)*mesh%sb%latt%rcell_volume*(this%singul%Fk(ik2) - this%singul%FF))
       end if
 
       
@@ -260,23 +260,39 @@ subroutine X(exchange_operator_apply_ACE)(this, mesh, st_d, psib, hpsib)
     ASSERT(psib%is_packed() .eqv. hpsib%is_packed())
   end if
 
-  SAFE_ALLOCATE(psi(1:mesh%np, 1:st_d%dim))
-  SAFE_ALLOCATE(hpsi(1:mesh%np, 1:st_d%dim))
+  select case(psib%status())
+  case(BATCH_DEVICE_PACKED, BATCH_PACKED)
 
-  do ibatch = 1, psib%nst
-    call batch_get_state(psib, ibatch, mesh%np, psi)
-    call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st_d%dim))
+    SAFE_ALLOCATE(hpsi(1:mesh%np, 1:st_d%dim))
 
-    do ist = 1, this%ace%nst
-      dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
-      call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
+    do ibatch = 1, psib%nst
+      call batch_get_state(psib, ibatch, mesh%np, psi)
+      call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
+
+      do ist = 1, this%ace%nst
+        dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:, :, ist, psib%ik), psi)
+        call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:, :, ist, psib%ik), hpsi)
+      end do
+
+      call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
     end do
 
-    call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
-  end do
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
 
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
+  case(BATCH_NOT_PACKED)
+
+    do ibatch = 1, psib%nst
+      do ist = 1, this%ace%nst
+        dot = X(mf_dotp)(mesh, st_d%dim, this%ace%X(chi)(:,:,ist,psib%ik), psib%X(ff)(1:mesh%np, 1:st_d%dim, ibatch))
+        call lalg_axpy(mesh%np, st_d%dim, -dot, this%ace%X(chi)(:,:, ist,psib%ik), hpsib%X(ff)(1:mesh%np, 1:st_d%dim, ibatch))
+      end do
+    end do
+
+  end select
+
+
  
   call profiling_out(prof)
 
@@ -376,7 +392,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
   !We start by the contribution from states all present in memory
   do ik = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+    ikpoint = st%d%get_kpoint_index(ik)
     do ib = st%group%block_start, st%group%block_end
       !We treat a batch of states at the same time
       st_start =  st%group%block_range(ib, 1)
@@ -498,7 +514,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
       !For each wf we received, we compute the potentials 
       !using the local wfn
       if(icom<=nreceiv .and. node_fr > -1) then
-        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+        ikpoint = st%d%get_kpoint_index(ik)
         call local_contribution( .not. double_sided_communication  )
       end if
 
@@ -627,8 +643,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
       !Local contribution
       do ik2 = st%d%kpt%start, st%d%kpt%end
-        if(states_elec_dim_get_spin_index(st%d, ik2) /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-        ikpoint2 = states_elec_dim_get_kpoint_index(st%d, ik2)
+        if(st%d%get_spin_index(ik2) /= st%d%get_spin_index(ik)) cycle
+        ikpoint2 = st%d%get_kpoint_index(ik2)
 
         !Down-sampling and q-point
         if(use_external_kernel) then
@@ -642,7 +658,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
           call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
-                  -(kpoints%full%npoints-npath)*sb%rcell_volume  &
+                  -(kpoints%full%npoints-npath)*sb%latt%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if
 
@@ -668,6 +684,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 #ifdef R_TCOMPLEX
           SAFE_ALLOCATE(psi_sym_conj(1:mesh%np, 1:st%d%dim))
           do idim = 1, st%d%dim
+            !$omp parallel do
             do ip = 1, mesh%np
               ff_psi_sym(ip, idim)   = ff*psi_sym(ip, idim)
               psi_sym_conj(ip, idim) = conjg(psi_sym(ip, idim))
@@ -687,10 +704,12 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
            else
              do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                call batch_get_state(st%group%psib(ib2, ik2), ii2, mesh%np, psi2)
+               !$omp parallel do 
                do ip = 1, mesh%np
                  rho(ip, ii2) = psi_sym_conj(ip, 1)*psi2(ip, 1)
                end do
                do idim = 2, st%d%dim
+                 !$omp parallel do
                  do ip = 1, mesh%np
                    rho(ip, ii2) = rho(ip, ii2) + psi_sym_conj(ip, idim)*psi2(ip, idim)
                  end do
@@ -720,6 +739,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                  call batch_get_state(this%xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi(ip, idim) = xpsi(ip, idim) - ff_psi_sym(ip, idim)*pot(ip, ii2)
                    end do
@@ -728,6 +748,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                end do
 
              case(BATCH_PACKED)
+               !$omp parallel do private(ii2, idim)
                do ip = 1, mesh%np
                  do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                    do idim = 1, st%d%dim 
@@ -741,6 +762,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
              case(BATCH_NOT_PACKED)
                do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                  do idim = 1, st%d%dim
+                   !$omp parallel do  
                    do ip = 1, mesh%np
                      this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)     &
                        = this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2) &
@@ -762,6 +784,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                case(BATCH_DEVICE_PACKED)
                  call batch_get_state(st%group%psib(ib2, ik2), ii2, mesh%np, psi2)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                                                  - ff2*psi2(ip, idim)*R_CONJ(pot(ip, ii2))
@@ -769,6 +792,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                  end do
                case(BATCH_PACKED)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                        - ff2*st%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)*R_CONJ(pot(ip, ii2))
@@ -776,6 +800,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                 end do
                case(BATCH_NOT_PACKED)
                  do idim = 1, st%d%dim
+                   !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi_ret(ip, idim, ist) = xpsi_ret(ip, idim, ist) &
                        - ff2*st%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)*R_CONJ(pot(ip, ii2))
@@ -888,7 +913,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
 
   !Reduction
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, MM)
+    call comm_allreduce(st%mpi_grp, MM)
   end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -934,7 +959,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
 
   !Reduction
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm,this%ace%X(chi))
+    call comm_allreduce(st%mpi_grp,this%ace%X(chi))
   end if
 
 #ifdef R_TCOMPLEX
@@ -1057,7 +1082,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, mesh, st_d, kpoi
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
     
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+      if(st_d%get_spin_index(ik2) /= st_d%get_spin_index(psib%ik)) cycle
 
       if(this%st%occ(ist, ik2) < M_EPSILON) cycle
 
@@ -1097,145 +1122,6 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, mesh, st_d, kpoi
 
   POP_SUB(X(exchange_operator_hartree_apply))
 end subroutine X(exchange_operator_hartree_apply)
-
-! scdm_EXX
-! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply)(this, namespace, scdm, mesh, st_d, kpoints, psib, hpsib, exx_coef, hartree)
-  type(exchange_operator_t), intent(in)    :: this
-  type(namespace_t),         intent(in)    :: namespace
-  type(scdm_t),              intent(in)    :: scdm
-  type(mesh_t),              intent(in)    :: mesh
-  type(states_elec_dim_t),   intent(in)    :: st_d
-  type(kpoints_t),           intent(in)    :: kpoints
-  class(wfs_elec_t),         intent(inout) :: psib
-  class(wfs_elec_t),         intent(inout) :: hpsib
-  FLOAT,                     intent(in)    :: exx_coef
-  logical,                   intent(in)    :: hartree
-
-  integer :: ist, jst, ip, idim, ik2, ibatch
-  integer :: ii, jj, kk, ll, count
-  FLOAT :: ff, rr(3), dist
-  R_TYPE, allocatable :: rho_l(:), pot_l(:), psil(:, :), hpsil(:, :), psi(:, :), hpsi(:, :), temp_state_global(:, :)
-  type(profile_t), save :: prof_exx_scdm
-
-  PUSH_SUB(X(exchange_operator_scdm_apply))
-  
-  call profiling_in(prof_exx_scdm, TOSTRING(X(SCDM_EXX_OPERATOR)))
-
-  if(kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
-  
-  ! make sure scdm is localized
-  call X(scdm_localize)(scdm, namespace, this%st, mesh)
-  
-  SAFE_ALLOCATE(psil(1:mesh%np, 1:st_d%dim))
-  SAFE_ALLOCATE(hpsil(1:mesh%np, 1:st_d%dim))
-  SAFE_ALLOCATE(psi(1:mesh%np_global, 1:st_d%dim))
-  SAFE_ALLOCATE(hpsi(1:mesh%np_global, 1:st_d%dim))
-  SAFE_ALLOCATE(temp_state_global(mesh%np_global, this%st%d%dim))
-  SAFE_ALLOCATE(rho_l(1:this%scdm%full_box))
-  SAFE_ALLOCATE(pot_l(1:this%scdm%full_box))
-  
-  do ibatch = 1, psib%nst
-    ist = psib%ist(ibatch)
-    
-    call batch_get_state(psib, ibatch, mesh%np, psil)
-    call batch_get_state(hpsib, ibatch, mesh%np, hpsil)
-
-    if(mesh%parallel_in_domains) then
-      ! the gathering is done for the domain distribution, the states are still local to the st%mpi_grp
-      call vec_allgather(mesh%vp, psi(:, 1), psil(:, 1))
-      call vec_allgather(mesh%vp, hpsi(:, 1), hpsil(:, 1))
-    else
-      psi(1:mesh%np, 1:st_d%dim) = psil(1:mesh%np, 1:st_d%dim)
-      hpsi(1:mesh%np, 1:st_d%dim) = hpsil(1:mesh%np, 1:st_d%dim)
-    end if
-    
-    ! accumulate exchange contribution to Hpsi in a temp array and add to Hpsi at the end
-    temp_state_global(:,:) = M_ZERO
-
-    do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
-      count = 0
-      do jst = this%scdm%st_exx_start, this%scdm%st_exx_end
-
-        if(this%st%occ(jst, ik2) < M_EPSILON) cycle
-        ! for psi in scdm representation check if it overlaps with the box of jst
-        ! NOTE: this can be faster by building an array with overlapping index pairs
-        !       within the radius of scdm%box_size
-        if(this%scdm%psi_scdm) then
-          do ii = 1, 3
-            rr(1:3) = this%scdm%center(ii,ist) - this%scdm%center(ii,jst)
-          end do
-          dist = sqrt(dot_product(rr, rr))
-          if(dist .gt. this%scdm%box_size) cycle
-        end if
-
-        ! in Hartree we just remove the self-interaction
-        if(hartree .and. jst /= ist) cycle
-
-        ! for scdm do product only in the local box
-        rho_l(:) = M_ZERO
-
-        ! copy density to local box
-        do jj = 1, this%scdm%box_size*2 + 1
-          do kk = 1, this%scdm%box_size*2 + 1
-            do ll = 1, this%scdm%box_size*2 + 1
-              ip = (jj - 1)*((this%scdm%box_size*2 + 1))**2+(kk - 1)*((this%scdm%box_size*2 + 1)) + ll
-              rho_l(ip) = R_CONJ(this%scdm%X(psi)(ip, jst))*psi(this%scdm%box(jj, kk, ll, jst), 1)
-            end do
-          end do
-        end do
-
-        call X(poisson_solve)(this%scdm%poisson, pot_l, rho_l, all_nodes=.false.)
-
-        ff = this%st%occ(jst, ik2)
-        if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
-
-        do idim = 1, this%st%d%dim
-          ! potential in local box to full H*psi 
-          do jj =1, this%scdm%box_size*2 + 1
-            do kk =1, this%scdm%box_size*2 + 1
-              do ll =1, this%scdm%box_size*2 + 1
-                ip = (jj - 1)*((this%scdm%box_size*2 + 1))**2 + (kk - 1)*((this%scdm%box_size*2 + 1)) + ll
-                temp_state_global(this%scdm%box(jj, kk, ll, jst), idim) = &
-                  temp_state_global(this%scdm%box(jj, kk, ll, jst), idim) - exx_coef*ff*this%scdm%X(psi)(ip, jst)*pot_l(ip)
-              end do
-            end do
-          end do
-
-        end do
-
-      end do
-    end do
-
-    ! sum contributions to hpsi from all processes in the st_exx_grp group
-    call comm_allreduce(this%scdm%st_exx_grp%comm, temp_state_global)
-    
-    ! add exchange contribution to the input state
-    hpsi(1:mesh%np_global, 1) =  hpsi(1:mesh%np_global, 1) + temp_state_global(1:mesh%np_global, 1)
-
-    if(mesh%parallel_in_domains) then
-      call vec_scatter(mesh%vp, 0, hpsil(:, 1), hpsi(:, 1))
-    else
-      hpsil(1:mesh%np, 1:st_d%dim) = hpsi(1:mesh%np, 1:st_d%dim)
-    end if
-
-    call batch_set_state(hpsib, ibatch, mesh%np, hpsil)
-  end do
-  
-  SAFE_DEALLOCATE_A(psil)
-  SAFE_DEALLOCATE_A(hpsil)
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(temp_state_global)
-  SAFE_DEALLOCATE_A(rho_l)
-  SAFE_DEALLOCATE_A(pot_l)
-
-  call profiling_out(prof_exx_scdm)
-  
-  POP_SUB(X(exchange_operator_scdm_apply))
-end subroutine X(exchange_operator_scdm_apply)
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -356,7 +356,7 @@ contains
     
 
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
@@ -391,10 +391,10 @@ contains
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
        ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l) 
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_l) 
     end if
 
-    stress_l = stress_l/der%mesh%sb%rcell_volume
+    stress_l = stress_l/der%mesh%sb%latt%rcell_volume
     stress_KE = stress_l
     stress = stress + stress_l
     
@@ -488,7 +488,7 @@ contains
        stress_l(ii,ii) = - hm%energy%exchange - hm%energy%correlation &
             + hm%energy%intnvxc
     end do
-    stress_l = stress_l/der%mesh%sb%rcell_volume
+    stress_l = stress_l/der%mesh%sb%latt%rcell_volume
     
     stress_xc(:,:) = stress_l(:,:)
     stress(:,:) = stress(:,:) + stress_l(:,:)
@@ -539,7 +539,7 @@ contains
 ! calculate stress from non-local pseudopotentials
     stress_t_NL = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
@@ -588,11 +588,11 @@ contains
     
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_t_NL)
     end if
 
 
-    stress_t_NL = stress_t_NL/der%mesh%sb%rcell_volume
+    stress_t_NL = stress_t_NL/der%mesh%sb%latt%rcell_volume
 
 ! calculate stress from short-range local pseudopotentials
     stress_t_SR = M_ZERO
@@ -620,7 +620,7 @@ contains
        end do
     end do
 
-    stress_t_SR = stress_t_SR/der%mesh%sb%rcell_volume
+    stress_t_SR = stress_t_SR/der%mesh%sb%latt%rcell_volume
 
 ! calculate stress from long-range local pseudopotentials
     stress_t_LR = M_ZERO
@@ -663,7 +663,7 @@ contains
        end do
     end do
 
-    stress_t_LR = stress_t_LR/der%mesh%sb%rcell_volume
+    stress_t_LR = stress_t_LR/der%mesh%sb%latt%rcell_volume
 
     
     stress_ps = stress_t_SR + stress_t_LR + stress_t_NL
@@ -678,7 +678,7 @@ contains
 !
 !    do idir = 1,3
 !       stress_ps(idir,idir) = stress_ps(idir,idir) &
-!            + 2d0*M_PI*sigma_erf**2*charge**2 /der%mesh%sb%rcell_volume**2
+!            + 2d0*M_PI*sigma_erf**2*charge**2 /der%mesh%sb%latt%rcell_volume**2
 !    end do
     
     stress = stress + stress_ps
@@ -834,7 +834,7 @@ contains
     end do
 
     if(geo%atoms_dist%parallel) then
-       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, stress_l)
+       call comm_allreduce(geo%atoms_dist%mpi_grp, stress_l)
     end if
 
 ! And the long-range part, using an Ewald sum
@@ -875,7 +875,7 @@ contains
              
              if(gx < CNST(-36.0)) cycle
 
-             factor = M_TWO*M_PI*exp(gx)/(sb%rcell_volume*gg2)
+             factor = M_TWO*M_PI*exp(gx)/(sb%latt%rcell_volume*gg2)
 
              if(factor < epsilon(factor)) cycle
 
@@ -904,7 +904,7 @@ contains
     end do
 
 
-    factor = M_HALF*M_PI*charge**2/(sb%rcell_volume*alpha**2)
+    factor = M_HALF*M_PI*charge**2/(sb%latt%rcell_volume*alpha**2)
     stress_l(1, 1) = stress_l(1, 1) - factor
     stress_l(2, 2) = stress_l(2, 2) - factor
     stress_l(3, 3) = stress_l(3, 3) - factor
@@ -914,10 +914,10 @@ contains
     sigma_erf = CNST(0.625)
     do idir = 1,3
        stress_l(idir,idir) = stress_l(idir,idir) &
-            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%rcell_volume
+            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%latt%rcell_volume
     end do
 
-    stress_l = stress_l/sb%rcell_volume
+    stress_l = stress_l/sb%latt%rcell_volume
 
     stress_Ewald = stress_l
     stress = stress + stress_l

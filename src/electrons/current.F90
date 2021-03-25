@@ -43,6 +43,7 @@ module current_oct_m
   use projector_oct_m
   use scissor_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
   use string_oct_m
@@ -303,7 +304,7 @@ contains
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
+        ispin = st%d%get_spin_index(ik)
         do ib = st%group%block_start, st%group%block_end
 
           call st%group%psib(ib, ik)%do_pack(copy = .true.)
@@ -379,7 +380,7 @@ contains
         ! we can use the packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_elec_dim_get_spin_index(st%d, ik)
+          ispin = st%d%get_spin_index(ik)
           do ib = st%group%block_start, st%group%block_end
 
             call st%group%psib(ib, ik)%do_pack(copy = .true.)
@@ -420,7 +421,7 @@ contains
         ! use the slow non-packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_elec_dim_get_spin_index(st%d, ik)
+          ispin = st%d%get_spin_index(ik)
           do ist = st%st_start, st%st_end
 
             ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -510,13 +511,13 @@ contains
     if(st%d%ispin /= SPINORS) then
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
+        ispin = st%d%get_spin_index(ik)
         call lalg_axpy(der%mesh%np, der%dim, M_ONE, st%current_kpt(:, :, ik), st%current(:, :, ispin))
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%current, dim = (/der%mesh%np, der%dim, st%d%nspin/)) 
+      call comm_allreduce(st%st_kpt_mpi_grp, st%current, dim = (/der%mesh%np, der%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
@@ -572,7 +573,7 @@ contains
 
     cmel = M_z0
 
-    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+    ispin = hm%d%get_spin_index(ik)
     ppsi_i(:,:) = M_z0        
     ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
     ppsi_j(:,:) = M_z0        
@@ -639,7 +640,7 @@ contains
       end do
     end do
 
-    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
+    if(der%mesh%parallel_in_domains) call der%mesh%allreduce(cmel)
 
     
 
@@ -653,11 +654,12 @@ contains
   end subroutine current_calculate_mel
 
   ! ---------------------------------------------------------
-  subroutine current_heat_calculate(der, hm, st, current)
-    type(derivatives_t),  intent(in)    :: der
-    type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(states_elec_t),  intent(in)    :: st
-    FLOAT,                intent(out)   :: current(:, :, :)
+  subroutine current_heat_calculate(space, der, hm, st, current)
+    type(space_t),            intent(in)    :: space
+    type(derivatives_t),      intent(in)    :: der
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(states_elec_t),      intent(in)    :: st
+    FLOAT,                    intent(out)   :: current(:, :, :)
 
     integer :: ik, ist, idir, idim, ip, ispin, ndim
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
@@ -665,10 +667,10 @@ contains
 
     PUSH_SUB(current_heat_calculate)
 
-    ASSERT(simul_box_is_periodic(der%mesh%sb))
+    ASSERT(space%is_periodic())
     ASSERT(st%d%dim == 1)
 
-    ndim = der%dim
+    ndim = space%dim
     
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
@@ -680,7 +682,7 @@ contains
     
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       do ist = st%st_start, st%st_end
 
         if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle

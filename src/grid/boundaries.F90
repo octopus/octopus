@@ -1,4 +1,5 @@
 !! Copyright (C) 2005-2010 Florian Lorenzen, Heiko Appel, X. Andrade
+!! Copyright (C) 2021 Sebastian Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -29,14 +30,13 @@ module boundaries_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
   use par_vec_oct_m
+  use partition_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use space_oct_m
-  use subarray_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -88,7 +88,7 @@ module boundaries_oct_m
 
   type pv_handle_batch_t
     private
-    type(batch_t)        :: ghost_send
+    type(batch_t)        :: ghost_send   !< batch for sending data; it is packed into this one
     integer, allocatable :: requests(:)
     integer              :: nnb
     ! these are needed for CL
@@ -132,10 +132,10 @@ contains
     type(space_t),        intent(in)    :: space
     type(mesh_t), target, intent(in)    :: mesh
 
-    integer :: sp, ip, ip_inner, iper, ip_global, idir
+    integer :: sp, ip, ip_inner, iper, idir
     integer :: ip_inner_global, ipart
-    integer, allocatable :: recv_rem_points(:, :)
-    integer :: nper_recv
+    integer, allocatable :: recv_rem_points(:, :), points(:), part(:), points_local(:)
+    integer :: nper_recv, iper_recv
 #ifdef HAVE_MPI
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
@@ -182,79 +182,80 @@ contains
       sp = mesh%np
       if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
 
-      !count the number of points that are periodic
+      ! count the number of points that are periodic
       this%nper = 0
       nper_recv = 0
       do ip = sp + 1, mesh%np_part
+        ip_inner_global = mesh_periodic_point(mesh, space, ip)
+        ip_inner = mesh_global2local(mesh, ip_inner_global)
 
-        ip_global = mesh_local2global(mesh, ip)
-
-        ip_inner = mesh_periodic_point(mesh, space, ip_global, ip)
-        ip_inner = mesh_global2local(mesh, ip_inner)
-
-        ! If the point is the periodic of another point, is not zero
-        ! (this might happen in the parallel case) and is inside the
-        ! grid then we have to copy it from the grid points.  
-        !
-        ! If the point index is larger than mesh%np then it is the
-        ! periodic copy of a point that is zero, so we don`t count it
-        ! as it will be initialized to zero anyway. For different
-        ! mixed boundary conditions the last check should be removed.
-        !
-        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
+        ! it is the same point, can happen for mixed periodicity
+        if (ip == ip_inner) cycle
+        ! the point maps to the boundary, can happen for mixed periodicity
+        ! in this case the point is already set to zero, so we can ignore it
+        ! for different mixed boundary conditions, we would need to be careful here
+        if (ip_inner_global > mesh%np_global) cycle
+        ! now check if point is local or if it needs to be communicated
+        if (ip_inner /= 0 .and. ip_inner <= mesh%np) then
           this%nper = this%nper + 1
-        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
+        else
           nper_recv = nper_recv + 1
         end if
       end do
+      if(.not.mesh%parallel_in_domains) then
+        ASSERT(nper_recv == 0)
+      end if
 
       SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
 
       if(mesh%parallel_in_domains) then
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
-        SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
+        SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
+        SAFE_ALLOCATE(points(1:nper_recv))
+        SAFE_ALLOCATE(points_local(1:nper_recv))
+        SAFE_ALLOCATE(part(1:nper_recv))
         this%nrecv = 0
       end if
 
       iper = 0
+      iper_recv = 0
       do ip = sp + 1, mesh%np_part
-
-        ip_global = mesh_local2global(mesh, ip)
-
-        ip_inner_global = mesh_periodic_point(mesh, space, ip_global, ip)
+        ip_inner_global = mesh_periodic_point(mesh, space, ip)
         ip_inner = mesh_global2local(mesh, ip_inner_global)
         
-        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
+        ! it is the same point, can happen for mixed periodicity
+        if (ip == ip_inner) cycle
+        ! the point maps to the boundary, can happen for mixed periodicity
+        ! in this case the point is already set to zero, so we can ignore it
+        if (ip_inner_global > mesh%np_global) cycle
+        ! now check if point is local or if it needs to be communicated
+        if (ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
-
-        else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
-          ! find in which paritition it is
-          do ipart = 1, mesh%vp%npart
-            if(ipart == mesh%vp%partno) cycle
-
-            ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
-            
-            if(ip_inner /= 0) then
-              if(ip_inner <= mesh%vp%np_local_vec(ipart)) then
-                ! count the points to receive from each node
-                this%nrecv(ipart) = this%nrecv(ipart) + 1
-                ! and store the number of the point
-                this%per_recv(this%nrecv(ipart), ipart) = ip
-                ! and where it is in the other partition
-                recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
-
-                ASSERT(mesh%mpi_grp%rank /= ipart - 1) ! if we are here, the point must be in another node
-              
-                exit
-              end if
-            end if
-            
-          end do
+        else
+          ! this can only happen if parallel in domain
+          ! the point is on another node
+          iper_recv = iper_recv + 1
+          points(iper_recv) = ip_inner_global
+          points_local(iper_recv) = ip
         end if
       end do
+      if(mesh%parallel_in_domains) then
+        ! find the points in the other partitions
+        call partition_get_partition_number(mesh%partition, nper_recv, &
+          points, part)
+        do iper_recv = 1, nper_recv
+          ipart = part(iper_recv)
+          ! count the points to receive from each node
+          this%nrecv(ipart) = this%nrecv(ipart) + 1
+          ! and store the number of the point
+          this%per_recv(this%nrecv(ipart), ipart) = points_local(iper_recv)
+          ! and its global index
+          recv_rem_points(this%nrecv(ipart), ipart) = points(iper_recv)
+        end do
+      end if
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
@@ -295,6 +296,13 @@ contains
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
           call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%mpi_grp%comm, status, mpi_err)
+          ! get local index of the points to send
+          do ip = 1, this%nsend(ipart)
+            this%per_send(ip, ipart) = mesh_global2local(mesh, this%per_send(ip, ipart))
+            ! make sure we have local points here
+            ASSERT(this%per_send(ip, ipart) > 0)
+            ASSERT(this%per_send(ip, ipart) <= mesh%np)
+          end do
         end do
 
         ! we no longer need this
@@ -303,6 +311,10 @@ contains
         call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
         SAFE_DEALLOCATE_A(send_buffer)
         
+        SAFE_DEALLOCATE_A(recv_rem_points)
+        SAFE_DEALLOCATE_A(points)
+        SAFE_DEALLOCATE_A(points_local)
+        SAFE_DEALLOCATE_A(part)
       end if
 #endif
 

@@ -148,6 +148,10 @@ contains
     ierr = 0
 
     if (.not. idx%is_hypercube) then
+      if (int(np, 8)*idx%dim > huge(0)) then
+        message(1) = "Too many global mesh points to write restart file for lxyz.obf."
+        call messages_fatal(1)
+      end if
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(allocated(idx%lxyz))

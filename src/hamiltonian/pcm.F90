@@ -1714,7 +1714,7 @@ contains
       end do
 
       ! reduce the local density scattered among nodes
-      call comm_allreduce(mesh%mpi_grp%comm, lrho, npt)
+      call mesh%allreduce(lrho, npt)
       
       ! normalize the integral to the tessera point charge q_pcm(ia)
       norm = sum(lrho(1:npt)) * mesh%volume_element

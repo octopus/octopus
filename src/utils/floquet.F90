@@ -106,7 +106,7 @@ program oct_floquet
      call v_ks_calculate_current(sys%ks, .true.)
 
      ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
      call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
   end if
 
@@ -242,8 +242,8 @@ contains
             end do
           end if
         end do
-        call comm_allreduce(mpi_world%comm, psi)
-        call comm_allreduce(mpi_world%comm, hpsi)
+        call comm_allreduce(mpi_world, psi)
+        call comm_allreduce(mpi_world, hpsi)
         hmss(1:nst, 1:nst) = M_ZERO
         call zgemm( 'n',                                  &
                     'c',                                  &

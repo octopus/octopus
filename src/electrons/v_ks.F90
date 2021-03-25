@@ -736,7 +736,7 @@ contains
     end if
 
     if (calc_eigenval_) call states_elec_fermi(st, namespace, gr%mesh) ! occupations
-    call energy_calc_total(namespace, hm, gr, st)
+    call energy_calc_total(namespace, space, hm, gr, st)
 
     POP_SUB(v_ks_h_setup)
   end subroutine v_ks_h_setup
@@ -760,7 +760,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm, namespace, space)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -776,9 +776,10 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current) 
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
+    type(space_t),                     intent(in)    :: space
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_elec_t),               intent(inout) :: st
     type(geometry_t) ,         target, intent(in)    :: geo
@@ -879,8 +880,8 @@ contains
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
     if(hm%self_induced_magnetic) then
-      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
+      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:space%dim))
+      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:space%dim))
       call magnetic_induced(ks%gr%der, st, hm%psolver, hm%kpoints, ks%calc%a_ind, ks%calc%b_ind)
     end if
    
@@ -1071,11 +1072,11 @@ contains
                 hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
 
+            if (ks%oep%has_photons) then
+              ks%calc%energy%photon_exchange = ks%oep%pt%ex
+            end if
           end if
 
-          if (ks%oep%has_photons) then
-            ks%calc%energy%photon_exchange = ks%oep%pt%ex
-          end if
         end if
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
@@ -1108,7 +1109,7 @@ contains
             coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
           end do
           
-          if(simul_box_is_periodic(ks%gr%sb)) then
+          if (space%is_periodic()) then
             latvec(1:3, 1:3) = ks%gr%sb%latt%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
             call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
           else
@@ -1150,7 +1151,7 @@ contains
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
             factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
-        if(ks%gr%mesh%parallel_in_domains) call comm_allreduce(ks%gr%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
+        if(ks%gr%mesh%parallel_in_domains) call ks%gr%mesh%allreduce(ks%calc%energy%intnvxc)
 
         ! MGGA vtau contribution
         if (states_are_real(st)) then
@@ -1207,8 +1208,8 @@ contains
       SAFE_DEALLOCATE_A(ks%calc%b_ind)
     end if
 
-    if (allocated(hm%ep%v_static)) then
-      hm%energy%intnvstatic = dmf_dotp(ks%gr%mesh, ks%calc%total_density, hm%ep%v_static) 
+    if (allocated(hm%v_static)) then
+      hm%energy%intnvstatic = dmf_dotp(ks%gr%mesh, ks%calc%total_density, hm%v_static) 
     else
       hm%energy%intnvstatic = M_ZERO
     end if
@@ -1401,7 +1402,7 @@ contains
       !! Static potentials are included in subroutine hamiltonian_elec_epot_generate (module hamiltonian).
       !! The sign convention for typical potentials and kick are different...
       if( hm%pcm%localf .and. ks%calc%time_present ) then
-        laser_present = epot_have_lasers( hm%ep )
+        laser_present = (hm%ext_lasers%no_lasers > 0)
         kick_present  = epot_have_kick(   hm%ep )
         if ( laser_present .and. kick_present ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
@@ -1409,8 +1410,8 @@ contains
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           potx = M_ZERO
           kick = M_ZERO
-          do ii = 1, hm%ep%no_lasers        
-            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          do ii = 1, hm%ext_lasers%no_lasers        
+            call laser_potential(hm%ext_lasers%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           kick_real = M_ZERO
           kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
@@ -1427,8 +1428,8 @@ contains
         else if ( laser_present .and. .not.kick_present ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
-          do ii = 1, hm%ep%no_lasers        
-            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          do ii = 1, hm%ext_lasers%no_lasers        
+            call laser_potential(hm%ext_lasers%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)

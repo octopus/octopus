@@ -94,7 +94,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     do ip = 1, this%der%mesh%np_global
       ip_v(ip) = ip
     end do
-    call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
+    call partition_get_partition_number(this%der%mesh%partition, this%der%mesh%np_global, ip_v, part_v)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
@@ -122,7 +122,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
     end do
 
-    call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+    call this%der%mesh%allreduce(tmp)
 
     do jp = 1, this%der%mesh%np
       pot(jp) = tmp(mesh_local2global(this%der%mesh, jp))

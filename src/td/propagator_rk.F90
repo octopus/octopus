@@ -33,6 +33,7 @@ module propagator_rk_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
@@ -530,7 +531,7 @@ contains
     sp_kp1 = kp1
     sp_kp2 = kp2
     sp_parallel = st%parallel_in_states .or. st%d%kpt%parallel
-    if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
+    if(sp_parallel) call mpi_grp_copy(sp_grp, st%st_kpt_mpi_grp)
 
     ! define pointer and variables for usage in td_rk2op, td_rk2opt routines
     mesh_p    => gr%mesh
@@ -681,7 +682,7 @@ contains
         end do
       end do
 
-      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, dres)
+      call comm_allreduce(st%dom_st_kpt_mpi_grp, dres)
 
       if(sqrt(dres) < tr%scf_threshold) exit
     end do
@@ -761,7 +762,7 @@ contains
     sp_kp1 = kp1
     sp_kp2 = kp2
     sp_parallel = st%parallel_in_states .or. st%d%kpt%parallel
-    if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
+    if(sp_parallel) call mpi_grp_copy(sp_grp, st%st_kpt_mpi_grp)
 
     ! define pointer and variables for usage in td_rk4op, td_rk4opt routines
     mesh_p    => gr%mesh
@@ -957,7 +958,7 @@ contains
           end do
         end do
       end do
-      if(sp_parallel) call comm_allreduce(sp_comm, dres)
+      if(sp_parallel) call comm_allreduce(sp_grp, dres)
       !write(*, *) 'Residual = ', dres
 
       if(sqrt(dres) < tr%scf_threshold) exit

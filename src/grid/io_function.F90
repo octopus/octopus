@@ -391,7 +391,12 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', namespace, action='write', position='asis')
 
     write(iunit, '(i6)') geo%natoms
-    call sb%write_short_info(iunit)
+    write(iunit, '(a,a,a)', advance='no') trim(geo%space%short_info()), '; ', trim(sb%short_info(unit_angstrom))
+    if (geo%space%is_periodic()) then
+      write(iunit, '(a,a)') '; ', trim(sb%latt%short_info(unit_angstrom))
+    else
+      write(iunit, '()')
+    end if
 
     ! xyz-style labels and positions:
     do iatom = 1, geo%natoms

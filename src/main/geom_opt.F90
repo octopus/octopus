@@ -122,6 +122,13 @@ contains
 
     PUSH_SUB(geom_opt_run_legacy)
 
+    if (sys%space%periodic_dim == 1 .or. sys%space%periodic_dim == 2) then
+      message(1) = "Geometry optimization not allowed for systems periodic in 1D or 2D, "
+      message(2) = "as in those cases the total energy is not correct."
+      call messages_fatal(2, namespace=sys%namespace)
+    end if
+
+
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
@@ -213,9 +220,11 @@ contains
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
+    ! Because g_opt has the "save" atribute, we need to explicitly empty the criteria list here, or there will be a memory leak.
+    call g_opt%scfv%criterion_list%empty()
     call end_()
-    POP_SUB(geom_opt_run_legacy)
 
+    POP_SUB(geom_opt_run_legacy)
   contains
 
     ! ---------------------------------------------------------
@@ -617,7 +626,7 @@ contains
     call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%syst%namespace, g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call energy_calc_total(g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &

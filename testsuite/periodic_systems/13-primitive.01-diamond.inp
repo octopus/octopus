@@ -133,4 +133,4 @@ OutputMEEnd = 7
 0.000000 | 0.500000 | 0.000000 | 0.500000 
 %
 StatesPack = yes
-LCAOStart = lcao_full
+

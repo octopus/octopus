@@ -1,7 +1,9 @@
 PeriodicDimensions = 3
 
 a = 6.6329387
-Lsize = a/2
+%LatticeParameters
+ a | a | a
+%
 
 %Coordinates
   "Li" |  0.0 | 0.0 | 0.0 

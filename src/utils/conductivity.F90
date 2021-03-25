@@ -317,19 +317,19 @@
        do ii = 1, geo%natoms
          do jj = 1, space%dim
            velcm(jj) = velcm(jj) + velocities(ivel, iter)/TOFLOAT(geo%natoms)
-           current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%rcell_volume*(velocities(ivel, iter) - vel0(jj))
+           current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
            ivel = ivel + 1
          end do
        end do
         
-       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume + current(1))
-       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
+       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/sb%latt%rcell_volume + current(1))
+       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*qtot/sb%latt%rcell_volume - total_current(1, iter)/sb%latt%rcell_volume)
 
-       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/sb%rcell_volume + current(1:space%dim)
+       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/sb%latt%rcell_volume + current(1:space%dim)
        
      else
-       curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%rcell_volume
-       heatcurr(iter,1:space%dim) = heat_current(1:space%dim, iter)/sb%rcell_volume
+       curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%latt%rcell_volume
+       heatcurr(iter,1:space%dim) = heat_current(1:space%dim, iter)/sb%latt%rcell_volume
      end if
         
      if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim)

@@ -9,8 +9,8 @@ Input      : 23-hybrids.01-ace.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -56.20037562
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -38.93055818
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -17.26981763
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.89094369
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.00746490
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.27011070

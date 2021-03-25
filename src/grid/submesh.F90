@@ -556,7 +556,7 @@ contains
 
     !no PUSH_SUB, called too often
 
-    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+    if (sm1%mesh%sb%periodic_dim == 0) then
       !first check the distance
       distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
@@ -609,7 +609,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-    call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
+    call this%mesh%allreduce(part_np)
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -631,9 +631,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
+    call this%mesh%allreduce(this%x_global)
+    call this%mesh%allreduce(this%part_v)
+    call this%mesh%allreduce(this%global2local)
 
     SAFE_DEALLOCATE_A(part_np)
 
@@ -737,7 +737,7 @@ contains
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
-      call comm_allreduce(this%mesh%mpi_grp%comm, dotp)
+      call this%mesh%allreduce(dotp)
       call profiling_out(prof_sm_reduce)
     end if 
  

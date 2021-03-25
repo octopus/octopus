@@ -33,6 +33,7 @@ module poisson_multigrid_oct_m
   use par_vec_oct_m
   use poisson_corrections_oct_m
   use profiling_oct_m
+  use space_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -70,16 +71,17 @@ module poisson_multigrid_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_init(this, namespace, mesh, ml, thr)
+  subroutine poisson_multigrid_init(this, namespace, space, mesh, ml, thr)
     type(mg_solver_t), intent(out)   :: this
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(mesh_t),      intent(inout) :: mesh
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
 
     PUSH_SUB(poisson_multigrid_init)
 
-    call poisson_corrections_init(this%corrector, namespace, ml, mesh)
+    call poisson_corrections_init(this%corrector, namespace, space, ml, mesh)
 
     this%threshold = thr
 

@@ -9,10 +9,13 @@ Input : 08-gdlib.01-gs.inp
 
 if (available gdlib); then
     match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-    match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.50252348
-    match ; Eigenvalue   ; GREPFIELD(static/info, ' 1   --', 3) ; 0.502523
-    match ; Dipole x     ; GREPFIELD(static/info, '<x> =', 3) ; 1.03804E+00
-    match ; Dipole y     ; GREPFIELD(static/info, '<y> =', 3) ; -1.02525E+00
+    Precision: 4.92e-16
+    match ; Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; 0.49227033
+    match ; Eigenvalue    ; GREPFIELD(static/info, ' 1   --', 3) ; 0.49227
+    Precision: 9.67e-16
+    match ; Dipole x      ; GREPFIELD(static/info, '<x> =', 3) ; 0.967046
+    Precision: 1.03e-15
+    match ; Dipole y      ; GREPFIELD(static/info, '<y> =', 3) ; -1.02555
 else
     match; Error; GREPCOUNT(err, 'GD library support'); 1
 endif

@@ -304,6 +304,8 @@ contains
     !%Option photon_correlator bit(34)
     !% Outputs the electron-photon correlation function. The output file is
     !% called <tt>photon_correlator</tt>.
+    !%Option xc_torque bit(35)
+    !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -326,6 +328,17 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
+    end if
+
+    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
+      if(st%d%ispin /= SPINORS) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed for spinors.'
+        call messages_fatal(1, namespace=namespace)
+      end if
+      if(space%dim /= 3) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed in the 3D case.'
+        call messages_fatal(1, namespace=namespace)
+      end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
@@ -676,7 +689,7 @@ contains
     end if
     
     call output_states(outp, namespace, dir, st, gr, geo, hm)
-    call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
     call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
 
@@ -706,7 +719,7 @@ contains
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, dir, st, gr, hm%kpoints, geo)
+      call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, geo)
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -743,6 +756,8 @@ contains
         end if
       end if
     end if
+
+    call output_xc_torque(outp, namespace, dir, gr%mesh, hm, st, geo, geo%space)
 
     call profiling_out(prof)
     POP_SUB(output_all)
@@ -1231,25 +1246,22 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
-    if(gr%sb%dim /= 3) then
+    if (space%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if(st%d%ispin == SPINORS) &
-      call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
+    if (st%d%ispin == SPINORS) call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
 
-    if(st%parallel_in_states) &
-      call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+    if (st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
 
-    if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
+    if (st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) then
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
+    end if
 
-    if(hm%ep%nlcc) &
-      call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
+    if (hm%ep%nlcc) call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
 
@@ -1279,7 +1291,7 @@ contains
     call cube_function_alloc_fs(cube, cf)
 
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
-    call fourier_shell_init(shell_density, cube, gr%mesh)
+    call fourier_shell_init(shell_density, space, cube, gr%mesh)
     ecutrho = shell_density%ekin_cutoff
     SAFE_ALLOCATE(field_g(1:shell_density%ngvectors, 1:st%d%nspin))
 
@@ -1325,7 +1337,7 @@ contains
 
     message(1) = "BerkeleyGW output: WFN"
     write(message(2),'(a,f12.6,a)') "Wavefunction cutoff for BerkeleyGW: ", &
-      fourier_shell_cutoff(cube, gr%mesh, .true.) * M_TWO, " Ry"
+      fourier_shell_cutoff(space, cube, gr%mesh, .true.) * M_TWO, " Ry"
     call messages_info(2)
 
     if(states_are_real(st)) then
@@ -1344,7 +1356,7 @@ contains
 
     ! FIXME: is parallelization over k-points possible?
     do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
+      call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
 
       if(mpi_grp_is_root(mpi_world)) &
         call write_binary_gvectors(iunit, shell_wfn%ngvectors, shell_wfn%ngvectors, shell_wfn%red_gvec)
@@ -1403,7 +1415,7 @@ contains
 
       adot(1:3, 1:3) = matmul(gr%sb%latt%rlattice(1:3, 1:3), gr%sb%latt%rlattice(1:3, 1:3))
       bdot(1:3, 1:3) = matmul(gr%sb%latt%klattice(1:3, 1:3), gr%sb%latt%klattice(1:3, 1:3))
-      recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+      recvol = (M_TWO * M_PI)**3 / gr%sb%latt%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%symm)
@@ -1423,8 +1435,8 @@ contains
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
 !      end if
       do ik = 1, st%d%nik
-        is = states_elec_dim_get_spin_index(st%d, ik)
-        ikk = states_elec_dim_get_kpoint_index(st%d, ik)
+        is = st%d%get_spin_index(ik)
+        ikk = st%d%get_kpoint_index(ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
         do ist = 1, st%nst
@@ -1439,7 +1451,7 @@ contains
 
       SAFE_ALLOCATE(ngk(1:hm%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
-        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
+        call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
         ngk(ik) = shell_wfn%ngvectors
         call fourier_shell_end(shell_wfn)
@@ -1478,7 +1490,7 @@ contains
         symmetries_number(gr%symm), 0, geo%natoms, &
         hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
         ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
-        gr%sb%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
+        gr%sb%latt%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
         M_ONE, gr%sb%latt%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)

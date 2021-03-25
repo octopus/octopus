@@ -39,7 +39,6 @@ module exchange_operator_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
   use singularity_oct_m
   use space_oct_m
@@ -68,8 +67,6 @@ module exchange_operator_oct_m
     zexchange_operator_apply,        &
     dexchange_operator_hartree_apply,&
     zexchange_operator_hartree_apply,&
-    dexchange_operator_scdm_apply,   &
-    zexchange_operator_scdm_apply,   &
     exchange_operator_rdmft_occ_apply,&
     dexchange_operator_compute_potentials, &
     zexchange_operator_compute_potentials, &
@@ -92,8 +89,6 @@ module exchange_operator_oct_m
     FLOAT :: cam_beta
 
     type(poisson_t) :: psolver      !< Poisson solver
-
-    type(scdm_t)  :: scdm
 
     type(singularity_t) :: singul !< Coulomb singularity
 

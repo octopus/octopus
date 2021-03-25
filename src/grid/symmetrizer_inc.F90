@@ -56,7 +56,7 @@ subroutine X(symmetrizer_apply)(this, mesh, field, field_vector, symmfield, symm
   if(present(field)) then
     maxabs = maxval(abs(field(1:mesh%np)))
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, maxabs)
+      call mesh%allreduce(maxabs)
     end if
     if(maxabs < M_EPSILON) then
       symmfield(1:mesh%np) = field(1:mesh%np)
@@ -67,7 +67,7 @@ subroutine X(symmetrizer_apply)(this, mesh, field, field_vector, symmfield, symm
   if(present(field_vector)) then
     maxabs = maxval(abs(field_vector(1:mesh%np, 1:3)))
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, maxabs)
+      call mesh%allreduce(maxabs)
     end if
     if(maxabs < M_EPSILON) then
       symmfield_vector(1:mesh%np, 1:3) = field_vector(1:mesh%np, 1:3)

@@ -416,7 +416,7 @@ contains
           end do
 
           if(st%parallel_in_states .or. st%d%kpt%parallel) then
-            call comm_allreduce(st%st_kpt_mpi_grp%comm, weight)
+            call comm_allreduce(st%st_kpt_mpi_grp, weight)
           end if
 
           SAFE_DEALLOCATE_A(ddot)

@@ -49,7 +49,9 @@ module magnetic_oct_m
     magnetic_local_moments,    &
     calc_physical_current,     &
     magnetic_induced,          &
-    magnetic_total_magnetization
+    magnetic_total_magnetization, &
+    write_total_xc_torque     ,&
+    calc_xc_torque
 
 contains
 
@@ -99,7 +101,7 @@ contains
     mm(3) = dmf_integrate(mesh, md(:, 3), reduce = .false.)
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, mm)
+      call mesh%allreduce(mm)
     end if
 
     SAFE_DEALLOCATE_A(md)
@@ -218,7 +220,7 @@ contains
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, lmm)
+      call mesh%allreduce(lmm)
     end if 
     
     SAFE_DEALLOCATE_A(md)
@@ -344,6 +346,65 @@ contains
     SAFE_DEALLOCATE_A(jj)
     POP_SUB(magnetic_induced)
   end subroutine magnetic_induced
+
+  subroutine write_total_xc_torque(iunit, mesh, vxc, st)
+    integer,                  intent(in) :: iunit
+    type(mesh_t),             intent(in) :: mesh
+    FLOAT,                    intent(in) :: vxc(:,:)
+    type(states_elec_t),      intent(in) :: st
+
+    FLOAT, allocatable :: torque(:,:)
+    FLOAT :: tt(3)
+
+    PUSH_SUB(write_total_xc_torque)
+
+    SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
+
+    call calc_xc_torque(mesh, vxc, st, torque)
+
+    tt(1) = dmf_integrate(mesh, torque(:,1))
+    tt(2) = dmf_integrate(mesh, torque(:,2))
+    tt(3) = dmf_integrate(mesh, torque(:,3))
+   
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit, '(a)') 'Total xc torque:'
+      write(iunit, '(1x,3(a,es10.3,3x))') 'Tx = ', tt(1),'Ty = ', tt(2),'Tz = ', tt(3)
+    end if
+
+    SAFE_DEALLOCATE_A(torque)
+
+    POP_SUB(write_total_xc_torque)
+  end subroutine write_total_xc_torque
+
+  ! ---------------------------------------------------------
+  subroutine calc_xc_torque(mesh, vxc, st, torque)
+    type(mesh_t),             intent(in) :: mesh
+    FLOAT,                    intent(in) :: vxc(:,:)
+    type(states_elec_t),      intent(in) :: st
+    FLOAT,                 intent(inout) :: torque(:,:)
+
+    FLOAT :: mag(3), Bxc(3)
+    integer :: ip
+
+    PUSH_SUB(calc_xc_torque)
+
+    ASSERT(st%d%ispin == SPINORS)
+
+    do ip = 1, mesh%np
+      mag(1) =  M_TWO * st%rho(ip, 3)
+      mag(2) = -M_TWO * st%rho(ip, 4)
+      mag(3) = st%rho(ip, 1) - st%rho(ip, 2)
+      Bxc(1) = -M_TWO * vxc(ip, 3)
+      Bxc(2) =  M_TWO * vxc(ip, 4)
+      Bxc(3) = -(vxc(ip, 1) - vxc(ip, 2))
+      torque(ip, 1) = mag(2) * Bxc(3) - mag(3) * Bxc(2)
+      torque(ip, 2) = mag(3) * Bxc(1) - mag(1) * Bxc(3)
+      torque(ip, 3) = mag(1) * Bxc(2) - mag(2) * Bxc(1)
+    end do
+
+    POP_SUB(calc_xc_torque)
+  end subroutine calc_xc_torque
+
 
 
 end module magnetic_oct_m
