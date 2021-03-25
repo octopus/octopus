@@ -106,6 +106,14 @@ sequenceDiagram
 -->
 <!--{{% sequence-diag %}}-->
 
+{{< d3-sequence "/develop/prop-simple.json" >}}
+
+Another example, in which the earth system is encapsulated in a container 'earth', consisting of 'terra' and 'luna' looks like:
+
+{{% expand %}}
 {{< d3-sequence "/develop/propagation.json" >}}
+{{% /expand %}}
 
+{{< d3-sequence "/develop/propagation-double-step.json" >}}
 
+{{< d3-sequence "/develop/propagation-double-step-3.json" >}}
