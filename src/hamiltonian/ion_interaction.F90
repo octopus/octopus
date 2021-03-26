@@ -414,6 +414,8 @@ contains
 
     PUSH_SUB(Ewald_long_3d)
 
+    ASSERT(space%dim == 3)
+    ASSERT(space%periodic_dim == 3)
 
     ! And the long-range part, using an Ewald sum
     SAFE_ALLOCATE(phase(1:natoms))
@@ -504,6 +506,8 @@ contains
 
     PUSH_SUB(Ewald_long_2d)
 
+    ASSERT(space%periodic_dim == 2)
+    ASSERT(space%dim == 2 .or. space%dim == 3)
 
     ! And the long-range part, using an Ewald sum
 
