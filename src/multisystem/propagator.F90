@@ -84,7 +84,7 @@ module propagator_oct_m
     OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS,  'Propagation step - Updating interactions'),     &
     OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP,       'Starting SCF loop'),         &
     OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP,         'End of SCF iteration'),      &
-    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, '')
+    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, 'Store current status')
 
 
   ! Known multisystem propagators
