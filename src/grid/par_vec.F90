@@ -166,7 +166,7 @@ module par_vec_oct_m
 
   ! derived type for the callback in the blocked loop doing the mesh reordering
   type :: local_reorder_arguments_t
-    integer(8), allocatable :: reordered(:)
+    integer, allocatable :: reordered(:)
     integer :: ip
     type(pv_t), pointer :: vp
     type(index_t), pointer :: idx

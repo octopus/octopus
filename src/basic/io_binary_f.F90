@@ -41,7 +41,8 @@ module io_binary_oct_m
     io_binary_get_info,       &
     dwrite_header,            &
     zwrite_header,            &
-    iwrite_header
+    iwrite_header,            &
+    lwrite_header
 
   interface io_binary_write
     module procedure dwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary

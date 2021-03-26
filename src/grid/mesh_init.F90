@@ -183,8 +183,8 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
 
   integer :: is
   FLOAT   :: chi(MAX_DIM)
-  integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM)
-  integer(8) :: global_size, local_size, sizes(1:MAX_DIM)
+  integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM), sizes(1:MAX_DIM)
+  integer(8) :: global_size, local_size
   integer(8) :: ihilbert, ihilbertb, istart, iend, hilbert_size
   integer :: ip, ip2, ib, ib2, np, np_boundary
   FLOAT :: pos(1:MAX_DIM)
@@ -210,7 +210,7 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
       " points in one direction for ", space%dim, " dimensions. This is not supported."
     call messages_fatal(1)
   end if
-  global_size = product(sizes)
+  global_size = product(int(sizes, 8))
   ! compute the bits per dimension: sizes(i) <= 2**bits
   mesh%idx%bits = maxval(ceiling(log(TOFLOAT(sizes))/log(2.)))
 
