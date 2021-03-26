@@ -1072,11 +1072,11 @@ contains
                 hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
 
+            if (ks%oep%has_photons) then
+              ks%calc%energy%photon_exchange = ks%oep%pt%ex
+            end if
           end if
 
-          if (ks%oep%has_photons) then
-            ks%calc%energy%photon_exchange = ks%oep%pt%ex
-          end if
         end if
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
