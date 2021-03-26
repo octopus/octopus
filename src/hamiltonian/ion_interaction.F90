@@ -499,7 +499,7 @@ contains
     integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2, coeff
-    FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
+    FLOAT   :: dz_max, dz_ij, erfc1, erfc2, tmp_erf
     FLOAT, allocatable :: force_tmp(:,:)
 
     PUSH_SUB(Ewald_long_2d)
@@ -507,15 +507,18 @@ contains
 
     ! And the long-range part, using an Ewald sum
 
-
     ! Searching maximum distance
-    dz_max = M_ZERO
-    do iatom = 1, natoms
-      do jatom = iatom + 1, natoms
-        dz_max = max(dz_max, abs(atom(iatom)%x(3) - atom(jatom)%x(3)))
+    if (space%dim == 3) then
+      dz_max = M_ZERO
+      do iatom = 1, natoms
+        do jatom = iatom + 1, natoms
+          dz_max = max(dz_max, abs(atom(iatom)%x(3) - atom(jatom)%x(3)))
+        end do
       end do
-    end do
-
+    else
+      ! For a 2D system, all atoms are on the plane, so the distance is zero
+      dz_max = M_ZERO
+    end if
 
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
@@ -531,34 +534,36 @@ contains
     ix_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 1)**2)))
     iy_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 2)**2)))
 
-    area_cell = abs(latt%rlattice(1, 1)*latt%rlattice(2, 2) - latt%rlattice(1, 2)*latt%rlattice(2, 1))
-
     SAFE_ALLOCATE(force_tmp(1:space%dim, 1:natoms))
     force_tmp = M_ZERO
 
     ! First the G = 0 term (charge was calculated previously)
     efourier = M_ZERO
-    factor = M_PI/(area_cell)
+    factor = M_PI/latt%rcell_volume
     do iatom = this%dist%start, this%dist%end
       do jatom = 1, natoms
-! efourier
-        dz_ij = atom(iatom)%x(3)-atom(jatom)%x(3)
+        ! efourier
+        if (space%dim == 3) then
+          dz_ij = atom(iatom)%x(3) - atom(jatom)%x(3)
+        else
+          dz_ij = M_ZERO
+        end if
 
         tmp_erf = loct_erf(this%alpha*dz_ij)
         factor1 = dz_ij*tmp_erf
         factor2 = exp(-(this%alpha*dz_ij)**2)/(this%alpha*sqrt(M_PI))
 
-        efourier = efourier - factor&
-          * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
-          * (factor1 + factor2)
+        efourier = efourier - factor &
+          * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) * (factor1 + factor2)
 
-! force
-        if(iatom == jatom)cycle
-        if(abs(tmp_erf) < M_EPSILON) cycle
+        ! force
+        if (iatom == jatom)cycle
+        if (abs(tmp_erf) < M_EPSILON) cycle
 
-        force_tmp(3,iatom) = force_tmp(3,iatom) - (- M_TWO*factor) &
-          * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
-          * tmp_erf
+        if (space%dim == 3) then
+          force_tmp(3, iatom) = force_tmp(3, iatom) - (- M_TWO*factor) &
+            * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) * tmp_erf
+        end if
 
       end do
     end do
@@ -575,14 +580,18 @@ contains
         ! g=0 must be removed from the sum
         if(gg2 < M_EPSILON) cycle
         gg_abs = sqrt(gg2)
-        factor = M_HALF*M_PI/(area_cell*gg_abs)
+        factor = M_HALF*M_PI/(latt%rcell_volume*gg_abs)
           
         do iatom = this%dist%start, this%dist%end
           do jatom = iatom, natoms
-! efourier
+            ! efourier
             gx = gg(1)*(atom(iatom)%x(1)-atom(jatom)%x(1)) &
               + gg(2)*(atom(iatom)%x(2)-atom(jatom)%x(2))
-            dz_ij = atom(iatom)%x(3)-atom(jatom)%x(3)
+            if (space%dim == 3) then
+              dz_ij = atom(iatom)%x(3)-atom(jatom)%x(3)
+            else
+              dz_ij = M_ZERO
+            end if
 
             erfc1 = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
             if(abs(erfc1) > M_EPSILON) then
@@ -608,8 +617,8 @@ contains
               * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
               * cos(gx)* ( factor1 + factor2)
               
-! force
-            if(iatom == jatom)cycle
+            ! force
+            if (iatom == jatom) cycle
 
             force_tmp(1:2, iatom) = force_tmp(1:2, iatom) &
               - (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
@@ -637,16 +646,16 @@ contains
               factor2 = M_ZERO
             end if
              
-
-            force_tmp(3, iatom) = force_tmp(3, iatom) &
-              - M_TWO*factor &
-              * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
-              * cos(gx)* ( factor1 - factor2)
-            force_tmp(3, jatom) = force_tmp(3, jatom) &
-              + M_TWO*factor &
-              * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
-              * cos(gx)* ( factor1 - factor2)
-
+            if (space%dim == 3) then
+              force_tmp(3, iatom) = force_tmp(3, iatom) &
+                - M_TWO*factor &
+                * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
+                * cos(gx)* ( factor1 - factor2)
+              force_tmp(3, jatom) = force_tmp(3, jatom) &
+                + M_TWO*factor &
+                * species_zval(atom(iatom)%species)*species_zval(atom(jatom)%species) &
+                * cos(gx)* ( factor1 - factor2)
+            end if
 
           end do
         end do
@@ -663,8 +672,6 @@ contains
     SAFE_DEALLOCATE_A(force_tmp)
 
     POP_SUB(Ewald_long_2d)
-
-
   end subroutine Ewald_long_2D
 
   ! ---------------------------------------------------------
