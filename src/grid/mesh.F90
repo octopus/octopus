@@ -666,7 +666,7 @@ contains
     type(mesh_t), intent(in) :: mesh
     
     ! 2 global index arrays
-    memory = memory + SIZEOF_UNSIGNED_LONG_LONG * TOFLOAT(mesh%np_part_global) * 2
+    memory = SIZEOF_UNSIGNED_LONG_LONG * TOFLOAT(mesh%np_part_global) * 2
 
   end function mesh_global_memory
 
