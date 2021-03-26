@@ -325,9 +325,6 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   end if
     
   if (.not. boundaries%fully_periodic) call zero_boundaries()
-  if (multiresolution_use(boundaries%mesh%hr_area)) then
-    call multiresolution()
-  end if
   if (boundaries%periodic) then
     call periodic()
   end if
@@ -370,64 +367,6 @@ contains
 
     POP_SUB(X(boundaries_set_batch).zero_boundaries)
   end subroutine zero_boundaries
-
-
-  ! ---------------------------------------------------------
-  subroutine multiresolution()
-    integer :: ist, ip
-    integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
-    FLOAT :: weight
-    R_TYPE, allocatable :: ff(:)
-    integer :: idx(1:3)
-
-    PUSH_SUB(X(boundaries_set_batch).multiresolution)
-
-    SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
-    ASSERT(boundaries%mesh%idx%dim == 3)
-    
-    do ist = 1, ffb%nst_linear
-      call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
-      
-      do ip = bndry_start, bndry_end
-        call mesh_local_index_to_coords(boundaries%mesh, ip, idx)
-        ix = idx(1)
-        iy = idx(2)
-        iz = idx(3)
-
-        i_lev = boundaries%mesh%resolution(ix,iy,iz)
-
-        ! resolution is 2**num_radii for outer boundary points, but now we want inner boundary points
-        if(i_lev /= 2**boundaries%mesh%hr_area%num_radii) then
-          dx = abs(mod(ix, 2**(i_lev)))
-          dy = abs(mod(iy, 2**(i_lev)))
-          dz = abs(mod(iz, 2**(i_lev)))
-
-          do ii = 1, boundaries%mesh%hr_area%interp%nn
-            do jj = 1, boundaries%mesh%hr_area%interp%nn
-              do kk = 1, boundaries%mesh%hr_area%interp%nn
-                weight = boundaries%mesh%hr_area%interp%ww(ii) * &
-                  boundaries%mesh%hr_area%interp%ww(jj) *        &
-                  boundaries%mesh%hr_area%interp%ww(kk)
-
-                ff(ip) = ff(ip) + weight * ff(mesh_local_index_from_coords(boundaries%mesh, [ &
-                  ix + boundaries%mesh%hr_area%interp%posi(ii) * dx,   &
-                  iy + boundaries%mesh%hr_area%interp%posi(jj) * dy,   &
-                  iz + boundaries%mesh%hr_area%interp%posi(kk) * dz]))
-              end do
-            end do
-          end do
-        end if
-
-      end do ! ip
-
-      call batch_set_state(ffb, ist, boundaries%mesh%np_part, ff)
-    end do ! ist
-
-    SAFE_DEALLOCATE_A(ff)
-    
-    POP_SUB(X(boundaries_set_batch).multiresolution)
-  end subroutine multiresolution
-
 
   ! ---------------------------------------------------------
   subroutine periodic()

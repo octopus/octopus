@@ -30,7 +30,6 @@ module nl_operator_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multiresolution_oct_m
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
@@ -400,12 +399,7 @@ contains
 
         do jj = 1, op%stencil%size
           ! Get local index of p1 plus current stencil point.
-          if (multiresolution_use(mesh%hr_area)) then
-            st1(jj) = mesh_local_index_from_coords(mesh, &
-                 p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
-          else
-            st1(jj) = mesh_local_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
-          end if
+          st1(jj) = mesh_local_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
 
           ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
