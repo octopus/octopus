@@ -202,13 +202,16 @@ contains
           nper_recv = nper_recv + 1
         end if
       end do
+      if(.not.mesh%parallel_in_domains) then
+        ASSERT(nper_recv == 0)
+      end if
 
       SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
 
       if(mesh%parallel_in_domains) then
         SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
-        SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
+        SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(points(1:nper_recv))
         SAFE_ALLOCATE(points_local(1:nper_recv))
         SAFE_ALLOCATE(part(1:nper_recv))
@@ -232,6 +235,7 @@ contains
           this%per_points(POINT_BOUNDARY, iper) = ip
           this%per_points(POINT_INNER, iper) = ip_inner
         else
+          ! this can only happen if parallel in domain
           ! the point is on another node
           iper_recv = iper_recv + 1
           points(iper_recv) = ip_inner_global
@@ -307,6 +311,10 @@ contains
         call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
         SAFE_DEALLOCATE_A(send_buffer)
         
+        SAFE_DEALLOCATE_A(recv_rem_points)
+        SAFE_DEALLOCATE_A(points)
+        SAFE_DEALLOCATE_A(points_local)
+        SAFE_DEALLOCATE_A(part)
       end if
 #endif
 

@@ -329,10 +329,12 @@ contains
     mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear  =  mesh_in%use_curvilinear
+    mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
     mesh_out%cv               => mesh_in%cv
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
-    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)/2
+    mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))/2
+    mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))/2
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
@@ -350,16 +352,30 @@ contains
     type(mesh_t),               intent(inout) :: mesh_out
     type(stencil_t),            intent(in)    :: stencil
 
+    integer :: idim
     PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
     mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
+    mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
     mesh_out%cv             => mesh_in%cv
 
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
-    mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
+    mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))*2
+    mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))*2
+    ! We need to make the possible number of grid points larger by one for
+    ! the non-periodic dimensions because the spacing is only half of the
+    ! original mesh and thus we could get points in the new boundary
+    ! that are still inside the simulation box.
+    ! For the periodic dimensions, we are anyway commensurate with the size
+    ! of the box, so we are still commensurate when taking twice the number
+    ! of points.
+    do idim = space%periodic_dim + 1, space%dim
+      mesh_out%idx%nr(1, idim) = mesh_out%idx%nr(1, idim) - 1
+      mesh_out%idx%nr(2, idim) = mesh_out%idx%nr(2, idim) + 1
+    end do
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge

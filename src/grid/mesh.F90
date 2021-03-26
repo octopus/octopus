@@ -659,6 +659,7 @@ contains
     end do
     
     ipg = mesh_global_index_from_coords(mesh, ix)
+    ASSERT(ipg > 0)
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip, rr, coords = xx)
