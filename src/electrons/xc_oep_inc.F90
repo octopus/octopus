@@ -469,6 +469,9 @@ subroutine X(xc_oep_mix)(oep, mesh, ss, rho, is)
   FLOAT,                    intent(in)    :: rho(:)
   integer,                  intent(in)    :: is
 
+  integer :: ip
+  FLOAT, allocatable :: mix(:)
+
   PUSH_SUB(X(xc_oep_mix))
 
   !Here we mix the xc potential
@@ -479,8 +482,18 @@ subroutine X(xc_oep_mix)(oep, mesh, ss, rho, is)
 
   case (OEP_MIXING_SCHEME_DENS)
 
-    !NTD: Division by zero withot taking care of small values is dangerous...
-    call lalg_axpy(mesh%np, oep%mixing, ss(:)/rho(:), oep%vxc(:, is))
+       ! See Eq. 28 of the Kuemmel paper
+    SAFE_ALLOCATE(mix(1:mesh%np))
+    do ip = 1, mesh%np
+      mix(ip) = - M_HALF * oep%vxc(ip, is) / (rho(ip) + M_TINY)
+      ! To avoid nonsense local mixing, we put a maximum value here
+      ! This tipically occurs when the wavefunctions are not well converged
+      if(abs(mix(ip)) > CNST(1e3)) mix(ip) = sign(CNST(1e3),mix(ip))
+      mix(ip) = mix(ip) * ss(ip)
+    end do
+
+    call lalg_axpy(mesh%np, M_ONE, mix, oep%vxc(:, is))
+    SAFE_DEALLOCATE_A(mix)
 
   case (OEP_MIXING_SCHEME_BB)
     !This is the Barzilai-Borwein scheme, as explained in 
