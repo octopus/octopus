@@ -174,9 +174,9 @@ contains
     !% Characterization of different modelmb particles in gr%sb%dim dimensional space.
     !%
     !% <tt>%DescribeParticlesModelmb
-    !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
-    !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
-    !% <br>&nbsp;&nbsp; electron | 2 | 1.    | 1. | fermion
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | 1800. | 1. | fermion
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | 1800. | 1. | fermion
+    !% <br>&nbsp;&nbsp; "electron" | 2 | 1.    | 1. | fermion
     !% <br>%</tt>
     !%
     !% would tell <tt>Octopus</tt> that there are presently 3 particles, called proton, proton,
