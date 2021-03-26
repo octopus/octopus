@@ -410,7 +410,7 @@ end subroutine X(bi_conjugate_gradients)
     res      = rho
 
     ! If rho is basically zero we are already done.
-    if(abs(rho) > M_EPSILON) then
+    if(abs(rho) > M_TINY) then
       call prec(v, z)
 
       xsi = nrm2(z)
@@ -428,7 +428,7 @@ end subroutine X(bi_conjugate_gradients)
 
       do while(iter < max_iter)
         iter = iter + 1
-        if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+        if(abs(rho) < M_TINY .or. abs(xsi) < M_TINY) then
           err = 1
           exit
         end if
@@ -441,7 +441,7 @@ end subroutine X(bi_conjugate_gradients)
 
         delta = dotu(v, z)
 
-        if(abs(delta) < M_EPSILON) then
+        if(abs(delta) < M_TINY) then
           err = 2
           exit
         end if
@@ -460,7 +460,7 @@ end subroutine X(bi_conjugate_gradients)
 
         epsilon = dotu(q, p)
 
-        if(abs(epsilon) < M_EPSILON) then
+        if(abs(epsilon) < M_TINY) then
           err = 3
           exit
         end if
@@ -484,7 +484,7 @@ end subroutine X(bi_conjugate_gradients)
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
 
-        if(abs(gamma) < M_EPSILON) then
+        if(abs(gamma) < M_TINY) then
           err = 4
           exit
         end if
@@ -520,7 +520,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         ! avoid divide by zero
-        if(abs(norm_b) < M_EPSILON) then
+        if(abs(norm_b) < M_TINY) then
           res = M_HUGE
         else
           res = nrm2(r)/norm_b
