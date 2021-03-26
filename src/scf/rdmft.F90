@@ -1042,7 +1042,7 @@ contains
     end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      call deigensolver_cg2(namespace, gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+      call deigensolver_cg2(namespace, gr%mesh, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
   

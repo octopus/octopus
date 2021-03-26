@@ -73,7 +73,7 @@ module linear_solver_oct_m
     type(namespace_t),        pointer :: namespace
     type(linear_solver_t),    pointer :: ls
     type(hamiltonian_elec_t), pointer :: hm
-    type(grid_t),             pointer :: gr
+    type(mesh_t),             pointer :: mesh
     type(states_elec_t),      pointer :: st
     integer                           :: ist
     integer                           :: ik
