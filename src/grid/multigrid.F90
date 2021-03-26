@@ -329,6 +329,7 @@ contains
     mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear  =  mesh_in%use_curvilinear
+    mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
     mesh_out%cv               => mesh_in%cv
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
@@ -358,6 +359,7 @@ contains
     mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
     mesh_out%use_curvilinear =  mesh_in%use_curvilinear
+    mesh_out%masked_periodic_boundaries = mesh_in%masked_periodic_boundaries
     mesh_out%cv             => mesh_in%cv
 
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
