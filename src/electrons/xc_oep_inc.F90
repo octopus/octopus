@@ -124,7 +124,11 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
-          call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
+          if(oep%has_photons) then
+            call X(xc_KLI_solve_photon) (namespace, gr%mesh, gr, hm, st, is, oep, first)
+          else
+            call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
+          end if 
           if(present(vxc)) then
             vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
           end if
