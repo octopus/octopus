@@ -1,5 +1,7 @@
 FromScratch=yes
 
+Debug = trace
+
 CalculationMode = gs
 
 PeriodicDimensions = 3
