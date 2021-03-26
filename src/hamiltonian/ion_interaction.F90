@@ -341,11 +341,18 @@ contains
     call comm_allreduce(this%dist%mpi_grp, eself)
     call comm_allreduce(this%dist%mpi_grp, charge)
 
-! Long range part of Ewald sum
-    select case(space%periodic_dim)
+    ! Long range part of Ewald sum
+    select case (space%periodic_dim)
     case(1)
-!Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
-      call Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
+      ! Not implemented.
+      efourier = M_ZERO
+      force = M_ZERO
+      ! Do not confuse the user and set to zero all the other components
+      ereal = M_ZERO
+      eself = M_ZERO
+      if (present(force_components)) then
+        force_components(1:space%dim, 1:natoms, ION_COMPONENT_REAL) = M_ZERO
+      end if
     case(2)
       call Ewald_long_2D(this, space, latt, atom, natoms, efourier, force)
     case(3)
@@ -366,10 +373,10 @@ contains
 
     energy = ereal + efourier + eself
 
-
+    ! Warning: The energy contribution of the long range part of the pseudo is
+    ! not correctly accounted for in systems periodic in 1D or 2D.
     epseudo = M_ZERO
-    !Temporary adding the pseudo contribution for 1D systems, as Ewald_long_1D is not yet implemented
-    if(space%periodic_dim == 3 .or. space%periodic_dim == 1)then
+    if (space%periodic_dim == 3) then
        ! Previously unaccounted G = 0 term from pseudopotentials. 
        ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
 
