@@ -26,7 +26,9 @@ match ; 15th Casida f ; LINEFIELD(casida/casida, 16, 6) ; 1.10562830E-02
 match ; 22nd Casida E ; LINEFIELD(casida/casida, 23, 2) ; 5.12976953E-01
 match ; 22nd Casida f ; LINEFIELD(casida/casida, 23, 6) ; 9.97594967E-03
 match ; 28th Casida E ; LINEFIELD(casida/casida, 29, 2) ; 5.67801210E-01
+Precision: 3.e-4
 match ; 28th Casida f ; LINEFIELD(casida/casida, 29, 6) ; 9.52130424E-03
+Precision : 1.e-4
 match ; 31st Casida E ; LINEFIELD(casida/casida, 32, 2) ; 5.75436022E-01
 match ; 31st Casida f ; LINEFIELD(casida/casida, 32, 6) ; 1.20831863E-02
 match ; 36th Casida E ; LINEFIELD(casida/casida, 37, 2) ; 1.00009314E+00
