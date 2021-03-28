@@ -864,7 +864,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       !MFT: TODO: which how should be passed here?
-      call dio_function_output(outp%how(1), dir, trim(filename), namespace, space, gr%mesh, &
+      call dio_function_output(0_8, dir, trim(filename), namespace, space, gr%mesh, &
         TOFLOAT(basins%map), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
 
@@ -1564,23 +1564,23 @@ contains
             if(has_phase) then
               if(.not. this%basis%submesh) then
                 ! MFT: TODO: which how should be passed here?
-               call zio_function_output(outp%how(1), dir, fname, namespace, space, mesh, &
+               call zio_function_output(0_8, dir, fname, namespace, space, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, ions = ions)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
                ! MFT: TODO: which how should be passed here?
-               call zio_function_output(outp%how(1), dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
+               call zio_function_output(0_8, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
               end if
             else
               if(.not.this%basis%submesh) then
                 if (states_are_real(st)) then
                   ! MFT: TODO: which how should be passed here?
-                  call dio_function_output(outp%how(1), dir, fname, namespace, space, mesh, &
+                  call dio_function_output(0_8, dir, fname, namespace, space, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 else
                   ! MFT: TODO: which how should be passed here?
-                  call zio_function_output(outp%how(1), dir, fname, namespace, space, mesh, &
+                  call zio_function_output(0_8, dir, fname, namespace, space, mesh, &
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 end if
               else
@@ -1588,12 +1588,12 @@ contains
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
                   ! MFT: TODO: which how should be passed here?
-                  call dio_function_output(outp%how(1), dir, fname, namespace, space, mesh, dtmp, fn_unit, ierr, ions = ions)
+                  call dio_function_output(0_8, dir, fname, namespace, space, mesh, dtmp, fn_unit, ierr, ions = ions)
                 else
                   tmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
                   ! MFT: TODO: which how should be passed here?
-                  call zio_function_output(outp%how(1), dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
+                  call zio_function_output(0_8, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
                 end if
               end if
             end if

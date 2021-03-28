@@ -91,7 +91,7 @@
     call io_mkdir(trim(dir), namespace)
     if(any(outp%how /= 0)) then
       ! MFT: TODO: which how should be passed here?
-      call dio_function_output(outp%how(1), trim(dir), 'local_target', namespace, space, mesh, &
+      call dio_function_output(0_8, trim(dir), 'local_target', namespace, space, mesh, &
         tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
 

@@ -88,7 +88,7 @@
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(any(outp%how /= 0)) then
       ! MFT: TODO: which how should be passed here?
-      call dio_function_output(outp%how(1), trim(dir), 'td_local_target', namespace, space, gr%mesh, &
+      call dio_function_output(0_8, trim(dir), 'td_local_target', namespace, space, mesh, &
         tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
 

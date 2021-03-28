@@ -378,8 +378,8 @@ contains
       end if
       !MFT: TODO: which how should be passed here?
       ! Write the corresponding output
-      call dio_function_output(outp%how(1), trim(restart_folder)//trim(folder), & 
-           trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
+      call dio_function_output(0_8, trim(restart_folder)//trim(folder), & 
+           trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, ions = ions)
       
       if(outp%what(OPTION__OUTPUT__POTENTIAL)) then
         write(out_name, '(a)') "potential"
@@ -727,7 +727,7 @@ contains
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         ! MFT: TODO: which how should be passed here?
-        call dio_function_output(outp%how(1), trim(filename), & 
+        call dio_function_output(0_8, trim(filename), & 
            trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
            units_out%length**(-space%dim), ierr, ions = ions)
       end do
@@ -739,7 +739,7 @@ contains
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
-          call dio_function_output(outp%how(1), trim(filename), & 
+          call dio_function_output(0_8, trim(filename), & 
              trim('density'), namespace, space, mesh, read_rff, &
              units_out%length**(-space%dim), ierr, ions = ions)
         end do
@@ -879,7 +879,7 @@ contains
     !      and units of the conversion.
     units = units_out%length**(-space%dim)
     ! MFT: TODO: which how should be passed here?
-    call dio_function_output(outp%how(1), trim(out_folder), trim(out_filename), namespace, space, mesh, & 
+    call dio_function_output(0_8, trim(out_folder), trim(out_filename), namespace, space, mesh, & 
       scalar_ff, units, ierr, ions = ions)
 
     SAFE_DEALLOCATE_A(tmp_ff)

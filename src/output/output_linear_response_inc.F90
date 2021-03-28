@@ -192,7 +192,7 @@ contains
         write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
       end if
       !MFT: TODO: which how should be passed here?
-      call X(io_function_output)(outp%how(1), dir, trim(fname), namespace, space, &
+      call X(io_function_output)(0_8, dir, trim(fname), namespace, space, &
         mesh, lr%X(dl_de)(1:mesh%np,is), unit_one / pert_unit, ierr, ions = ions)
     end do
 
@@ -203,7 +203,7 @@ contains
         write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
       end if
       !MFT: TODO: which how should be passed here?
-      call X(io_function_output)(outp%how(1), dir, trim(fname), namespace, space &
+      call X(io_function_output)(0_8, dir, trim(fname), namespace, space, &
         mesh, lr%X(dl_elf)(1:mesh%np,is), unit_one / pert_unit, ierr, ions = ions)
     end do
 

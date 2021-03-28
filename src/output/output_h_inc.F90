@@ -222,7 +222,7 @@
 
         write(fname, '(2a)') 'current_kpt'
         !MFT: TODO: which how shoud be passed in here?
-        call io_function_output_vector_BZ(outp%how(1), dir, fname, namespace, space, st%d%kpt, hm%kpoints, &
+        call io_function_output_vector_BZ(0_8, dir, fname, namespace, space, st%d%kpt, hm%kpoints, &
             current_kpt(:, :), (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
             grp = st%st_kpt_mpi_grp)
         SAFE_DEALLOCATE_A(current_kpt)
@@ -289,7 +289,7 @@
           write(fname, '(a,i1)') 'density_kpt-sp', is
         end if
         !MFT TODO: which how should be passed?
-        call io_function_output_global_BZ(outp%how(1), dir, fname, namespace, &
+        call io_function_output_global_BZ(0_8, dir, fname, namespace, &
           hm%kpoints, density_kpt(:, is), unit_one, err)
       end do
       SAFE_DEALLOCATE_A(density_tmp)

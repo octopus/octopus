@@ -2567,7 +2567,7 @@ contains
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
   ! MFT: TODO: which how should be passed here?
-  call io_function_output_global_BZ(outp%how(1), dir, "n_excited_el_kpt", namespace, &
+  call io_function_output_global_BZ(0_8, dir, "n_excited_el_kpt", namespace, &
     kpoints, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)

@@ -357,7 +357,7 @@
     if(any(outp%how /= 0)) then
       if(tg%density_weight > M_ZERO) then
       ! MFT: TODO: which how should be passed here?
-        call dio_function_output(outp%how(1), trim(dir), 'density_target', namespace, space, mesh, &
+        call dio_function_output(0_8, trim(dir), 'density_target', namespace, space, mesh, &
           tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
       end if
     end if
