@@ -19,5 +19,13 @@ gives rise to the following graph:
 This graph can be created using the {{< code "graphviz" >}} package.
 
 {{% expand "How to install and use graphviz" %}}
-more to come...
+On {{% name Debian %}}-like systems, {{< code graphviz >}} can simply be installed with
+{{% code-block %}}
+sudo apt-get install graphviz
+{{% /code-block %}}
+Then, the {{< code "interaction_graph.dot" >}} can be converted into a {{< code png >}} file by using:
+{{% code-block %}}
+dot -Tpng interaction_graph.dot > interaction_graph.png
+{{% /code-block %}}
+
 {{% /expand %}}
