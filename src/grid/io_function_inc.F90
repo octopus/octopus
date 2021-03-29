@@ -793,7 +793,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, space, mesh
   mformat2   = '(i12,99es34.24E3)'
   mfmtheader = '(a,a10,5a23)'
 
-  ASSERT(how > 0)
+  !ASSERT(how > 0)
   ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
 
   np_max = mesh%np_global
