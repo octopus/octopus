@@ -99,7 +99,7 @@ contains
       do ii = 0, nn - 1
         !! an option using less memory, but slower
         if (cube_point_to_process(ixyz, part) == cube%mpi_grp%rank + 1) cube_np = cube_np + 1
-        ixyz(3) = ixyz(3) + 1
+        ixyz(1) = ixyz(1) + 1
       end do
     end do
     
