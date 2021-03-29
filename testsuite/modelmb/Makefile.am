@@ -21,8 +21,11 @@
 sharedir = $(pkgdatadir)/testsuite/modelmb
 
 dist_share_DATA = \
-	01-cosh_2e_1d.test                                \
-	01-cosh_2e_1d.01-gs.inp                           \
-	01-cosh_2e_1d.02-td.inp
+	01-cosh_2e_1d.test            \
+	01-cosh_2e_1d.01-gs.inp       \
+	01-cosh_2e_1d.02-td.inp       \
+	02-qd_2e_2d.test              \
+	02-qd_2e_2d.01-gs.inp         \
+	02-qd_2e_2d.02-td.inp
 
 CLEANFILES = *~ *.bak
