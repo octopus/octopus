@@ -122,6 +122,13 @@ contains
 
     PUSH_SUB(geom_opt_run_legacy)
 
+    if (sys%space%periodic_dim == 1 .or. sys%space%periodic_dim == 2) then
+      message(1) = "Geometry optimization not allowed for systems periodic in 1D or 2D, "
+      message(2) = "as in those cases the total energy is not correct."
+      call messages_fatal(2, namespace=sys%namespace)
+    end if
+
+
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
