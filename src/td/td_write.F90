@@ -1366,7 +1366,7 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT :: ionic_dipole(MAX_DIM)
+    FLOAT :: ionic_dipole(geo%space%dim)
     FLOAT, allocatable :: multipole(:,:)
     type(mpi_grp_t)    :: mpi_grp_
 
@@ -1431,7 +1431,6 @@ contains
     end if
 
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
-    ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
@@ -2428,7 +2427,7 @@ contains
       integer, intent(in) :: dir
 
       integer :: uist, ist, ik, idim
-      FLOAT   :: n_dip(MAX_DIM)
+      FLOAT   :: n_dip(space%dim)
       CMPLX, allocatable :: xpsi(:,:)
       CMPLX, allocatable :: psi(:, :), gspsi(:, :)
       
@@ -2464,7 +2463,7 @@ contains
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
-            projections(ist, uist, ik) = projections(ist, uist, ik)-n_dip(dir)
+            projections(ist, uist, ik) = projections(ist, uist, ik) - n_dip(dir)
           end do
         end do
       end do

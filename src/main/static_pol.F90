@@ -87,7 +87,8 @@ contains
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
-    FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
+    FLOAT :: center_dipole(1:sys%space%dim), diag_dipole(1:sys%space%dim), ionic_dipole(1:sys%space%dim), &
+      print_dipole(1:sys%space%dim)
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
@@ -254,7 +255,7 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      ionic_dipole = geometry_dipole(sys%geo)
+      ionic_dipole(1:sys%space%dim) = geometry_dipole(sys%geo)
       print_dipole(1:sys%space%dim) = center_dipole(1:sys%space%dim) + ionic_dipole(1:sys%space%dim)
       call output_dipole(stdout, print_dipole, sys%space%dim)
     end if

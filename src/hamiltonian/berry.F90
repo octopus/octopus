@@ -155,13 +155,13 @@ contains
     type(geometry_t),      intent(in)    :: geo
 
     integer :: ispin, idir
-    FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+    FLOAT :: e_dip(space%dim + 1, st%d%nspin), n_dip(space%dim), nquantumpol
 
     PUSH_SUB(calc_dipole)
 
     ASSERT(.not. gr%sb%latt%nonorthogonal)
 
-    dipole(1:MAX_DIM) = M_ZERO
+    dipole(1:space%dim) = M_ZERO
 
     do ispin = 1, st%d%nspin
       call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
