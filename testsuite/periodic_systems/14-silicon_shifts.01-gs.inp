@@ -46,8 +46,10 @@ KPointsUseSymmetries = yes
 ExtraStates = 1
 ConvRelDens = 1e-7
 
-Output = geometry + dos
-OutputFormat = xyz
+%Output
+ geometry | xyz
+ dos
+%
 
 FilterPotentials = filter_none
 

@@ -10,8 +10,9 @@ Spacing = 0.5*angstrom
   "H" | 0 | 0 | 0
 %
 
-OutputFormat = dx
-Output = density
+%Output
+ density | dx
+% 
 ConvertHow = operation
 %ConvertScalarOperation
  'rho' | 'restart/gs' | 'density.obf' | '2.0*rho'

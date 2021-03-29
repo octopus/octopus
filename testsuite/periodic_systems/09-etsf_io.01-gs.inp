@@ -31,8 +31,12 @@ BoxShape = parallelepiped
 ExtraStates = 2
 
 ExperimentalFeatures = yes
-Output = wfs + wfs_fourier + density + geometry
-OutputFormat = etsf + netcdf
+%Output 
+ wfs | etsf + netcdf
+ wfs_fourier | etsf + netcdf
+ density | etsf + netcdf
+ geometry | etsf + netcdf
+%
 OutputWfsNumber = "3-4"
 
 # ETSF_IO output is currently not compatible with k-point parallelization

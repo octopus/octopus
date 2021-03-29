@@ -42,7 +42,9 @@ ParKPoints = no
  2 | 2 | 2
 %
 
-Output = matrix_elements
+%Output
+ matrix_elements
+%
 OutputMatrixElements  = two_body
 OutputMEStart = 24
 OutputMEEnd = 25

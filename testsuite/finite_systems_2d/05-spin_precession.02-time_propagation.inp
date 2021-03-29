@@ -48,8 +48,9 @@ ArnoldiOrthogonalization = drcgs
 TDExpOrder = 16
 TDTimeStep = dt
 
-Output = density
-OutputFormat = xcrysden
+%Output
+ density | xcrysden
+% 
 OutputInterval = 25
 TDOutput = energy + multipoles + spin
 

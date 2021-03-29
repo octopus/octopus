@@ -12,8 +12,31 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF + potential_gradient + pol_density + mesh_r + kinetic_energy_density + dos + tpa + wfs_fourier + xc_density + wfs_sqmod + energy_density + heat_current + photon_correlator + current + ELF_basins
-OutputFormat = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+%Output 
+ density | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ geometry | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ wfs | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ bader | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ potential | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ forces | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ el_pressure | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ ELF | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ potential_gradient | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ pol_density | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ mesh_r | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ kinetic_energy_density | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ dos | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ tpa | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ wfs_fourier | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ xc_density | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ wfs_sqmod | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ energy_density | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ heat_current | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ photon_correlator | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ current | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+ ELF_basins | axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+%
+
 OutputInterval = 4
 OutputDuringSCF = yes
 # for Bader parallel in domains

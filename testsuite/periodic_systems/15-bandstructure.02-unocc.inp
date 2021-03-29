@@ -38,7 +38,9 @@ ExperimentalFeatures = yes
 ExtraStates = 5
 ConvRelDens = 1e-7
 
-Output = geometry + dos
-OutputFormat = xyz
+%Output
+ geometry | xyz
+ dos
+%
 
 StatesPack = yes

@@ -31,7 +31,9 @@ ExtraStates = 10
 
 
 ExperimentalFeatures = yes
-Output = BerkeleyGW
+%Output 
+ BerkeleyGW
+%
 BerkeleyGW_CalcExchange = yes
 
 FilterPotentials = filter_none

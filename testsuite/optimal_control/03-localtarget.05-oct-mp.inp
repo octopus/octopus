@@ -39,8 +39,10 @@ TheoryLevel = independent_particles
 Mixing = 1.0
 MixingScheme = linear
 
-Output = wfs + density
-OutputFormat = axis_x
+%Output
+ wfs | axis_x
+ density | axis_x
+%
 
 
 # ------------------
