@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2021 M. Oliveira
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,28 +18,11 @@
 ## 02110-1301, USA.
 ##
 
-sharedir = $(pkgdatadir)/testsuite/finite_systems_2d
+sharedir = $(pkgdatadir)/testsuite/modelmb
 
 dist_share_DATA = \
-	01-quadratic_box.01-ground_state.inp \
-	01-quadratic_box.02-hartree.inp \
-	01-quadratic_box.03-hartree+xc.inp \
-	01-quadratic_box.04-spin_polarized.inp \
-	01-quadratic_box.test \
-	02-fock-darwin.01-ground_state.inp \
-	02-fock-darwin.02-ground_state.inp \
-	02-fock-darwin.03-ground_state.inp \
-	02-fock-darwin.04-ground_state.inp \
-	02-fock-darwin.test \
-	03-helium_atom.01-ground_state.inp \
-	03-helium_atom.02-ground_state.inp \
-	03-helium_atom.test \
-	04-biot_savart.01-gs.inp \
-	04-biot_savart.test \
-	05-spin_precession.test \
-	05-spin_precession.01-ground_state.inp \
-	05-spin_precession.02-time_propagation.inp \
-        08-gdlib.test \
-        08-gdlib.01-gs.inp
+	01-cosh_2e_1d.test                                \
+	01-cosh_2e_1d.01-gs.inp                           \
+	01-cosh_2e_1d.02-td.inp
 
 CLEANFILES = *~ *.bak
