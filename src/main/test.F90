@@ -321,15 +321,6 @@ contains
     write(message(3),'(a,e14.6)') "Info: Norm solution CG ", dmf_nrm2(sys%gr%mesh, x)
     call messages_info(3)
 
-    !Test the QMR linear solver
-    x = M_ZERO
-    iter = 1000
-    call dqmr_sym_spec_dotu(sys%gr%mesh%np, x, rho, laplacian_op, prec_op, iter, res, threshold)
-    write(message(1),'(a,i6,a)')  "Info: QMR converged with ", iter, " iterations."
-    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
-    write(message(3),'(a,e14.6)') "Info: Norm solution QMR ", dmf_nrm2(sys%gr%mesh, x)
-    call messages_info(3)
-
     call preconditioner_end(prec_aux)
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(rho)
@@ -363,22 +354,6 @@ contains
       SAFE_DEALLOCATE_A(tmpx)
 
      end subroutine laplacian_op
-
-     ! ---------------------------------------------------------
-     subroutine prec_op (x, hx)
-       FLOAT,      intent(in)    :: x(:)   !<  x(gr%mesh%np)
-       FLOAT,      intent(out)   :: hx(:)  !< Hx(gr%mesh%np)
- 
-       FLOAT, allocatable :: tmpx(:)
- 
-       ASSERT(associated(mesh_aux))
-  
-       SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
-       call lalg_copy(mesh_aux%np, x, tmpx)
-       call dderivatives_perform(prec_aux%op, der_aux, tmpx, hx)
-       SAFE_DEALLOCATE_A(tmpx)
-
-     end subroutine prec_op
 
    end subroutine test_linear_solver
 
