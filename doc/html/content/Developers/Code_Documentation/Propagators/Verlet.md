@@ -71,49 +71,19 @@ One ''tick'' of the propagator is defined in the function {{< code "classical_pa
 
 The Verlet algorithm is a good (because simple) example to illustrate how the systems and the interaction are updated as the code progresses through the main loop.
 
-<!--
-{{% mermaid %}}
-sequenceDiagram
-    participant A as system A
-    participant Iab as interaction A to B
-    participant Iba as interaction B to A
-    participant B as system B
-    %%
-    rect rgba(0,255,0,0.1)
-    Note left of A: OP_VERLET_UPDATE_POS
-    A ->> A: update positions
-    B ->> B: update positions
-    end
-    %%
-    rect rgba(0,255,0,0.1)
-    Note left of A: OP_UPDATE_INTERACTIONS
-    rect rgba(255,0,0,0.1)
-    A ->>+ Iab: update()
-        Iab ->>+ B: update_exposed_quantities()
-            B ->> B: update_exposed_quantity()
-        B ->>- Iab: 
-    Iab ->>- A: 
-    end
-    rect rgba(255,0,0,0.1)
-    B ->>+ Iba: update()
-        Iba ->>+ A: update_exposed_quantities()
-            A ->> A: update_exposed_quantity()
-        A ->>- Iba: 
-    Iba ->>- B: 
-    end
-    end
-{{% /mermaid %}}
--->
-<!--{{% sequence-diag %}}-->
 
-{{< d3-sequence "/develop/prop-simple.json" >}}
+{{< d3-sequence file="/develop/graph_data/propagation.json"  viewContainers="yes" viewGhosts="yes" >}}
 
-Another example, in which the earth system is encapsulated in a container 'earth', consisting of 'terra' and 'luna' looks like:
+This graph illustrates how the state machine is stepping through the algorithm. Each system is picking the next algorithmic step from the propagator. For the containers (i.e. ''root'' and ''earth''), the only steps are ''Updating interactions'' and ''Finished''. The {{< emph real >}} systems, on the other hand, are progressing orderly through the operations, defined in the propagator.
 
-{{% expand %}}
-{{< d3-sequence "/develop/propagation.json" >}}
+
+</br>
+
+{{% expand "Example with different time steps" %}}
+This example shows the propagation of the solar system, where different time steps are used for the three systems.
+
+{{< d3-sequence file="/develop/graph_data/propagation-double-step-3.json" viewContainers="yes" viewGhosts="yes" >}}
+
+In contrast to the previous example we can see here that the slowest system (i.e. ''sun'') is waiting in ''Updating interaction'' for many computational steps, as it needs to wait for the other systems to complete their time steps. These waiting steps are computationally very cheap, as no grid operations are performed.
+
 {{% /expand %}}
-
-{{< d3-sequence "/develop/propagation-double-step.json" >}}
-
-{{< d3-sequence "/develop/propagation-double-step-3.json" >}}

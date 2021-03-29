@@ -146,4 +146,4 @@ When using these system types, **always** use the parameters, and not their nume
 {{% /notice %}}
 
 
-{{% graphviz-file "/static/interaction_graph.dot" %}}
+{{% graphviz-file "/static/graph_data/interaction_graph.dot" %}}

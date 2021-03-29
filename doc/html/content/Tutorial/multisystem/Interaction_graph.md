@@ -14,4 +14,10 @@ The following input file
 {{% /expand %}}
 
 gives rise to the following graph:
-{{% graphviz-file "/static/interaction_graph.dot" %}}
+{{% graphviz-file "/static/graph_data/interaction_graph.dot" %}}
+
+This graph can be created using the {{< code "graphviz" >}} package.
+
+{{% expand "How to install and use graphviz" %}}
+more to come...
+{{% /expand %}}

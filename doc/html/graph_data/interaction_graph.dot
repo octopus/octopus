@@ -1,0 +1,8 @@
+digraph {
+  "Sun" -> "Earth" [label="gravity"];
+  "Sun" -> "Moon" [label="gravity"];
+  "Earth" -> "Sun" [label="gravity"];
+  "Earth" -> "Moon" [label="gravity"];
+  "Moon" -> "Sun" [label="gravity"];
+  "Moon" -> "Earth" [label="gravity"];
+}

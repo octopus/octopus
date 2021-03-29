@@ -1,0 +1,44 @@
+{ "systems": [ 
+    { "name": "system A",
+      "interactions": [
+        { "type": "Gravity", "partner": "system B" }
+      ],
+      "quantities": [
+        { "name": "Positions" }
+      ],
+      "propagator": "verlet"
+    },
+    { "name": "system B",
+      "interactions": [
+        { "type": "Gravity", "partner": "system A" }
+      ],
+      "quantities": [
+        { "name": "Positions" }
+      ],
+      "propagator": "verlet"
+    }],
+  "propagation": [
+      { "name": "OP_VERLET_UPDATE_POS",
+        "steps": [
+            { "source": "system A", "dest": "system A", "label": "calc_pos", "clocks": { "system A": 1, "system B": 1} },
+            { "source": "system B", "dest": "system B", "label": "calc_pos", "clocks": { "system A": 1, "system B": 1} }
+        ] },
+      { "name": "OP_UPDATE_INTERACTIONS",
+        "steps": [
+            { "source": "system A", "dest": "Gravity:system A=>system B", "label": "update interaction" },
+            { "source": "Gravity:system A=>system B", "dest": "system B", "label": "update quantities" },
+            { "source": "system B", "dest": "Gravity:system B=>system A", "label": "update interaction" },
+            { "source": "Gravity:system B=>system A", "dest": "system A", "label": "update quantities" }
+        ] },
+      { "name": "OP_VERLET_COMPUTE_ACC",
+        "steps": [
+            { "source": "system A", "dest": "system A", "label": "calc_acc" },
+            { "source": "system B", "dest": "system B", "label": "calc_acc" }
+        ] },
+      { "name": "OP_VERLET_COMPUTE_VEL",
+        "steps": [
+            { "source": "system A", "dest": "system A", "label": "calc_vel" },
+            { "source": "system B", "dest": "system B", "label": "calc_vel" }
+        ] }
+  ]
+}
