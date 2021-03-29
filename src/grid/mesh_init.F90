@@ -629,29 +629,6 @@ contains
     POP_SUB(mesh_init_stage_3.reorder_points)
   end subroutine reorder_points
 
-  ! callback routine for blocked loop doing the mesh reordering
-  subroutine reorder_add_index(index, arguments)
-    integer, intent(in)    :: index(:)
-    class(*), intent(inout) :: arguments
-
-    integer :: ipg
-
-    select type(a => arguments)
-      class is (reorder_arguments_t)
-        ipg = index_from_coords(a%mesh%idx, index)
-        if (ipg < a%istart .or. ipg > a%iend) return
-        if (ipg <= a%mesh%np_global) then
-          a%reordered(a%ip_inner) = a%mesh%idx%grid_to_hilbert_global(ipg)
-          a%ip_inner = a%ip_inner + 1
-        else
-          a%reordered(a%boundary_start+a%ip_boundary) = a%mesh%idx%grid_to_hilbert_global(ipg)
-          a%ip_boundary = a%ip_boundary + 1
-        end if
-      class default
-        ASSERT(.false.)
-    end select
-  end subroutine reorder_add_index
-
   ! ---------------------------------------------------------
   subroutine do_partition()
 #ifdef HAVE_MPI
@@ -870,6 +847,30 @@ contains
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
   end subroutine mesh_get_vol_pp
 end subroutine mesh_init_stage_3
+
+! callback routine for blocked loop doing the mesh reordering
+subroutine reorder_add_index(index, arguments)
+  integer, intent(in)    :: index(:)
+  class(*), intent(inout) :: arguments
+
+  integer :: ipg
+
+  select type(a => arguments)
+    class is (reorder_arguments_t)
+      ipg = index_from_coords(a%mesh%idx, index)
+      if (ipg < a%istart .or. ipg > a%iend) return
+      if (ipg <= a%mesh%np_global) then
+        a%reordered(a%ip_inner) = a%mesh%idx%grid_to_hilbert_global(ipg)
+        a%ip_inner = a%ip_inner + 1
+      else
+        a%reordered(a%boundary_start+a%ip_boundary) = a%mesh%idx%grid_to_hilbert_global(ipg)
+        a%ip_boundary = a%ip_boundary + 1
+      end if
+    class default
+      ASSERT(.false.)
+  end select
+end subroutine reorder_add_index
+
 
 end module mesh_init_oct_m
 
