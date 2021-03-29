@@ -629,7 +629,8 @@ contains
     logical,                  intent(in)    :: stopping
     logical,                  intent(inout) :: from_scratch
 
-    integer :: ierr
+    integer :: ierr, it
+    logical :: output_iter
 
     PUSH_SUB(td_check_point)
 
@@ -639,7 +640,17 @@ contains
     call messages_info(1)
     etime = loct_clock()
 
-    if ((any(outp%output_interval > 0) .and. any(mod(iter, outp%output_interval) == 0)) .or. iter == td%max_iter .or. stopping) then ! output
+    output_iter = .false.
+    do it = 1, size(outp%output_interval)
+      if(outp%output_interval(it) /= 0) then
+        if(mod(iter, outp%output_interval(it)) == 0) then
+          output_iter = .true.
+          exit
+        end if
+      end if
+    end do
+
+    if (output_iter .or. iter == td%max_iter .or. stopping) then ! output
       ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
       if (st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)

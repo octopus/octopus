@@ -82,14 +82,14 @@ contains
     logical,              intent(in)    :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, iter, ierr_rho, ik
+    integer :: iunit, ierr, iter, ierr_rho, ik, it
     logical :: read_gs, converged, forced_finish, showoccstates, is_orbital_dependent, occ_missing
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
-    logical :: write_density, bandstructure_mode, read_td_states
+    logical :: write_density, bandstructure_mode, read_td_states, output_iter
 
     PUSH_SUB(unocc_run_legacy)
 
@@ -292,6 +292,7 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
 
     do iter = 1, max_iter
+      output_iter = .false.
       call eigensolver_run(eigens, sys%namespace, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
@@ -331,8 +332,16 @@ contains
         end if
       end if 
 
-      if(any(sys%outp%output_interval /= 0) .and. any(mod(iter, sys%outp%output_interval) == 0) &
-            .and. sys%outp%duringscf) then
+      do it = 1, size(sys%outp%output_interval)
+        if(sys%outp%output_interval(it) /= 0) then
+          if(mod(iter, sys%outp%output_interval(it)) == 0) then
+            output_iter = .true.
+            exit
+          end if
+        end if
+      end do
+
+      if(output_iter .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%namespace, sys%space, dirname, sys%gr, sys%ions, iter, sys%st, sys%hm, sys%ks)
       end if
