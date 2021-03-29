@@ -75,7 +75,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     npptype = modelmbparticles%nparticles_per_type(itype)
     do nspindown = 0, floor(npptype/M_TWO)
       nspinup = npptype - nspindown
-      call young_init (young, nspinup, nspindown)
+      call young_init(young, nspinup, nspindown)
       do iyoung = 1, young%nyoung
         dg_combo_ndown(itype, idiagram_combo) = nspindown
         dg_combo_iy(itype, idiagram_combo) = iyoung
@@ -97,9 +97,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     ! skip diagram combinations already used in present degenerate subspace
     if (young_used (idiagram_combo) > 0) cycle
 
-    call X(modelmb_sym_state_1diag)(gr, &
-       modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
-       dg_combo_iy(:, idiagram_combo), &
+    call X(modelmb_sym_state_1diag)(gr, modelmbparticles, dg_combo_ndown(:, idiagram_combo), dg_combo_iy(:, idiagram_combo), &
        antisymwf, sym_ok_alltypes, norm)
    
     ! test the overall symmetrization (no 0.0 norms for present combination of Young diagrams)
@@ -119,17 +117,20 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
   end do ! idiagram_combo
 
   ! if we are projecting on all Fermionic YD, need to renormalize here
-  if (gr%mesh%parallel_in_domains) then
-    call batch_init(wfbatch, 1, 1, 1, fermicompwf)
-    call X(mesh_batch_dotp_self)(gr%mesh, wfbatch, wfdotp, reduce=.true.)
-    norm = TOFLOAT(wfdotp(1,1))
-    call wfbatch%end()
-  else
-    norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
-    norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
-  end if
+  if (symmetries_satisfied) then
+    ! Only normalize if symmetries are satisfied, other wise the norm might be zero.
+    if (gr%mesh%parallel_in_domains) then
+      call batch_init(wfbatch, 1, 1, 1, fermicompwf)
+      call X(mesh_batch_dotp_self)(gr%mesh, wfbatch, wfdotp, reduce=.true.)
+      norm = TOFLOAT(wfdotp(1,1))
+      call wfbatch%end()
+    else
+      norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
+      norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
+    end if
 
-  wf(:) = fermicompwf(:,1,1) / sqrt(norm)
+    wf(:) = fermicompwf(:,1,1) / sqrt(norm)
+  end if
 
   SAFE_DEALLOCATE_A(antisymwf)
   SAFE_DEALLOCATE_A(fermicompwf)
