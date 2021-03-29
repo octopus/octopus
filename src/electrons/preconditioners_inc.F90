@@ -48,7 +48,7 @@ subroutine X(preconditioner_apply)(pre, namespace, mesh, hm, a, b, ik, omega)
   case(PRE_FILTER)
     call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
     call wfs_elec_init(batch_b, hm%d%dim, 1, 1, b, ik)
-    call boundaries_set(hm%der%boundaries, batch_a)
+    call boundaries_set(pre%der%boundaries, batch_a)
     if (allocated(hm%hm_base%phase)) then
       SAFE_ALLOCATE(batch_ea)
       call batch_a%copy_to(batch_ea)
@@ -58,7 +58,7 @@ subroutine X(preconditioner_apply)(pre, namespace, mesh, hm, a, b, ik, omega)
       batch_ea => batch_a
     end if
 
-     call X(derivatives_batch_perform)(pre%op, hm%der, batch_ea, batch_b, set_bc = .false.)
+     call X(derivatives_batch_perform)(pre%op, pre%der, batch_ea, batch_b, set_bc = .false.)
 
     if (allocated(hm%hm_base%phase)) then
       call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., batch_b)
@@ -270,7 +270,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
 
   if(pre%which == PRE_FILTER) then
 
-    call X(derivatives_batch_perform)(pre%op, hm%der, aa, bb)
+    call X(derivatives_batch_perform)(pre%op, pre%der, aa, bb)
 
   else if(pre%which == PRE_NONE) then
 

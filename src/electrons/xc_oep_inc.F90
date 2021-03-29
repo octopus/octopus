@@ -75,7 +75,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, fine, hm, st,
       select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (namespace, hm%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
+          call X(oep_x) (namespace, mesh, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
         end do sum_comp
         ex = ex + eig
       end select

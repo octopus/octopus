@@ -126,7 +126,7 @@ module hamiltonian_elec_oct_m
     FLOAT, allocatable :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, allocatable :: vberry(:,:) !< Berry phase potential from external E_field
 
-    type(derivatives_t), pointer :: der !< pointer to derivatives
+    type(derivatives_t), pointer, private :: der !< pointer to derivatives
     
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix

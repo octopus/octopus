@@ -74,6 +74,8 @@ module preconditioners_oct_m
     integer             :: npre, npost, nmiddle
 
     type(multigrid_t) :: mgrid  ! multigrid object
+
+    type(derivatives_t), pointer :: der => null()
   end type preconditioner_t
 
 contains
@@ -82,7 +84,7 @@ contains
   subroutine preconditioner_init(this, namespace, gr, mc, space)
     type(preconditioner_t), target, intent(out)    :: this
     type(namespace_t),              intent(in)     :: namespace
-    type(grid_t),                   intent(in)     :: gr
+    type(grid_t), target,           intent(in)     :: gr
     type(multicomm_t),              intent(in)     :: mc
     type(space_t),                  intent(in)     :: space
 
@@ -96,6 +98,8 @@ contains
 
     SAFE_ALLOCATE(this%op_array(1))
     this%op => this%op_array(1)
+
+    this%der => gr%der
 
     !%Variable Preconditioner
     !%Type integer
@@ -257,6 +261,8 @@ contains
 
     PUSH_SUB(preconditioner_null)
     this%which = PRE_NONE
+
+    nullify(this%der)
 
     POP_SUB(preconditioner_null)
   end subroutine preconditioner_null
