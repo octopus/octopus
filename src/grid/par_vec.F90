@@ -562,28 +562,6 @@ contains
       POP_SUB(vec_init.reorder_points)
     end subroutine reorder_points
 
-    ! callback routine for blocked loop doing the mesh reordering
-    subroutine reorder_add_index(index, arguments)
-      integer, intent(in)    :: index(:)
-      class(*), intent(inout) :: arguments
-
-      integer :: ipg, tmp
-      logical :: found
-
-      select type(a => arguments)
-        class is (local_reorder_arguments_t)
-          ipg = index_from_coords(a%idx, index)
-          if (ipg == 0) return
-          tmp = iihash_lookup(vp%global, ipg, found)
-          if (.not. found) return
-          a%reordered(a%ip) = a%vp%local(a%vp%xlocal + tmp - 1)
-          ASSERT(ipg == a%vp%local(a%vp%xlocal + tmp - 1))
-          a%ip = a%ip + 1
-        class default
-          ASSERT(.false.)
-      end select
-    end subroutine reorder_add_index
-
     subroutine init_MPI_Alltoall()
       integer, allocatable :: part_local(:)
 
@@ -656,6 +634,29 @@ contains
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
   end subroutine vec_init
+
+  ! ---------------------------------------------------------
+  ! callback routine for blocked loop doing the mesh reordering
+  subroutine reorder_add_index(index, arguments)
+    integer, intent(in)    :: index(:)
+    class(*), intent(inout) :: arguments
+
+    integer :: ipg, tmp
+    logical :: found
+
+    select type(a => arguments)
+      class is (local_reorder_arguments_t)
+        ipg = index_from_coords(a%idx, index)
+        if (ipg == 0) return
+        tmp = iihash_lookup(a%vp%global, ipg, found)
+        if (.not. found) return
+        a%reordered(a%ip) = a%vp%local(a%vp%xlocal + tmp - 1)
+        ASSERT(ipg == a%vp%local(a%vp%xlocal + tmp - 1))
+        a%ip = a%ip + 1
+      class default
+        ASSERT(.false.)
+    end select
+  end subroutine reorder_add_index
 
 
   ! ---------------------------------------------------------
