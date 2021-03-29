@@ -665,7 +665,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(any(outp%what) .or. outp%whatBZ + outp%what_lda_u /= 0) then
+    if((maxval(outp%what) > 0) .or. outp%whatBZ + outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
@@ -711,8 +711,8 @@ contains
       call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
-    do iout = 1, 40
-      if(bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF)) then
+    do iout = 1, size(outp%how)
+      if(bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
         call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions, iter)
         exit
       end if
@@ -741,10 +741,10 @@ contains
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     
-    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+    if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
            .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
-      if (ks%oep%level == XC_OEP_FULL) then
-        if (ks%oep%has_photons) then
+      if(ks%oep%level == XC_OEP_FULL) then
+        if(ks%oep%has_photons) then
           if(outp%what(OPTION__OUTPUT__PHOTON_CORRELATOR)) then
             write(fname, '(a)') 'photon_correlator'
             call dio_function_output(outp%how(OPTION__OUTPUT__PHOTON_CORRELATOR), dir, trim(fname), namespace, space, &
