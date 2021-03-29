@@ -363,6 +363,11 @@ contains
       end if
     end if
     
+    if ((writ%out(OUT_SEPARATE_FORCES)%write .or. writ%out(OUT_COORDS)%write) .and. space%periodic_dim == 1) then
+      call messages_input_error(namespace, 'TDOutput', &
+        'Forces for systems periodic in 1D are not currently implemented and options that output the forces are not allowed.')
+    end if
+
     !%Variable TDOutputResolveStates
     !%Type logical
     !%Default No

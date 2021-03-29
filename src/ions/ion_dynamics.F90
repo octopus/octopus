@@ -441,6 +441,11 @@ contains
     call parse_variable(namespace, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
+    if (this%move_ions .and. geo%space%periodic_dim == 1) then
+      call messages_input_error(namespace, 'MoveIons', &
+        'Moving ions for a 1D periodic system is not allowed, as forces are incorrect.')
+    end if
+
     if(ion_dynamics_ions_move(this)) then 
       SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
     end if
