@@ -296,7 +296,7 @@ contains
 
     if(what_tag == 'Output') then
       do what_i = 1, size(what)
-        if (what(what_i)) then
+        if(what(what_i) .and. (.not. any(what_no_how == what_i))) then
           if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
             call messages_input_error(namespace, how_tag)
           end if
