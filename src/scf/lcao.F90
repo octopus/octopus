@@ -711,7 +711,7 @@ contains
     call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, namespace, st, gr, gr%sb, geo, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, hm, gr%sb, geo, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
 
       if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
@@ -1053,16 +1053,17 @@ contains
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, namespace, st, gr, sb, geo, qtot, ispin, spin_channels, rho)
-    type(lcao_t),        intent(inout) :: this
-    type(namespace_t),   intent(in)    :: namespace
-    type(states_elec_t), intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
-    type(simul_box_t),   intent(in)    :: sb
-    type(geometry_t),    intent(in)    :: geo
-    FLOAT,               intent(in)    :: qtot  !< the total charge of the system
-    integer,             intent(in)    :: ispin, spin_channels
-    FLOAT,               intent(out)   :: rho(:, :)
+  subroutine lcao_guess_density(this, namespace, st, gr, hm, sb, geo, qtot, ispin, spin_channels, rho)
+    type(lcao_t),             intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(states_elec_t),      intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(simul_box_t),        intent(in)    :: sb
+    type(geometry_t),         intent(in)    :: geo
+    FLOAT,                    intent(in)    :: qtot  !< the total charge of the system
+    integer,                  intent(in)    :: ispin, spin_channels
+    FLOAT,                    intent(out)   :: rho(:, :)
 
     integer :: ia, is, idir, gmd_opt, ip
     integer, save :: iseed = 321
@@ -1107,6 +1108,12 @@ contains
       call parse_variable(namespace, 'GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error(namespace, 'GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
+    end if
+
+    if(parse_is_defined(namespace, 'GuessMagnetDensity') .and. hm%theory_level == HARTREE_FOCK) then
+      message(1) = "GuessMagnetDensity cannot be used for Hartree-Fock and hybrids calculation."
+      message(2) = "Please perform a LDA or GGA calculation first and restart from this calculation."
+      call messages_fatal(2)
     end if
 
     rho = M_ZERO
