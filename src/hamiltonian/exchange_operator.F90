@@ -183,11 +183,9 @@ contains
     end if
     nullify(this%st)
 
-    if(this%useACE) then
-      this%ace%nst = 0
-      SAFE_DEALLOCATE_A(this%ace%dchi)
-      SAFE_DEALLOCATE_A(this%ace%zchi)
-    end if
+    this%ace%nst = 0
+    SAFE_DEALLOCATE_A(this%ace%dchi)
+    SAFE_DEALLOCATE_A(this%ace%zchi)
 
     call singularity_end(this%singul)
     call poisson_end(this%psolver)

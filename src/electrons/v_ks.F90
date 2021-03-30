@@ -1051,9 +1051,11 @@ contains
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
-              call  dxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  dxc_slater_calc(namespace, ks%gr%mesh, ks%gr%sb, space, hm%exxop, st, &
+                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             else
-              call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  zxc_slater_calc(namespace, ks%gr%mesh, ks%gr%sb, space, hm%exxop, st, &
+                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
           else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
             if (states_are_real(st)) then
