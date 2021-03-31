@@ -54,6 +54,7 @@ basic_f_srcs =                                 \
 	basic/gdlib.F90                        \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
+	basic/heap.F90                         \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
@@ -64,6 +65,7 @@ basic_f_srcs =                                 \
 	basic/loct.F90                         \
 	basic/lookup.F90                       \
 	basic/messages.F90                     \
+	basic/merge_sorted.F90                 \
 	basic/mpi_debug.F90                    \
 	basic/mpi.F90                          \
 	basic/mpi_lib.F90                      \
