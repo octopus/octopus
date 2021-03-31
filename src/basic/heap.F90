@@ -35,10 +35,10 @@ module heap_oct_m
   ! The time complexity of this merge is O(n log k) where n is the full size
   ! of the arrays and k is the number of arrays.
   type, private :: heap_t
-    integer, pointer :: a(:)            !< a list of sorted arrays
-    integer :: length                   !< the number of sorted arrays -> this is the length of the heap
-    integer, allocatable :: indices(:)  !< the starting indices of the sorted arrays
-    integer, allocatable :: sizes(:)    !< the sizes of the sorted arrays
+    integer(8), pointer :: a(:)            !< a list of sorted arrays
+    integer(8) :: length                   !< the number of sorted arrays -> this is the length of the heap
+    integer(8), allocatable :: indices(:)  !< the starting indices of the sorted arrays
+    integer(8), allocatable :: sizes(:)    !< the sizes of the sorted arrays
   contains
     procedure :: init => heap_init
     procedure :: end => heap_end
@@ -48,10 +48,10 @@ module heap_oct_m
 contains
   ! Initialize the heap
   subroutine heap_init(heap, list, sizes)
-    class(heap_t),              intent(inout) :: heap      !< the heap type
-    integer, target,            intent(in)    :: list(:)   !< the list of numbers to be merged
-    integer,                    intent(in)    :: sizes(:)  !< the sizes of the arrays
-    integer :: i
+    class(heap_t),      intent(inout) :: heap      !< the heap type
+    integer(8), target, intent(in)    :: list(:)   !< the list of numbers to be merged
+    integer(8),         intent(in)    :: sizes(:)  !< the sizes of the arrays
+    integer(8) :: i
 
     PUSH_SUB(heap_init)
     ! we keep a pointer to access the data; we do not need to modify it
@@ -92,11 +92,11 @@ contains
   end subroutine
 
   subroutine heap_merge(heap, merged, index_map)
-    class(heap_t),     intent(inout) :: heap
-    integer,           intent(inout) :: merged(:)
-    integer, optional, intent(inout) :: index_map(:)  !< index map for sorting another data array
+    class(heap_t),        intent(inout) :: heap
+    integer(8),           intent(inout) :: merged(:)
+    integer(8), optional, intent(inout) :: index_map(:)  !< index map for sorting another data array
 
-    integer :: i
+    integer(8) :: i
 
     PUSH_SUB(heap_merge)
     if (sum(heap%sizes) /= ubound(merged, dim=1)) then
@@ -116,11 +116,11 @@ contains
       if (heap%sizes(1) == 0) then
         ! if this array is already empty, swap it with the last one and
         ! reduce the size of the heap by one
-        call swap(heap, 1, heap%length)
+        call swap(heap, 1_8, heap%length)
         heap%length = heap%length - 1
       end if
       ! down-sift (restore min-heap property)
-      call minheapify(heap, 1)
+      call minheapify(heap, 1_8)
     end do
     POP_SUB(heap_merge)
   end subroutine
@@ -129,7 +129,7 @@ contains
   subroutine build_minheap(heap)
     class(heap_t), intent(inout) :: heap
 
-    integer :: i
+    integer(8) :: i
 
     ! this goes bottom up for all parent nodes
     do i = heap%length/2, 1, -1
@@ -139,11 +139,10 @@ contains
 
   ! downsifting from index i (restore minheap property)
   recursive subroutine minheapify(heap, i)
-    class(heap_t), intent(inout) :: heap
-    integer,       intent(in)    :: i
+    class(heap_t),    intent(inout) :: heap
+    integer(8),       intent(in)    :: i
 
-    integer :: left, right, smallest
-    integer :: tmp
+    integer(8) :: left, right, smallest
 
     left = 2*i
     right = 2*i + 1
@@ -169,11 +168,9 @@ contains
 
   ! swap two of the sorted arrays in the heap
   subroutine swap(heap, i, j)
-    class(heap_t), intent(inout) :: heap
-    integer,       intent(in)    :: i
-    integer,       intent(in)    :: j
-
-    integer :: tmp
+    class(heap_t),    intent(inout) :: heap
+    integer(8),       intent(in)    :: i
+    integer(8),       intent(in)    :: j
 
     ! swap index and associated size
     call swap_int(heap%indices, i, j)
@@ -182,11 +179,11 @@ contains
 
   ! swap two integers
   subroutine swap_int(a, i, j)
-    integer, intent(inout) :: a(:)
-    integer, intent(in)    :: i
-    integer, intent(in)    :: j
+    integer(8), intent(inout) :: a(:)
+    integer(8), intent(in)    :: i
+    integer(8), intent(in)    :: j
 
-    integer :: tmp
+    integer(8) :: tmp
 
     tmp = a(i)
     a(i) = a(j)
@@ -195,9 +192,9 @@ contains
 
   ! compare the current value of two arrays in the heap
   logical function is_smaller(heap, i, j)
-    class(heap_t), intent(inout) :: heap
-    integer,       intent(in)    :: i
-    integer,       intent(in)    :: j
+    class(heap_t),    intent(inout) :: heap
+    integer(8),       intent(in)    :: i
+    integer(8),       intent(in)    :: j
 
     is_smaller = heap%a(heap%indices(i)) < heap%a(heap%indices(j))
   end function
