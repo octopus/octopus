@@ -226,27 +226,27 @@ contains
       write(iunit, '("IN  step: ",I10,"| system: ",a,"| ",a)' , advance='no' ) event_ID, trim(system_name), trim(event%get_info())
 
       if( present(extra)) then
-        write(iunit, '("| ",a)' , advance='no')  trim(extra)
+        write(iunit, '(" | ",a)' , advance='no')  trim(extra)
       end if
 
       if (present(system_clock)) then
-        write(iunit, '("| system_clock:", E15.5)' , advance='no')  system_clock%time()
+        write(iunit, '(" | system_clock:", E15.5)' , advance='no')  system_clock%time()
       end if
 
       if (present(prop_clock)) then
-        write(iunit, '("| prop_clock:", E15.5)' , advance='no')  prop_clock%time()
+        write(iunit, '(" | prop_clock:", E15.5)' , advance='no')  prop_clock%time()
       end if
 
       if (present(interaction_clock)) then
-        write(iunit, '("| interaction_clock:", E15.5)' , advance='no')  interaction_clock%time()
+        write(iunit, '(" | interaction_clock:", E15.5)' , advance='no')  interaction_clock%time()
       end if
 
       if (present(partner_clock)) then
-        write(iunit, '("| partner_clock:", E15.5)' , advance='no')  partner_clock%time()
+        write(iunit, '(" | partner_clock:", E15.5)' , advance='no')  partner_clock%time()
       end if
 
       if (present(requested_clock)) then
-        write(iunit, '("| requested_clock:", E15.5)' , advance='no')  requested_clock%time()
+        write(iunit, '(" | requested_clock:", E15.5)' , advance='no')  requested_clock%time()
       end if
 
       write(iunit, '()' , advance='yes')
@@ -278,47 +278,47 @@ contains
 
       if(present(update)) then
         if(update) then
-          update_string = "|updated: true"
+          update_string = " | updated: true"
         else
-          update_string = "|updated: false"
+          update_string = " | updated: false"
         endif
       else
         update_string = ""
       endif
 
-      write(iunit, '("OUT step: ",I10,"| closes: ",I10," ")', advance='no')  &
+      write(iunit, '("OUT step: ",I10," | closes: ",I10)', advance='no')  &
         event_ID, handle%enter_ID
 
       if(present(update)) then
         if(update) then
-            write(iunit, '("|updated: true")', advance='no')
+            write(iunit, '(" | updated: true")', advance='no')
           else
-            write(iunit, '("|updated: false")', advance='no')
+            write(iunit, '(" | updated: false")', advance='no')
           endif
       end if
   
       if( present(extra)) then
-        write(iunit, '("| ",a)' , advance='no')  trim(extra)
+        write(iunit, '(" | ",a)' , advance='no')  trim(extra)
       end if
 
       if (present(system_clock)) then
-        write(iunit, '("| system_clock:", E15.5)' , advance='no')  system_clock%time()
+        write(iunit, '(" | system_clock:", E15.5)' , advance='no')  system_clock%time()
       end if
 
       if (present(prop_clock)) then
-        write(iunit, '("| prop_clock:", E15.5)' , advance='no')  prop_clock%time()
+        write(iunit, '(" | prop_clock:", E15.5)' , advance='no')  prop_clock%time()
       end if
 
       if (present(interaction_clock)) then
-        write(iunit, '("| interaction_clock:", E15.5)' , advance='no')  interaction_clock%time()
+        write(iunit, '(" | interaction_clock:", E15.5)' , advance='no')  interaction_clock%time()
       end if
 
       if (present(partner_clock)) then
-        write(iunit, '("| partner_clock:", E15.5)' , advance='no')  partner_clock%time()
+        write(iunit, '(" | partner_clock:", E15.5)' , advance='no')  partner_clock%time()
       end if
 
       if (present(requested_clock)) then
-        write(iunit, '("| requested_clock:", E15.5)' , advance='no')  requested_clock%time()
+        write(iunit, '(" | requested_clock:", E15.5)' , advance='no')  requested_clock%time()
       end if
 
       write(iunit, '()' , advance='yes')

@@ -122,9 +122,6 @@ contains
 
     PUSH_SUB(run)
 
-    call multisystem_debug_init("debug_multisystem.txt", global_namespace)
-
-
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
     call messages_print_stress(stdout)
@@ -285,8 +282,6 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_statistics()
 #endif
-
-    call multisystem_debug_end()
 
     POP_SUB(run)
 

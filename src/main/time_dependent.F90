@@ -65,6 +65,8 @@ contains
 
     PUSH_SUB(time_dependent_run_multisystem)
 
+    call multisystem_debug_init("debug/propagation.txt", global_namespace)
+
     call messages_write('Info: Running Multi-System time evolution')
     call messages_new_line()
     call messages_new_line()
@@ -111,6 +113,8 @@ contains
     end do
 
     call systems%propagation_finish()
+
+    call multisystem_debug_end()
 
     POP_SUB(time_dependent_run_multisystem)
   end subroutine time_dependent_run_multisystem
