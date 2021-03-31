@@ -26,6 +26,7 @@ module mesh_init_oct_m
   use iihash_oct_m
   use index_oct_m
   use math_oct_m
+  use merge_sorted_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mesh_partition_oct_m
@@ -186,15 +187,17 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM), sizes(1:MAX_DIM)
   integer(8) :: global_size, local_size
   integer(8) :: ihilbert, ihilbertb, istart, iend, hilbert_size
-  integer :: ip, ip2, ib, ib2, np, np_boundary
+  integer :: ip, ib, ib2, np, np_boundary
   FLOAT :: pos(1:MAX_DIM)
   logical :: found
-  integer :: irank, nduplicate
+  integer :: irank, iunique
   type(lihash_t) :: hilbert_to_grid, hilbert_to_boundary
   integer(8), allocatable :: boundary_to_hilbert(:), boundary_to_hilbert_global(:)
+  integer(8), allocatable :: boundary_to_hilbert_recv(:)
   integer(8), allocatable :: grid_to_hilbert(:), grid_to_hilbert_initial(:)
   integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
   integer, allocatable :: initial_sizes(:), initial_offsets(:), final_sizes(:), offsets(:)
+  integer(8), allocatable :: hilbert_cutoff(:)
 
   PUSH_SUB(mesh_init_stage_2)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -307,11 +310,6 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
 
   SAFE_DEALLOCATE_A(grid_to_hilbert_initial)
 
-  SAFE_DEALLOCATE_A(scounts)
-  SAFE_DEALLOCATE_A(sdispls)
-  SAFE_DEALLOCATE_A(rcounts)
-  SAFE_DEALLOCATE_A(rdispls)
-
 
   mesh%np = final_sizes(mpi_world%rank)
   mesh%np_global = sum(final_sizes)
@@ -346,8 +344,88 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   np_boundary = ib - 1
   mesh%np_part = mesh%np + np_boundary
 
+  ! sort local boundary
+  call sort(boundary_to_hilbert(1:np_boundary))
+
+  ! get minimum and maximum
+  istart = boundary_to_hilbert(1)
+  iend = boundary_to_hilbert(np_boundary)
 #ifdef HAVE_MPI
-  ! get global boundary indices
+  call MPI_Allreduce(MPI_IN_PLACE, istart, 1, &
+    MPI_LONG_LONG, MPI_MIN, mpi_world%comm, mpi_err)
+  call MPI_Allreduce(MPI_IN_PLACE, iend, 1, &
+    MPI_LONG_LONG, MPI_MAX, mpi_world%comm, mpi_err)
+#endif
+  hilbert_size = iend - istart + 1
+
+  ! get index ranges for each rank
+  SAFE_ALLOCATE(hilbert_cutoff(0:mpi_world%size-1))
+  do irank = 0, mpi_world%size - 1
+    hilbert_cutoff(irank) = floor(TOFLOAT(hilbert_size) * (irank+1)/mpi_world%size) + istart
+  end do
+
+  ! get send counts
+  scounts = 0
+  ip = 1
+  do irank = 0, mpi_world%size - 1
+    do while (boundary_to_hilbert(ip) < hilbert_cutoff(irank))
+      scounts(irank) = scounts(irank) + 1
+      ip = ip + 1
+      if (ip > np_boundary) exit
+    end do
+  end do
+  SAFE_DEALLOCATE_A(hilbert_cutoff)
+
+  ! compute communication pattern (sdispls, rcounts, rdispls)
+  sdispls(0) = 0
+  do irank = 1, mpi_world%size - 1
+    sdispls(irank) = sdispls(irank - 1) + scounts(irank - 1)
+  end do
+
+#ifdef HAVE_MPI
+  call MPI_Alltoall(scounts(0), 1, MPI_INTEGER, &
+       rcounts(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+  rcounts = scounts
+#endif
+
+  rdispls(0) = 0
+  do irank = 1, mpi_world%size - 1
+    rdispls(irank) = rdispls(irank - 1) + rcounts(irank - 1)
+  end do
+
+  ! communicate the locally sorted boundary points
+  SAFE_ALLOCATE(boundary_to_hilbert_recv(1:sum(rcounts)))
+#ifdef HAVE_MPI
+  call MPI_Alltoallv(boundary_to_hilbert(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
+       boundary_to_hilbert_recv(1), rcounts(0), rdispls(0), MPI_LONG_LONG, mpi_world%comm, mpi_err)
+#else
+  boundary_to_hilbert_recv(1:rcounts(0)) = boundary_to_hilbert(1:scounts(0))
+#endif
+  SAFE_DEALLOCATE_A(boundary_to_hilbert)
+  SAFE_ALLOCATE(boundary_to_hilbert(1:sum(rcounts)))
+
+  ! do k-way merge of sorted indices
+  call merge_sorted_arrays(boundary_to_hilbert_recv, int(rcounts, 8), boundary_to_hilbert)
+
+  ! make indices unique
+  boundary_to_hilbert_recv(1) = boundary_to_hilbert(1)
+  iunique = 2
+  do ip = 1, sum(rcounts) - 1
+    if (boundary_to_hilbert(ip+1) /= boundary_to_hilbert(ip)) then
+      boundary_to_hilbert_recv(iunique) = boundary_to_hilbert(ip+1)
+      iunique = iunique + 1
+    end if
+  end do
+  np_boundary = iunique - 1
+
+  SAFE_DEALLOCATE_A(scounts)
+  SAFE_DEALLOCATE_A(sdispls)
+  SAFE_DEALLOCATE_A(rcounts)
+  SAFE_DEALLOCATE_A(rdispls)
+
+#ifdef HAVE_MPI
+  ! get offsets for boundary point communication
   call MPI_Allgather(np_boundary, 1, MPI_INTEGER, initial_sizes(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
 #else
   initial_sizes(0) = np_boundary
@@ -357,27 +435,8 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
     initial_offsets(irank) = initial_offsets(irank-1) + initial_sizes(irank-1)
   end do
 
-  ! boundary
-  SAFE_ALLOCATE(boundary_to_hilbert_global(1:sum(initial_sizes)))
-#ifdef HAVE_MPI
-  call MPI_Allgatherv(boundary_to_hilbert(1), np_boundary, MPI_LONG_LONG, &
-    boundary_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
-    mpi_world%comm, mpi_err)
-#else
-  boundary_to_hilbert_global(1:sum(initial_sizes)) = boundary_to_hilbert(1:sum(initial_sizes))
-#endif
-
-  ! sort boundary
-  call sort(boundary_to_hilbert_global)
-
-  ! get number of non-unique elements (could be done in parallel)
-  nduplicate = 0
-  do ip = 1, sum(initial_sizes) - 1
-    if (boundary_to_hilbert_global(ip+1) == boundary_to_hilbert_global(ip)) then
-      nduplicate = nduplicate + 1
-    end if
-  end do
-  mesh%np_part_global = mesh%np_global + sum(initial_sizes) - nduplicate
+  ! global grid size
+  mesh%np_part_global = mesh%np_global + sum(initial_sizes)
 
   ! get global indices
   ! inner grid
@@ -387,19 +446,18 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
     mesh%idx%grid_to_hilbert_global(1), final_sizes(0), offsets(0), MPI_LONG_LONG, &
     mpi_world%comm, mpi_err)
 #else
-  mesh%idx%grid_to_hilbert_global(1:mesh%np) = grid_to_hilbert(1:mesh%np)
+  mesh%idx%grid_to_hilbert_global(1:mesh%np_global) = grid_to_hilbert(1:mesh%np_global)
 #endif
 
-  ! add unique boundary indices
-  ip2 = mesh%np_global + 1
-  mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(1)
-  ip2 = ip2 + 1
-  do ip = 2, sum(initial_sizes)
-    if (boundary_to_hilbert_global(ip) /= boundary_to_hilbert_global(ip-1)) then
-      mesh%idx%grid_to_hilbert_global(ip2) = boundary_to_hilbert_global(ip)
-      ip2 = ip2 + 1
-    end if
-  end do
+  ! boundary indices
+#ifdef HAVE_MPI
+  call MPI_Allgatherv(boundary_to_hilbert_recv(1), np_boundary, MPI_LONG_LONG, &
+    mesh%idx%grid_to_hilbert_global(mesh%np_global+1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
+    mpi_world%comm, mpi_err)
+#else
+  mesh%idx%grid_to_hilbert_global(mesh%np_global+1:mesh%np_part_global) = &
+    boundary_to_hilbert_recv(1:np_boundary)
+#endif
 
   SAFE_DEALLOCATE_A(initial_offsets)
   SAFE_DEALLOCATE_A(initial_sizes)
@@ -415,9 +473,11 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   SAFE_DEALLOCATE_A(final_sizes)
 
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
+  SAFE_DEALLOCATE_A(boundary_to_hilbert_recv)
   SAFE_DEALLOCATE_A(boundary_to_hilbert_global)
   call lihash_end(hilbert_to_grid)
   SAFE_DEALLOCATE_A(grid_to_hilbert)
+  SAFE_DEALLOCATE_A(hilbert_cutoff)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)
