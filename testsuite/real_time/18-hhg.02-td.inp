@@ -49,5 +49,9 @@ electric_amplitude = (sqrt(10^14)/sqrt(3.509470*10^16))
 AbsorbingBoundaries = mask
 AbWidth = 50
 
-TDOutput = laser + multipoles + dipole_acceleration
+%TDOutput 
+ laser
+ multipoles 
+ dipole_acceleration
+%
 StatesPack = yes

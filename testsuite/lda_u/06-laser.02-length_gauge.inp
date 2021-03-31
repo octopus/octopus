@@ -40,7 +40,12 @@ electric_field   | 0 | 0 | i | omega | "envelope_function"
 
 AbsorbingBoundaries = no
 
-TDOutput = laser + energy + multipoles + total_current
+%TDOutput 
+ laser 
+ energy 
+ multipoles 
+ total_current
+%
 
 FilterPotentials = filter_none
 

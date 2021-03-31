@@ -67,7 +67,11 @@ stime  = 100.0
 TDPropagationTime = stime
 TDPropagator = crank_nicolson
 
-TDOutput = multipoles + laser + geometry
+%TDOutput 
+ multipoles 
+ laser 
+ geometry
+% 
 
 # --------------
 # OCT parameters

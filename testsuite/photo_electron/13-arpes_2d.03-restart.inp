@@ -99,7 +99,11 @@ PES_Flux_UseMemory = no
 # OUT
 #######
 
-TDOutput = multipoles + energy + laser
+%TDOutput 
+ multipoles
+ energy 
+ laser
+%
 
 OutputInterval = 500
 RestartWriteInterval = 500

@@ -67,6 +67,12 @@ Tpulse = 210
   "envelope_sin2" | tdf_from_expr | "-Iau/omega*c*sin(pi*t/Tpulse)^2*(1-step(t-Tpulse))"
 %
 
-TDOutput = laser + total_current + td_occup + gauge_field
+%TDOutput 
+ laser 
+ total_current 
+ td_occup 
+ gauge_field
+%
+ 
 OutputFormat = plane_x
 StatesPack = yes

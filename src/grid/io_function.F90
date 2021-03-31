@@ -110,7 +110,7 @@ contains
     what_tag_in, how_tag_in, output_interval_tag_in, ignore_error)
     type(namespace_t), intent(in)  :: namespace
     type(space_t),     intent(in)  :: space
-    logical,           intent(out) :: what(MAX_OUTPUT_TYPES)
+    logical,           intent(inout) :: what(MAX_OUTPUT_TYPES)
     integer(8),        intent(out) :: how(MAX_OUTPUT_TYPES)
     integer,           intent(out) :: output_interval(MAX_OUTPUT_TYPES) 
     character(len=*), optional, intent(in):: what_tag_in
@@ -130,7 +130,7 @@ contains
 
     how = 0_8
     output_interval = 0_8
-    what = .false.
+    !what = .false.
     what_tag = optional_default(what_tag_in, 'Output')
     how_tag = optional_default(how_tag_in, 'OutputFormat')
     output_interval_tag = optional_default(output_interval_tag_in, 'OutputInterval')
@@ -236,7 +236,21 @@ contains
     if(parse_block(namespace, what_tag, blk) == 0) then
       ncols = parse_block_cols(blk, 0)
       nrows = parse_block_n(blk)
-      if(ncols == 2) then
+
+      if(ncols == 1) then
+        !new format, Type 0
+        !%Output
+        !  density
+        !  wfs
+        !%
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if(.not. varinfo_valid_option(what_tag, what_i)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          if(what_i > 0) what(what_i) = .true.
+        end do
+      else if(ncols == 2) then
         !new format, Type 1
         !%Output
         !  density | cube + axis_z
@@ -248,7 +262,7 @@ contains
           if(.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          what(what_i) = .true.
+          if(what_i > 0) what(what_i) = .true.
           if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
             call parse_block_integer(blk, iout - 1, 1, how(what_i))
             if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
@@ -268,7 +282,7 @@ contains
           if(.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          what(what_i) = .true.
+          if(what_i > 0) what(what_i) = .true.
           call parse_block_integer(blk, iout - 1, 2, output_interval(what_i))
           if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
             call parse_block_integer(blk, iout - 1, 4, how(what_i))
@@ -286,7 +300,7 @@ contains
       if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
         call messages_input_error(namespace, what_tag)
       end if
-      what(what_i) = .true.
+      if(what_i > 0) what(what_i) = .true.
       if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
         call parse_variable(namespace, how_tag, 0, how(what_i))
       end if
