@@ -43,7 +43,6 @@ module multisystem_debug_oct_m
     multisystem_debug_write_event_out, &
     event_info_t,                      &
     event_function_call_t,             &
-    event_propagation_step_t,          &
     event_handle_t
 
   integer, parameter, public :: MAX_INFO_LEN = 128
@@ -81,19 +80,6 @@ module multisystem_debug_oct_m
   interface event_function_call_t
     procedure :: event_function_call_constructor
   end interface event_function_call_t
-
-  !-------------------------------------------------------------------
-
-  type, extends(event_info_t) :: event_propagation_step_t
-    type(algorithmic_operation_t) :: op
-  contains
-    procedure :: get_info => event_propagation_step_get_info
-    final :: event_propagation_step_finalizer
-  end type event_propagation_step_t
-
-  interface event_propagation_step_t
-    procedure :: event_propagation_step_constructor
-  end interface event_propagation_step_t
 
   !-------------------------------------------------------------------
 
@@ -153,6 +139,7 @@ contains
   subroutine event_function_call_finalizer(this)
     type(event_function_call_t) :: this
 
+
   end subroutine event_function_call_finalizer
 
   function event_function_call_get_info(this) result(info)
@@ -161,39 +148,12 @@ contains
 
     info = "function: " // trim(this%function_name) 
     if(this%op_label /= "NULL") then
-      write(0,*) 'event_function_call_info', this%op_label
       info =  "function: " // trim(this%function_name) // "|operation: " // trim(this%op_label)
     endif
 
   end function event_function_call_get_info
 
   !-------------------------------------------------------------------
-
-  function event_propagation_step_constructor(operation) result(event)
-    type(algorithmic_operation_t) :: operation
-    type(event_propagation_step_t), pointer :: event
-
-    SAFE_ALLOCATE(event)
-
-    event%op = operation
-
-  end function event_propagation_step_constructor
-
-  subroutine event_propagation_step_finalizer(this)
-    type(event_propagation_step_t) :: this
-
-  end subroutine event_propagation_step_finalizer
-
-  function event_propagation_step_get_info(this) result(info)
-    class(event_propagation_step_t), intent(in) :: this
-    character(len=MAX_INFO_LEN)  :: info
-
-    info = "propagation step: " // trim(this%op%label)
-
-  end function event_propagation_step_get_info
-
-  !-------------------------------------------------------------------
-
 
   subroutine multisystem_debug_init(filename, namespace)
     character(*), intent(in)           :: filename
@@ -235,12 +195,6 @@ contains
 
   end subroutine multisystem_debug_stop_log
 
-
-  subroutine multisystem_debug_write_system_info(system)
-    class(interaction_partner_t), intent(in) :: system
-
-    
-  end subroutine multisystem_debug_write_system_info
 
   function multisystem_debug_write_event_in(system, event, extra,  system_clock, prop_clock, & 
                                             interaction_clock, partner_clock, requested_clock) result(handle)
@@ -307,16 +261,16 @@ contains
 
   subroutine multisystem_debug_write_event_out(handle, extra, update, system_clock, prop_clock, &
                                                interaction_clock, partner_clock, requested_clock) 
-    class(event_handle_t), intent(in) :: handle
-    character(*), optional            :: extra
-    logical, optional                 :: update
-    type(clock_t), intent(in), optional                 :: system_clock
-    type(clock_t), intent(in), optional                 :: prop_clock
-    type(clock_t), intent(in), optional                 :: interaction_clock
-    type(clock_t), intent(in), optional                 :: partner_clock
-    type(clock_t), intent(in), optional                 :: requested_clock
+    class(event_handle_t), intent(in)    :: handle
+    character(*), optional               :: extra
+    logical, optional                    :: update
+    type(clock_t), intent(in), optional  :: system_clock
+    type(clock_t), intent(in), optional  :: prop_clock
+    type(clock_t), intent(in), optional  :: interaction_clock
+    type(clock_t), intent(in), optional  :: partner_clock
+    type(clock_t), intent(in), optional  :: requested_clock
 
-    character(16)                      :: update_string
+    character(16)                        :: update_string
 
     PUSH_SUB(multisystem_debug_write_event_out)
 
@@ -378,13 +332,5 @@ contains
 
   end subroutine multisystem_debug_write_event_out
 
-  subroutine multisystem_debug_write_clock(system, partner, handle, extra)
-    class(interaction_partner_t), intent(in), optional  :: system
-    class(interaction_partner_t), intent(in), optional  :: partner
-    class(event_handle_t), intent(in), optional :: handle
-    character(*), optional            :: extra
-
-
-  end subroutine  multisystem_debug_write_clock
 
 end module multisystem_debug_oct_m
