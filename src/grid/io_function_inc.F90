@@ -1498,7 +1498,6 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, kpoints,
   mformat2   = '(i12,99es34.24E3)'
   mfmtheader = '(a,a10,5a23)'
 
-  ASSERT(how > 0)
   ASSERT(ubound(ff, dim = 1) >= kpoints%reduced%npoints)
 
   np_max = kpoints%reduced%npoints
