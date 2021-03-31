@@ -342,18 +342,12 @@ contains
     if(with_gauge_field) output_options(OUT_GAUGE_FIELD) = .true.
     if(hm%ext_lasers%no_lasers > 0) output_options(OUT_LASER) = .true.
     if(kick%qkick_mode /= QKICKMODE_NONE) output_options(OUT_FTCHD) = .true.
-    
-    do iout = 1, OUT_MAX
-      write(*,*) 'MFT output_options old= ', output_options(iout)
-    end do
 
     call io_function_read_what_how_when(sb, namespace, output_options, outp%how, outp%output_interval, &
     'TDOutput')
 
-
     do iout = 1, OUT_MAX
       writ%out(iout)%write = output_options(iout)
-      write(*,*) 'MFT output_options new= ', output_options(iout)
     end do
 
     ! experimental stuff
