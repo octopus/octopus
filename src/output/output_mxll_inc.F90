@@ -25,7 +25,7 @@
     PUSH_SUB(output_mxll_init)
 
     !%Variable MaxwellOutput
-    !%Type flag
+    !%Type integer
     !%Default none
     !%Section Output
     !%Description
@@ -93,7 +93,7 @@
     !%End
 
     call io_function_read_what_how_when(sb, namespace, outp%what, outp%how, outp%output_interval, &
-      'MaxwellOutput', 'OutputHow', 'MaxwellOutputInterval')
+      'MaxwellOutput', 'OutputFormat', 'MaxwellOutputInterval')
 
 
 
