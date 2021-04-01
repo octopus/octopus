@@ -549,6 +549,11 @@ contains
     integer, allocatable :: initial_sizes(:), initial_offsets(:)
     integer :: ipg, nn, idir, irank
     integer :: bsize(space%dim), order, default
+    integer :: number_of_blocks(space%dim)
+    integer :: point(space%dim)
+    integer(8) :: ii, jj, jl, jb, total_bsize
+    integer(8), allocatable :: reorder_indices(:)
+    integer, allocatable :: global_indices(:)
     type(block_t) :: blk
     type(reorder_arguments_t) :: args
     integer, parameter :: &
@@ -637,47 +642,110 @@ contains
         end if
       end if
 
-      ! do the global reordering in parallel
-      ! use block data decomposition of global indices
-      SAFE_ALLOCATE(initial_offsets(0:mpi_world%size))
-      SAFE_ALLOCATE(initial_sizes(0:mpi_world%size-1))
-      do irank = 0, mpi_world%size
-        initial_offsets(irank) = floor(TOFLOAT(mesh%np_part_global) * irank/mpi_world%size)
+      SAFE_ALLOCATE(reorder_indices(1:mesh%np_global))
+      SAFE_ALLOCATE(global_indices(1:mesh%np_global))
+      ! compute indices along blocked parallelepiped curve
+      total_bsize = product(int(bsize(1:space%dim), 8))
+      number_of_blocks(1:space%dim) = (mesh%idx%nr(2, 1:space%dim) - mesh%idx%nr(1, 1:space%dim) + 1) &
+        /bsize(1:space%dim) + 1
+      do ipg = 1, mesh%np_global
+        call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
+        point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
+        ! jl: index in local block
+        ! jb: block index
+        ! jj: total index
+        jl = 0_8
+        jb = 0_8
+        do ii = 1, space%dim
+          jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
+          jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
+        end do
+        jj = jl + jb * total_bsize
+        reorder_indices(ipg) = jj
       end do
-      do irank = 0, mpi_world%size - 1
-        initial_sizes(irank) = initial_offsets(irank+1) - initial_offsets(irank)
+      call sort(reorder_indices, global_indices)
+
+      do ipg = 1, mesh%np_global
+        reorder_indices(global_indices(ipg)) = mesh%idx%grid_to_hilbert_global(ipg)
+      end do
+      do ipg = 1, mesh%np_global
+        mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg)
+      end do
+      SAFE_DEALLOCATE_A(reorder_indices)
+      SAFE_DEALLOCATE_A(global_indices)
+
+      SAFE_ALLOCATE(reorder_indices(mesh%np_global+1:mesh%np_part_global))
+      SAFE_ALLOCATE(global_indices(mesh%np_global+1:mesh%np_part_global))
+      ! compute indices along blocked parallelepiped curve
+      total_bsize = product(int(bsize(1:space%dim), 8))
+      number_of_blocks(1:space%dim) = (mesh%idx%nr(2, 1:space%dim) - mesh%idx%nr(1, 1:space%dim) + 1) &
+        /bsize(1:space%dim) + 1
+      do ipg = mesh%np_global + 1, mesh%np_part_global
+        call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
+        point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
+        ! jl: index in local block
+        ! jb: block index
+        ! jj: total index
+        jl = 0_8
+        jb = 0_8
+        do ii = 1, space%dim
+          jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
+          jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
+        end do
+        jj = jl + jb * total_bsize
+        reorder_indices(ipg) = jj
+      end do
+      call sort(reorder_indices, global_indices)
+
+      do ipg = mesh%np_global + 1, mesh%np_part_global
+        reorder_indices(global_indices(ipg)+mesh%np_global) = mesh%idx%grid_to_hilbert_global(ipg)
+      end do
+      do ipg = mesh%np_global + 1, mesh%np_part_global
+        mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg)
       end do
 
-      ! set arguments for callback function
-      args%istart = initial_offsets(mpi_world%rank) + 1
-      args%iend = initial_offsets(mpi_world%rank + 1)
-      args%local_size = args%iend - args%istart + 1
-      ASSERT(args%local_size == initial_sizes(mpi_world%rank))
-      args%ip_inner = 1
-      args%ip_boundary = 1
-      args%boundary_start = max(mesh%np_global-args%istart+1, 0)
-      args%mesh => mesh
-      SAFE_ALLOCATE(args%reordered(1:args%local_size))
-      args%reordered = 0
-      ! here is the reordering loop: a blocked loop over space%dim dimensions
-      call blocked_loop(space%dim, mesh%idx%nr(1, :), mesh%idx%nr(2, :), bsize, &
-        reorder_add_index, args)
-      nullify(args%mesh)
 
-      ASSERT(args%ip_inner + args%ip_boundary - 2 == args%local_size)
-      ! gather the reordered index
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(args%reordered(1), args%local_size, MPI_LONG_LONG, &
-        mesh%idx%grid_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
-        mpi_world%comm, mpi_err)
-#else
-      do ipg = 1, mesh%np_part_global
-        mesh%idx%grid_to_hilbert_global(ipg) = args%reordered(ipg)
-      end do
-#endif
-      SAFE_DEALLOCATE_A(args%reordered)
-      SAFE_DEALLOCATE_A(initial_offsets)
-      SAFE_DEALLOCATE_A(initial_sizes)
+!      ! do the global reordering in parallel
+!      ! use block data decomposition of global indices
+!      AFE_ALLOCATE(initial_offsets(0:mpi_world%size))
+!      AFE_ALLOCATE(initial_sizes(0:mpi_world%size-1))
+!      do irank = 0, mpi_world%size
+!        initial_offsets(irank) = floor(TOFLOAT(mesh%np_part_global) * irank/mpi_world%size)
+!      end do
+!      do irank = 0, mpi_world%size - 1
+!        initial_sizes(irank) = initial_offsets(irank+1) - initial_offsets(irank)
+!      end do
+!
+!      ! set arguments for callback function
+!      args%istart = initial_offsets(mpi_world%rank) + 1
+!      args%iend = initial_offsets(mpi_world%rank + 1)
+!      args%local_size = args%iend - args%istart + 1
+!      SSERT(args%local_size == initial_sizes(mpi_world%rank))
+!      args%ip_inner = 1
+!      args%ip_boundary = 1
+!      args%boundary_start = max(mesh%np_global-args%istart+1, 0)
+!      args%mesh => mesh
+!      AFE_ALLOCATE(args%reordered(1:args%local_size))
+!      args%reordered = 0
+!      ! here is the reordering loop: a blocked loop over space%dim dimensions
+!      call blocked_loop(space%dim, mesh%idx%nr(1, :), mesh%idx%nr(2, :), bsize, &
+!        reorder_add_index, args)
+!      nullify(args%mesh)
+!
+!      SSERT(args%ip_inner + args%ip_boundary - 2 == args%local_size)
+!      ! gather the reordered index
+!#ifdef HAVE_MPI
+!      call MPI_Allgatherv(args%reordered(1), args%local_size, MPI_LONG_LONG, &
+!        mesh%idx%grid_to_hilbert_global(1), initial_sizes(0), initial_offsets(0), MPI_LONG_LONG, &
+!        mpi_world%comm, mpi_err)
+!#else
+!      do ipg = 1, mesh%np_part_global
+!        mesh%idx%grid_to_hilbert_global(ipg) = args%reordered(ipg)
+!      end do
+!#endif
+!      AFE_DEALLOCATE_A(args%reordered)
+!      AFE_DEALLOCATE_A(initial_offsets)
+!      AFE_DEALLOCATE_A(initial_sizes)
 
       ! Recreate hash table.
       call lihash_end(mesh%idx%hilbert_to_grid_global)
