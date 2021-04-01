@@ -51,7 +51,7 @@ contains
     class(heap_t),      intent(inout) :: heap      !< the heap type
     integer(8), target, intent(in)    :: list(:)   !< the list of numbers to be merged
     integer(8),         intent(in)    :: sizes(:)  !< the sizes of the arrays
-    integer(8) :: i
+    integer(8) :: i, j
 
     PUSH_SUB(heap_init)
     ! we keep a pointer to access the data; we do not need to modify it
@@ -59,10 +59,20 @@ contains
 
     ! get the number of arrays to merge
     heap%length = ubound(sizes, dim=1)
+    ! ignore empty parts
+    do i = 1, ubound(sizes, dim=1)
+      if (sizes(i) == 0) then
+        heap%length = heap%length - 1
+      end if
+    end do
     allocate(heap%sizes(heap%length))
     allocate(heap%indices(heap%length))
-    do i = 1, heap%length
-      heap%sizes(i) = sizes(i)
+    ! get the sizes of the non-empty arrays
+    j = 1
+    do i = 1, ubound(sizes, dim=1)
+      if (sizes(i) == 0) cycle
+      heap%sizes(j) = sizes(i)
+      j = j + 1
     end do
     ! compute the starting indices
     heap%indices(1) = 1
