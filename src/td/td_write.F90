@@ -211,6 +211,7 @@ contains
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     logical :: output_options(MAX_OUTPUT_TYPES)
+    integer :: output_interval(MAX_OUTPUT_TYPES)
     type(simul_box_t) :: sb !MFT: Do we need this?
     type(block_t) :: blk
     character(len=MAX_PATH_LEN) :: filename
@@ -343,7 +344,7 @@ contains
     if(hm%ext_lasers%no_lasers > 0) output_options(OUT_LASER) = .true.
     if(kick%qkick_mode /= QKICKMODE_NONE) output_options(OUT_FTCHD) = .true.
 
-    call io_function_read_what_how_when(sb, namespace, output_options, outp%how, outp%output_interval, &
+    call io_function_read_what_how_when(sb, namespace, output_options, outp%how, output_interval, &
     'TDOutput')
 
     do iout = 1, OUT_MAX
