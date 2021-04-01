@@ -48,7 +48,12 @@ MaxwellABPMLReflectionError    = 1e-16
 
 # ----- Maxwell output variables ------------------------------------------------------------------
 
- MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+ %MaxwellOutput
+  electric_field
+  magnetic_field 
+  maxwell_energy_density 
+  trans_electric_field
+ %
 
  MaxwellOutputInterval = 10
  MaxwellTDOutput       = maxwell_energy + maxwell_fields
