@@ -99,7 +99,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
               end if
             end if
 
-            if (states_are_real(st)) then
+            if(states_are_real(st)) then
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               call dio_function_output(outp%how(OPTION__OUTPUT__WFS), dir, fname, namespace, space, gr%mesh, dtmp, &
                 fn_unit, ierr, ions = ions)
@@ -120,7 +120,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
   if(outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
-    if (states_are_complex(st)) then
+    if(states_are_complex(st)) then
       SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
     end if
     do ist = st%st_start, st%st_end
@@ -187,7 +187,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
   end if
 
   if(outp%what(OPTION__OUTPUT__MMB_DEN) .or. outp%what(OPTION__OUTPUT__MMB_WFS)) then
-    if (states_are_real(st)) then
+    if(states_are_real(st)) then
       call doutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     else
       call zoutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)

@@ -148,19 +148,19 @@ contains
 
     PUSH_SUB(td_init)
 
-    if (hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
+    if(hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
 
-    if (hm%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
+    if(hm%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
 
     call ion_dynamics_init(td%ions_dyn, namespace, ions)
 
-    if (ion_dynamics_ions_move(td%ions_dyn)) then
-      if (hm%kpoints%use_symmetries) then
+    if(ion_dynamics_ions_move(td%ions_dyn)) then
+      if(hm%kpoints%use_symmetries) then
         message(1) = "KPoints symmetries cannot be used with moving ions."
         message(2) = "Please set KPointsSymmetries = no."
         call messages_fatal(2, namespace=namespace)
       end if
-      if (st%symmetrize_density) then
+      if(st%symmetrize_density) then
         message(1) = "Symmetrization of the density cannot be used with moving ions."
         message(2) = "Please set SymmetrizeDensity = no."
         call messages_fatal(2, namespace=namespace)
@@ -200,7 +200,7 @@ contains
     !%End
     call parse_variable(namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
 
-    if (td%mu <= M_ZERO) then
+    if(td%mu <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
       call messages_fatal(1)
     end if
@@ -230,7 +230,7 @@ contains
 
     call parse_variable(namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
-    if (td%dt <= M_ZERO) then
+    if(td%dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       call messages_fatal(1, namespace=namespace)
     end if
@@ -238,7 +238,7 @@ contains
     call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
 
-    if (parse_is_defined(namespace, 'TDMaxSteps') .and. parse_is_defined(namespace, 'TDPropagationTime')) then
+    if(parse_is_defined(namespace, 'TDMaxSteps') .and. parse_is_defined(namespace, 'TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
       call messages_fatal(namespace=namespace)
     end if
@@ -268,15 +268,15 @@ contains
     !% cannot use this variable together with <tt>TDPropagationTime</tt>.
     !%End
     default = 1500
-    if (propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
+    if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
     call parse_variable(namespace, 'TDMaxSteps', default, td%max_iter)
 
-    if (propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
+    if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
 
     call messages_print_var_value(stdout, 'TDPropagationTime', propagation_time, unit = units_out%time)
     call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
 
-    if (td%max_iter < 1) then
+    if(td%max_iter < 1) then
       write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
       message(2) = '(TDMaxSteps <= 1)'
       call messages_fatal(2, namespace=namespace)
@@ -303,10 +303,10 @@ contains
     !%End
 
     call parse_variable(namespace, 'TDDynamics', EHRENFEST, td%dynamics)
-    if (.not. varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error(namespace, 'TDDynamics')
+    if(.not. varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error(namespace, 'TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
-    if (td%dynamics .ne. EHRENFEST) then
-      if (.not. ion_dynamics_ions_move(td%ions_dyn)) call messages_input_error(namespace, 'TDDynamics')
+    if(td%dynamics .ne. EHRENFEST) then
+      if(.not. ion_dynamics_ions_move(td%ions_dyn)) call messages_input_error(namespace, 'TDDynamics')
     end if
 
     !%Variable RecalculateGSDuringEvolution
@@ -326,7 +326,7 @@ contains
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
     call parse_variable(namespace, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
-    if (hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) then
+    if(hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) then
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes", namespace=namespace)
     end if
 
@@ -346,7 +346,7 @@ contains
     call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions_dyn) .or. &
       gauge_field_is_applied(hm%ep%gfield), family_is_mgga_with_exc(ks%xc))
 
-    if (hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
+    if(hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=namespace)
       call laser_write_info(hm%ext_lasers%lasers, stdout, td%dt, td%max_iter)
       call messages_print_stress(stdout, namespace=namespace)
@@ -371,7 +371,7 @@ contains
        call messages_fatal(1, namespace=namespace)
     end if
 
-    if (gr%der%boundaries%spiralBC .and. any(abs(hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
+    if(gr%der%boundaries%spiralBC .and. any(abs(hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
       message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
       call messages_fatal(1, namespace=namespace)
     end if
@@ -397,9 +397,9 @@ contains
 
     PUSH_SUB(td_init_run)
     ! Allocate wavefunctions during time-propagation
-    if (td%dynamics == EHRENFEST) then
+    if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
-      if (hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
+      if(hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
@@ -413,7 +413,7 @@ contains
       call scf_init(td%scf, namespace, gr, ions, st, mc, hm, ks, space)
     end if
 
-    if (gauge_field_is_applied(hm%ep%gfield)) then
+    if(gauge_field_is_applied(hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(ks, .true.)
 
@@ -424,16 +424,16 @@ contains
 
     call td_init_wfs(td, namespace, space, mc, gr, ions, st, ks, hm, fromScratch)
 
-    if (td%iter > td%max_iter) then
+    if(td%iter > td%max_iter) then
       call states_elec_deallocate_wfns(st)
-      if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
+      if(ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
       POP_SUB(td_init_run)
       return
     end if
 
     ! Calculate initial forces and kinetic energy
-    if (ion_dynamics_ions_move(td%ions_dyn)) then
-      if (td%iter > 0) then
+    if(ion_dynamics_ions_move(td%ions_dyn)) then
+      if(td%iter > 0) then
         call td_read_coordinates(td, namespace, ions)
         call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = td%iter*td%dt)
       end if
@@ -442,7 +442,7 @@ contains
 
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
     else
-      if (outp%what(OPTION__OUTPUT__FORCES)) then
+      if(outp%what(OPTION__OUTPUT__FORCES)) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
       end if
     end if
@@ -450,19 +450,19 @@ contains
     call td_write_init(td%write_handler, namespace, space, outp, gr, st, hm, ions, ks, ion_dynamics_ions_move(td%ions_dyn), &
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
-    if (td%scissor > M_EPSILON) then
+    if(td%scissor > M_EPSILON) then
       call scissor_init(hm%scissor, namespace, space, st, gr%mesh, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
-    if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, ions, st, ks, hm, outp)
+    if(td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, ions, st, ks, hm, outp)
 
-    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
+    if(gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
     call restart_init(td%restart_dump, namespace, RESTART_TD, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
-    if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
+    if(ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
       call restart_init(td%restart_load, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
     end if
@@ -470,11 +470,11 @@ contains
     call messages_print_stress(stdout, "Time-Dependent Simulation", namespace=namespace)
     call td_print_header(namespace)
 
-    if (td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
+    if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
       call pes_init_write(td%pesv,gr%mesh,st, namespace)
     end if
 
-    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%pack()
+    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%pack()
 
     POP_SUB(td_init_run)
   end subroutine td_init_run
@@ -502,14 +502,14 @@ contains
 
     PUSH_SUB(td_end_run)
 
-    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
+    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
 
     call restart_end(td%restart_dump)
     call td_write_end(td%write_handler)
 
     ! free memory
     call states_elec_deallocate_wfns(st)
-    if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
+    if(ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
 
     POP_SUB(td_end_run)
   end subroutine td_end_run
@@ -545,9 +545,9 @@ contains
 
       call profiling_in(prof, "TIME_STEP")
 
-      if (iter > 1) then
-        if (((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time)) then
-          if (.not. hm%pcm%localf) then
+      if(iter > 1) then
+        if(((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time)) then
+          if(.not. hm%pcm%localf) then
             call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
           else
             call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
@@ -555,7 +555,7 @@ contains
           call td_write_kick(outp, namespace, space, gr%mesh, hm%ep%kick, ions, iter)
           !We activate the sprial BC only after the kick,
           !to be sure that the first iteration corresponds to the ground state
-          if (gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
+          if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
         end if
       end if
 
@@ -569,8 +569,8 @@ contains
       end select
 
       !Apply mask absorbing boundaries
-      if (hm%bc%abtype == MASK_ABSORBING) then
-        if (states_are_real(st)) then
+      if(hm%bc%abtype == MASK_ABSORBING) then
+        if(states_are_real(st)) then
           call dvmask(gr%mesh, hm, st)
         else
           call zvmask(gr%mesh, hm, st)
@@ -578,7 +578,7 @@ contains
       endif
 
       !Photoelectron stuff
-      if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
+      if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
         call pes_calc(td%pesv, namespace, space, gr%mesh, st, td%dt, iter, gr, hm, stopping)
       end if
 
@@ -591,7 +591,7 @@ contains
       call io_debug_on_the_fly(namespace)
 
       call profiling_out(prof)
-      if (stopping) exit
+      if(stopping) exit
 
     end do propagation
 
@@ -650,33 +650,33 @@ contains
       end if
     end do
 
-    if (output_iter .or. iter == td%max_iter .or. stopping) then ! output
+    if(output_iter .or. iter == td%max_iter .or. stopping) then ! output
       ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
-      if (st%modelmbparticles%nparticle > 0) then
-        call modelmb_sym_all_states (gr, st)
+      if(st%modelmbparticles%nparticle > 0) then
+        call modelmb_sym_all_states(gr, st)
       end if
       call td_write_output(namespace, space, gr, st, hm, ks, outp, ions, iter, td%dt)
     end if
 
-    if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
+    if(mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
       !if(iter == td%max_iter) outp%iter = ii - 1
       call td_write_data(td%write_handler)
       call td_dump(td%restart_dump, namespace, space, gr, st, hm, td, iter, ierr)
-      if (ierr /= 0) then
+      if(ierr /= 0) then
         message(1) = "Unable to write time-dependent restart information."
         call messages_warning(1, namespace=namespace)
       end if
 
       call pes_output(td%pesv, namespace, space, gr%mesh, st, iter, outp, td%dt, gr, ions)
 
-      if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
+      if(ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
         call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
         from_scratch = .false.
         call states_elec_deallocate_wfns(st)
         call electrons_ground_state_run(namespace, mc, gr, ions, st, ks, hm, outp, space, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
         call td_load(td%restart_load, namespace, space, gr, st, hm, td, ierr)
-        if (ierr /= 0) then
+        if(ierr /= 0) then
           message(1) = "Unable to load TD states."
           call messages_fatal(1, namespace=namespace)
         end if
@@ -737,12 +737,12 @@ contains
     if(freeze_orbitals /= 0) then
       call messages_experimental('TDFreezeOrbitals')
 
-      if (hm%lda_u_level /= DFT_U_NONE) then
+      if(hm%lda_u_level /= DFT_U_NONE) then
         call messages_not_implemented('TDFreezeOrbitals with DFT+U', namespace=namespace)
       end if
     end if
 
-    if (.not. from_scratch) then
+    if(.not. from_scratch) then
       !We redistribute the states before the restarting
       if(freeze_orbitals > 0) then
         call states_elec_freeze_redistribute_states(st, namespace, gr%mesh, mc, freeze_orbitals)
@@ -760,21 +760,21 @@ contains
       call restart_end(restart)
     end if
 
-    if (td%iter >= td%max_iter) then
+    if(td%iter >= td%max_iter) then
       message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
       call messages_info(1)
       POP_SUB(td_init_wfs)
       return
     end if
 
-    if (from_scratch) then
+    if(from_scratch) then
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
 
       if(.not. st%only_userdef_istates) then
-        if (ierr == 0) then
+        if(ierr == 0) then
           call states_elec_load(restart, namespace, space, st, gr%mesh, hm%kpoints, ierr, label = ": gs")
         end if
-        if (ierr /= 0) then
+        if(ierr /= 0) then
           message(1) = 'Unable to read ground-state wavefunctions.'
           call messages_fatal(1, namespace=namespace)
         end if
@@ -783,7 +783,7 @@ contains
       ! check if we should deploy user-defined wavefunctions.
       ! according to the settings in the input file the routine
       ! overwrites orbitals that were read from restart/gs
-      if (parse_is_defined(namespace, 'UserDefinedStates')) then
+      if(parse_is_defined(namespace, 'UserDefinedStates')) then
         call states_elec_read_user_def_orbitals(gr%mesh, namespace, space, st)
       end if
 
@@ -793,8 +793,8 @@ contains
 
     !We activate the sprial BC only after the kick,
     !to be sure that the first iteration corresponds to the ground state
-    if (gr%der%boundaries%spiralBC) then
-      if ((td%iter-1)*td%dt > hm%ep%kick%time .and. gr%der%boundaries%spiralBC) then
+    if(gr%der%boundaries%spiralBC) then
+      if((td%iter-1)*td%dt > hm%ep%kick%time .and. gr%der%boundaries%spiralBC) then
         gr%der%boundaries%spiral = .true.
       end if
       hm%hm_base%spin => st%spin
@@ -807,17 +807,17 @@ contains
     ! in order that the code does properly the initialization.
     call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
-    if (freeze_orbitals > 0) then
-      if (from_scratch) then
+    if(freeze_orbitals > 0) then
+      if(from_scratch) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, &
                    freeze_orbitals, family_is_mgga(ks%xc_family))
       else
         call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
-        if (ierr == 0) then
+        if(ierr == 0) then
           call td_load_frozen(restart, space, gr%mesh, st, hm, ierr)
         end if
-        if (ierr /= 0) then
+        if(ierr /= 0) then
           td%iter = 0
           message(1) = "Unable to read frozen restart information."
           call messages_fatal(1, namespace=namespace)
@@ -830,13 +830,13 @@ contains
       call states_elec_freeze_adjust_qtot(st)
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
-    else if (freeze_orbitals < 0) then
+    else if(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
-      if (from_scratch) then
+      if(from_scratch) then
         call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, st%nst-1, family_is_mgga(ks%xc_family))
       else
         call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no", namespace=namespace)
@@ -858,11 +858,11 @@ contains
     !% exchange-correlation potentials from the ground-state electronic configuration.
     !%End
     call parse_variable(namespace, 'TDFreezeHXC', .false., freeze_hxc)
-    if (freeze_hxc) then
+    if(freeze_hxc) then
       write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
       call messages_info(1)
 
-      if (.not. from_scratch) then
+      if(.not. from_scratch) then
 
         call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
         call states_elec_load(restart_frozen, namespace, space, st, gr%mesh, hm%kpoints, ierr, label = ": gs")
@@ -885,7 +885,7 @@ contains
 
     x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
-    if (st%parallel_in_states) then
+    if(st%parallel_in_states) then
       call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
     end if
 #endif
@@ -903,13 +903,13 @@ contains
     !% are not evolved during the time evolution.
     !%End
     call parse_variable(namespace, 'TDFreezeDFTUOccupations', .false., freeze_occ)
-    if (freeze_occ) then
+    if(freeze_occ) then
       write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
       call messages_info(1)
       call lda_u_freeze_occ(hm%lda_u)
 
       !In this case we should reload GS wavefunctions
-      if (hm%lda_u_level /= DFT_U_NONE .and. .not. from_scratch) then
+      if(hm%lda_u_level /= DFT_U_NONE .and. .not. from_scratch) then
         call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         call lda_u_load(restart_frozen, hm%lda_u, st, hm%energy%dft_u, ierr, occ_only = .true.)
         call restart_end(restart_frozen)
@@ -924,13 +924,13 @@ contains
     !% The effective U of LDA+U is not evolved during the time evolution.
     !%End
     call parse_variable(namespace, 'TDFreezeU', .false., freeze_u)
-    if (freeze_u) then
+    if(freeze_u) then
       write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
       call messages_info(1)
       call lda_u_freeze_u(hm%lda_u)
 
       !In this case we should reload GS wavefunctions
-      if (hm%lda_u_level == DFT_U_ACBN0 .and. .not. from_scratch) then
+      if(hm%lda_u_level == DFT_U_ACBN0 .and. .not. from_scratch) then
         call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         call lda_u_load(restart_frozen, hm%lda_u, st, hm%energy%dft_u, ierr, u_only = .true.)
         call restart_end(restart_frozen)
@@ -963,8 +963,8 @@ contains
 
     ! I apply the delta electric field *after* td_write_iter, otherwise the
     ! dipole matrix elements in write_proj are wrong
-    if (abs(hm%ep%kick%time)  <=  M_EPSILON) then
-      if (.not. hm%pcm%localf ) then
+    if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
+      if(.not. hm%pcm%localf ) then
         call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
       else
         call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
@@ -972,7 +972,7 @@ contains
       call td_write_kick(outp, namespace, space, gr%mesh, hm%ep%kick, ions, 0)
 
       !We activate the sprial BC only after the kick
-      if (gr%der%boundaries%spiralBC) then
+      if(gr%der%boundaries%spiralBC) then
         gr%der%boundaries%spiral = .true.
       end if
     end if
@@ -1000,7 +1000,7 @@ contains
     call io_assign(iunit)
     iunit = io_open(io_workpath('td.general/coordinates', namespace), namespace, action='read', status='old')
 
-    if (iunit < 0) then
+    if(iunit < 0) then
       message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates', namespace))//"'."
       message(2) = "Starting simulation from initial geometry."
       call messages_warning(2, namespace=namespace)
@@ -1050,36 +1050,36 @@ contains
 
     ierr = 0
 
-    if (restart_skip(restart)) then
+    if(restart_skip(restart)) then
       POP_SUB(td_dump)
       return
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Writing td restart."
       call messages_info(1)
     end if
 
     ! first write resume file
     call states_elec_dump(restart, space, st, gr%mesh, hm%kpoints, err, iter=iter)
-    if (err /= 0) ierr = ierr + 1
+    if(err /= 0) ierr = ierr + 1
 
     call states_elec_dump_rho(restart, space, st, gr%mesh, ierr, iter=iter)
-    if (err /= 0) ierr = ierr + 1 
+    if(err /= 0) ierr = ierr + 1 
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_dump(restart, hm%lda_u, st, ierr)
-      if (err /= 0) ierr = ierr + 1
+      if(err /= 0) ierr = ierr + 1
     end if
 
     call potential_interpolation_dump(td%tr%vksold, space, restart, gr%mesh, st%d%nspin, err2)
-    if (err2 /= 0) ierr = ierr + 2
+    if(err2 /= 0) ierr = ierr + 2
 
     call pes_dump(td%pesv, namespace, restart, st, gr%mesh, err)
-    if (err /= 0) ierr = ierr + 4
+    if(err /= 0) ierr = ierr + 4
 
     ! Gauge field restart
-    if (gauge_field_is_applied(hm%ep%gfield)) then
+    if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
     end if
 
@@ -1088,11 +1088,11 @@ contains
       if(err /= 0) ierr = ierr + 8
     end if
 
-    if (allocated(st%frozen_rho)) then
+    if(allocated(st%frozen_rho)) then
       call states_elec_dump_frozen(restart, space, st, gr%mesh, ierr)
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Writing td restart done."
       call messages_info(1)
     end if
@@ -1116,38 +1116,38 @@ contains
 
     ierr = 0
 
-    if (restart_skip(restart)) then
+    if(restart_skip(restart)) then
       ierr = -1
       POP_SUB(td_load)
       return
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Reading td restart."
       call messages_info(1)
     end if
 
     ! Read states
     call states_elec_load(restart, namespace, space, st, gr%mesh, hm%kpoints, err, iter=td%iter, label = ": td")
-    if (err /= 0) then
+    if(err /= 0) then
       ierr = ierr + 1
     end if
 
     ! read potential from previous interactions
     call potential_interpolation_load(td%tr%vksold, namespace, space, restart, gr%mesh, st%d%nspin, err2)
 
-    if (err2 /= 0) ierr = ierr + 2
+    if(err2 /= 0) ierr = ierr + 2
 
     ! read PES restart
-    if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
+    if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
       call pes_load(td%pesv, namespace, restart, st, err)
-      if (err /= 0) ierr = ierr + 4
+      if(err /= 0) ierr = ierr + 4
     end if
 
     ! Gauge field restart
-    if (gauge_field_is_applied(hm%ep%gfield)) then
+    if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_load(restart, hm%ep%gfield, err)
-      if (err /= 0) then
+      if(err /= 0) then
         ierr = ierr + 8
       else
         call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time = td%dt*td%iter)
@@ -1161,7 +1161,7 @@ contains
       if(err /= 0) call states_elec_fermi(st, namespace, gr%mesh)
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Reading td restart done."
       call messages_info(1)
     end if
@@ -1182,13 +1182,13 @@ contains
 
     ierr = 0
 
-    if (restart_skip(restart)) then
+    if(restart_skip(restart)) then
       ierr = -1
       POP_SUB(td_load)
       return
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Reading td frozen restart."
       call messages_info(1)
     end if
@@ -1202,7 +1202,7 @@ contains
 
     call states_elec_load_frozen(restart, space, st, mesh, ierr)
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Reading td frozen restart done."
       call messages_info(1)
     end if

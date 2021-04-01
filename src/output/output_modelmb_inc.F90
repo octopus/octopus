@@ -101,7 +101,7 @@ subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
       "  ", mm, st%eigenval(mm,1), st%mmb_proj(mm), trim(youngstring)
 
     symmetries_satisfied = .true.
-    if (st%mmb_proj(mm) < CNST(1.e-6)) then
+    if(st%mmb_proj(mm) < CNST(1.e-6)) then
       symmetries_satisfied = .false.
     end if
 
@@ -123,7 +123,7 @@ subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
   SAFE_DEALLOCATE_A(wf)
 
   if(outp%what(OPTION__OUTPUT__MMB_DEN)) then
-    call modelmb_density_matrix_end (denmat)
+    call modelmb_density_matrix_end(denmat)
   end if
 
   POP_SUB(X(output_modelmb))
