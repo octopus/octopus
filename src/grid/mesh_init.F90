@@ -550,10 +550,6 @@ contains
     integer :: ipg, nn, idir, irank
     integer :: bsize(space%dim), order, default
     integer :: number_of_blocks(space%dim)
-    integer :: point(space%dim)
-    integer(8) :: ii, jj, jl, jb, total_bsize
-    integer(8), allocatable :: reorder_indices(:)
-    integer, allocatable :: global_indices(:)
     type(block_t) :: blk
     type(reorder_arguments_t) :: args
     integer, parameter :: &
@@ -642,67 +638,13 @@ contains
         end if
       end if
 
-      SAFE_ALLOCATE(reorder_indices(1:mesh%np_global))
-      SAFE_ALLOCATE(global_indices(1:mesh%np_global))
       ! compute indices along blocked parallelepiped curve
-      total_bsize = product(int(bsize(1:space%dim), 8))
       number_of_blocks(1:space%dim) = (mesh%idx%nr(2, 1:space%dim) - mesh%idx%nr(1, 1:space%dim) + 1) &
         /bsize(1:space%dim) + 1
-      do ipg = 1, mesh%np_global
-        call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
-        point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
-        ! jl: index in local block
-        ! jb: block index
-        ! jj: total index
-        jl = 0_8
-        jb = 0_8
-        do ii = 1, space%dim
-          jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
-          jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
-        end do
-        jj = jl + jb * total_bsize
-        reorder_indices(ipg) = jj
-      end do
-      call sort(reorder_indices, global_indices)
-
-      do ipg = 1, mesh%np_global
-        reorder_indices(global_indices(ipg)) = mesh%idx%grid_to_hilbert_global(ipg)
-      end do
-      do ipg = 1, mesh%np_global
-        mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg)
-      end do
-      SAFE_DEALLOCATE_A(reorder_indices)
-      SAFE_DEALLOCATE_A(global_indices)
-
-      SAFE_ALLOCATE(reorder_indices(mesh%np_global+1:mesh%np_part_global))
-      SAFE_ALLOCATE(global_indices(mesh%np_global+1:mesh%np_part_global))
-      ! compute indices along blocked parallelepiped curve
-      total_bsize = product(int(bsize(1:space%dim), 8))
-      number_of_blocks(1:space%dim) = (mesh%idx%nr(2, 1:space%dim) - mesh%idx%nr(1, 1:space%dim) + 1) &
-        /bsize(1:space%dim) + 1
-      do ipg = mesh%np_global + 1, mesh%np_part_global
-        call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
-        point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
-        ! jl: index in local block
-        ! jb: block index
-        ! jj: total index
-        jl = 0_8
-        jb = 0_8
-        do ii = 1, space%dim
-          jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
-          jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
-        end do
-        jj = jl + jb * total_bsize
-        reorder_indices(ipg) = jj
-      end do
-      call sort(reorder_indices, global_indices)
-
-      do ipg = mesh%np_global + 1, mesh%np_part_global
-        reorder_indices(global_indices(ipg)+mesh%np_global) = mesh%idx%grid_to_hilbert_global(ipg)
-      end do
-      do ipg = mesh%np_global + 1, mesh%np_part_global
-        mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg)
-      end do
+      ! inner points
+      call reorder_index_range(1, mesh%np_global, bsize, number_of_blocks)
+      ! boundary points
+      call reorder_index_range(mesh%np_global+1, mesh%np_part_global, bsize, number_of_blocks)
 
 
 !      ! do the global reordering in parallel
@@ -759,6 +701,57 @@ contains
 
     POP_SUB(mesh_init_stage_3.reorder_points)
   end subroutine reorder_points
+
+  subroutine reorder_index_range(ipstart, ipend, bsize, number_of_blocks)
+    integer, intent(in) :: ipstart
+    integer, intent(in) :: ipend
+    integer, intent(in) :: bsize(1:space%dim)
+    integer, intent(in) :: number_of_blocks(1:space%dim)
+    integer :: ipg, point(1:space%dim)
+    integer(8), allocatable :: reorder_indices(:)
+    integer, allocatable :: global_indices(:)
+
+    PUSH_SUB(mesh_init_stage_3.reorder_index_range)
+    SAFE_ALLOCATE(reorder_indices(ipstart:ipend))
+    SAFE_ALLOCATE(global_indices(ipstart:ipend))
+    do ipg = ipstart, ipend
+      call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
+      point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
+      reorder_indices(ipg) = get_blocked_index(space, point, bsize, number_of_blocks)
+    end do
+    ! sort according to the new indices
+    call sort(reorder_indices, global_indices)
+    ! reorder according to new order
+    do ipg = ipstart, ipend
+      reorder_indices(global_indices(ipg)+ipstart-1) = mesh%idx%grid_to_hilbert_global(ipg)
+    end do
+    do ipg = ipstart, ipend
+      mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg)
+    end do
+    SAFE_DEALLOCATE_A(reorder_indices)
+    SAFE_DEALLOCATE_A(global_indices)
+    POP_SUB(mesh_init_stage_3.reorder_index_range)
+  end subroutine reorder_index_range
+
+  ! get index along a curve that follows small parallelepipeds
+  ! this corresponds to blocked loops over n-dimensional space
+  integer(8) function get_blocked_index(space, point, bsize, number_of_blocks)
+    type(space_t), intent(in) :: space
+    integer,       intent(in) :: point(1:space%dim)
+    integer,       intent(in) :: bsize(1:space%dim)
+    integer,       intent(in) :: number_of_blocks(1:space%dim)
+    integer(8) :: ii, jj, jl, jb
+    ! jl: index in local block
+    ! jb: block index
+    jl = 0_8
+    jb = 0_8
+    do ii = 1, space%dim
+      jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
+      jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
+    end do
+    ! total index along the curve
+    get_blocked_index = jl + jb * product(int(bsize(1:space%dim), 8))
+  end function get_blocked_index
 
   ! ---------------------------------------------------------
   subroutine do_partition()
