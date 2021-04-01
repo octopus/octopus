@@ -663,10 +663,15 @@ contains
     integer, intent(in) :: bsize(1:space%dim)
     integer, intent(in) :: number_of_blocks(1:space%dim)
     integer :: ipg, point(1:space%dim)
-    integer(8), allocatable :: reorder_indices(:)
-    integer, allocatable :: global_indices(:)
+    integer(8), allocatable :: reorder_indices(:), reorder_recv(:)
+    integer, allocatable :: global_indices(:), global_recv(:)
+    integer(8), allocatable :: index_map(:)
     integer, allocatable :: initial_sizes(:), initial_offsets(:)
     integer :: irank, istart, iend, local_size
+    integer(8) :: indstart, indend, hilbert_size
+
+    integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
+    integer(8), allocatable :: hilbert_cutoff(:)
 
     PUSH_SUB(mesh_init_stage_3.reorder_index_range)
 
@@ -700,14 +705,100 @@ contains
     call sort(reorder_indices, global_indices)
     global_indices = global_indices + istart - 1
 
-    ! redistribute
-    ! k-way merge locally
-    ! reorder locally
+    ! get minimum and maximum
+    indstart = reorder_indices(1)
+    indend = reorder_indices(local_size)
+#ifdef HAVE_MPI
+    call MPI_Allreduce(MPI_IN_PLACE, indstart, 1, &
+      MPI_LONG_LONG, MPI_MIN, mpi_world%comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, indend, 1, &
+      MPI_LONG_LONG, MPI_MAX, mpi_world%comm, mpi_err)
+#endif
+    hilbert_size = indend - indstart + 1
 
+    ! get index ranges for each rank
+    SAFE_ALLOCATE(hilbert_cutoff(0:mpi_world%size-1))
+    do irank = 0, mpi_world%size - 1
+      hilbert_cutoff(irank) = floor(TOFLOAT(hilbert_size) * (irank+1)/mpi_world%size) + indstart
+    end do
+
+    SAFE_ALLOCATE(scounts(0:mpi_world%size-1))
+    SAFE_ALLOCATE(sdispls(0:mpi_world%size-1))
+    SAFE_ALLOCATE(rcounts(0:mpi_world%size-1))
+    SAFE_ALLOCATE(rdispls(0:mpi_world%size-1))
+    ! get send counts
+    scounts = 0
+    irank = 0
+    ! the indices are ordered, so we can go through them and increase
+    ! the rank to which they are associated to when we cross a cutoff
+    do ip = 1, local_size
+      if(reorder_indices(ip) >= hilbert_cutoff(irank)) then
+        irank = irank + 1
+        ASSERT(irank < mpi_world%size)
+      end if
+      scounts(irank) = scounts(irank) + 1
+    end do
+    SAFE_DEALLOCATE_A(hilbert_cutoff)
+    ASSERT(sum(scounts) == local_size)
+
+    ! compute communication pattern (sdispls, rcounts, rdispls)
+    sdispls(0) = 0
+    do irank = 1, mpi_world%size - 1
+      sdispls(irank) = sdispls(irank - 1) + scounts(irank - 1)
+    end do
+
+#ifdef HAVE_MPI
+    call MPI_Alltoall(scounts(0), 1, MPI_INTEGER, &
+         rcounts(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+    rcounts = scounts
+#endif
+
+    rdispls(0) = 0
+    do irank = 1, mpi_world%size - 1
+      rdispls(irank) = rdispls(irank - 1) + rcounts(irank - 1)
+    end do
+
+    ! communicate the locally sorted indices
+    SAFE_ALLOCATE(reorder_recv(1:sum(rcounts)))
+#ifdef HAVE_MPI
+    call MPI_Alltoallv(reorder_indices(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
+         reorder_recv(1), rcounts(0), rdispls(0), MPI_LONG_LONG, mpi_world%comm, mpi_err)
+#else
+    reorder_recv(1:rcounts(0)) = reorder_indices(1:scounts(0))
+#endif
+    SAFE_DEALLOCATE_A(reorder_indices)
+    SAFE_ALLOCATE(reorder_indices(1:sum(rcounts)))
+
+    ! communicate the corresponding global indices
+    SAFE_ALLOCATE(global_recv(1:sum(rcounts)))
+#ifdef HAVE_MPI
+    call MPI_Alltoallv(global_indices(1), scounts(0), sdispls(0), MPI_INTEGER, &
+         global_recv(1), rcounts(0), rdispls(0), MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+    global_recv(1:rcounts(0)) = global_indices(1:scounts(0))
+#endif
+    SAFE_DEALLOCATE_A(global_indices)
+
+    ! do k-way merge of sorted indices
+    SAFE_ALLOCATE(index_map(1:sum(rcounts)))
+    call merge_sorted_arrays(reorder_recv, int(rcounts, 8), reorder_indices, index_map)
 
     ! reorder according to new order
-    do ipg = 1, local_size
-      reorder_indices(ipg) = mesh%idx%grid_to_hilbert_global(global_indices(ipg))
+    do ipg = 1, sum(rcounts)
+      reorder_indices(ipg) = mesh%idx%grid_to_hilbert_global(global_recv(index_map(ipg)))
+    end do
+
+    ! get offsets for allgatherv communication
+    local_size = sum(rcounts)
+#ifdef HAVE_MPI
+    call MPI_Allgather(local_size, 1, MPI_INTEGER, initial_sizes(0), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+    initial_sizes(0) = local_size
+#endif
+    initial_offsets(0) = 0
+    do irank = 1, mpi_world%size
+      initial_offsets(irank) = initial_offsets(irank-1) + initial_sizes(irank-1)
     end do
 
     ! gather the reordered index
@@ -720,20 +811,19 @@ contains
       mesh%idx%grid_to_hilbert_global(ipg) = reorder_indices(ipg-ipstart+1)
     end do
 #endif
-    !do ipg = ipstart, ipend
-    !  call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
-    !  point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
-    !  if(mpi_world%rank == 0) then
-    !    print *, ipg, mesh%idx%grid_to_hilbert_global(ipg), get_blocked_index(space, point, bsize, number_of_blocks)
-    !  end if
-    !end do
-    !call MPI_Barrier(mpi_world%comm, mpi_err)
-    !stop
     SAFE_DEALLOCATE_A(initial_offsets)
     SAFE_DEALLOCATE_A(initial_sizes)
 
     SAFE_DEALLOCATE_A(reorder_indices)
-    SAFE_DEALLOCATE_A(global_indices)
+    SAFE_DEALLOCATE_A(reorder_recv)
+
+    SAFE_DEALLOCATE_A(global_recv)
+    SAFE_DEALLOCATE_A(index_map)
+
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sdispls)
+    SAFE_DEALLOCATE_A(rcounts)
+    SAFE_DEALLOCATE_A(rdispls)
     POP_SUB(mesh_init_stage_3.reorder_index_range)
   end subroutine reorder_index_range
 
