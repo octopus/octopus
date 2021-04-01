@@ -250,10 +250,12 @@ contains
           end if
           if(what_i > 0) then
             what(what_i) = .true.
-            if(what_tag == 'Output') then
-              call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
-              if(.not. any(what_no_how == what_i)) then
-                call parse_variable(namespace, how_tag, 0, how(what_i))
+            call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+            if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+              .or. (what_tag /= 'Output')) then
+              call parse_variable(namespace, how_tag, 0, how(what_i))
+              if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                call messages_input_error(namespace, how_tag)
               end if
             end if
           end if
@@ -272,13 +274,12 @@ contains
           end if
           if(what_i > 0) then 
             what(what_i) = .true.
-            if(what_tag == 'Output') then
-              call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
-              if(.not. any(what_no_how == what_i)) then
-                call parse_block_integer(blk, iout - 1, 1, how(what_i))
-                if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
-                  call messages_input_error(namespace, how_tag)
-                end if
+            call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+            if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+              .or. (what_tag /= 'Output')) then
+              call parse_block_integer(blk, iout - 1, 1, how(what_i))
+              if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                call messages_input_error(namespace, how_tag)
               end if
             end if
           end if
@@ -297,7 +298,8 @@ contains
           end if
           if(what_i > 0) what(what_i) = .true.
           call parse_block_integer(blk, iout - 1, 2, output_interval(what_i))
-          if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
+          if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+            .or. (what_tag /= 'Output')) then
             call parse_block_integer(blk, iout - 1, 4, how(what_i))
             if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
               call messages_input_error(namespace, how_tag)
@@ -313,11 +315,14 @@ contains
       if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
         call messages_input_error(namespace, what_tag)
       end if
-      if(what_i > 0) what(what_i) = .true.
-      if((what_tag == 'Output') .and. (.not. any(what_no_how == what_i))) then
-        call parse_variable(namespace, how_tag, 0, how(what_i))
+      if(what_i > 0) then
+        what(what_i) = .true.
+        call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+        if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+          .or. (what_tag /= 'Output')) then
+          call parse_variable(namespace, how_tag, 0, how(what_i))
+        end if
       end if
-      call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
     endif
 
 
