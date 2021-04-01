@@ -784,7 +784,7 @@ contains
       call io_mkdir(outp%iter_dir, namespace)
     end if
 
-    if(all(outp%how == 0) .and. writ%out(OUT_N_EX)%write) then 
+    if(all(outp%how == 0) .and. writ%out(OUT_N_EX)%write) then
       call io_function_read_what_how_when(namespace, space, outp%what, outp%how, outp%output_interval)
     end if
 
