@@ -37,7 +37,7 @@ LCAOComplexYlms = true
 CalculateSelfInducedMagneticField = yes
 
 %Output 
- matrix_elements | axis_y
+ matrix_elements
  potential | axis_y
 %
 OutputMatrixElements = momentum + ang_momentum
