@@ -66,8 +66,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions, iter)
   ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
 
   ! geometry
-  if(outp%what(OPTION__OUTPUT__GEOMETRY) .and. ((iter == -1 .or. &
-    mod(iter, outp%output_interval(OPTION__OUTPUT__GEOMETRY)) == 0)) &
+  if(outp%what(OPTION__OUTPUT__GEOMETRY) .and. (iter == -1 .or. &
+    mod(iter, outp%output_interval(OPTION__OUTPUT__GEOMETRY)) == 0) &
     .and. bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -84,8 +84,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions, iter)
   end if
 
   ! density
-  if(outp%what(OPTION__OUTPUT__DENSITY) .and. ((iter == -1 .or. &
-  mod(iter, outp%output_interval(OPTION__OUTPUT__DENSITY) == 0))) &
+  if(outp%what(OPTION__OUTPUT__DENSITY) .and. (iter == -1 .or. &
+  mod(iter, outp%output_interval(OPTION__OUTPUT__DENSITY)) == 0) &
   .and. bitand(outp%how(OPTION__OUTPUT__DENSITY), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
@@ -108,8 +108,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions, iter)
   end if
 
   ! wave-functions
-  if(outp%what(OPTION__OUTPUT__WFS) .and. ((iter == -1 .or. &
-  mod(iter, outp%output_interval(OPTION__OUTPUT__WFS) == 0))) &
+  if(outp%what(OPTION__OUTPUT__WFS) .and. (iter == -1 .or. &
+  mod(iter, outp%output_interval(OPTION__OUTPUT__WFS)) == 0) &
   .and. bitand(outp%how(OPTION__OUTPUT__WFS), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if(st%parallel_in_states) &
@@ -143,8 +143,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions, iter)
   end if
 
   ! wave-functions in fourier space
-  if(outp%what(OPTION__OUTPUT__WFS_FOURIER) .and. ((iter == -1 .or. &
-  mod(iter, outp%output_interval(OPTION__OUTPUT__WFS_FOURIER) == 0))) &
+  if(outp%what(OPTION__OUTPUT__WFS_FOURIER) .and. (iter == -1 .or. &
+  mod(iter, outp%output_interval(OPTION__OUTPUT__WFS_FOURIER)) == 0) &
   .and. bitand(outp%how(OPTION__OUTPUT__WFS_FOURIER), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if (st%parallel_in_states) then
