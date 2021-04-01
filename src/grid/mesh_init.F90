@@ -366,15 +366,18 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
 
   ! get send counts
   scounts = 0
-  ip = 1
-  do irank = 0, mpi_world%size - 1
-    do while (boundary_to_hilbert(ip) < hilbert_cutoff(irank))
-      scounts(irank) = scounts(irank) + 1
-      ip = ip + 1
-      if (ip > np_boundary) exit
-    end do
+  irank = 0
+  ! the indices are ordered, so we can go through them and increase
+  ! the rank to which they are associated to when we cross a cutoff
+  do ip = 1, np_boundary
+    if(boundary_to_hilbert(ip) >= hilbert_cutoff(irank)) then
+      irank = irank + 1
+      ASSERT(irank < mpi_world%size)
+    end if
+    scounts(irank) = scounts(irank) + 1
   end do
   SAFE_DEALLOCATE_A(hilbert_cutoff)
+  ASSERT(sum(scounts) == np_boundary)
 
   ! compute communication pattern (sdispls, rcounts, rdispls)
   sdispls(0) = 0
