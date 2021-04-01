@@ -38,7 +38,7 @@ k=1.0
 %
 
 %Output
- mmb_den | plane_z + axis_x
+ mmb_den
  mmb_wfs | plane_z + axis_x
 %
 
