@@ -1502,23 +1502,23 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, kpoints,
 
   np_max = kpoints%reduced%npoints
 
-  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Outpur_KPT with format axis y")
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Outpur_KPT with format axis z")
+  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Output_KPT with format binary") 
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Output_KPT with format axis x")
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Output_KPT with format axis y")
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Output_KPT with format axis z")
   if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
   if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
   if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Outpur_KPT with format dx")
-  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Outpur_KPT with format xcrysden")
-  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Outpur_KPT with format cube")
+  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Output_KPT with format dx")
+  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Output_KPT with format xcrysden")
+  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Output_KPT with format cube")
 
-  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Outpur_KPT with format matlab")
+  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Output_KPT with format matlab")
 
 #if defined(HAVE_NETCDF)
-  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Outpur_KPT with format netcdf")
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Output_KPT with format netcdf")
 #endif
-  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Outpur_KPT with format vtk")
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Output_KPT with format vtk")
 
   POP_SUB(X(io_function_output_global_BZ))
   call profiling_out(write_prof)

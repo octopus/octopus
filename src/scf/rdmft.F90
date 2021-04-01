@@ -128,7 +128,7 @@ contains
       call messages_fatal(2)
     end if
    
-    if (states_are_complex(st)) then
+    if(states_are_complex(st)) then
       call messages_not_implemented("Complex states for RDMFT")
     end if
 
@@ -181,7 +181,7 @@ contains
     !%End
     call parse_variable(namespace, 'RDMBasis',.true., rdm%do_basis)
     
-    if (rdm%do_basis .and. fromScratch) then
+    if(rdm%do_basis .and. fromScratch) then
       call messages_write("RDMFT calculations with RDMBasis = yes cannot be started FromScratch", new_line=.true.)
       call messages_write("Run a calculation for independent particles first")
       call messages_fatal()
@@ -198,7 +198,7 @@ contains
     call parse_variable(namespace, 'RDMHartreeFock',.false., rdm%hf)
 
     rdm%nst = st%nst
-    if (rdm%do_basis) then
+    if(rdm%do_basis) then
       rdm%n_twoint = rdm%nst*(rdm%nst + 1)*(rdm%nst**2 + rdm%nst + 2)/8
       SAFE_ALLOCATE(rdm%eone_int(1:rdm%nst, 1:rdm%nst))
       SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
@@ -224,7 +224,7 @@ contains
     else
       ! initialize eigensolver. 
       call eigensolver_init(rdm%eigens, namespace, gr, st, mc, space)
-      if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
+      if(rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
     SAFE_ALLOCATE(rdm%eone(1:rdm%nst))
@@ -258,7 +258,7 @@ contains
     SAFE_DEALLOCATE_A(rdm%hartree)
     SAFE_DEALLOCATE_A(rdm%exchange)
 
-    if (rdm%do_basis) then
+    if(rdm%do_basis) then
       SAFE_DEALLOCATE_A(rdm%eone_int)
       SAFE_DEALLOCATE_A(rdm%twoint)
       SAFE_DEALLOCATE_A(rdm%i_index)
@@ -299,12 +299,12 @@ contains
 
     PUSH_SUB(scf_rdmft)
 
-    if (hm%d%ispin /= 1) then
+    if(hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
 
     ! problem is about k-points for exchange
-    if (space%is_periodic()) then
+    if(space%is_periodic()) then
       call messages_not_implemented("Periodic system calculations for RDMFT", namespace=namespace)
     end if
 
@@ -321,7 +321,7 @@ contains
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
-    if (.not. rdm%do_basis) then
+    if(.not. rdm%do_basis) then
       maxcount = 1 !still needs to be checked
     else
       maxcount = 50
@@ -346,7 +346,7 @@ contains
       write(message(2),'(a, i4)') 'Iteration:', iter
       call messages_info(2)
       ! occupation number optimization unless we are doing Hartree-Fock
-      if (rdm%hf) then
+      if(rdm%hf) then
         call scf_occ_NO(rdm, namespace, gr, hm, space, st, energy_occ)
       else
         call scf_occ(rdm, namespace, gr, hm, space, st, energy_occ)
@@ -355,21 +355,21 @@ contains
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount 
-        if (rdm%do_basis) then
+        if(rdm%do_basis) then
           call scf_orb(rdm, namespace, gr, st, hm, space, energy)
         else
           call scf_orb_cg(rdm, namespace, space, gr, ions, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
-        if (rdm%do_basis) then
-          if (abs(energy_dif)/abs(energy) < rdm%conv_ener .and. rdm%maxFO < rdm%tolerFO)  exit
-          if (energy_dif < M_ZERO) then 
+        if(rdm%do_basis) then
+          if(abs(energy_dif)/abs(energy) < rdm%conv_ener .and. rdm%maxFO < rdm%tolerFO)  exit
+          if(energy_dif < M_ZERO) then 
             xneg = xneg + 1
           else
             xpos = xpos + 1
           end if
-          if (xneg > CNST(1.5e0)*xpos) then
+          if(xneg > CNST(1.5e0)*xpos) then
             rdm%scale_f = CNST(1.01)*rdm%scale_f
           elseif (xneg < CNST(1.1e0)*xpos) then 
             rdm%scale_f = CNST(0.95)* rdm%scale_f 
@@ -385,23 +385,23 @@ contains
       write(message(2),'(a,1x,es20.10)') 'Rel. energy difference:', rel_ener
       call messages_info(2)
 
-      if (.not. rdm%hf .and. rdm%do_basis) then
+      if(.not. rdm%hf .and. rdm%do_basis) then
         write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
         call messages_info(1)
       end if
 
 
-      if (rdm%do_basis) then
+      if(rdm%do_basis) then
         conv = (rel_ener < rdm%conv_ener) .and. rdm%maxFO < rdm%tolerFO
       else
         conv = rel_ener < rdm%conv_ener
       endif
  
-      if (rdm%toler > CNST(1e-4)) rdm%toler = rdm%toler*CNST(1e-1) !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
+      if(rdm%toler > CNST(1e-4)) rdm%toler = rdm%toler*CNST(1e-1) !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
       ! save restart information
-      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == rdm%max_iter)) then
-        if (rdm%do_basis) then
+      if((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == rdm%max_iter)) then
+        if(rdm%do_basis) then
           call states_elec_copy(states_save, st)
           SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
           SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
@@ -419,7 +419,7 @@ contains
           ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
           call states_elec_dump(restart_dump, space, states_save, gr%mesh, hm%kpoints, ierr, iter=iter) 
 
-          if (conv .or. iter == rdm%max_iter) then
+          if(conv .or. iter == rdm%max_iter) then
             call states_elec_end(st)
             call states_elec_copy(st, states_save)
           end if
@@ -432,14 +432,14 @@ contains
           call states_elec_dump(restart_dump, space, st, gr%mesh, hm%kpoints, ierr, iter=iter) 
           
           ! calculate maxFO for cg-solver 
-          if (.not. rdm%hf) then
+          if(.not. rdm%hf) then
             call calc_maxFO (namespace, hm, st, gr, rdm)
             write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
             call messages_info(1)
           end if 
         endif
 
-        if (ierr /= 0) then
+        if(ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
         end if
@@ -447,7 +447,7 @@ contains
       endif
 
       ! write output for iterations if requested
-      if(any(outp%what /= 0) .and. outp%duringscf) then
+      if(any(outp%what) .and. outp%duringscf) then
         do what_i = 1, size(outp%what)
           if(outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
             write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
@@ -457,7 +457,7 @@ contains
         end do
       end if
 
-      if (conv) exit
+      if(conv) exit
     end do 
 
     if(conv) then 
@@ -498,19 +498,19 @@ contains
 
         call v_ks_write_info(ks, iunit, namespace)
         
-        if (rdm%do_basis) then
+        if(rdm%do_basis) then
           write(iunit, '(a)')'Orbital optimization with [basis set]'
         else
           write(iunit, '(a)')'Orbital optimization with [conjugated gradients]'
         end if
         write(iunit, '(1x)')
         
-        if (rdm%hf) then
+        if(rdm%hf) then
           write(iunit, '(a)')'Hartree Fock calculation'
           write(iunit, '(1x)')
         end if
         
-        if (hm%psolver%is_dressed) then
+        if(hm%psolver%is_dressed) then
           write(iunit, '(a)')'Dressed state calculation'
           call photon_mode_write_info(hm%psolver%photons, iunit)
           write(iunit, '(1x)')
@@ -531,7 +531,7 @@ contains
         iunit = 0
       end if
 
-      if (hm%psolver%is_dressed) then
+      if(hm%psolver%is_dressed) then
         call calc_photon_number(gr, st, hm%psolver%photons, photon_number_state, ekin_state, epot_state)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', hm%psolver%photons%number(1)
@@ -539,7 +539,7 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then
-        if (rdm%max_iter > 0) then
+        if(rdm%max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'maxFO = ', rdm%maxFO
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ener = ', rel_ener
@@ -548,26 +548,26 @@ contains
         ! otherwise, these values are uninitialized, and unknown.
       end if
 
-      if (mpi_grp_is_root(mpi_world)) then
+      if(mpi_grp_is_root(mpi_world)) then
         ! Write header
         write(iunit,'(a)') 'Natural occupation numbers:'
         write(iunit,'(a4,5x,a12)', advance='no') '#st', 'Occupation'
-        if (.not. rdm%do_basis) write(iunit,'(5x,a12)', advance='no') 'conv'
-        if (hm%psolver%is_dressed) write(iunit,'(3(5x,a12))', advance='no') 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+        if(.not. rdm%do_basis) write(iunit,'(5x,a12)', advance='no') 'conv'
+        if(hm%psolver%is_dressed) write(iunit,'(3(5x,a12))', advance='no') 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
         write(iunit,*)
 
         ! Write values
         do ist = 1, st%nst
           write(iunit,'(i4,3x,f14.12)', advance='no') ist, st%occ(ist, 1)
-          if (.not. rdm%do_basis) write(iunit,'(3x,f14.12)', advance='no') rdm%eigens%diff(ist, 1)
-          if (hm%psolver%is_dressed) then
+          if(.not. rdm%do_basis) write(iunit,'(3x,f14.12)', advance='no') rdm%eigens%diff(ist, 1)
+          if(hm%psolver%is_dressed) then
             write(iunit,'(3(3x,f14.12))', advance='no') photon_number_state(ist), ekin_state(ist), epot_state(ist)
           end if
           write(iunit,*)
         end do
       end if
       
-      if (mpi_grp_is_root(mpi_world)) then
+      if(mpi_grp_is_root(mpi_world)) then
         call io_close(iunit)
       end if
       
@@ -809,7 +809,7 @@ contains
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
     do while (sumgi1*sumgi2 > M_ZERO) 
-      if (sumgi2 > M_ZERO) then
+      if(sumgi2 > M_ZERO) then
         mu2 = mu1
         sumgi2 = sumgi1
         mu1 = mu1 - dinterv
@@ -838,7 +838,7 @@ contains
           CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
 
-      if (sumgi1*sumgim < M_ZERO) then
+      if(sumgi1*sumgim < M_ZERO) then
         mu2 = mum
       else
         mu1 = mum
@@ -848,15 +848,15 @@ contains
       ! check occ.num. threshold again after minimization
       do ist = 1, st%nst
         st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        if (st%occ(ist,1) <= thresh_occ ) st%occ(ist,1) = thresh_occ
+        if(st%occ(ist,1) <= thresh_occ ) st%occ(ist,1) = thresh_occ
       end do
 
-      if (abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
+      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
     end do
 
     nullify(rdm_ptr)
 
-    if (icycle >= 50) then
+    if(icycle >= 50) then
       write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
     end if
@@ -915,7 +915,7 @@ contains
     
     do ist = 1, size
       occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-      if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
+      if(occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
     end do
       
     rdm_ptr%occsum = sum(occ(1:size))
@@ -925,7 +925,7 @@ contains
 
     call total_energy_rdm(rdm_ptr, occ, objective, dE_dn)
     do ist = 1, size
-      if (occ(ist) <= thresh_occ ) then
+      if(occ(ist) <= thresh_occ ) then
         df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm_ptr%mu)
       else
         df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm_ptr%mu)
@@ -980,7 +980,7 @@ contains
     call construct_lambda(namespace, hm, st, gr, lambda, rdm)
     
     !Set up fo matrix 
-    if (rdm%iter==1) then
+    if(rdm%iter==1) then
       do ist = 1, st%nst
         do jst = 1, ist
           fo(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
@@ -1102,7 +1102,7 @@ contains
     lambda = M_ZERO
 
     !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
-    if (.not. rdm%do_basis) then
+    if(.not. rdm%do_basis) then
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(hpsi1(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part ,1:st%d%dim))
@@ -1118,7 +1118,7 @@ contains
           lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi1(:,1), hpsi(:,1))
           
           ! calculate <phi_i|H|phi_j>=lam_ij
-          if (.not. iorb == jorb ) then
+          if(.not. iorb == jorb ) then
             call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi1, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
@@ -1163,7 +1163,7 @@ contains
     end if
 
 
-    if (.not. rdm%do_basis) then
+    if(.not. rdm%do_basis) then
       SAFE_DEALLOCATE_A(hpsi)
       SAFE_DEALLOCATE_A(hpsi1)
       SAFE_DEALLOCATE_A(dpsi)
@@ -1239,7 +1239,7 @@ contains
 
 
     !Calculate the energy derivative with respect to the occupation numbers
-    if (present(dE_dn)) then
+    if(present(dE_dn)) then
       dE_dn(:) = rdm%eone(:) + V_h(:) + V_x(:)
     end if
 
@@ -1279,7 +1279,7 @@ contains
 
     nspin_ = min(st%d%nspin, 2)
    
-    if (rdm%do_basis.eqv..false.) then 
+    if(rdm%do_basis.eqv..false.) then 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(rho1(1:gr%mesh%np))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
@@ -1479,26 +1479,26 @@ contains
 
         !the Hartree terms
         rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + dm(kst, lst, iorb)*wkl*two_int
-        if (inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + dm(ist, jst, iorb)*wij*two_int
+        if(inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + dm(ist, jst, iorb)*wij*two_int
 
         !the exchange terms
         !weights are only included if they can differ from one
         rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*dm(jst, lst, iorb)*wik
-        if (kst /= lst) then 
+        if(kst /= lst) then 
           rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*dm(jst, kst, iorb)*wil
         end if
-        if (ist /= jst) then
+        if(ist /= jst) then
           if(jst >= kst) then
             rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*dm(ist, lst, iorb)*wjk
           else
-            if (inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*dm(ist, lst, iorb)
+            if(inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*dm(ist, lst, iorb)
           end if
         end if
-        if (ist /=jst .and. kst /= lst) then
-          if (jst >= lst) then
+        if(ist /=jst .and. kst /= lst) then
+          if(jst >= lst) then
             rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int*dm(ist, kst, iorb)*wjl
           else
-            if (inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*dm(ist, kst, iorb)
+            if(inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*dm(ist, kst, iorb)
           end if
         end if
 

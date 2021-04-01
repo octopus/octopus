@@ -862,7 +862,7 @@ contains
         exit
       end if
 
-      if(any(outp%what /=0) .and. (outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf &
+      if(any(outp%what) .and. (outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf &
         .and. gs_run_) then
           do what_i = 1, size(outp%what) 
             if (outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then

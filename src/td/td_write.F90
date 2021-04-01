@@ -212,6 +212,7 @@ contains
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     logical :: output_options(MAX_OUTPUT_TYPES)
     integer :: output_interval(MAX_OUTPUT_TYPES)
+    integer(8) :: how(MAX_OUTPUT_TYPES)
     type(simul_box_t) :: sb !MFT: Do we need this?
     type(block_t) :: blk
     character(len=MAX_PATH_LEN) :: filename
@@ -344,7 +345,7 @@ contains
     if(hm%ext_lasers%no_lasers > 0) output_options(OUT_LASER) = .true.
     if(kick%qkick_mode /= QKICKMODE_NONE) output_options(OUT_FTCHD) = .true.
 
-    call io_function_read_what_how_when(sb, namespace, output_options, outp%how, output_interval, &
+    call io_function_read_what_how_when(sb, namespace, output_options, how, output_interval, &
     'TDOutput')
 
     do iout = 1, OUT_MAX
@@ -362,7 +363,7 @@ contains
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
     !See comment in zstates_elec_mpdotp
-    if (space%is_periodic() .and. writ%out(OUT_POPULATIONS)%write) then
+    if(space%is_periodic() .and. writ%out(OUT_POPULATIONS)%write) then
       call messages_not_implemented("TDOutput populations for periodic systems", namespace=namespace)
     end if
 
@@ -375,7 +376,7 @@ contains
       end if
     end if
     
-    if ((writ%out(OUT_SEPARATE_FORCES)%write .or. writ%out(OUT_COORDS)%write) .and. space%periodic_dim == 1) then
+    if((writ%out(OUT_SEPARATE_FORCES)%write .or. writ%out(OUT_COORDS)%write) .and. space%periodic_dim == 1) then
       call messages_input_error(namespace, 'TDOutput', &
         'Forces for systems periodic in 1D are not currently implemented and options that output the forces are not allowed.')
     end if
@@ -407,7 +408,7 @@ contains
     !% during a time-dependent simulation. Must be non-negative.
     !%End
     call parse_variable(namespace, 'TDMultipoleLmax', 1, writ%lmax)
-    if (writ%lmax < 0) then
+    if(writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
       call messages_fatal(2, namespace=namespace)
@@ -582,7 +583,7 @@ contains
     end if
 
 
-    if (iter == 0) then
+    if(iter == 0) then
       first = 0
     else
       first = iter + 1
@@ -603,7 +604,7 @@ contains
 
       SAFE_ALLOCATE(writ%out(OUT_MULTIPOLES)%mult_handles(st%st_start:st%st_end))
       
-      if (mpi_grp_is_root(writ%out(OUT_MULTIPOLES)%mpi_grp)) then
+      if(mpi_grp_is_root(writ%out(OUT_MULTIPOLES)%mpi_grp)) then
         do ist = st%st_start, st%st_end
           write(filename, '(a,i4.4)') 'td.general/multipoles-ist', ist
           call write_iter_init(writ%out(OUT_MULTIPOLES)%mult_handles(ist), &
@@ -840,7 +841,7 @@ contains
     do iout = 1, OUT_MAX
       if(iout == OUT_LASER) cycle      
       if(writ%out(iout)%write) then  
-        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+        if(mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
           if(writ%out(iout)%resolve_states) then
             do ist = writ%out(iout)%hand_start, writ%out(iout)%hand_end
               call write_iter_end(writ%out(iout)%mult_handles(ist))
@@ -896,114 +897,114 @@ contains
     call profiling_in(prof, "TD_WRITE_ITER")
 
 
-    if (writ%out(OUT_MULTIPOLES)%write) then
+    if(writ%out(OUT_MULTIPOLES)%write) then
       call td_write_multipole(writ%out(OUT_MULTIPOLES), gr, ions, st, writ%lmax, kick, iter)
     end if
 
-    if (writ%out(OUT_FTCHD)%write) then
+    if(writ%out(OUT_FTCHD)%write) then
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
     end if
 
-    if (writ%out(OUT_ANGULAR)%write) then
+    if(writ%out(OUT_ANGULAR)%write) then
       call td_write_angular(writ%out(OUT_ANGULAR)%handle, namespace, gr, ions, hm, st, kick, iter)
     end if
 
-    if (writ%out(OUT_SPIN)%write) then
+    if(writ%out(OUT_SPIN)%write) then
       call td_write_spin(writ%out(OUT_SPIN)%handle, gr, st, iter)
     end if
 
-    if (writ%out(OUT_MAGNETS)%write) then
+    if(writ%out(OUT_MAGNETS)%write) then
       call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, ions, writ%lmm_r, iter)
     end if
 
-    if (writ%out(OUT_TOT_M)%write) then
+    if(writ%out(OUT_TOT_M)%write) then
       call td_write_tot_mag(writ%out(OUT_TOT_M)%handle, gr, st, kick, iter)
     end if
 
     if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%compute_interval) == 0) then
-      if (mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
+      if(mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
       call td_write_proj(writ%out(OUT_PROJ)%handle, space, gr, ions, st, writ%gs_st, kick, iter)
     end if
 
-    if (writ%out(OUT_FLOQUET)%write) then
+    if(writ%out(OUT_FLOQUET)%write) then
       call td_write_floquet(namespace, space, hm, gr, st, iter)
     end if
 
-    if (writ%out(OUT_KP_PROJ)%write) then
+    if(writ%out(OUT_KP_PROJ)%write) then
       call td_write_proj_kp(gr, hm%kpoints, st, writ%gs_st, namespace, iter)
     end if
 
-    if (writ%out(OUT_COORDS)%write) then
+    if(writ%out(OUT_COORDS)%write) then
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, ions, iter)
     end if
 
-    if (writ%out(OUT_SEPARATE_COORDS)%write) then
+    if(writ%out(OUT_SEPARATE_COORDS)%write) then
       call td_write_sep_coordinates(writ%out(OUT_SEPARATE_COORDS)%handle, ions, iter,1)
     end if
 
-    if (writ%out(OUT_SEPARATE_VELOCITY)%write) then
+    if(writ%out(OUT_SEPARATE_VELOCITY)%write) then
       call td_write_sep_coordinates(writ%out(OUT_SEPARATE_VELOCITY)%handle, ions, iter,2)
     end if
 
-    if (writ%out(OUT_SEPARATE_FORCES)%write) then
+    if(writ%out(OUT_SEPARATE_FORCES)%write) then
       call td_write_sep_coordinates(writ%out(OUT_SEPARATE_FORCES)%handle, ions, iter,3)
     end if
 
-    if (writ%out(OUT_TEMPERATURE)%write) then
+    if(writ%out(OUT_TEMPERATURE)%write) then
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, ions, iter)
     end if
 
-    if (writ%out(OUT_POPULATIONS)%write) then
+    if(writ%out(OUT_POPULATIONS)%write) then
       call td_write_populations(writ%out(OUT_POPULATIONS)%handle, namespace, space, gr%mesh, st, writ, dt, iter)
     end if
 
-    if (writ%out(OUT_ACC)%write) then
+    if(writ%out(OUT_ACC)%write) then
       call td_write_acc(writ%out(OUT_ACC)%handle, namespace, space, gr, ions, st, hm, dt, iter)
     end if
       
-    if (writ%out(OUT_VEL)%write) then
+    if(writ%out(OUT_VEL)%write) then
       call td_write_vel(writ%out(OUT_VEL)%handle, space, gr%der, st, hm%kpoints, iter)
     end if
 
     ! td_write_laser no longer called here, because the whole laser is printed
     ! out at the beginning.
 
-    if (writ%out(OUT_ENERGY)%write) then
+    if(writ%out(OUT_ENERGY)%write) then
       call td_write_energy(writ%out(OUT_ENERGY)%handle, hm, iter, ions%kinetic_energy)
     end if
 
-    if (writ%out(OUT_GAUGE_FIELD)%write) then
+    if(writ%out(OUT_GAUGE_FIELD)%write) then
       call gauge_field_output_write(hm%ep%gfield, writ%out(OUT_GAUGE_FIELD)%handle, iter)
     end if
 
-    if (writ%out(OUT_EIGS)%write) then
+    if(writ%out(OUT_EIGS)%write) then
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
     end if
 
-    if (writ%out(OUT_ION_CH)%write) then
+    if(writ%out(OUT_ION_CH)%write) then
       call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter)
     end if
 
-    if (writ%out(OUT_TOTAL_CURRENT)%write) then
+    if(writ%out(OUT_TOTAL_CURRENT)%write) then
       call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
     end if
     
-    if (writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
+    if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, space, hm, gr, st, iter)
     end if
     
-    if (writ%out(OUT_PARTIAL_CHARGES)%write) then
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
       call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, gr%mesh, st, &
         ions, iter)
     end if
     
-    if (writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
-      if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
+    if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
+      if(mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
       call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, namespace, gr, hm%kpoints, st, writ%gs_st, iter)
     end if
 
     !LDA+U outputs
-    if (writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) then
+    if(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) then
       call td_write_effective_u(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%handle, hm%lda_u, iter)
     end if
 
@@ -1025,8 +1026,8 @@ contains
     do iout = 1, OUT_MAX
       if(iout == OUT_LASER) cycle
       if(writ%out(iout)%write)  then
-        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
-          if (writ%out(iout)%resolve_states) then
+        if(mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+          if(writ%out(iout)%resolve_states) then
             do ii = writ%out(iout)%hand_start, writ%out(iout)%hand_end
               call write_iter_flush(writ%out(iout)%mult_handles(ii))
             end do
@@ -1104,7 +1105,7 @@ contains
 
         !second line -> columns name
         call write_iter_header_start(out_spin)
-        if (st%d%ispin == SPINORS) then
+        if(st%d%ispin == SPINORS) then
           write(aux, '(a2,18x)') 'Sx'
           call write_iter_header(out_spin, aux)
           write(aux, '(a2,18x)') 'Sy'
@@ -1159,7 +1160,7 @@ contains
         !second line -> columns name
         call write_iter_header_start(out_magnets)
         do ia = 1, ions%natoms
-          if (st%d%ispin == SPINORS) then
+          if(st%d%ispin == SPINORS) then
             write(aux, '(a2,i2.2,16x)') 'mx', ia
             call write_iter_header(out_magnets, aux)
             write(aux, '(a2,i2.2,16x)') 'my', ia
@@ -1337,7 +1338,7 @@ contains
     PUSH_SUB(td_write_multipole)
     
     
-    if (out_multip%resolve_states) then
+    if(out_multip%resolve_states) then
       SAFE_ALLOCATE(rho(1:gr%mesh%np_part, 1:st%d%nspin))
       rho(:,:)     = M_ZERO
 
@@ -1384,7 +1385,7 @@ contains
     ASSERT(.not. (lmax > 1 .and. gr%sb%dim > 3))
 
     mpi_grp_ = mpi_world 
-    if (present(mpi_grp)) mpi_grp_ = mpi_grp
+    if(present(mpi_grp)) mpi_grp_ = mpi_grp
 
     if(mpi_grp_is_root(mpi_grp_).and.iter == 0) then
       call td_write_print_header_init(out_multip)
@@ -1403,7 +1404,7 @@ contains
 
       do is = 1, st%d%nspin
         write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip, aux)
-        if (lmax > 0) then
+        if(lmax > 0) then
           do idir = 1, gr%sb%dim
             write(aux, '(4a1,i1,a1)') '<', index2axis(idir), '>', '(', is,')'
             call write_iter_header(out_multip, aux)
@@ -1424,7 +1425,7 @@ contains
 
       do is = 1, st%d%nspin
         call write_iter_header(out_multip, 'Electrons')
-        if (lmax > 0) then
+        if(lmax > 0) then
           do idir = 1, gr%sb%dim
             call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%length)) // ']')
           end do
@@ -1441,7 +1442,7 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    if (gr%sb%dim > 3 .and. lmax == 1) then
+    if(gr%sb%dim > 3 .and. lmax == 1) then
       ! For higher dimensions we can only have up to the dipole
       SAFE_ALLOCATE(multipole(1:gr%sb%dim+1, 1:st%d%nspin))
     else
@@ -1453,7 +1454,7 @@ contains
       call dmf_multipoles(gr%mesh, rho(:,is), lmax, multipole(:,is))
     end do
 
-    if (lmax > 0) then
+    if(lmax > 0) then
       ionic_dipole = ions%dipole()
       do is = 1, st%d%nspin
         multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
@@ -1464,7 +1465,7 @@ contains
       call write_iter_start(out_multip)
       do is = 1, st%d%nspin
         call write_iter_double(out_multip, units_from_atomic(units_out%length**0, multipole(1, is)), 1)
-        if (lmax > 0) then
+        if(lmax > 0) then
           do idir = 1, gr%sb%dim
             call write_iter_double(out_multip, units_from_atomic(units_out%length, multipole(1+idir, is)), 1)
           end do
@@ -2094,12 +2095,12 @@ contains
       call write_iter_header(out_energy, 'Exchange')
       call write_iter_header(out_energy, 'Correlation')
 
-      if (hm%pcm%run_pcm) then 
+      if(hm%pcm%run_pcm) then 
           call write_iter_header(out_energy, 'E_M-solvent')
           n_columns = n_columns + 1    
       end if   
 
-      if (hm%lda_u_level /= DFT_U_NONE) then
+      if(hm%lda_u_level /= DFT_U_NONE) then
           call write_iter_header(out_energy, 'Hubbard')
           n_columns = n_columns + 1
       end if
@@ -2132,7 +2133,7 @@ contains
     call write_iter_double(out_energy, units_from_atomic(units_out%energy, hm%energy%correlation), 1)
     
     !adding the molecule-solvent electrostatic interaction
-    if (hm%pcm%run_pcm) call write_iter_double(out_energy, &
+    if(hm%pcm%run_pcm) call write_iter_double(out_energy, &
                              units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
                                                                  hm%energy%int_nn_pcm + hm%energy%int_ne_pcm), 1)
 
@@ -2232,7 +2233,7 @@ contains
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         do idim = 1, st%d%dim        
-          if (st%st_start <= ist .and. ist <= st%st_end .and. &
+          if(st%st_start <= ist .and. ist <= st%st_end .and. &
               st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
             occ(ii) = st%occ(ist, ik)
           end if
@@ -2492,7 +2493,7 @@ contains
 
     CMPLX, allocatable :: projections(:,:)
     character(len=80) :: aux, dir
-    integer :: ik, ikpt, ist, uist, err
+    integer :: ik, ikpt, ist, uist, err, output_i
     FLOAT :: Nex, weight
     integer :: gs_nst
     FLOAT, allocatable :: Nex_kpt(:)
@@ -2577,8 +2578,12 @@ contains
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
   ! MFT: TODO: which how should be passed here?
-  call io_function_output_global_BZ(0_8, dir, "n_excited_el_kpt", namespace, &
-    kpoints, Nex_kpt, unit_one, err) 
+  do output_i = 1, size(outp%how)
+    if(outp%how(output_i) /= 0) then
+      call io_function_output_global_BZ(0_8, dir, "n_excited_el_kpt", namespace, &
+        kpoints, Nex_kpt, unit_one, err) 
+    end if
+  end do
  
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(Nex_kpt)
@@ -3344,14 +3349,14 @@ contains
       writ%out(iout)%write = out_flag(iout)
     end do
     do iout = 4, 5
-      if (iout == 4) then
-        if (out_flag(4)) then
+      if(iout == 4) then
+        if(out_flag(4)) then
           do idim=1, 3
             writ%out(4-1+idim)%write = .true.
           end do
         end if
-      else if (iout == 5) then
-        if (out_flag(5)) then
+      else if(iout == 5) then
+        if(out_flag(5)) then
           do idim=1, 3
             writ%out(5-1+idim)%write = .true.
           end do
@@ -3359,7 +3364,7 @@ contains
       end if
     end do
 
-    if (iter == 0) then
+    if(iter == 0) then
       first = 0
     else
       first = iter + 1
@@ -3367,47 +3372,47 @@ contains
 
     call io_mkdir('td.general', namespace)
 
-    if (writ%out(OUT_MAXWELL_ENERGY)%write) then
+    if(writ%out(OUT_MAXWELL_ENERGY)%write) then
        call write_iter_init(writ%out(OUT_MAXWELL_ENERGY)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/maxwell_energy", namespace)))
     end if
 
-    if (writ%out(OUT_MAXWELL_FIELDS)%write) then
+    if(writ%out(OUT_MAXWELL_FIELDS)%write) then
        call write_iter_init(writ%out(OUT_MAXWELL_FIELDS)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/fields", namespace)))
     end if
 
-    if (writ%out(OUT_MEAN_POYNTING)%write) then
+    if(writ%out(OUT_MEAN_POYNTING)%write) then
        call write_iter_init(writ%out(OUT_MEAN_POYNTING)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/mean_poynting_vector", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_X)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_X)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-x", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-y", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-z", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_X)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_X)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-x", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-y", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-z", namespace)))
     end if
@@ -3450,7 +3455,7 @@ contains
     call profiling_in(prof, "TD_WRITE_ITER_MAXWELL")
 
     if(writ%out(OUT_MAXWELL_ENERGY)%write) then
-!      if (present(hm_elec)) then
+!      if(present(hm_elec)) then
 !        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter, &
 !                                             hm, ions%kinetic_energy)
 !      else
@@ -3458,35 +3463,35 @@ contains
 !      end if
     end if
 
-    if (writ%out(OUT_MAXWELL_FIELDS)%write) then
+    if(writ%out(OUT_MAXWELL_FIELDS)%write) then
       call td_write_fields(writ%out(OUT_MAXWELL_FIELDS)%handle, st, gr, iter, dt)
     end if
 
-    if (writ%out(OUT_MEAN_POYNTING)%write) then
+    if(writ%out(OUT_MEAN_POYNTING)%write) then
       call td_write_poynting_vector(writ%out(OUT_MEAN_POYNTING)%handle, st, gr, iter, dt, hm%plane_waves)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_X)%write) then
       call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
       call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
+    if(writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
       call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_X)%write) then
       call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
       call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
+    if(writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
       call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
@@ -3517,27 +3522,27 @@ contains
 
     pml_check = any(hm%bc%bc_ab_type(1:3) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Writing td_maxwell restart."
       call messages_info(1)
     end if
 
-    if (bc_plane_waves) then
+    if(bc_plane_waves) then
       zff_dim = 2 * st%dim
     else
       zff_dim = 1 * st%dim
     end if
-    if (pml_check) then
+    if(pml_check) then
       zff_dim = zff_dim + 18
     end if
 
     SAFE_ALLOCATE(zff(1:mesh%np,1:zff_dim))
     zff = M_z0
 
-    if (bc_plane_waves) then
+    if(bc_plane_waves) then
       zff(1:mesh%np, 1:st%dim)   = st%rs_state(1:mesh%np, 1:st%dim)
       zff(1:mesh%np, st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:mesh%np, 1:st%dim)
-      if (pml_check) then
+      if(pml_check) then
         id = 0
         do id1 = 1, 3
           do id2 = 1, 3
@@ -3551,7 +3556,7 @@ contains
        end if
     else
       zff(1:mesh%np, 1:st%dim) = st%rs_state(1:mesh%np, 1:st%dim)
-      if (pml_check) then
+      if(pml_check) then
         id = 0
         do id1 = 1, 3
           do id2 = 1, 3
@@ -3566,9 +3571,9 @@ contains
     end if
 
     call states_mxll_dump(restart, st, space, mesh, zff, zff_dim, err, iter)
-    if (err /= 0) ierr = ierr + 1
+    if(err /= 0) ierr = ierr + 1
 
-    if (debug%info) then
+    if(debug%info) then
       message(1) = "Debug: Writing td_maxwell restart done."
       call messages_info(1)
     end if
@@ -3823,7 +3828,7 @@ contains
     call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, dtmp, ep_field=st%ep, mu_field=st%mu, &
       mean_value=field)
 
-    if (plane_wave_flag) then
+    if(plane_wave_flag) then
       call get_poynting_vector_plane_waves(gr, st, st%rs_sign, dtmp, mean_value=field)
     end if
 
@@ -3843,7 +3848,7 @@ contains
         write(aux, '(a,i1,a)') 'poynting (', idir, ')'
         call write_iter_header(out_poynting, aux)
       end do
-      if (plane_wave_flag) then
+      if(plane_wave_flag) then
         do idir = 1, gr%sb%dim
           write(aux, '(a,i1,a)') 'poynting pl. w.(', idir, ')'
           call write_iter_header(out_poynting, aux)
@@ -3869,7 +3874,7 @@ contains
     call write_iter_double(out_poynting, field, gr%sb%dim)
 
     ! Output of mean poynting vector plane wave
-    if (plane_wave_flag) then
+    if(plane_wave_flag) then
       field_2 = units_from_atomic(unit_one/units_out%length**2, field_2)
       call write_iter_double(out_poynting, field_2, gr%sb%dim)
     end if

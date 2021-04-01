@@ -65,8 +65,9 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
-      call io_function_output_vector(outp%how(OPTION__OUTPUT__POL_DENSITY), dir, fname, namespace, space, &
-        gr%mesh, polarization, fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+      call io_function_output_vector(outp%how(OPTION__OUTPUT__POL_DENSITY),&
+        dir, fname, namespace, space, gr%mesh, polarization, fn_unit, ierr, &
+        ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(polarization)

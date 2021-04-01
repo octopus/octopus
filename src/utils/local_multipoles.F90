@@ -694,8 +694,8 @@ contains
     call messages_info(1)
 
     ! If we have Bader domains, then we need to get the basins
-    if (any(loc_domains(:)%dshape == BADER)) then
-      if (mesh%parallel_in_domains) then
+    if(any(loc_domains(:)%dshape == BADER)) then
+      if(mesh%parallel_in_domains) then
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'
         call messages_fatal(1)
       end if
@@ -715,11 +715,11 @@ contains
       call local_ions_mask(loc_domains(id)%mesh_mask, ions, mesh, loc_domains(id)%ions_mask)
     end do
 
-    if (any(loc_domains(:)%dshape == BADER)) then
+    if(any(loc_domains(:)%dshape == BADER)) then
       call basins_end(basins)
     end if
 
-    if (debug%info) then
+    if(debug%info) then
       call parse_variable(namespace, 'LDOutputFormat', 0, how)
       if (.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
         call messages_input_error(namespace, 'LDOutputFormat')

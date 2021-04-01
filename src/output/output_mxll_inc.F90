@@ -109,7 +109,7 @@
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'MaxwellOutputIterDir', "output_iter", outp%iter_dir)
-    if(any(outp%what /= 0) .and. maxval(outp%output_interval) > 0) then
+    if(any(outp%what) .and. maxval(outp%output_interval) > 0) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
@@ -169,7 +169,7 @@
 
     PUSH_SUB(output_mxll)
 
-    if(any(outp%what /= 0)) then
+    if(any(outp%what)) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)

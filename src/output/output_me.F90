@@ -86,7 +86,7 @@ contains
     type(states_elec_t), intent(in)  :: st
     integer,             intent(in)  :: nst
 
-    integer(8) ::  how(MAX_OUTPUT_TYPES)
+    integer(8) :: how(MAX_OUTPUT_TYPES)
     integer :: output_interval(MAX_OUTPUT_TYPES)
 
     PUSH_SUB(output_me_init)

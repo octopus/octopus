@@ -665,7 +665,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if((maxval(outp%what) > 0) .or. outp%whatBZ + outp%what_lda_u /= 0) then
+    if(any(outp%what) .or. outp%whatBZ + outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
