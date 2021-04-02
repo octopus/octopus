@@ -165,7 +165,7 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how, what_no_how_u
+    integer :: what_no_how_u
 
     PUSH_SUB(output_init)
 
