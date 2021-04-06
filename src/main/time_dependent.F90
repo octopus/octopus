@@ -67,7 +67,7 @@ contains
     PUSH_SUB(time_dependent_run_multisystem)
 
     if ( debug%propagation_graph ) then
-      call multisystem_debug_init("debug/propagation.txt", global_namespace)
+      call multisystem_debug_init("debug/propagation.txt", global_namespace, systems%grp)
     end if
 
     call messages_write('Info: Running Multi-System time evolution')

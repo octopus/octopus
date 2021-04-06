@@ -93,8 +93,9 @@ module multisystem_debug_oct_m
 
   !-------------------------------------------------------------------
 
-  integer iunit
   type(event_handle_t) :: event_handle_root
+  type(mpi_grp_t)      :: mpi_grp
+  integer iunit
   integer event_ID
   logical log_active
 
@@ -147,14 +148,19 @@ contains
 
   !-------------------------------------------------------------------
 
-  subroutine multisystem_debug_init(filename, namespace)
-    character(*), intent(in)           :: filename
+  subroutine multisystem_debug_init(filename, namespace, group)
+    character(*),      intent(in)      :: filename
     type(namespace_t), intent(in)      :: namespace
+    type(mpi_grp_t),   intent(in)      :: group
 
     PUSH_SUB(multisystem_debug_init)
 
+    mpi_grp = group
+
     event_ID = 0
-    iunit = io_open(filename, namespace, action="write", status="unknown" )
+    if(mpi_grp%rank == 0) then
+      iunit = io_open(filename, namespace, action="write", status="unknown" )
+    end if
     log_active = .false.
 
     POP_SUB(multisystem_debug_init) 
@@ -164,7 +170,9 @@ contains
   subroutine multisystem_debug_end()
 
     PUSH_SUB(multisystem_debug_end)
-    call io_close(iunit)
+    if(mpi_grp%rank == 0) then
+      call io_close(iunit)
+    end if
     POP_SUB(multisystem_debug_end)
 
   end subroutine multisystem_debug_end
@@ -202,7 +210,7 @@ contains
 
     PUSH_SUB(multisystem_debug_write_event_in)
 
-    if(log_active) then
+    if( (mpi_grp%rank == 0) .and. log_active) then
 
       if(present(system)) then
         system_name = '.'//trim(system%namespace%get())
