@@ -93,8 +93,7 @@ module multisystem_debug_oct_m
 
   !-------------------------------------------------------------------
 
-  type(event_handle_t) :: event_handle_root
-  type(mpi_grp_t)      :: mpi_grp
+  type(mpi_grp_t) :: mpi_grp
   integer iunit
   integer event_ID
   logical log_active
