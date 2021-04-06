@@ -88,6 +88,7 @@ module par_vec_oct_m
   use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
+  use sort_oct_m
   use space_oct_m
   use stencil_oct_m
   use types_oct_m
@@ -163,14 +164,6 @@ module par_vec_oct_m
     integer                 :: np_ghost             !< number of local ghost points
     integer, allocatable, private :: ghost(:)             !< Global indices of ghost points, np_ghost elements
   end type pv_t
-
-  ! derived type for the callback in the blocked loop doing the mesh reordering
-  type :: local_reorder_arguments_t
-    integer, allocatable :: reordered(:)
-    integer :: ip
-    type(pv_t), pointer :: vp
-    type(index_t), pointer :: idx
-  end type local_reorder_arguments_t
 
   interface vec_scatter
     module procedure dvec_scatter
@@ -450,9 +443,10 @@ contains
 
   contains
     subroutine reorder_points()
-      integer :: ip, nn
-      integer :: bsize(space%dim), order
-      type(local_reorder_arguments_t) :: args
+      integer :: ip, nn, ipg
+      integer :: bsize(space%dim), order, point(space%dim), number_of_blocks(space%dim)
+      integer(8), allocatable :: reorder_indices(:)
+      integer, allocatable :: global_indices(:), reordered(:)
       type(block_t) :: blk
       integer, parameter :: &
         ORDER_BLOCKS     =  1, &
@@ -523,7 +517,7 @@ contains
           if(parse_block(namespace, 'MeshLocalBlockSize', blk) == 0) then
             nn = parse_block_cols(blk, 0)
             if (nn /= space%dim) then
-              message(1) = "Error: number of entries in MeshBlockSize must match the  umber of dimensions."
+              message(1) = "Error: number of entries in MeshLocalBlockSize must match the  umber of dimensions."
               call messages_fatal(1)
             end if
             do idir = 1, nn
@@ -532,23 +526,35 @@ contains
           end if
         end if
 
-        args%vp => vp
-        args%idx => idx
-        SAFE_ALLOCATE(args%reordered(vp%xlocal:vp%xlocal + vp%np_local - 1))
-        args%reordered = 0
-        args%ip = vp%xlocal
-        ! here is the reordering loop: a blocked loop over space%dim dimensions
-        call blocked_loop(space%dim, idx%nr(1, :)+idx%enlarge(:), idx%nr(2, :)-idx%enlarge(:), &
-          bsize, reorder_add_index, args)
-        nullify(args%vp)
-        nullify(args%idx)
-        ! make sure the number of points is correct
-        ASSERT(args%ip == vp%xlocal + vp%np_local)
-        ! assign the reordered points
-        do ip = vp%xlocal, vp%xlocal + vp%np_local - 1
-          vp%local(ip) = args%reordered(ip)
+        !number_of_blocks(1:space%dim) = (idx%nr(2, 1:space%dim) - idx%nr(1, 1:space%dim) + 1) &
+        !  /bsize(1:space%dim) + 1
+        number_of_blocks(1:space%dim) = idx%ll(1:space%dim)/bsize(1:space%dim) + 1
+
+        ! compute new indices locally
+        SAFE_ALLOCATE(reorder_indices(1:vp%np_local))
+        SAFE_ALLOCATE(global_indices(1:vp%np_local))
+        do ip = 1, vp%np_local
+          ipg = vp%local(ip + vp%xlocal - 1)
+          call index_hilbert_to_point(idx, space%dim, idx%grid_to_hilbert_global(ipg), point)
+          point(1:space%dim) = point(1:space%dim) + idx%offset(1:space%dim) + idx%enlarge(1:space%dim)
+          reorder_indices(ip) = get_blocked_index(space%dim, point, bsize, number_of_blocks)
         end do
-        SAFE_DEALLOCATE_A(args%reordered)
+        ! sort the local array
+        call sort(reorder_indices, global_indices)
+        SAFE_DEALLOCATE_A(reorder_indices)
+
+        ! reorder according to new order
+        SAFE_ALLOCATE(reordered(1:vp%np_local))
+        do ip = 1, vp%np_local
+          reordered(ip) = vp%local(global_indices(ip) + vp%xlocal - 1)
+        end do
+        SAFE_DEALLOCATE_A(global_indices)
+
+        ! assign the reordered points
+        do ip = 1, vp%np_local
+          vp%local(ip + vp%xlocal - 1) = reordered(ip)
+        end do
+        SAFE_DEALLOCATE_A(reordered)
 
         ! Recreate hash table.
         call iihash_end(vp%global)
@@ -634,30 +640,6 @@ contains
       POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
   end subroutine vec_init
-
-  ! ---------------------------------------------------------
-  ! callback routine for blocked loop doing the mesh reordering
-  subroutine reorder_add_index(index, arguments)
-    integer, intent(in)    :: index(:)
-    class(*), intent(inout) :: arguments
-
-    integer :: ipg, tmp
-    logical :: found
-
-    select type(a => arguments)
-      class is (local_reorder_arguments_t)
-        ipg = index_from_coords(a%idx, index)
-        if (ipg == 0) return
-        tmp = iihash_lookup(a%vp%global, ipg, found)
-        if (.not. found) return
-        a%reordered(a%ip) = a%vp%local(a%vp%xlocal + tmp - 1)
-        ASSERT(ipg == a%vp%local(a%vp%xlocal + tmp - 1))
-        a%ip = a%ip + 1
-      class default
-        ASSERT(.false.)
-    end select
-  end subroutine reorder_add_index
-
 
   ! ---------------------------------------------------------
   !> Deallocate memory used by vp.

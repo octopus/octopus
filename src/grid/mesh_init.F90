@@ -698,7 +698,7 @@ contains
     do ipg = istart, iend
       call index_hilbert_to_point(mesh%idx, space%dim, mesh%idx%grid_to_hilbert_global(ipg), point)
       point(1:space%dim) = point(1:space%dim) + mesh%idx%offset(1:space%dim)
-      reorder_indices(ipg-istart+1) = get_blocked_index(space, point, bsize, number_of_blocks)
+      reorder_indices(ipg-istart+1) = get_blocked_index(space%dim, point, bsize, number_of_blocks)
     end do
     ! parallel sort according to the new indices
     ! sort the local array
@@ -826,26 +826,6 @@ contains
     SAFE_DEALLOCATE_A(rdispls)
     POP_SUB(mesh_init_stage_3.reorder_index_range)
   end subroutine reorder_index_range
-
-  ! get index along a curve that follows small parallelepipeds
-  ! this corresponds to blocked loops over n-dimensional space
-  integer(8) function get_blocked_index(space, point, bsize, number_of_blocks)
-    type(space_t), intent(in) :: space
-    integer,       intent(in) :: point(1:space%dim)
-    integer,       intent(in) :: bsize(1:space%dim)
-    integer,       intent(in) :: number_of_blocks(1:space%dim)
-    integer(8) :: ii, jl, jb
-    ! jl: index in local block
-    ! jb: block index
-    jl = 0_8
-    jb = 0_8
-    do ii = 1, space%dim
-      jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
-      jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
-    end do
-    ! total index along the curve
-    get_blocked_index = jl + jb * product(int(bsize(1:space%dim), 8))
-  end function get_blocked_index
 
   ! ---------------------------------------------------------
   subroutine do_partition()

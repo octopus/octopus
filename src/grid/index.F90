@@ -40,7 +40,8 @@ module index_oct_m
     index_hilbert_to_point, &
     index_point_to_hilbert, &
     index_dump,             &
-    index_load
+    index_load,             &
+    get_blocked_index
 
   type index_t
     ! Components are public by default
@@ -263,6 +264,26 @@ contains
     point_copy(1:dim) = point(1:dim) + idx%offset(1:dim)
     call hilbert_point_to_index(dim, idx%bits, ihilbert, point_copy(1))
   end subroutine index_point_to_hilbert
+
+  ! get index along a curve that follows small parallelepipeds
+  ! this corresponds to blocked loops over n-dimensional space
+  integer(8) function get_blocked_index(dim, point, bsize, number_of_blocks)
+    integer, intent(in) :: dim
+    integer, intent(in) :: point(1:dim)
+    integer, intent(in) :: bsize(1:dim)
+    integer, intent(in) :: number_of_blocks(1:dim)
+    integer(8) :: ii, jl, jb
+    ! jl: index in local block
+    ! jb: block index
+    jl = 0_8
+    jb = 0_8
+    do ii = 1, dim
+      jl = jl + mod(point(ii), bsize(ii)) * product(int(bsize(1:ii-1), 8))
+      jb = jb + point(ii) / bsize(ii) * product(int(number_of_blocks(1:ii-1), 8))
+    end do
+    ! total index along the curve
+    get_blocked_index = jl + jb * product(int(bsize(1:dim), 8))
+  end function get_blocked_index
 end module index_oct_m
 
 !! Local Variables:
