@@ -214,6 +214,8 @@ contains
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: Start multisystem_dt_operation for '" + trim(this%namespace%get()) + "'"
       call messages_info(1)
+    end if
+    if (debug%propagation_graph) then
       debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("multisystem_dt_operation"), &
                                                       system_clock = this%clock, prop_clock = this%prop%clock)
     end if
@@ -231,6 +233,8 @@ contains
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: Finish multisystem_dt_operation for '" + trim(this%namespace%get()) + "'"
       call messages_info(1)
+    end if
+    if (debug%propagation_graph) then
       call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
     end if
 

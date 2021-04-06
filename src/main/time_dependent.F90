@@ -19,6 +19,7 @@
 #include "global.h"
 
 module time_dependent_oct_m
+  use debug_oct_m
   use electrons_oct_m
   use global_oct_m
   use messages_oct_m
@@ -65,7 +66,9 @@ contains
 
     PUSH_SUB(time_dependent_run_multisystem)
 
-    call multisystem_debug_init("debug/propagation.txt", global_namespace)
+    if ( debug%propagation_graph ) then
+      call multisystem_debug_init("debug/propagation.txt", global_namespace)
+    end if
 
     call messages_write('Info: Running Multi-System time evolution')
     call messages_new_line()
@@ -92,7 +95,9 @@ contains
 
     call systems%propagation_start()
 
-    call multisystem_debug_start_log()
+    if ( debug%propagation_graph ) then
+      call multisystem_debug_start_log()
+    end if
 
     ! The full TD loop
     do while (.not. systems%has_reached_final_propagation_time(final_time))
@@ -112,10 +117,16 @@ contains
 
     end do
 
+    if ( debug%propagation_graph ) then
+      call multisystem_debug_stop_log()
+    end if
+
     call systems%propagation_finish()
 
-    call multisystem_debug_end()
-
+    if ( debug%propagation_graph ) then
+      call multisystem_debug_end()
+    end if
+    
     POP_SUB(time_dependent_run_multisystem)
   end subroutine time_dependent_run_multisystem
 

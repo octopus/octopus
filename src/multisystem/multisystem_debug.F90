@@ -74,7 +74,6 @@ module multisystem_debug_oct_m
     character(len=ALGO_LABEL_LEN) :: op_label
   contains
     procedure :: get_info => event_function_call_get_info
-    final :: event_function_call_finalizer
   end type event_function_call_t
 
   interface event_function_call_t
@@ -108,9 +107,7 @@ contains
     type(event_handle_t)                  :: handle
 
     PUSH_SUB(event_handle_constructor)
-
     handle%enter_ID = id
-
     POP_SUB(event_handle_constructor)
 
   end function event_handle_constructor
@@ -136,12 +133,7 @@ contains
 
   end function event_function_call_constructor
 
-  subroutine event_function_call_finalizer(this)
-    type(event_function_call_t) :: this
-
-
-  end subroutine event_function_call_finalizer
-
+  
   function event_function_call_get_info(this) result(info)
     class(event_function_call_t), intent(in) :: this
     character(len=MAX_INFO_LEN)  :: info
@@ -172,9 +164,7 @@ contains
   subroutine multisystem_debug_end()
 
     PUSH_SUB(multisystem_debug_end)
-
     call io_close(iunit)
-
     POP_SUB(multisystem_debug_end)
 
   end subroutine multisystem_debug_end

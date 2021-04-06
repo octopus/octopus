@@ -182,7 +182,9 @@ contains
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: Start  ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "'"
       call messages_info(1)
+    end if
 
+    if (debug%propagation_graph) then
       debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("dt_operation", tdop),    &
                                                       system_clock=this%clock, prop_clock=this%prop%clock)
     end if
@@ -277,6 +279,9 @@ contains
       write(message(1), '(a,a,1X,a, l)') "Debug: Finish ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "' ", &
                                          this%prop%step_is_done()
       call messages_info(1)
+    end if
+
+    if (debug%propagation_graph) then
       call multisystem_debug_write_event_out(debug_handle, system_clock=this%clock, prop_clock=this%prop%clock)
     end if
 
@@ -331,7 +336,9 @@ contains
     if (debug%info) then
       write(message(1), '(a,a,a)') "Debug: -- Updating exposed quantities for partner '", trim(partner%namespace%get()), "'"
       call messages_info(1)
+    end if
 
+    if (debug%propagation_graph) then
       debug_handle = multisystem_debug_write_event_in(system = partner, &
                                                       event = event_function_call_t("system_update_exposed_quantities"), &
                                                       partner_clock = partner%clock, &
@@ -413,11 +420,13 @@ contains
       write(message(1), '(a,a,a)') "Debug: -- Finished updating exposed quantities for partner '", &
         trim(partner%namespace%get()), "'"
       call messages_info(1)
+    end if
+
+    if (debug%propagation_graph) then
       call multisystem_debug_write_event_out(debug_handle, update=allowed_to_update, &
                                                            partner_clock = partner%clock, &
                                                            requested_clock = requested_time, &
                                                            interaction_clock = interaction%clock )
-
     end if
 
     POP_SUB(system_update_exposed_quantities)
