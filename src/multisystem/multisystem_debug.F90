@@ -267,7 +267,7 @@ contains
     type(clock_t), intent(in), optional  :: partner_clock
     type(clock_t), intent(in), optional  :: requested_clock
 
-    character(16)                        :: update_string
+    character(17)                        :: update_string
 
     PUSH_SUB(multisystem_debug_write_event_out)
 
