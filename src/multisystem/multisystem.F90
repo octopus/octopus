@@ -216,7 +216,7 @@ contains
       call messages_info(1)
     end if
     if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("multisystem_dt_operation"), &
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("multisystem_dt_operation"), &
                                                       system_clock = this%clock, prop_clock = this%prop%clock)
     end if
 
@@ -427,8 +427,8 @@ contains
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_write_interaction_graph(this, iunit, include_ghosts)
     class(multisystem_t), intent(in) :: this
-    logical, optional                :: include_ghosts
     integer,              intent(in) :: iunit
+    logical,              intent(in) :: include_ghosts
 
     class(system_t), pointer :: system
     class(interaction_t), pointer :: interaction
@@ -450,7 +450,7 @@ contains
         ! Write interaction to DOT graph if this interaction has a partner
         select type (interaction)
         type is (ghost_interaction_t)
-          if(optional_default(include_ghosts, .false.)) then
+          if(include_ghosts) then
             write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &
             '" [label="'+ interaction%label + '"];'
           endif
@@ -464,7 +464,7 @@ contains
       ! If this subsystem is also a multisystem, then we also need to traverse it
       select type (system)
       class is (multisystem_t)
-        call system%write_interaction_graph(iunit)
+        call system%write_interaction_graph(iunit, include_ghosts)
       end select
     end do
 

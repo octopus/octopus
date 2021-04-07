@@ -185,7 +185,7 @@ contains
     end if
 
     if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(this, event_function_call_t("dt_operation", tdop),    &
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("dt_operation", tdop),    &
                                                       system_clock=this%clock, prop_clock=this%prop%clock)
     end if
 
@@ -339,7 +339,7 @@ contains
     end if
 
     if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(system = partner, &
+      debug_handle = multisystem_debug_write_event_in(system_namespace = partner%namespace, &
                                                       event = event_function_call_t("system_update_exposed_quantities"), &
                                                       partner_clock = partner%clock, &
                                                       requested_clock = requested_time, &

@@ -23,7 +23,6 @@ module multisystem_debug_oct_m
   use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
-  use interaction_partner_oct_m
   use io_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -83,7 +82,6 @@ module multisystem_debug_oct_m
   !-------------------------------------------------------------------
 
   type :: event_handle_t
-    character, allocatable :: name(:)
     integer, public :: enter_ID
   end type event_handle_t
 
@@ -101,26 +99,25 @@ module multisystem_debug_oct_m
 contains
 
 
-  function event_handle_constructor( id, name ) result(handle)
-    integer, intent(in)                   :: id
-    character(len=MAX_INFO_LEN), optional :: name
-    type(event_handle_t)                  :: handle
+  function event_handle_constructor( id ) result(handle)
+    integer, intent(in)                               :: id
+    type(event_handle_t)                              :: handle
 
     PUSH_SUB(event_handle_constructor)
-    handle%enter_ID = id
-    POP_SUB(event_handle_constructor)
 
+    handle%enter_ID = id
+
+    POP_SUB(event_handle_constructor)
   end function event_handle_constructor
   !-------------------------------------------------------------------
 
   function event_function_call_constructor(name, op) result(event)
     character(*) name
     type(algorithmic_operation_t), optional :: op
-    type(event_function_call_t), pointer :: event
+    type(event_function_call_t)             :: event
 
     PUSH_SUB(event_function_call_constructor)
 
-    SAFE_ALLOCATE(event)
     event%function_name = name
 
     if(present(op)) then
@@ -130,7 +127,6 @@ contains
     endif
 
     POP_SUB(event_function_call_constructor)
-
   end function event_function_call_constructor
 
   
@@ -138,11 +134,14 @@ contains
     class(event_function_call_t), intent(in) :: this
     character(len=MAX_INFO_LEN)  :: info
 
+    PUSH_SUB(event_function_call_get_info)
+
     info = "function: " // trim(this%function_name) 
     if(this%op_label /= "NULL") then
       info =  "function: " // trim(this%function_name) // "|operation: " // trim(this%op_label)
     endif
 
+    POP_SUB(event_function_call_get_info)
   end function event_function_call_get_info
 
   !-------------------------------------------------------------------
@@ -163,39 +162,41 @@ contains
     log_active = .false.
 
     POP_SUB(multisystem_debug_init) 
-
   end subroutine multisystem_debug_init
 
   subroutine multisystem_debug_end()
 
     PUSH_SUB(multisystem_debug_end)
+
     if(mpi_grp%rank == 0) then
       call io_close(iunit)
     end if
-    POP_SUB(multisystem_debug_end)
 
+    POP_SUB(multisystem_debug_end)
   end subroutine multisystem_debug_end
 
   subroutine multisystem_debug_start_log()
 
     PUSH_SUB(multisystem_debug_start_log)
+
     log_active = .true.
-    POP_SUB(multisystem_debug_start_log)
-    
+
+    POP_SUB(multisystem_debug_start_log)    
   end subroutine multisystem_debug_start_log
 
   subroutine multisystem_debug_stop_log()
 
     PUSH_SUB(multisystem_debug_stop_log)
-    log_active = .false.
-    POP_SUB(multisystem_debug_stop_log)
 
+    log_active = .false.
+    
+    POP_SUB(multisystem_debug_stop_log)
   end subroutine multisystem_debug_stop_log
 
 
-  function multisystem_debug_write_event_in(system, event, extra,  system_clock, prop_clock, & 
+  function multisystem_debug_write_event_in(system_namespace, event, extra,  system_clock, prop_clock, & 
                                             interaction_clock, partner_clock, requested_clock) result(handle)
-    class(interaction_partner_t), intent(in), optional  :: system
+    class(namespace_t),  intent(in), optional           :: system_namespace
     class(event_info_t), intent(in)                     :: event
     character(*), optional                              :: extra
     type(clock_t), intent(in), optional                 :: system_clock
@@ -211,8 +212,8 @@ contains
 
     if( (mpi_grp%rank == 0) .and. log_active) then
 
-      if(present(system)) then
-        system_name = '.'//trim(system%namespace%get())
+      if(present(system_namespace)) then
+        system_name = '.'//trim(system_namespace%get())
         if (system_name == '.') system_name = ''
       else
         system_name = 'KEEP'
@@ -253,7 +254,6 @@ contains
     endif
 
     POP_SUB(multisystem_debug_write_event_in)
-
   end function multisystem_debug_write_event_in
 
   subroutine multisystem_debug_write_event_out(handle, extra, update, system_clock, prop_clock, &
@@ -326,8 +326,6 @@ contains
 
 
     POP_SUB(multisystem_debug_write_event_out)
-
   end subroutine multisystem_debug_write_event_out
-
 
 end module multisystem_debug_oct_m

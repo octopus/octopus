@@ -192,9 +192,6 @@ contains
         write(iunit_out, '(a)') '}'
         call io_close(iunit_out)
       end if
-      if(debug%info) then
-        
-      end if
     end select
 
     if (.not. systems%process_is_slave()) then

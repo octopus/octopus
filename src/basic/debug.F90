@@ -80,7 +80,7 @@ contains
     !%Option interaction_graph 32
     !% Octopus generates a dot file containing the graph for a multisystem run.
     !%Option interaction_graph_full 64
-    !% Octopus generates a dot file containing the graph for a multisystem run.
+    !% Octopus generates a dot file containing the graph for a multisystem run including ghost interactions.
     !%Option propagation_graph 128
     !% Octopus generates a file with information for the propagation diagram.
     !%End
