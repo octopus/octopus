@@ -25,16 +25,17 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, fine, hm, st, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
   type(xc_t),               intent(inout) :: xcs
   logical,                  intent(in)    :: apply_sic_pz
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
+  type(multigrid_level_t),  intent(in)    :: fine
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(inout) :: st
   FLOAT,                    intent(inout) :: ex, ec
-  FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
+  FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(mesh%np, st%d%nspin)
 
   FLOAT :: eig
   integer :: is, ist, ixc, nspin_, isp, idm, jdm
@@ -50,7 +51,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
   nspin_ = min(st%d%nspin, 2)
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
   SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
-  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
+  SAFE_ALLOCATE(oep%X(lxc)(1:mesh%np, st%st_start:st%st_end, 1:nspin_))
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
   ! this part handles the (pure) orbital functionals
@@ -74,7 +75,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (namespace, gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
+          call X(oep_x) (namespace, mesh, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
         end do sum_comp
         ex = ex + eig
       end select
@@ -82,19 +83,19 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, hm%kpoints, is, oep, ex, ec)
+      call X(oep_sic) (xcs, mesh, fine, hm%psolver, namespace, st, hm%kpoints, is, oep, ex, ec)
     end if
 
     ! calculate uxc_bar for the occupied states
 
-    SAFE_ALLOCATE(psi(1:gr%mesh%np))
+    SAFE_ALLOCATE(psi(1:mesh%np))
 
     oep%uxc_bar(:, is) = M_ZERO
     do ist = st%st_start, st%st_end
-      call states_elec_get_state(st, gr%mesh, idm, ist, isp, psi)
-      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, psi, oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false., dotu = .true.))
+      call states_elec_get_state(st, mesh, idm, ist, isp, psi)
+      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(mesh, psi, oep%X(lxc)(1:mesh%np, ist, is), reduce = .false., dotu = .true.))
     end do
-    if(gr%mesh%parallel_in_domains) call gr%mesh%allreduce(oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
+    if(mesh%parallel_in_domains) call mesh%allreduce(oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
 
     SAFE_DEALLOCATE_A(psi)
 
@@ -110,9 +111,9 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 #endif
 
   if (st%d%ispin==SPINORS) then
-    call xc_KLI_Pauli_solve(gr%mesh, namespace, st, oep)
+    call xc_KLI_Pauli_solve(mesh, namespace, st, oep)
     if(present(vxc)) then
-      vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+      vxc(1:mesh%np,:) = oep%vxc(1:mesh%np,:)
     end if
     ! full OEP not implemented!
   else
@@ -125,25 +126,25 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
           if(oep%has_photons) then
-            call X(xc_KLI_solve_photon) (namespace, gr%mesh, gr, hm, st, is, oep, first)
+            call X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
           else
-            call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
+            call X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
           end if 
           if(present(vxc)) then
-            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+            vxc(1:mesh%np, is) = vxc(1:mesh%np, is) + oep%vxc(1:mesh%np, 1)
           end if
         end if
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
 
           if(oep%has_photons) then
-            call X(xc_oep_solve_photon)(namespace, gr, hm, st, is, vxc(:,is), oep)
+            call X(xc_oep_solve_photon)(namespace, mesh, hm, st, is, vxc(:,is), oep)
           else
-            call X(xc_oep_solve)(namespace, gr, hm, st, is, vxc(:,is), oep)
+            call X(xc_oep_solve)(namespace, mesh, hm, st, is, vxc(:,is), oep)
           end if
 
           if(present(vxc)) then
-            call lalg_axpy(gr%mesh%np, M_ONE, oep%vxc(1:gr%mesh%np, is), vxc(1:gr%mesh%np, is))
+            call lalg_axpy(mesh%np, M_ONE, oep%vxc(1:mesh%np, is), vxc(1:mesh%np, is))
           end if
         end if
         if (is == nspin_) first = .false.
@@ -163,13 +164,13 @@ end subroutine X(xc_OEP_calc)
 ! ---------------------------------------------------------
 !> This routine follows closely the one of PRB 68, 035103 (2003)
 !> Below we refer to the equation number of this paper
-subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
+subroutine X(xc_oep_solve) (namespace, mesh, hm, st, is, vxc, oep)
   type(namespace_t),        intent(in)    :: namespace
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
   integer,                  intent(in)    :: is
-  FLOAT,                    intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
+  FLOAT,                    intent(inout) :: vxc(:) !< (mesh%np, given for the spin is)
   type(xc_oep_t),           intent(inout) :: oep
 
   integer :: iter, ist, iter_used
@@ -185,22 +186,22 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   if(st%parallel_in_states) &
     call messages_not_implemented("Full OEP parallel in states", namespace=namespace)
 
-  SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
-  SAFE_ALLOCATE(     ss(1:gr%mesh%np))
-  SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
-  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(     bb(1:mesh%np, 1:1))
+  SAFE_ALLOCATE(     ss(1:mesh%np))
+  SAFE_ALLOCATE(vxc_old(1:mesh%np))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(orthogonal(1:st%nst))
 
-  call lalg_copy(gr%mesh%np, vxc, vxc_old)
+  call lalg_copy(mesh%np, vxc, vxc_old)
 
   if(.not. lr_is_allocated(oep%lr)) then
-    call lr_allocate(oep%lr, st, gr%mesh)
+    call lr_allocate(oep%lr, st, mesh)
     oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
   end if
 
   ! fix xc potential (needed for Hpsi)
-  call lalg_axpy(gr%mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
+  call lalg_axpy(mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
@@ -208,20 +209,20 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
     do ist = 1, st%nst
 
       if(abs(st%occ(ist,1))<= M_EPSILON) cycle  !only over occupied states
-      call states_elec_get_state(st, gr%mesh, ist, is, psi)
+      call states_elec_get_state(st, mesh, ist, is, psi)
       psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
 
       ! evaluate right-hand side
-      vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+      vxc_bar = dmf_integrate(mesh, psi2(:, 1)*oep%vxc(1:mesh%np, is))
 
       ! This the right-hand side of Eq. 21
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
-        R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
+      bb(1:mesh%np, 1) = -(oep%vxc(1:mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
+        R_CONJ(psi(:, 1)) + oep%X(lxc)(1:mesh%np, ist, is)
 
-      call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
+      call X(lr_orth_vector) (mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
       ! Sternheimer equation [H-E_i]psi_i = bb_i, where psi_i the orbital shift, see Eq. 21
-      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, &
+      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, mesh, st, ist, is, &
            oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
       
@@ -233,28 +234,28 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       end if
 
       !We project out the occupied bands 
-      call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
+      call X(lr_orth_vector) (mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
 
       ! calculate this funny function ss
       ! ss = ss + 2*dl_psi*psi
       ! This is Eq. 25
-      call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
+      call lalg_axpy(mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
     end do
 
     !Here we mix the xc potential
-    call X(xc_oep_mix)(oep, gr%mesh, ss, st%rho(:,is), is)
+    call X(xc_oep_mix)(oep, mesh, ss, st%rho(:,is), is)
 
     !Here we enforce Eq. (24), see the discussion below Eq. 26 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        call states_elec_get_state(st, gr%mesh, ist, is, psi)
+        call states_elec_get_state(st, mesh, ist, is, psi)
         psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
-        vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
-        oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
+        vxc_bar = dmf_integrate(mesh, psi2(:, 1)*oep%vxc(1:mesh%np, is))
+        oep%vxc(1:mesh%np,is) = oep%vxc(1:mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 
-    ff = dmf_nrm2(gr%mesh, ss)
+    ff = dmf_nrm2(mesh, ss)
 
     if(debug%info) then
       write(message(1),'(a,i3,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, " residual ", ff, " max ", oep%scftol%max_iter
@@ -282,7 +283,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   message(2) = ''
   call messages_info(2)
 
-  call lalg_copy(gr%mesh%np, vxc_old, vxc)
+  call lalg_copy(mesh%np, vxc_old, vxc)
 
   SAFE_DEALLOCATE_A(bb)
   SAFE_DEALLOCATE_A(ss)
@@ -297,13 +298,13 @@ end subroutine X(xc_oep_solve)
 
 ! ---------------------------------------------------------
 !> This is the photon version of the xc_oep_solve routine
-subroutine X(xc_oep_solve_photon) (namespace, gr, hm, st, is, vxc, oep)
+subroutine X(xc_oep_solve_photon) (namespace, mesh, hm, st, is, vxc, oep)
   type(namespace_t),        intent(in)    :: namespace
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
   integer,                  intent(in)    :: is
-  FLOAT,                    intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
+  FLOAT,                    intent(inout) :: vxc(:) !< (mesh%np, given for the spin is)
   type(xc_oep_t),           intent(inout) :: oep
 
   integer :: iter, ist, iter_used
@@ -324,31 +325,31 @@ subroutine X(xc_oep_solve_photon) (namespace, gr, hm, st, is, vxc, oep)
   ASSERT(.false.)
 #endif
 
-  SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
-  SAFE_ALLOCATE(     ss(1:gr%mesh%np))
-  SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
-  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(     bb(1:mesh%np, 1:1))
+  SAFE_ALLOCATE(     ss(1:mesh%np))
+  SAFE_ALLOCATE(vxc_old(1:mesh%np))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(orthogonal(1:st%nst))
-  SAFE_ALLOCATE(phi1(1:gr%mesh%np, 1:st%d%dim, 1:oep%noccst))
+  SAFE_ALLOCATE(phi1(1:mesh%np, 1:st%d%dim, 1:oep%noccst))
 
-  call lalg_copy(gr%mesh%np, vxc, vxc_old)
+  call lalg_copy(mesh%np, vxc, vxc_old)
 
   if(.not. lr_is_allocated(oep%lr)) then
-    call lr_allocate(oep%lr, st, gr%mesh)
+    call lr_allocate(oep%lr, st, mesh)
     oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
   end if
 
   if(.not. lr_is_allocated(oep%photon_lr)) then
-    call lr_allocate(oep%photon_lr, st, gr%mesh)
+    call lr_allocate(oep%photon_lr, st, mesh)
     oep%photon_lr%ddl_psi(:, :, :, :) = M_ZERO
   end if
 #ifdef R_TREAL
-  call xc_oep_pt_phi(namespace, gr, hm, st, is, oep, phi1)
+  call xc_oep_pt_phi(namespace, mesh, hm, st, is, oep, phi1)
 #endif
 
   ! fix xc potential (needed for Hpsi)
-  call lalg_axpy(gr%mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
+  call lalg_axpy(mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
@@ -356,26 +357,26 @@ subroutine X(xc_oep_solve_photon) (namespace, gr, hm, st, is, vxc, oep)
     do ist = 1, st%nst
 
       if(abs(st%occ(ist,1))<= M_EPSILON) cycle  !only over occupied states
-      call states_elec_get_state(st, gr%mesh, ist, is, psi)
+      call states_elec_get_state(st, mesh, ist, is, psi)
       psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
 
       ! evaluate right-hand side
-      vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+      vxc_bar = dmf_integrate(mesh, psi2(:, 1)*oep%vxc(1:mesh%np, is))
 
       ! This the right-hand side of Eq. 21
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
-        R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
+      bb(1:mesh%np, 1) = -(oep%vxc(1:mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
+        R_CONJ(psi(:, 1)) + oep%X(lxc)(1:mesh%np, ist, is)
 
 #ifdef R_TREAL
-      call xc_oep_pt_rhs(gr, st, is, oep, phi1, ist, bb)
+      call xc_oep_pt_rhs(mesh, st, is, oep, phi1, ist, bb)
 #endif
 
       orthogonal = .true.
       orthogonal(ist) = .false.
-      call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+      call X(states_elec_orthogonalize_single)(st, mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
 
       ! Sternheimer equation [H-E_i]psi_i = bb_i, where psi_i the orbital shift, see Eq. 21
-      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, &
+      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, mesh, st, ist, is, &
            oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
       
@@ -389,36 +390,36 @@ subroutine X(xc_oep_solve_photon) (namespace, gr, hm, st, is, vxc, oep)
       !We project out the occupied bands 
       orthogonal = .true.
       orthogonal(ist) = .false.
-      call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
+      call X(states_elec_orthogonalize_single)(st, mesh, st%nst, is, &
       oep%lr%X(dl_psi)(:,:, ist, is), normalize = .false., mask = orthogonal)
 
       ! calculate this funny function ss
       ! ss = ss + 2*dl_psi*psi
       ! This is Eq. 25
-      call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
+      call lalg_axpy(mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
 
 #ifdef R_TREAL
-      call xc_oep_pt_inhomog(gr, st, is, phi1, ist, ss)
+      call xc_oep_pt_inhomog(mesh, st, is, phi1, ist, ss)
 #endif
     end do
 
     !Here we mix the xc potential
-    call X(xc_oep_mix)(oep, gr%mesh, ss, st%rho(:,is), is)
+    call X(xc_oep_mix)(oep, mesh, ss, st%rho(:,is), is)
 
     !Here we enforce Eq. (24), see the discussion below Eq. 26 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        call states_elec_get_state(st, gr%mesh, ist, is, psi)
+        call states_elec_get_state(st, mesh, ist, is, psi)
         psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
-        vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+        vxc_bar = dmf_integrate(mesh, psi2(:, 1)*oep%vxc(1:mesh%np, is))
 #ifdef R_TREAL
-        call xc_oep_pt_uxcbar(gr, st, is, oep, phi1, ist, vxc_bar)
+        call xc_oep_pt_uxcbar(mesh, st, is, oep, phi1, ist, vxc_bar)
 #endif
-        oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
+        oep%vxc(1:mesh%np,is) = oep%vxc(1:mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 
-    ff = dmf_nrm2(gr%mesh, ss)
+    ff = dmf_nrm2(mesh, ss)
 
     if(debug%info) then
       write(message(1),'(a,i3,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, " residual ", ff, " max ", oep%scftol%max_iter
@@ -446,7 +447,7 @@ subroutine X(xc_oep_solve_photon) (namespace, gr, hm, st, is, vxc, oep)
   message(2) = ''
   call messages_info(2)
 
-  call lalg_copy(gr%mesh%np, vxc_old, vxc)
+  call lalg_copy(mesh%np, vxc_old, vxc)
 
   SAFE_DEALLOCATE_A(bb)
   SAFE_DEALLOCATE_A(ss)

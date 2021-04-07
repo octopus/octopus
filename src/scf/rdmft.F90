@@ -1042,7 +1042,7 @@ contains
     end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      call deigensolver_cg2(namespace, gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+      call deigensolver_cg2(namespace, gr%mesh, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
   
@@ -1301,7 +1301,7 @@ contains
       ! only used to calculate total energy
       do is = 1, nspin_
         do jdm = 1, st%d%dim
-          call doep_x(namespace, gr%der, hm%psolver, st, is, jdm, lxc, ex, 1.d0, v_ij)
+          call doep_x(namespace, gr%mesh, hm%psolver, st, is, jdm, lxc, ex, 1.d0, v_ij)
         end do
       end do
       do ist = 1, st%nst

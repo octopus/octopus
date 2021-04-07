@@ -450,9 +450,9 @@ contains
      if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
 
       if (states_are_real(st)) then
-        call deigensolver_run(eigens, namespace, gr, st, hm, iter, ik)
+        call deigensolver_run(eigens, namespace, gr%mesh, st, hm, iter, ik)
       else
-        call zeigensolver_run(eigens, namespace, gr, st, hm, iter, ik)
+        call zeigensolver_run(eigens, namespace, gr%mesh, st, hm, iter, ik)
       end if
 
       if(st%calc_eigenval .and. .not. eigens%folded_spectrum) then

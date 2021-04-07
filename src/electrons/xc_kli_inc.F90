@@ -18,10 +18,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
+subroutine X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
   integer,                  intent(in)    :: is
@@ -182,10 +181,9 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
 end subroutine X(xc_KLI_solve)
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve_photon) (namespace, mesh, gr, hm, st, is, oep, first)
+subroutine X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
   integer,                  intent(in)    :: is
@@ -215,19 +213,19 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, gr, hm, st, is, oep, first)
     SAFE_ALLOCATE(coctranslation(1:mesh%np))
     coctranslation(1:mesh%np) = oep%pt%pol_dipole(1:mesh%np, 1)
     oep%pt%pol_dipole(1:mesh%np,1) = oep%pt%pol_dipole(1:mesh%np, 1) - &
-      dmf_dotp(gr%mesh, SUM(st%rho(1:mesh%np, :), dim=2),oep%pt%pol_dipole(1:mesh%np, 1))/abs(st%qtot)
+      dmf_dotp(mesh, SUM(st%rho(1:mesh%np, :), dim=2),oep%pt%pol_dipole(1:mesh%np, 1))/abs(st%qtot)
   end if
 
-  SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
-  SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
+  SAFE_ALLOCATE(phi1(1:mesh%np,1:st%d%dim,1:st%nst))
+  SAFE_ALLOCATE(bb(1:mesh%np, 1:1))
   if (is == 1) oep%pt%ex = M_ZERO
 
   if(.not. lr_is_allocated(oep%photon_lr)) then
-    call lr_allocate(oep%photon_lr, st, gr%mesh)
+    call lr_allocate(oep%photon_lr, st, mesh)
     oep%photon_lr%ddl_psi(:,:, :, :) = M_ZERO
   end if
 
-  if (.not. first) call xc_oep_pt_phi(namespace, gr, hm, st, is, oep, phi1)
+  if (.not. first) call xc_oep_pt_phi(namespace, mesh, hm, st, is, oep, phi1)
 #else
   ! Photons with OEP are only implemented for real states
   ASSERT(.false.)
@@ -259,10 +257,10 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, gr, hm, st, is, oep, first)
     call states_elec_get_state(st, mesh, ist, is, psi)
 #ifdef R_TREAL
     if (ist>(oep%eigen_n + 1)) exit ! included to guarantee that the photonic KLI finishes correctly but the parallel in states feature of the normal KLI works still
-    bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)
+    bb(:,1) = oep%X(lxc)(1:mesh%np, ist, is)
     if (ist /= oep%eigen_n + 1) bb(:,1) = bb(:,1) - oep%uxc_bar(ist, is)*R_CONJ(psi(:, 1))
     if (.not.first) then
-      call xc_oep_pt_rhs(gr, st, is, oep, phi1, ist, bb)
+      call xc_oep_pt_rhs(mesh, st, is, oep, phi1, ist, bb)
     end if
     oep%vxc(:, 1) = oep%vxc(:, 1) + oep%socc*st%occ(ist, is)*bb(:, 1)*psi(:, 1)
 #else
@@ -273,7 +271,7 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, gr, hm, st, is, oep, first)
 
   if (oep%coc_translation) then
     oep%pt%pol_dipole(1:mesh%np, 1) = oep%pt%pol_dipole(1:mesh%np,1 ) + &
-        dmf_dotp(gr%mesh, sum(st%rho(1:mesh%np, :), dim=2), coctranslation(1:mesh%np))/abs(st%qtot)
+        dmf_dotp(mesh, sum(st%rho(1:mesh%np, :), dim=2), coctranslation(1:mesh%np))/abs(st%qtot)
     SAFE_DEALLOCATE_A(coctranslation)
   end if
 

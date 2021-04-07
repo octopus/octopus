@@ -36,6 +36,7 @@ module xc_oep_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
   use photon_mode_oct_m

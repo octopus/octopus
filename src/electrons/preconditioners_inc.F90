@@ -17,10 +17,10 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
+subroutine X(preconditioner_apply)(pre, namespace, mesh, hm, a, b, ik, omega)
   type(preconditioner_t),   intent(in)    :: pre
   type(namespace_t),        intent(in)    :: namespace
-  type(grid_t), target,     intent(in)    :: gr
+  type(mesh_t), target,     intent(in)    :: mesh
   type(hamiltonian_elec_t), intent(in)    :: hm
   R_TYPE, contiguous,       intent(inout) :: a(:,:)
   R_TYPE, contiguous,       intent(inout) :: b(:,:)
@@ -43,25 +43,25 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
 
   select case(pre%which)
   case(PRE_NONE)
-    call lalg_copy(gr%mesh%np, hm%d%dim, a, b)
+    call lalg_copy(mesh%np, hm%d%dim, a, b)
 
   case(PRE_FILTER)
     call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
     call wfs_elec_init(batch_b, hm%d%dim, 1, 1, b, ik)
-    call boundaries_set(gr%der%boundaries, batch_a)
+    call boundaries_set(pre%der%boundaries, batch_a)
     if (allocated(hm%hm_base%phase)) then
       SAFE_ALLOCATE(batch_ea)
       call batch_a%copy_to(batch_ea)
-      call hamiltonian_elec_base_phase(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., batch_ea, src = batch_a)
+      call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np_part, .false., batch_ea, src = batch_a)
       batch_b%has_phase = .true.
     else
       batch_ea => batch_a
     end if
 
-     call X(derivatives_batch_perform)(pre%op, gr%der, batch_ea, batch_b, set_bc = .false.)
+     call X(derivatives_batch_perform)(pre%op, pre%der, batch_ea, batch_b, set_bc = .false.)
 
     if (allocated(hm%hm_base%phase)) then
-      call hamiltonian_elec_base_phase(hm%hm_base, gr%mesh, gr%mesh%np, .true., batch_b)
+      call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., batch_b)
       call batch_ea%end(copy = .false.)
       SAFE_DEALLOCATE_P(batch_ea)
     end if
@@ -76,7 +76,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
     do idim = 1, hm%d%dim
       call X(poisson_solve)(hm%psolver, b(:, idim), a(:, idim), all_nodes=.false.)
     end do
-    call lalg_scal(gr%mesh%np, hm%d%dim, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b)
+    call lalg_scal(mesh%np, hm%d%dim, R_TOTYPE(M_ONE/(M_TWO*M_PI)), b)
 
   case(PRE_MULTIGRID)
     call multigrid()
@@ -99,12 +99,12 @@ contains
 
     PUSH_SUB(X(preconditioner_apply).apply_D_inverse)
 
-    SAFE_ALLOCATE(diag(1:gr%mesh%np))
+    SAFE_ALLOCATE(diag(1:mesh%np))
 
     do idim = 1, hm%d%dim
-      diag(:) = pre%diag_lapl(1:gr%mesh%np) + hm%ep%vpsl(1:gr%mesh%np) + hm%vhxc(1:gr%mesh%np, idim)
+      diag(:) = pre%diag_lapl(1:mesh%np) + hm%ep%vpsl(1:mesh%np) + hm%vhxc(1:mesh%np, idim)
 
-      b(1:gr%mesh%np,idim) = a(1:gr%mesh%np,idim)/(diag(1:gr%mesh%np) + omega_)
+      b(1:mesh%np,idim) = a(1:mesh%np,idim)/(diag(1:mesh%np) + omega_)
     end do
 
     SAFE_DEALLOCATE_A(diag)
@@ -249,10 +249,10 @@ end subroutine X(preconditioner_apply)
 
 ! ----------------------------------------
 
-subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, omega)
+subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, omega)
   type(preconditioner_t),   intent(in)    :: pre
   type(namespace_t),        intent(in)    :: namespace
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
   type(hamiltonian_elec_t), intent(in)    :: hm
   class(batch_t),           intent(inout) :: aa
   class(batch_t),           intent(inout) :: bb
@@ -270,23 +270,23 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
 
   if(pre%which == PRE_FILTER) then
 
-    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
+    call X(derivatives_batch_perform)(pre%op, pre%der, aa, bb)
 
   else if(pre%which == PRE_NONE) then
 
-    call aa%copy_data_to(gr%mesh%np, bb)
+    call aa%copy_data_to(mesh%np, bb)
 
   else
-    SAFE_ALLOCATE(psia(1:gr%mesh%np_part, 1:hm%d%dim))
-    SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psia(1:mesh%np_part, 1:hm%d%dim))
+    SAFE_ALLOCATE(psib(1:mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
-      call batch_get_state(aa, ii, gr%mesh%np, psia)
+      call batch_get_state(aa, ii, mesh%np, psia)
       if(present(omega)) then
-        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+        call X(preconditioner_apply)(pre, namespace, mesh, hm, psia, psib, ik, omega(ii))
       else
-        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik)
+        call X(preconditioner_apply)(pre, namespace, mesh, hm, psia, psib, ik)
       end if
-      call batch_set_state(bb, ii, gr%mesh%np, psib)
+      call batch_set_state(bb, ii, mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)
     SAFE_DEALLOCATE_A(psib)
