@@ -220,7 +220,7 @@ contains
 
       handle = event_handle_t(event_ID)
 
-      write(iunit, '("IN  step: ",I10,"| system: ",a,"| ",a)' , advance='no' ) event_ID, trim(system_name), trim(event%get_info())
+      write(iunit, '("IN  step: ",I10," | system: ",a,"| ",a)' , advance='no' ) event_ID, trim(system_name), trim(event%get_info())
 
       if( present(extra)) then
         write(iunit, '(" | ",a)' , advance='no')  trim(extra)
