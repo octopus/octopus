@@ -25,22 +25,26 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, fine, hm, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, sb, fine, hm, st, space, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
   type(xc_t),               intent(inout) :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(mesh_t),             intent(in)    :: mesh
+  type(simul_box_t),        intent(in)    :: sb
   type(multigrid_level_t),  intent(in)    :: fine
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(inout) :: st
+  type(space_t),            intent(in)    :: space
   FLOAT,                    intent(inout) :: ex, ec
   FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(mesh%np, st%d%nspin)
 
   FLOAT :: eig
-  integer :: is, ist, ixc, nspin_, isp, idm, jdm
+  integer :: is, ist, ixc, nspin_, isp, idm
   logical, save :: first = .true.
-  R_TYPE, allocatable :: psi(:)
+  R_TYPE, allocatable :: psi(:), xpsi(:)
+  type(states_elec_t) :: xst
+  logical :: exx
 
   if(oep%level == XC_OEP_NONE) return
 
@@ -52,12 +56,48 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, fine, hm, st,
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
   SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
   SAFE_ALLOCATE(oep%X(lxc)(1:mesh%np, st%st_start:st%st_end, 1:nspin_))
+  oep%X(lxc) = M_ZERO
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
+  !We first apply the exchange operator to all the states
+  call xst%nullify()
+  
+  exx = .false.
+  functl_loop: do ixc = 1, 2
+    if(xcs%functional(ixc, 1)%family /= XC_FAMILY_OEP) cycle
+    select case(xcs%functional(ixc,1)%id)
+    case(XC_OEP_X)
+      call X(exchange_operator_compute_potentials)(hm%exxop, namespace, space, mesh, sb%latt, st, xst, hm%kpoints, eig)
+      ex = ex + eig
+      exx = .true.
+    end select
+  end do functl_loop
+
   ! this part handles the (pure) orbital functionals
-  oep%X(lxc) = M_ZERO
-  spin: do is = 1, nspin_
-    !
+  ! SIC a la PZ is handled here
+  if(apply_sic_pz) then
+    spin: do is = 1, nspin_
+      ! distinguish between 'is' being the spin_channel index (collinear)
+      ! and being the spinor (noncollinear)
+      if (st%d%ispin==SPINORS) then
+        isp = 1
+        idm = is
+      else
+        isp = is
+        idm = 1
+      end if
+
+      call X(oep_sic) (xcs, mesh, fine, hm%psolver, namespace, st, hm%kpoints, is, oep, ex, ec)
+    end do spin
+  end if   
+
+  ! calculate uxc_bar for the occupied states
+
+  SAFE_ALLOCATE(psi(1:mesh%np))
+  SAFE_ALLOCATE(xpsi(1:mesh%np))
+
+  oep%uxc_bar(:, :) = M_ZERO
+  do is = 1, nspin_
     ! distinguish between 'is' being the spin_channel index (collinear)
     ! and being the spinor (noncollinear)
     if (st%d%ispin==SPINORS) then
@@ -67,39 +107,31 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, fine, hm, st,
       isp = is
       idm = 1
     end if
-    ! get lxc
-    functl_loop: do ixc = 1, 2
-      if(xcs%functional(ixc, 1)%family /= XC_FAMILY_OEP) cycle
 
-      eig = M_ZERO
-      select case(xcs%functional(ixc,1)%id)
-      case(XC_OEP_X)
-        sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (namespace, mesh, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
-        end do sum_comp
-        ex = ex + eig
-      end select
-    end do functl_loop
-
-    ! SIC a la PZ is handled here
-    if(apply_sic_pz) then
-      call X(oep_sic) (xcs, mesh, fine, hm%psolver, namespace, st, hm%kpoints, is, oep, ex, ec)
-    end if
-
-    ! calculate uxc_bar for the occupied states
-
-    SAFE_ALLOCATE(psi(1:mesh%np))
-
-    oep%uxc_bar(:, is) = M_ZERO
     do ist = st%st_start, st%st_end
       call states_elec_get_state(st, mesh, idm, ist, isp, psi)
+      if(exx) then
+        ! Here we copy the state from xst to X(lxc). 
+        ! This will be removed in the future, but it allows to keep both EXX and PZ-SIC in the code 
+        call states_elec_get_state(xst, mesh, idm, ist, isp, xpsi)
+        ! There is a complex conjugate here, as the lxc is defined as <\psi|X and 
+        ! exchange_operator_compute_potentials returns X|\psi>
+#ifndef R_TREAL
+        xpsi = R_CONJ(xpsi)
+#endif
+        call lalg_axpy(mesh%np, M_ONE, xpsi, oep%X(lxc)(1:mesh%np, ist, is))
+      end if
+     
       oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(mesh, psi, oep%X(lxc)(1:mesh%np, ist, is), reduce = .false., dotu = .true.))
     end do
+
     if(mesh%parallel_in_domains) call mesh%allreduce(oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
+  end do
 
-    SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(xpsi)
 
-  end do spin
+  call states_elec_end(xst)
 
 #if defined(HAVE_MPI) 
   if(st%parallel_in_states) then

@@ -25,6 +25,7 @@ module rdmft_oct_m
   use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
+  use exchange_operator_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -346,16 +347,16 @@ contains
       call messages_info(2)
       ! occupation number optimization unless we are doing Hartree-Fock
       if (rdm%hf) then
-        call scf_occ_NO(rdm, namespace, gr, hm, st, energy_occ)
+        call scf_occ_NO(rdm, namespace, gr, hm, space, st, energy_occ)
       else
-        call scf_occ(rdm, namespace, gr, hm, st, energy_occ)
+        call scf_occ(rdm, namespace, gr, hm, space, st, energy_occ)
       end if
       ! orbital optimization
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount 
         if (rdm%do_basis) then
-          call scf_orb(rdm, namespace, gr, st, hm, energy)
+          call scf_orb(rdm, namespace, gr, st, hm, space, energy)
         else
           call scf_orb_cg(rdm, namespace, space, gr, geo, st, ks, hm, energy)
         end if
@@ -695,11 +696,12 @@ contains
   ! ---------------------------------------------------------
   ! dummy routine for occupation numbers which only calculates the necessary variables for further use
   ! used in Hartree-Fock mode
-  subroutine scf_occ_NO(rdm, namespace, gr, hm, st, energy)
+  subroutine scf_occ_NO(rdm, namespace, gr, hm, space, st, energy)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
+    type(space_t),            intent(in)    :: space
     type(states_elec_t),      intent(inout) :: st
     FLOAT,                    intent(out)   :: energy
      
@@ -714,7 +716,7 @@ contains
     
     energy = M_ZERO
 
-    call rdm_derivatives(rdm, namespace, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr, space)
 
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -736,11 +738,12 @@ contains
   end subroutine scf_occ_NO
 
   ! scf for the occupation numbers 
-  subroutine scf_occ(rdm, namespace, gr, hm, st, energy)
+  subroutine scf_occ(rdm, namespace, gr, hm, space, st, energy)
     type(rdm_t), target,      intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
+    type(space_t),            intent(in)    :: space
     type(states_elec_t),      intent(inout) :: st
     FLOAT,                    intent(out)   :: energy
 
@@ -779,7 +782,7 @@ contains
 
     st%occ = occin
     
-    call rdm_derivatives(rdm, namespace, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr, space)
 
     !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
     !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
@@ -948,12 +951,13 @@ contains
   end subroutine write_iter_info_rdmft
 
   ! scf for the natural orbitals
-  subroutine scf_orb(rdm, namespace, gr, st, hm, energy)
+  subroutine scf_orb(rdm, namespace, gr, st, hm, space, energy)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr !< grid
     type(states_elec_t),      intent(inout) :: st !< States
     type(hamiltonian_elec_t), intent(in)    :: hm !< Hamiltonian
+    type(space_t),            intent(in)    :: space
     FLOAT,                    intent(out)   :: energy    
 
     integer :: ist, jst
@@ -1001,7 +1005,7 @@ contains
     call lalg_eigensolve(st%nst, fo, rdm%evalues)
     call assign_eigfunctions(rdm, st, fo)
     call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
-    call rdm_derivatives(rdm, namespace, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr, space)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     SAFE_DEALLOCATE_A(lambda) 
@@ -1067,7 +1071,7 @@ contains
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, space, hm, st, geo)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
-    call rdm_derivatives(rdm, namespace, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr, space)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -1251,18 +1255,20 @@ contains
 
   ! ----------------------------------------
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
-  subroutine rdm_derivatives(rdm, namespace, hm, st, gr)
+  subroutine rdm_derivatives(rdm, namespace, hm, st, gr, space)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(in)    :: st 
     type(grid_t),             intent(in)    :: gr
+    type(space_t),            intent(in)    :: space
+
     
-    FLOAT, allocatable :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
-    FLOAT, allocatable :: v_ij(:,:,:)
-    FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
-    FLOAT              :: ex !required input variable for doep_x, not used otherwise, might get used
-    FLOAT              :: dd
+    FLOAT, allocatable  :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
+    FLOAT, allocatable  :: v_ij(:,:,:)
+    FLOAT               :: ex !required input variable for doep_x, not used otherwise, might get used
+    FLOAT               :: dd
+    type(states_elec_t) :: xst
     
     integer :: ist, jst, nspin_, is, jdm, iorb, jorb
 
@@ -1278,9 +1284,7 @@ contains
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(v_ij(1:gr%mesh%np, 1:st%nst, 1:st%nst))
-      SAFE_ALLOCATE(lxc(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
 
-      lxc = M_ZERO
       v_ij = M_ZERO
       rdm%eone = M_ZERO
       rdm%hartree = M_ZERO
@@ -1296,14 +1300,13 @@ contains
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
 
-      !integrals used for the hartree and exchange parts of the total energy and their derivatives
+      ! integrals used for the hartree and exchange parts of the total energy and their derivatives
       ! maybe better to let that be done from the lower level routines like hamiltonian apply?
+      !
       ! only used to calculate total energy
-      do is = 1, nspin_
-        do jdm = 1, st%d%dim
-          call doep_x(namespace, gr%mesh, hm%psolver, st, is, jdm, lxc, ex, 1.d0, v_ij)
-        end do
-      end do
+      call dexchange_operator_compute_potentials(hm%exxop, namespace, space, gr%mesh, gr%sb%latt, &
+                                                 st, xst, hm%kpoints, ex)
+
       do ist = 1, st%nst
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
 
@@ -1325,7 +1328,6 @@ contains
       SAFE_DEALLOCATE_A(rho1)
       SAFE_DEALLOCATE_A(dpsi)
       SAFE_DEALLOCATE_A(dpsi2)
-      SAFE_DEALLOCATE_A(lxc)
       SAFE_DEALLOCATE_A(v_ij)
 
     else !if energy derivatives are expanded in a basis set

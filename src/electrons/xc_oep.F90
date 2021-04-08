@@ -42,6 +42,7 @@ module xc_oep_oct_m
   use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
   use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -62,9 +63,7 @@ module xc_oep_oct_m
     xc_oep_end,                 &
     xc_oep_write_info,          &
     dxc_oep_calc,               &
-    zxc_oep_calc,               &
-    doep_x,                     &
-    zoep_x
+    zxc_oep_calc
 
   !> the OEP levels
   integer, public, parameter ::  &
@@ -414,14 +413,12 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "xc_kli_inc.F90"
-#include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "xc_kli_inc.F90"
-#include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 
