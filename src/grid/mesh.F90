@@ -449,6 +449,9 @@ contains
         write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
         write(iunit, '(a20,i21)')  'algorithm=          ', 1
         write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
+        write(iunit, '(a20,i21)')  'bits=               ', mesh%idx%bits
+        write(iunit, '(a20,i21)')  'dim=                ', mesh%idx%dim
+        write(iunit, '(a20,3i21)') 'offset=             ', mesh%idx%offset(1:mesh%idx%dim)
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
@@ -462,7 +465,8 @@ contains
   !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored.
   !! fingerprint cannot be read, it returns ierr /= 0.
-  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, ierr)
+  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, &
+      read_np_part, read_np, bits, offset, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
@@ -470,11 +474,13 @@ contains
     type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: read_np_part
     integer,          intent(out) :: read_np
+    integer,          intent(out) :: bits
+    integer,          intent(out) :: offset(1:mesh%idx%dim)
     integer,          intent(out) :: ierr
 
     character(len=20)  :: str
-    character(len=100) :: lines(4)
-    integer :: iunit, box_shape, algorithm, err
+    character(len=100) :: lines(7)
+    integer :: iunit, box_shape, algorithm, dim, err
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
@@ -499,7 +505,7 @@ contains
         read(lines(1), '(a20,i21)')  str, box_shape
       end if
 
-      call iopar_read(mpi_grp, iunit, lines, 4, err)
+      call iopar_read(mpi_grp, iunit, lines, 7, err)
       if (err /= 0) then
         ierr = ierr + 4
       else
@@ -507,6 +513,14 @@ contains
         read(lines(2), '(a20,i21)')  str, read_np
         read(lines(3), '(a20,i21)')  str, algorithm
         read(lines(4), '(a20,i21)')  str, checksum
+        read(lines(5), '(a20,i21)')  str, bits
+        read(lines(6), '(a20,i21)')  str, dim
+        ! only allow restarting simulations with the same dimensions
+        if (dim /= mesh%idx%dim) then
+          ierr = ierr + 8
+        else
+          read(lines(7), '(a20,3i21)')  str, offset(1:dim)
+        end if
 
         ASSERT(read_np_part >= read_np)
           
@@ -538,8 +552,8 @@ contains
     integer,              intent(out) :: ierr
 
     integer :: ipg, ipg_new, read_np_part, read_np, err
+    integer :: bits, offset(mesh%idx%dim), point(mesh%idx%dim)
     integer(8), allocatable :: read_indices(:)
-    logical :: found
     
     PUSH_SUB(mesh_check_dump_compatibility)
 
@@ -549,7 +563,7 @@ contains
     grid_reordered = .false.
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, err)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, bits, offset, err)
     if (err /= 0) then
       ierr = ierr + 1
       message(1) = "Unable to read mesh fingerprint from '"//trim(dir)//"/"//trim(filename)//"'."
@@ -580,16 +594,18 @@ contains
         else
           ! generate the map
           SAFE_ALLOCATE(map(1:read_np))
-
           do ipg = 1, read_np
-            ipg_new = lihash_lookup(mesh%idx%hilbert_to_grid_global, read_indices(ipg), found)
-            if(.not. found) then
-              map(ipg) = 0
-              grid_reordered = .false.
-            else
-              map(ipg) = ipg_new
-              if(map(ipg) > mesh%np_global) map(ipg) = 0
-            end if
+            ! get nd-index from old hilbert index
+            call hilbert_index_to_point(mesh%idx%dim, bits, read_indices(ipg), point(1))
+            ! use old offset
+            point(1:mesh%idx%dim) = point(1:mesh%idx%dim) - offset(1:mesh%idx%dim)
+            ! get new global index
+            ipg_new = mesh_global_index_from_coords(mesh, point)
+            map(ipg) = ipg_new
+            ! ignore boundary points
+            if(map(ipg) > mesh%np_global) map(ipg) = 0
+            ! if the map is zero for one point, it is not a simple reordering
+            if(map(ipg) == 0) grid_reordered = .false.
           end do
         end if
 

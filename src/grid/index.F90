@@ -162,10 +162,6 @@ contains
 
     ierr = 0
 
-    if (int(np, 8)*idx%dim > huge(0)) then
-      message(1) = "Too many global mesh points to write restart file for lxyz.obf."
-      call messages_fatal(1)
-    end if
     if (mpi_grp_is_root(mpi_grp)) then
       ! the index array is a global function and only root will write
       ASSERT(allocated(idx%grid_to_hilbert_global))
