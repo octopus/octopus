@@ -96,8 +96,6 @@ module poisson_psolver_oct_m
 
     integer :: isf_order           !< order of the interpolating scaling functions used in the decomposition 
     integer :: localnscatterarr(5)
-    integer :: rs_n_global(3)      !< total size of the fft in each direction in real space
-    integer :: rs_istart(1:3)      !< where does the local portion of the function start in real space
 #ifdef HAVE_PSOLVER
     type(dictionary), pointer :: inputs !input parameters
 #endif
@@ -191,6 +189,9 @@ contains
     !% If k-points parallelization is used, "no" must be selected.
     !%End
     call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., data_is_parallel)
+    if (.not. cube%parallel_in_domains) then
+      data_is_parallel = .false.
+    end if
 
     call messages_obsolete_variable(namespace, 'PoissonSolverISFParallelData', 'PoissonSolverPSolverParallelData')
 
