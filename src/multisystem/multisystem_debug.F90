@@ -36,8 +36,7 @@ module multisystem_debug_oct_m
   public &
     multisystem_debug_init,            &
     multisystem_debug_end,             &
-    multisystem_debug_start_log,       &
-    multisystem_debug_stop_log,        &
+    multisystem_debug_write_marker,    &
     multisystem_debug_write_event_in,  &
     multisystem_debug_write_event_out, &
     event_info_t,                      &
@@ -94,7 +93,6 @@ module multisystem_debug_oct_m
   type(mpi_grp_t) :: mpi_grp
   integer iunit
   integer event_ID
-  logical log_active
 
 contains
 
@@ -112,9 +110,9 @@ contains
   !-------------------------------------------------------------------
 
   function event_function_call_constructor(name, op) result(event)
-    character(*) name
-    type(algorithmic_operation_t), optional :: op
-    type(event_function_call_t)             :: event
+    character(*),                   intent(in)           :: name
+    type(algorithmic_operation_t),  intent(in), optional :: op
+    type(event_function_call_t)                          :: event
 
     PUSH_SUB(event_function_call_constructor)
 
@@ -159,7 +157,6 @@ contains
     if(mpi_grp%rank == 0) then
       iunit = io_open(filename, namespace, action="write", status="unknown" )
     end if
-    log_active = .false.
 
     POP_SUB(multisystem_debug_init) 
   end subroutine multisystem_debug_init
@@ -175,24 +172,28 @@ contains
     POP_SUB(multisystem_debug_end)
   end subroutine multisystem_debug_end
 
-  subroutine multisystem_debug_start_log()
 
-    PUSH_SUB(multisystem_debug_start_log)
+  subroutine multisystem_debug_write_marker(system_namespace, text)
 
-    log_active = .true.
+    class(namespace_t),  intent(in), optional           :: system_namespace
+    character(*), intent(in) :: text
 
-    POP_SUB(multisystem_debug_start_log)    
-  end subroutine multisystem_debug_start_log
+    character(len = MAX_NAMESPACE_LEN) ::  system_name
 
-  subroutine multisystem_debug_stop_log()
+    PUSH_SUB(multisystem_debug_write_marker)
 
-    PUSH_SUB(multisystem_debug_stop_log)
+    system_name = '.'//trim(system_namespace%get())
+    if (system_name == '.') system_name = ''
 
-    log_active = .false.
-    
-    POP_SUB(multisystem_debug_stop_log)
-  end subroutine multisystem_debug_stop_log
+    if(mpi_grp%rank == 0) then
+      write(iunit, '("MARKER:   ",I10," | system: ",a,"| text: ",a)' , advance='yes' ) event_ID, trim(system_name), trim(text)
+    end if
 
+    event_ID = event_ID + 1
+
+    POP_SUB(multisystem_debug_write_marker)
+
+  end subroutine multisystem_debug_write_marker
 
   function multisystem_debug_write_event_in(system_namespace, event, extra,  system_clock, prop_clock, & 
                                             interaction_clock, partner_clock, requested_clock) result(handle)
@@ -210,7 +211,7 @@ contains
 
     PUSH_SUB(multisystem_debug_write_event_in)
 
-    if( (mpi_grp%rank == 0) .and. log_active) then
+    if(mpi_grp%rank == 0) then
 
       if(present(system_namespace)) then
         system_name = '.'//trim(system_namespace%get())
@@ -271,7 +272,7 @@ contains
 
     PUSH_SUB(multisystem_debug_write_event_out)
 
-    if(log_active) then
+    if(mpi_grp%rank == 0) then
 
       if(present(update)) then
         if(update) then

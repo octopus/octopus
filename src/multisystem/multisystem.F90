@@ -317,7 +317,14 @@ contains
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
 
+    type(event_handle_t) :: debug_handle
+
     PUSH_SUB(multisystem_propagation_start)
+
+    if (debug%propagation_graph) then
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("multisystem_propagation_start"), &
+                                                      system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     ! Start the propagation of the multisystem
     call system_propagation_start(this)
@@ -329,6 +336,10 @@ contains
       call system%propagation_start()
     end do
 
+    if (debug%propagation_graph) then
+      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
+
     POP_SUB(multisystem_propagation_start)
   end subroutine multisystem_propagation_start
 
@@ -339,7 +350,14 @@ contains
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
 
+    type(event_handle_t) :: debug_handle
+
     PUSH_SUB(multisystem_propagation_finish)
+
+    if (debug%propagation_graph) then
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("multisystem_propagation_finish"), &
+                                                      system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     ! Finish the propagation of the multisystem
     call system_propagation_finish(this)
@@ -350,6 +368,10 @@ contains
       system => iter%get_next()
       call system%propagation_finish()
     end do
+
+    if (debug%propagation_graph) then
+      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     POP_SUB(multisystem_propagation_finish)
   end subroutine multisystem_propagation_finish

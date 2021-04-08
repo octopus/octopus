@@ -92,11 +92,11 @@ contains
 
     call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
 
-    if ( debug%propagation_graph ) then
-      call multisystem_debug_start_log()
-    end if
-
     call systems%propagation_start()
+
+    if ( debug%propagation_graph ) then
+      call multisystem_debug_write_marker(systems%namespace, "propagation_start")
+    end if
 
     ! The full TD loop
     do while (.not. systems%has_reached_final_propagation_time(final_time))
@@ -116,11 +116,11 @@ contains
 
     end do
 
-    call systems%propagation_finish()
-
     if ( debug%propagation_graph ) then
-      call multisystem_debug_stop_log()
+      call multisystem_debug_write_marker(systems%namespace, "propagation_finish")
     end if
+
+    call systems%propagation_finish()
 
     if ( debug%propagation_graph ) then
       call multisystem_debug_end()

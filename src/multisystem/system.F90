@@ -744,8 +744,14 @@ contains
     class(system_t),      intent(inout) :: this
 
     logical :: all_updated
+    type(event_handle_t) :: debug_handle
 
     PUSH_SUB(system_propagation_start)
+
+    if (debug%propagation_graph) then
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_start"), &
+                                                      system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: Start  propagation_start for '" + trim(this%namespace%get()) + "'"
@@ -773,20 +779,34 @@ contains
       call messages_info(1)
     end if
 
+    if (debug%propagation_graph) then
+      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
+
     POP_SUB(system_propagation_start)
   end subroutine system_propagation_start
 
   ! ---------------------------------------------------------
   subroutine system_propagation_finish(this)
     class(system_t),      intent(inout) :: this
+    type(event_handle_t) :: debug_handle
 
     PUSH_SUB(system_propagation_finish)
+
+    if (debug%propagation_graph) then
+      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_finish"), &
+                                                      system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     ! Finish output
     call this%output_finish()
 
     ! System-specific and propagator-specific finalization step
     call this%do_td_operation(this%prop%final_step)
+
+    if (debug%propagation_graph) then
+      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
+    end if
 
     POP_SUB(system_propagation_finish)
   end subroutine system_propagation_finish
