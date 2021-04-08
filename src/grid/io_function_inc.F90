@@ -1305,7 +1305,7 @@ contains
     logical, intent(in) :: write_real
 
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
-    FLOAT :: lattice_vectors(3,3)
+    FLOAT :: lattice_vectors(3,mesh%sb%dim)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
@@ -1343,8 +1343,9 @@ contains
     if(mesh%sb%dim == 2) my_n(3) = 1
 
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
-    do idir = 1, 3
-      do idir2 = 1, 3
+    lattice_vectors = M_ZERO
+    do idir = 1, mesh%sb%dim
+      do idir2 = 1, mesh%sb%dim
         lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
       end do
     end do
