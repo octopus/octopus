@@ -34,7 +34,8 @@ module heap_oct_m
   ! is restored by down-sifting (minheapify).
   ! The time complexity of this merge is O(n log k) where n is the full size
   ! of the arrays and k is the number of arrays.
-  type, private :: heap_t
+  type :: heap_t
+    private
     integer(8), pointer :: a(:)            !< a list of sorted arrays
     integer(8) :: length                   !< the number of sorted arrays -> this is the length of the heap
     integer(8), allocatable :: indices(:)  !< the starting indices of the sorted arrays
