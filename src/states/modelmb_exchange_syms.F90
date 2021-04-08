@@ -60,6 +60,10 @@ subroutine modelmb_sym_all_states (gr, st)
 
   PUSH_SUB(modelmb_sym_all_states)
 
+  if (st%parallel_in_states) then
+    call messages_not_implemented("Model MB parallel in states")
+  end if
+
   if (states_are_complex(st)) then
     call zmodelmb_sym_all_states (gr, st)
   else
