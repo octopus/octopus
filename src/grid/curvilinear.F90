@@ -201,7 +201,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      chi = matmul(x, sb%latt%klattice_primitive)
+      chi(1:sb%dim) = matmul(x(1:sb%dim), sb%latt%klattice_primitive)
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
