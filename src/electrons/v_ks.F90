@@ -1185,6 +1185,8 @@ contains
     type(space_t),            intent(in)    :: space
 
     integer                           :: ip, ispin
+    type(states_elec_t) :: xst !< The states after the application of the Fock operator
+                               !! This is needed to construct the ACE operator
 
     PUSH_SUB(v_ks_calc_finish)
 
@@ -1300,18 +1302,22 @@ contains
         !This should be changed and the CAM parameters should also be obtained from the restart information
         !Maybe the parameters should be mixed too.
         if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
+          call xst%nullify()
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
-            call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
+                    ks%gr%sb, ks%calc%hf_st, xst, hm%kpoints)
+            call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
+                    ks%gr%sb, ks%calc%hf_st, xst, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
-              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, &
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
             else
-              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
             end if
           end if
+          call states_elec_end(xst)
         end if
 
         select case(ks%theory_level)

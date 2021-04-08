@@ -301,13 +301,14 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, sb, st, kpoints)
-  type(exchange_operator_t), intent(inout) :: this
+subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, sb, st, xst, kpoints)
+  type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(space_t),             intent(in)    :: space
   type(mesh_t),              intent(in)    :: mesh
   type(simul_box_t),         intent(in)    :: sb
   type(states_elec_t),       intent(in)    :: st 
+  type(states_elec_t),       intent(inout) :: xst
   type(kpoints_t),           intent(in)    :: kpoints
 
   integer :: ib, ii, ik, ist, ikloc, node_fr, node_to
@@ -332,7 +333,6 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
   PUSH_SUB(X(exchange_operator_compute_potentials))
 
-  SAFE_DEALLOCATE_A(this%ace%X(chi))
    
   !Weight of the exchange operator
   exx_coef = max(this%cam_alpha,this%cam_beta)
@@ -378,12 +378,12 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(xpsi(1:mesh%np, 1:st%d%dim))
 
-  if(.not.this%xst%group%block_initialized) then
-    call states_elec_copy(this%xst, st)
+  if(.not.xst%group%block_initialized) then
+    call states_elec_copy(xst, st)
   end if
 
   !We set to zero before doing the accumulation
-  call states_elec_set_zero(this%xst)
+  call states_elec_set_zero(xst)
 
   !We do the symmetrization on the received states, to reduce the amount of Poisson equation solved
   if(kpoints%use_symmetries) then
@@ -552,10 +552,10 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
           do istloc = st%st_start, st%st_end
             do idim = 1, st%d%dim 
               !TODO: Create a routine batch_add_to_state taking ist and ik as arguments
-              call batch_get_state(this%xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
+              call batch_get_state(xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
                                         (/istloc, idim/), mesh%np, xpsi(:,idim))
               call lalg_axpy(mesh%np, M_ONE, xpsi_rec(:,idim, istloc), xpsi(:,idim))
-              call batch_set_state(this%xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
+              call batch_set_state(xst%group%psib(st%group%iblock(istloc, ikloc), ikloc), &
                                         (/istloc, idim/), mesh%np, xpsi(:,idim))
             end do
           end do
@@ -733,18 +733,18 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
            call profiling_in(prof_acc, "EXCHANGE_ACCUMULATE")
            if(ff > M_EPSILON) then
 
-             select case(this%xst%group%psib(ib2, ik2)%status())
+             select case(xst%group%psib(ib2, ik2)%status())
              case(BATCH_DEVICE_PACKED)
                !xpsi contains the application of the Fock operator to psi2
                do  ii2 = 1, st%group%psib(ib2, ik2)%nst
-                 call batch_get_state(this%xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
+                 call batch_get_state(xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
                  do idim = 1, st%d%dim
                    !$omp parallel do
                    do ip = 1, mesh%np
                      xpsi(ip, idim) = xpsi(ip, idim) - ff_psi_sym(ip, idim)*pot(ip, ii2)
                    end do
                  end do
-                 call batch_set_state(this%xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
+                 call batch_set_state(xst%group%psib(ib2, ik2), ii2, mesh%np, xpsi)
                end do
 
              case(BATCH_PACKED)
@@ -752,8 +752,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                do ip = 1, mesh%np
                  do  ii2 = 1, st%group%psib(ib2, ik2)%nst
                    do idim = 1, st%d%dim 
-                     this%xst%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)     &
-                      = this%xst%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)  &
+                     xst%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)     &
+                      = xst%group%psib(ib2, ik2)%X(ff_pack)((ii2-1)*st%d%dim+idim, ip)  &
                           - ff_psi_sym(ip, idim)*pot(ip, ii2)
                    end do
                  end do
@@ -764,8 +764,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                  do idim = 1, st%d%dim
                    !$omp parallel do  
                    do ip = 1, mesh%np
-                     this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)     &
-                       = this%xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2) &
+                     xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2)     &
+                       = xst%group%psib(ib2, ik2)%X(ff)(ip, idim, ii2) &
                           - ff_psi_sym(ip, idim)*pot(ip, ii2)
                    end do
                  end do
@@ -845,10 +845,11 @@ end subroutine X(exchange_operator_compute_potentials)
 
 ! ---------------------------------------------------------
 ! We follow the procedure defined in Lin, J. Chem. Theory Comput. 2016, 12, 2242
-subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
+subroutine X(exchange_operator_ACE)(this, mesh, st, xst, phase)
   type(exchange_operator_t), intent(inout) :: this
   type(mesh_t),              intent(in)    :: mesh
   type(states_elec_t),       intent(inout) :: st
+  type(states_elec_t),       intent(inout) :: xst
   CMPLX, optional,           intent(in)    :: phase(:, st%d%kpt%start:)
 
   integer :: nst, nst2, ierr, idim
@@ -878,8 +879,8 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim)) 
   SAFE_ALLOCATE(xpsi(1:mesh%np, 1:st%d%dim))
 
-  if(this%xst%parallel_in_states) then
-    call states_elec_parallel_remote_access_start(this%xst)
+  if(xst%parallel_in_states) then
+    call states_elec_parallel_remote_access_start(xst)
   end if
 
   !We loop over all states and we get the X|\psi> using MPI one sided communication
@@ -888,7 +889,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = 1, st%group%nblocks
       !We copy data into xpsib from the corresponding MPI task
-      call states_elec_parallel_get_block(this%xst, mesh, ib, ik, xpsib)
+      call states_elec_parallel_get_block(xst, mesh, ib, ik, xpsib)
       do ii = 1, xpsib%nst
         nst =  st%group%psib(ib, ik)%ist(ii)
         call batch_get_state(xpsib, ii, mesh%np, xpsi)
@@ -904,12 +905,12 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
           MM(nst2, nst, ik) = -X(mf_dotp)(mesh, st%d%dim, psi, xpsi)
         end do !nst2
       end do !ii
-      call states_elec_parallel_release_block(this%xst, ib, xpsib)
+      call states_elec_parallel_release_block(xst, ib, xpsib)
     end do !ib
   end do !ik
   SAFE_DEALLOCATE_A(psi)
 
-  if(this%xst%parallel_in_states) call states_elec_parallel_remote_access_stop(this%xst)
+  if(xst%parallel_in_states) call states_elec_parallel_remote_access_stop(xst)
 
   !Reduction
   if(st%parallel_in_states) then
@@ -946,7 +947,7 @@ subroutine X(exchange_operator_ACE)(this, mesh, st, phase)
   do ik = st%d%kpt%start, st%d%kpt%end
     do nst2 = st%st_start, st%st_end
       do idim = 1, st%d%dim
-        call batch_get_state(this%xst%group%psib(this%xst%group%iblock(nst2, ik), ik), (/nst2, idim/), &
+        call batch_get_state(xst%group%psib(xst%group%iblock(nst2, ik), ik), (/nst2, idim/), &
                                 mesh%np, xpsi(:,idim))
         do nst = 1, this%ace%nst
           !U^-1 is upper triangular
