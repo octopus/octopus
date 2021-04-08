@@ -94,8 +94,6 @@ module exchange_operator_oct_m
 
     logical       :: useACE
     type(ACE_t)   :: ace
-    type(states_elec_t) :: xst !< The states after the application of the Fock operator
-                               !! This is needed to construct the ACE operator
   end type exchange_operator_t
  
 contains
@@ -145,10 +143,6 @@ contains
     call parse_variable(namespace, 'AdaptivelyCompressedExchange', .false., this%useACE)
     if(this%useACE) call messages_experimental('AdaptivelyCompressedExchange')
 
-    if(this%useACE) then
-      call this%xst%nullify()
-    end if
-
     call singularity_init(this%singul, namespace, st, sb, kpoints)
     if(states_are_real(st)) then
       call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
@@ -190,7 +184,6 @@ contains
     nullify(this%st)
 
     if(this%useACE) then
-      call states_elec_end(this%xst)
       this%ace%nst = 0
       SAFE_DEALLOCATE_A(this%ace%dchi)
       SAFE_DEALLOCATE_A(this%ace%zchi)
