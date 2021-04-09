@@ -163,7 +163,6 @@ contains
     this%geo%kinetic_energy = M_ZERO
     call distributed_nullify(this%geo%atoms_dist, 0)
     this%geo%reduced_coordinates = .false.
-    this%geo%lsize = M_ZERO
     this%geo%latt = lattice_vectors_t(this%namespace, this%space)
 
     call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)

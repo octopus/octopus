@@ -96,9 +96,6 @@ module geometry_oct_m
     logical                      :: only_user_def          !< Do we want to treat only user-defined species?
     logical,         private     :: species_time_dependent !< For time-dependent user defined species
 
-    !> variables for passing info from XSF input to simul_box_init
-    FLOAT :: lsize(MAX_DIM)
-
     logical                 :: force_total_enforce
     type(ion_interaction_t) :: ion_interaction
   
@@ -123,7 +120,6 @@ contains
     PUSH_SUB(geometry_init)
 
     geo%space => space
-    geo%latt = lattice_vectors_t(namespace, space) ! Build lattice vectors.
 
     call species_init_global(namespace)
     
@@ -211,8 +207,16 @@ contains
       end do
     end if
 
+    
+    if (allocated(xyz%latvec)) then
+      ! Build lattice vectors from the XSF input
+      geo%latt = lattice_vectors_t(namespace, geo%space, xyz%latvec)
+    else
+      ! Build lattice vectors from input file
+      geo%latt = lattice_vectors_t(namespace, geo%space)
+    end if
+
     geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
-    geo%lsize(:) = xyz%lsize(:)
 
     call read_coords_end(xyz)
 
