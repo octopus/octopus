@@ -1325,14 +1325,22 @@ contains
 
         select case(ks%theory_level)
         case(HARTREE_FOCK)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+          call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)
         case(HARTREE)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, M_ZERO, M_ONE, M_ZERO, ks%calc%hf_st)
         case(RDMFT)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, M_ZERO, M_ONE, M_ZERO, ks%calc%hf_st)
         end select
       end if
 
+    end if
+
+    ! Because of the intent(in) in v_ks_calc_start, we need to update the parameters of hybrids for OEP 
+    ! here
+    if(ks%theory_level == KOHN_SHAM_DFT .and. bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER .and. ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_FBE) then
+        call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+      end if
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
