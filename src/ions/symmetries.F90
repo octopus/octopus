@@ -200,8 +200,7 @@ contains
 
         if(.not. geo%reduced_coordinates) then
           ! Transform atomic positions to reduced coordinates
-          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms), &
-                                           latt%klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
+          position(1:dim4syms,iatom) = latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
         else
           position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
         end if
