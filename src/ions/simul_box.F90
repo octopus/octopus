@@ -666,17 +666,13 @@ contains
 
     PUSH_SUB(simul_box_copy)
 
-    sbout%box_shape               = sbin%box_shape
-    sbout%rsize                   = sbin%rsize
-    sbout%xsize                   = sbin%xsize
-    sbout%lsize                   = sbin%lsize
-    sbout%latt%rlattice           = sbin%latt%rlattice
-    sbout%latt%rlattice_primitive = sbin%latt%rlattice_primitive
-    sbout%latt%klattice           = sbin%latt%klattice
-    sbout%latt%klattice_primitive = sbin%latt%klattice_primitive
-    sbout%latt%nonorthogonal      = sbin%latt%nonorthogonal
-    sbout%dim                     = sbin%dim
-    sbout%periodic_dim            = sbin%periodic_dim
+    sbout%box_shape      = sbin%box_shape
+    sbout%rsize          = sbin%rsize
+    sbout%xsize          = sbin%xsize
+    sbout%lsize          = sbin%lsize
+    sbout%latt           = sbin%latt
+    sbout%dim            = sbin%dim
+    sbout%periodic_dim   = sbin%periodic_dim
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy

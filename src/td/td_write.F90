@@ -411,7 +411,7 @@ contains
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) then 
       if (space%is_periodic()) then
-        rmin = minval(gr%sb%lsize(1:space%periodic_dim))
+        rmin = M_TWO*minval(norm2(gr%sb%latt%rlattice(:,1:space%periodic_dim),dim=1))
       else
         rmin = CNST(100.0)
       end if

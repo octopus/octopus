@@ -484,11 +484,12 @@ contains
       index_ = 1
     end if
 
-    offset = M_ZERO
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
     ! Offset in periodic directions:
-    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
+    do idir = 1, geo%space%periodic_dim
+      offset(idir) = -M_HALF*sum(mesh%sb%latt%rlattice(idir,1:geo%space%periodic_dim))
+    end do
     ! Offset in aperiodic directions:
     do idir = geo%space%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
@@ -497,12 +498,12 @@ contains
     if(geo%space%is_periodic()) then
       if(index_ == 1) then
         select case(geo%space%periodic_dim)
-          case(3)
-            write(iunit, '(a)') 'CRYSTAL'
-          case(2)
-            write(iunit, '(a)') 'SLAB'
-          case(1)
-            write(iunit, '(a)') 'POLYMER'
+        case(3)
+          write(iunit, '(a)') 'CRYSTAL'
+        case(2)
+          write(iunit, '(a)') 'SLAB'
+        case(1)
+          write(iunit, '(a)') 'POLYMER'
         end select
       end if
 
