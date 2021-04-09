@@ -242,12 +242,7 @@ subroutine X(forces_from_potential)(gr, namespace, space, geo, hm, st, force, fo
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
                 !We find the atom that correspond to this one, once symmetry is applied
-                ratom = M_ZERO
-                if(geo%reduced_coordinates) then
-                  ratom(1:space%dim) = symm_op_apply_inv_red(gr%symm%ops(iop), geo%atom(iatom)%x)
-                else
-                  ratom(1:space%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), geo%atom(iatom)%x)
-                end if
+                ratom(1:space%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), geo%atom(iatom)%x)
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
 

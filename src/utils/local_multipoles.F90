@@ -504,11 +504,6 @@ contains
 
     select case (domain%dshape)
     case (MINIMUM)
-      if (geo%reduced_coordinates) then
-        message(1) = "The 'minimum' box shape cannot be used if atomic positions"
-        message(2) = "are given as reduced coordinates."
-        call messages_fatal(2)
-      end if
       call parse_block_float(blk, row, 2, radius, unit = units_inp%length)
       if (radius < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_string(blk, row, 3, domain%clist)

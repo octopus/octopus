@@ -86,8 +86,6 @@ module geometry_oct_m
     type(atom_classical_t), allocatable :: catom(:)
 
     FLOAT   :: kinetic_energy      !< the ion kinetic energy
-    logical :: reduced_coordinates !< If true the coordinates are stored in
-                                   !! reduced coordinates and need to be converted.
     type(distributed_t) :: atoms_dist
 
     !> Information about the species
@@ -216,7 +214,12 @@ contains
       geo%latt = lattice_vectors_t(namespace, geo%space)
     end if
 
-    geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
+    ! Convert coordinates to Cartesian in case we have reduced coordinates
+    if (xyz%source == READ_COORDS_REDUCED) then
+      do ia = 1, geo%natoms
+        geo%atom(ia)%x(1:geo%space%dim) = geo%latt%red_to_cart(geo%atom(ia)%x(1:geo%space%dim))
+      end do
+    end if
 
     call read_coords_end(xyz)
 

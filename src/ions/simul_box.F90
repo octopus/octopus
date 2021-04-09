@@ -260,13 +260,6 @@ contains
         if(sb%rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
-
-        if(geo%reduced_coordinates) then
-          message(1) = "The 'minimum' box shape cannot be used if atomic positions"
-          message(2) = "are given as reduced coordinates."
-          call messages_fatal(2, namespace=namespace)
-        end if
-
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
@@ -518,10 +511,6 @@ contains
 
       call simul_box_periodic_atom_in_box(sb, geo, geo%atom(iatom)%x(:))
 
-      if(geo%reduced_coordinates) then
-        geo%atom(iatom)%x(pd + 1:geo%space%dim) = M_TWO*sb%lsize(pd + 1:geo%space%dim)*geo%atom(iatom)%x(pd + 1:geo%space%dim)
-      end if
-
       if (.not. sb%contains_point(geo%atom(iatom)%x)) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (geo%space%periodic_dim /= geo%space%dim) then
@@ -534,9 +523,6 @@ contains
       end if
 
     end do
-
-    ! done with the conversion to real coordinates
-    geo%reduced_coordinates =  .false.
 
     POP_SUB(simul_box_atoms_in_box)
   end subroutine simul_box_atoms_in_box
@@ -554,14 +540,10 @@ contains
     pd = geo%space%periodic_dim
 
     if (geo%space%is_periodic()) then
-      if(.not. geo%reduced_coordinates) then
-        !convert the position to reduced coordinates
-         xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
-      else
-        ! in this case coordinates are already in reduced space
-        xx(1:pd) = ratom(1:pd)
-      end if
+      !convert the position to reduced coordinates
+      xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
 
+      ! Put atom back inside the box
       xx(1:pd) = xx(1:pd) + M_HALF
       do idir = 1, pd
         xx(idir) = xx(idir) - anint(xx(idir))
@@ -572,8 +554,9 @@ contains
       ASSERT(all(xx(1:pd) < CNST(1.0)))
 
       xx(1:pd) = (xx(1:pd) - M_HALF)
-      ratom(1:pd) = matmul(sb%latt%rlattice(1:pd, 1:pd), xx(1:pd))
 
+      ! Convert back to Cartesian coordinates
+      ratom(1:pd) = matmul(sb%latt%rlattice(1:pd, 1:pd), xx(1:pd))
     end if
     
 
@@ -772,12 +755,7 @@ contains
       if(iop == symmetries_identity_index(symm)) cycle
 
       do iatom = 1, geo%natoms
-        ratom = M_ZERO
-        if(geo%reduced_coordinates) then
-          ratom(1:this%dim) = symm_op_apply_red(symm%ops(iop), geo%atom(iatom)%x)
-        else
-          ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
-        end if
+        ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
      
         call simul_box_periodic_atom_in_box(this, geo, ratom)
 

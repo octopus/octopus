@@ -198,12 +198,8 @@ contains
       do iatom = 1, geo%natoms
         position(1:3,iatom) = M_ZERO
 
-        if(.not. geo%reduced_coordinates) then
-          ! Transform atomic positions to reduced coordinates
-          position(1:dim4syms,iatom) = latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
-        else
-          position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
-        end if
+        ! Transform atomic positions to reduced coordinates
+        position(1:dim4syms,iatom) = latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
         do idir = 1, dim4syms
           position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
