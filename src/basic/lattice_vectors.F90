@@ -52,6 +52,8 @@ module lattice_vectors_oct_m
     procedure :: scale => lattice_vectors_scale
     procedure :: write_info => lattice_vectors_write_info
     procedure :: short_info => lattice_vectors_short_info
+    procedure :: cart_to_red => lattice_vectors_cart_to_red
+    procedure :: red_to_cart => lattice_vectors_red_to_cart
     final :: lattice_vectors_finalize
   end type lattice_vectors_t
 
@@ -292,6 +294,26 @@ contains
     
     POP_SUB(lattice_vectors_scale)
   end subroutine lattice_vectors_scale
+
+  !--------------------------------------------------------------
+  pure function lattice_vectors_cart_to_red(this, xx_cart) result(xx_red)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx_cart(this%space%dim)
+    FLOAT :: xx_red(this%space%dim)
+
+    xx_red = matmul(xx_cart, this%klattice)/(M_TWO*M_PI)
+
+  end function lattice_vectors_cart_to_red
+
+  !--------------------------------------------------------------
+  pure function lattice_vectors_red_to_cart(this, xx_red) result(xx_cart)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx_red(this%space%dim)
+    FLOAT :: xx_cart(this%space%dim)
+
+    xx_cart = matmul(this%rlattice, xx_red)
+
+  end function lattice_vectors_red_to_cart
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)

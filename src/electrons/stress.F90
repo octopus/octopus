@@ -230,11 +230,10 @@ contains
          call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
          if (allocated(cube%Lrs))then
-            xx(1:3) = cube%Lrs(1,1:3)
-            xx(1:3) = matmul(gr%sb%latt%rlattice(1:3,1:3),xx)
+            xx(1:3) = gr%sb%latt%red_to_cart(cube%Lrs(1,1:3))
          else
             xx(1:3) = -TOFLOAT(cube%rs_n_global(1:3)/2 )/TOFLOAT(cube%rs_n_global(1:3))
-            xx(1:3) = matmul(gr%sb%latt%rlattice(1:3,1:3),xx)
+            xx(1:3) = gr%sb%latt%red_to_cart(xx(1:3))
          end if
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)

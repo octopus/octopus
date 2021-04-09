@@ -296,9 +296,8 @@ contains
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a)') 'begin atoms_frac'
-    do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%latt%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+    do ia = 1, sys%geo%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), sb%latt%cart_to_red(geo%atom(ia)%x(1:3))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -1100,7 +1099,7 @@ contains
         orbitals(iw)%submesh = .false.
       
         ! cartesian coordinate of orbital center
-        center(1:3) =  matmul(sb%latt%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
+        center(1:3) = sb%latt%red_to_cart(w90_proj_centers(iw,1:3))
         call submesh_init(orbitals(iw)%sphere, space, sb, mesh, center, orbitals(iw)%radius)
       
         ! make transpose table of submesh points for use in pwscf routine
