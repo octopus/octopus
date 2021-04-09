@@ -16,39 +16,11 @@
 !! 02110-1301, USA.
 !!
 !!
-! ---------------------------------------------------------
-subroutine X(xc_slater_calc)(namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
-  type(namespace_t),         intent(in)    :: namespace
-  type(mesh_t),              intent(in)    :: mesh
-  type(simul_box_t),         intent(in)    :: sb
-  type(space_t),             intent(in)    :: space
-  type(exchange_operator_t), intent(in)    :: exxop
-  type(states_elec_t),       intent(in)    :: st
-  type(kpoints_t),           intent(in)    :: kpoints
-  FLOAT,                     intent(inout) :: ex
-  FLOAT, optional,           intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
-
-  FLOAT :: eig
-  type(profile_t), save :: prof
-
-  call profiling_in(prof, TOSTRING(X(XC_SLATER)))
-  PUSH_SUB(X(xc_slater_calc))
-
-  eig = M_ZERO
-  call X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, eig, vxc)
-  ex = ex + eig
-
-  POP_SUB(X(xc_slater_calc))
-  call profiling_out(prof)
-end subroutine X(xc_slater_calc)
-
 !------------------------------------------------------------
-!> This routine is adapted from the X(oep_x) routine
-!------------------------------------------------------------
-subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
+subroutine X(slater_calc) (namespace, mesh, latt, space, exxop, st, kpoints, ex, vxc)
   type(namespace_t),           intent(in)    :: namespace
   type(mesh_t),                intent(in)    :: mesh
-  type(simul_box_t),           intent(in)    :: sb
+  type(lattice_vectors_t),     intent(in)    :: latt
   type(space_t),               intent(in)    :: space
   type(exchange_operator_t),   intent(in)    :: exxop
   type(states_elec_t),         intent(in)    :: st
@@ -62,16 +34,17 @@ subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
   R_TYPE, allocatable :: psi(:,:), xpsi(:,:)
   CMPLX :: tmp
   FLOAT, allocatable :: tmp_vxc(:,:)
-  FLOAT :: nup, ndn, sqmod_updn, weight
+  FLOAT :: nup, ndn, sqmod_updn, weight, eig
   FLOAT :: global_b(4), local_b(4), local_v(4), global_v(4)
   type(states_elec_t) :: xst
 
 
-  PUSH_SUB(X(slater))
+  PUSH_SUB(X(slater_calc))
 
   !We first apply the exchange operator to all the states
   call xst%nullify()
-  call X(exchange_operator_compute_potentials)(exxop, namespace, space, mesh, sb, st, xst, kpoints)
+  eig = M_ZERO
+  call X(exchange_operator_compute_potentials)(exxop, namespace, space, mesh, latt, st, xst, kpoints)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(xpsi(1:mesh%np, 1:st%d%dim))
@@ -112,7 +85,7 @@ subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
       end if
 
       ! get the contribution to the exchange energy
-      ex = ex + M_HALF * weight * R_REAL(X(mf_dotp)(mesh, st%d%dim, xpsi, psi))
+      eig = eig + M_HALF * weight * R_REAL(X(mf_dotp)(mesh, st%d%dim, xpsi, psi))
     end do
   end do
 
@@ -121,8 +94,7 @@ subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     ! sum all contributions to the exchange energy
-    call MPI_Allreduce(ex, rr, 1, MPI_FLOAT, MPI_SUM, st%st_kpt_mpi_grp%comm, mpi_err)
-    ex = rr
+    call comm_allreduce(st%st_kpt_mpi_grp, eig)
     if(present(vxc)) then
       if(st%d%ispin == SPINORS) then
         call comm_allreduce(st%st_kpt_mpi_grp, bij)
@@ -132,6 +104,7 @@ subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
     end if
   end if
 #endif
+  ex = ex + eig
 
   if(present(vxc) .and. st%d%ispin /= SPINORS) then
     call lalg_axpy(mesh%np, st%d%spin_channels, M_ONE, tmp_vxc, vxc)
@@ -219,8 +192,8 @@ subroutine X(slater) (namespace, mesh, sb, space, exxop, st, kpoints, ex, vxc)
   SAFE_DEALLOCATE_A(xpsi)
   SAFE_DEALLOCATE_A(bij)
 
-  POP_SUB(X(slater))
-end subroutine X(slater)
+  POP_SUB(X(slater_calc))
+end subroutine X(slater_calc)
 
 
 !! Local Variables:

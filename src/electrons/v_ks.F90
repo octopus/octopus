@@ -36,6 +36,7 @@ module v_ks_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use libvdwxc_oct_m
@@ -1051,10 +1052,10 @@ contains
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
-              call  dxc_slater_calc(namespace, ks%gr%mesh, ks%gr%sb, space, hm%exxop, st, &
+              call  dslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
                                        hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             else
-              call  zxc_slater_calc(namespace, ks%gr%mesh, ks%gr%sb, space, hm%exxop, st, &
+              call  zslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
                                        hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
           else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
@@ -1307,11 +1308,11 @@ contains
           call xst%nullify()
           if(states_are_real(ks%calc%hf_st)) then
             call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
-                    ks%gr%sb, ks%calc%hf_st, xst, hm%kpoints)
+                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
             call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
           else
             call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
-                    ks%gr%sb, ks%calc%hf_st, xst, hm%kpoints)
+                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))

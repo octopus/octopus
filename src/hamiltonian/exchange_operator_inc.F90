@@ -301,12 +301,12 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, sb, st, xst, kpoints)
+subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, latt, st, xst, kpoints)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(space_t),             intent(in)    :: space
   type(mesh_t),              intent(in)    :: mesh
-  type(simul_box_t),         intent(in)    :: sb
+  type(lattice_vectors_t),   intent(in)    :: latt
   type(states_elec_t),       intent(in)    :: st 
   type(states_elec_t),       intent(inout) :: xst
   type(kpoints_t),           intent(in)    :: kpoints
@@ -364,13 +364,13 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
   if(double_sided_communication) then
     !The MPI distribution scheme is not compatible with the downsampling as implemented now
     !This is because of the "returned potential"
-    if(any(kpoints%downsampling(1:sb%dim)/=1)) then
+    if(any(kpoints%downsampling(1:space%dim) /= 1)) then
       call messages_not_implemented("ACE with downsampling")
     end if
   end if
 
   if(kpoints%use_symmetries) then
-    if(any(kpoints%downsampling(1:sb%dim)/=1)) then
+    if(any(kpoints%downsampling(1:space%dim) /= 1)) then
       call messages_not_implemented("Downsampling with k-point symmetries")
     end if
   end if
@@ -658,7 +658,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
           call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
-                  -(kpoints%full%npoints-npath)*sb%latt%rcell_volume  &
+                  -(kpoints%full%npoints-npath)*latt%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if
 
