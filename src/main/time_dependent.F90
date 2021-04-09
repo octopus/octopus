@@ -66,9 +66,7 @@ contains
 
     PUSH_SUB(time_dependent_run_multisystem)
 
-    if ( debug%propagation_graph ) then
-      call multisystem_debug_init("debug/multisystem_propagation.log", global_namespace, systems%grp)
-    end if
+    call multisystem_debug_init("debug/multisystem_propagation.log", global_namespace, systems%grp)
 
     call messages_write('Info: Running Multi-System time evolution')
     call messages_new_line()
@@ -94,9 +92,7 @@ contains
 
     call systems%propagation_start()
 
-    if ( debug%propagation_graph ) then
-      call multisystem_debug_write_marker(systems%namespace, "propagation_start")
-    end if
+    call multisystem_debug_write_marker(systems%namespace, event_marker_t("propagation_start"))
 
     ! The full TD loop
     do while (.not. systems%has_reached_final_propagation_time(final_time))
@@ -116,15 +112,11 @@ contains
 
     end do
 
-    if ( debug%propagation_graph ) then
-      call multisystem_debug_write_marker(systems%namespace, "propagation_finish")
-    end if
+    call multisystem_debug_write_marker(systems%namespace, event_marker_t("propagation_finish"))
 
     call systems%propagation_finish()
 
-    if ( debug%propagation_graph ) then
-      call multisystem_debug_end()
-    end if
+    call multisystem_debug_end()
     
     POP_SUB(time_dependent_run_multisystem)
   end subroutine time_dependent_run_multisystem

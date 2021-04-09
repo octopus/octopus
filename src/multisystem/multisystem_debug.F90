@@ -22,6 +22,7 @@ module multisystem_debug_oct_m
 
   use algorithm_oct_m
   use clock_oct_m
+  use debug_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
@@ -41,6 +42,8 @@ module multisystem_debug_oct_m
     multisystem_debug_write_event_out, &
     event_info_t,                      &
     event_function_call_t,             &
+    event_clock_update_t,              &
+    event_marker_t,                    &
     event_handle_t
 
   integer, parameter, public :: MAX_INFO_LEN = 128
@@ -77,6 +80,31 @@ module multisystem_debug_oct_m
   interface event_function_call_t
     procedure :: event_function_call_constructor
   end interface event_function_call_t
+
+  !-------------------------------------------------------------------
+
+  type, extends(event_info_t) :: event_clock_update_t
+    character(len=MAX_INFO_LEN) :: clock_name
+    type(clock_t)               :: clock
+  contains
+    procedure :: get_info => event_clock_update_get_info
+  end type event_clock_update_t
+
+  interface event_clock_update_t
+    procedure :: event_clock_update_constructor
+  end interface event_clock_update_t
+
+  !-------------------------------------------------------------------
+
+  type, extends(event_info_t) :: event_marker_t
+    character(len=MAX_INFO_LEN) :: text
+  contains
+    procedure :: get_info => event_marker_get_info
+  end type event_marker_t
+
+  interface event_marker_t
+    procedure :: event_marker_constructor
+  end interface event_marker_t
 
   !-------------------------------------------------------------------
 
@@ -134,13 +162,66 @@ contains
 
     PUSH_SUB(event_function_call_get_info)
 
+!    info = "type: function_call | function: " // trim(this%function_name) 
     info = "function: " // trim(this%function_name) 
     if(this%op_label /= "NULL") then
-      info =  "function: " // trim(this%function_name) // "|operation: " // trim(this%op_label)
+      info = trim(info) // " | operation: " // trim(this%op_label)
     endif
 
     POP_SUB(event_function_call_get_info)
   end function event_function_call_get_info
+
+  !-------------------------------------------------------------------
+
+  function event_clock_update_constructor(clock_name, clock) result(event)
+    character(*),  intent(in)   :: clock_name
+    type(clock_t), intent(in)   :: clock
+    type(event_clock_update_t)  :: event
+
+    PUSH_SUB(event_function_call_constructor)
+
+    event%clock = clock
+    event%clock_name = clock_name
+
+    POP_SUB(event_function_call_constructor)
+  end function event_clock_update_constructor
+
+  
+  function event_clock_update_get_info(this) result(info)
+    class(event_clock_update_t), intent(in) :: this
+    character(len=MAX_INFO_LEN)  :: info
+
+    PUSH_SUB(event_function_call_get_info)
+
+    write(info, '("type: clock_update | clock_name: ",a," | clock: ",E15.5)') trim(this%clock_name), this%clock%time()
+
+    POP_SUB(event_function_call_get_info)
+  end function event_clock_update_get_info
+
+  !-------------------------------------------------------------------
+
+  function event_marker_constructor(text) result(event)
+    character(*),  intent(in)   :: text
+    type(event_marker_t)  :: event
+
+    PUSH_SUB(event_function_call_constructor)
+
+    event%text = text
+ 
+    POP_SUB(event_function_call_constructor)
+  end function event_marker_constructor
+
+  
+  function event_marker_get_info(this) result(info)
+    class(event_marker_t), intent(in) :: this
+    character(len=MAX_INFO_LEN)  :: info
+
+    PUSH_SUB(event_function_call_get_info)
+
+    write(info, '("type: marker | text: ",a)') trim(this%text)
+
+    POP_SUB(event_function_call_get_info)
+  end function event_marker_get_info
 
   !-------------------------------------------------------------------
 
@@ -154,7 +235,7 @@ contains
     mpi_grp = group
 
     event_ID = 0
-    if(mpi_grp%rank == 0) then
+    if(debug%propagation_graph .and. mpi_grp%rank == 0) then
       iunit = io_open(filename, namespace, action="write", status="unknown" )
     end if
 
@@ -165,7 +246,7 @@ contains
 
     PUSH_SUB(multisystem_debug_end)
 
-    if(mpi_grp%rank == 0) then
+    if(debug%propagation_graph .and. mpi_grp%rank == 0) then
       call io_close(iunit)
     end if
 
@@ -173,23 +254,25 @@ contains
   end subroutine multisystem_debug_end
 
 
-  subroutine multisystem_debug_write_marker(system_namespace, text)
+  subroutine multisystem_debug_write_marker(system_namespace, event)
 
     class(namespace_t),  intent(in), optional           :: system_namespace
-    character(*), intent(in) :: text
+    class(event_info_t), intent(in)                     :: event
 
     character(len = MAX_NAMESPACE_LEN) ::  system_name
 
     PUSH_SUB(multisystem_debug_write_marker)
 
-    system_name = '.'//trim(system_namespace%get())
-    if (system_name == '.') system_name = ''
+    if(debug%propagation_graph .and. mpi_grp%rank == 0) then
 
-    if(mpi_grp%rank == 0) then
-      write(iunit, '("MARKER:   ",I10," | system: ",a,"| text: ",a)' , advance='yes' ) event_ID, trim(system_name), trim(text)
+      system_name = '.'//trim(system_namespace%get())
+      if (system_name == '.') system_name = ''
+
+      write(iunit, '("MARKER:   ",I10," | system: ",a,"| ",a)' , advance='yes' ) event_ID, & 
+            trim(system_name), trim(event%get_info())
+      event_ID = event_ID + 1
+
     end if
-
-    event_ID = event_ID + 1
 
     POP_SUB(multisystem_debug_write_marker)
 
@@ -211,7 +294,7 @@ contains
 
     PUSH_SUB(multisystem_debug_write_event_in)
 
-    if(mpi_grp%rank == 0) then
+    if(debug%propagation_graph .and. mpi_grp%rank == 0) then
 
       if(present(system_namespace)) then
         system_name = '.'//trim(system_namespace%get())
@@ -272,7 +355,7 @@ contains
 
     PUSH_SUB(multisystem_debug_write_event_out)
 
-    if(mpi_grp%rank == 0) then
+    if(debug%propagation_graph .and. mpi_grp%rank == 0) then
 
       if(present(update)) then
         if(update) then

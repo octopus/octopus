@@ -184,10 +184,8 @@ contains
       call messages_info(1)
     end if
 
-    if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("dt_operation", tdop),    &
-                                                      system_clock=this%clock, prop_clock=this%prop%clock)
-    end if
+    debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("dt_operation", tdop),    &
+                                                    system_clock=this%clock, prop_clock=this%prop%clock)
 
     select case (tdop%id)
     case (FINISHED)
@@ -281,9 +279,7 @@ contains
       call messages_info(1)
     end if
 
-    if (debug%propagation_graph) then
-      call multisystem_debug_write_event_out(debug_handle, system_clock=this%clock, prop_clock=this%prop%clock)
-    end if
+    call multisystem_debug_write_event_out(debug_handle, system_clock=this%clock, prop_clock=this%prop%clock)
 
     POP_SUB(system_dt_operation)
   end subroutine system_dt_operation
@@ -338,13 +334,11 @@ contains
       call messages_info(1)
     end if
 
-    if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(system_namespace = partner%namespace, &
-                                                      event = event_function_call_t("system_update_exposed_quantities"), &
-                                                      partner_clock = partner%clock, &
-                                                      requested_clock = requested_time, &
-                                                      interaction_clock = interaction%clock )
-    end if
+    debug_handle = multisystem_debug_write_event_in(system_namespace = partner%namespace, &
+                                                    event = event_function_call_t("system_update_exposed_quantities"), &
+                                                    partner_clock = partner%clock, &
+                                                    requested_clock = requested_time, &
+                                                    interaction_clock = interaction%clock )
 
     select type (interaction)
     class is (interaction_with_partner_t)
@@ -422,12 +416,10 @@ contains
       call messages_info(1)
     end if
 
-    if (debug%propagation_graph) then
-      call multisystem_debug_write_event_out(debug_handle, update=allowed_to_update, &
-                                                           partner_clock = partner%clock, &
-                                                           requested_clock = requested_time, &
-                                                           interaction_clock = interaction%clock )
-    end if
+    call multisystem_debug_write_event_out(debug_handle, update=allowed_to_update, &
+                                                         partner_clock = partner%clock, &
+                                                         requested_clock = requested_time, &
+                                                         interaction_clock = interaction%clock )
 
     POP_SUB(system_update_exposed_quantities)
   contains
@@ -748,10 +740,8 @@ contains
 
     PUSH_SUB(system_propagation_start)
 
-    if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_start"), &
-                                                      system_clock = this%clock, prop_clock = this%prop%clock)
-    end if
+    debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_start"), &
+                                                    system_clock = this%clock, prop_clock = this%prop%clock)
 
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: Start  propagation_start for '" + trim(this%namespace%get()) + "'"
@@ -779,9 +769,7 @@ contains
       call messages_info(1)
     end if
 
-    if (debug%propagation_graph) then
-      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
-    end if
+    call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
 
     POP_SUB(system_propagation_start)
   end subroutine system_propagation_start
@@ -793,10 +781,8 @@ contains
 
     PUSH_SUB(system_propagation_finish)
 
-    if (debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_finish"), &
-                                                      system_clock = this%clock, prop_clock = this%prop%clock)
-    end if
+    debug_handle = multisystem_debug_write_event_in(this%namespace, event_function_call_t("system_propagation_finish"), &
+                                                    system_clock = this%clock, prop_clock = this%prop%clock)
 
     ! Finish output
     call this%output_finish()
@@ -804,9 +790,7 @@ contains
     ! System-specific and propagator-specific finalization step
     call this%do_td_operation(this%prop%final_step)
 
-    if (debug%propagation_graph) then
-      call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
-    end if
+    call multisystem_debug_write_event_out(debug_handle, system_clock = this%clock, prop_clock = this%prop%clock)
 
     POP_SUB(system_propagation_finish)
   end subroutine system_propagation_finish

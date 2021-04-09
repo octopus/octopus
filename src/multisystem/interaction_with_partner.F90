@@ -62,13 +62,11 @@ contains
     ! We should only try to update the interaction if it is not yet at the requested time
     ASSERT(.not. (this%clock == requested_time))
 
-    if(debug%propagation_graph) then
-      debug_handle = multisystem_debug_write_event_in(event = event_function_call_t("interaction_with_partner_update"), &
-                                                     extra="target: "//trim(this%label)//"-"//trim(this%partner%namespace%get()), &
-                                                     interaction_clock = this%clock,      &
-                                                     partner_clock = this%partner%clock,  & 
-                                                     requested_clock = requested_time)
-    endif 
+    debug_handle = multisystem_debug_write_event_in(event = event_function_call_t("interaction_with_partner_update"), &
+                                                   extra="target: "//trim(this%label)//"-"//trim(this%partner%namespace%get()), &
+                                                   interaction_clock = this%clock,      &
+                                                   partner_clock = this%partner%clock,  & 
+                                                   requested_clock = requested_time)
 
     allowed_to_update = this%partner%update_exposed_quantities(requested_time, this)
 
@@ -98,13 +96,10 @@ contains
       updated = .false.
     end if
 
-    if(debug%propagation_graph) then
-      call multisystem_debug_write_event_out(debug_handle, update = updated,   &
-                                              interaction_clock = this%clock,  &
-                                              partner_clock = this%partner%clock, &
-                                              requested_clock = requested_time)
-
-    endif
+    call multisystem_debug_write_event_out(debug_handle, update = updated,   &
+                                            interaction_clock = this%clock,  &
+                                            partner_clock = this%partner%clock, &
+                                            requested_clock = requested_time)
 
     POP_SUB(interaction_with_partner_update)
   end function interaction_with_partner_update
