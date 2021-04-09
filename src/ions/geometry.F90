@@ -213,11 +213,6 @@ contains
 
     geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
     geo%lsize(:) = xyz%lsize(:)
-    if (xyz%periodic_dim > -1 .and. xyz%periodic_dim /= geo%space%periodic_dim) then
-      message(1) = "Periodicity in XSF input is incompatible with the value of PeriodicDimensions."
-      call messages_fatal(1, namespace=namespace)
-    end if
-
 
     call read_coords_end(xyz)
 

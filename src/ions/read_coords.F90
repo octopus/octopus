@@ -72,7 +72,6 @@ module read_coords_oct_m
     type(read_coords_atom), allocatable :: atom(:)
 
     !> variables for passing info from XSF input to simul_box_init
-    integer :: periodic_dim
     FLOAT :: lsize(MAX_DIM)
   end type read_coords_info
 
@@ -89,7 +88,6 @@ contains
     gf%flags     = 0
     gf%n         = 0
 
-    gf%periodic_dim = -1
     gf%lsize(:) = -M_ONE
 
     POP_SUB(read_coords_init)
@@ -116,7 +114,7 @@ contains
     type(space_t),          intent(in)    :: space
     type(namespace_t),      intent(in)    :: namespace
 
-    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
+    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use, periodic_dim
     type(block_t) :: blk
     character(len=256) :: str
     logical :: done
@@ -290,19 +288,23 @@ contains
       ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'
       select case(trim(str))
       case('CRYSTAL')
-        gf%periodic_dim = 3
+        periodic_dim = 3
       case('SLAB')
-        gf%periodic_dim = 2
+        periodic_dim = 2
       case('POLYMER')
-        gf%periodic_dim = 1
+        periodic_dim = 1
       case('MOLECULE')
-        gf%periodic_dim = 0
+        periodic_dim = 0
       case('ATOMS')
         call messages_not_implemented("Input from XSF file beginning with ATOMS", namespace=namespace)
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
         call messages_fatal(1, namespace=namespace)
       end select
+      if (periodic_dim /= space%periodic_dim) then
+        message(1) = "Periodicity in XSF input is incompatible with the value of PeriodicDimensions."
+        call messages_fatal(1, namespace=namespace)
+      end if
 
       do istep = 1, step_to_use - 1
         read(iunit, *) ! PRIMVEC
