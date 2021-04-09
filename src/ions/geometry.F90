@@ -77,6 +77,8 @@ module geometry_oct_m
 
     type(space_t), pointer :: space
 
+    type(lattice_vectors_t) :: latt
+
     integer                   :: natoms
     type(atom_t), allocatable :: atom(:)
 
@@ -121,6 +123,7 @@ contains
     PUSH_SUB(geometry_init)
 
     geo%space => space
+    geo%latt = lattice_vectors_t(namespace, space) ! Build lattice vectors.
 
     call species_init_global(namespace)
     
@@ -344,6 +347,8 @@ contains
     type(geometry_t), intent(in)  :: geo_in
 
     PUSH_SUB(geometry_copy)
+
+    geo_out%latt = geo_in%latt
 
     geo_out%natoms = geo_in%natoms
     SAFE_ALLOCATE(geo_out%atom(1:geo_out%natoms))

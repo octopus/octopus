@@ -89,7 +89,7 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    type(lattice_vectors_t) :: latt
+    type(lattice_vectors_t), pointer :: latt => NULL()
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     
@@ -106,7 +106,7 @@ contains
   subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t),                    intent(inout) :: geo
+    type(geometry_t),  target,           intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -125,7 +125,7 @@ contains
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
-    sb%latt = lattice_vectors_t(namespace, space) ! Build lattice vectors.
+    sb%latt => geo%latt
 
     call read_box()                        ! Parameters defining the simulation box.
 
@@ -600,6 +600,8 @@ contains
 
     PUSH_SUB(simul_box_end)
 
+    nullify(sb%latt)
+
     ! We first need to bet a pointer to the box to deallocated it because of a
     ! bug in gfortran.
     box => sb%box
@@ -670,7 +672,7 @@ contains
     sbout%rsize          = sbin%rsize
     sbout%xsize          = sbin%xsize
     sbout%lsize          = sbin%lsize
-    sbout%latt           = sbin%latt
+    sbout%latt          => sbin%latt
     sbout%dim            = sbin%dim
     sbout%periodic_dim   = sbin%periodic_dim
 
