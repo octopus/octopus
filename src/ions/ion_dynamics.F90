@@ -565,6 +565,7 @@ contains
 
     end if
 
+    call geometry_fold_atoms_into_cell(geo)
     call simul_box_atoms_in_box(sb, geo, namespace, .false.)
 
     POP_SUB(ion_dynamics_propagate)

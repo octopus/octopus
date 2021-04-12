@@ -53,6 +53,7 @@ module geometry_oct_m
     geometry_partition,              &
     geometry_write_xyz,              &
     geometry_read_xyz,               &
+    geometry_fold_atoms_into_cell,         &
     geometry_min_distance,           &
     geometry_species_time_dependent, &
     geometry_val_charge,             &
@@ -123,6 +124,7 @@ contains
     
     ! initialize geometry
     call geometry_init_xyz(geo, namespace)
+    call geometry_fold_atoms_into_cell(geo)
     call geometry_init_species(geo, namespace, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
 
@@ -469,6 +471,21 @@ contains
 
     POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
+
+  ! ---------------------------------------------------------
+  subroutine geometry_fold_atoms_into_cell(geo)
+    type(geometry_t),   intent(inout) :: geo
+
+    integer :: iatom
+
+    PUSH_SUB(geometry_fold_atoms_into_cell)
+
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%x(1:geo%space%dim) = geo%latt%fold_into_cell(geo%atom(iatom)%x(1:geo%space%dim))
+    end do
+
+    POP_SUB(geometry_fold_atoms_into_cell)
+  end subroutine geometry_fold_atoms_into_cell
 
   !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
   ! ---------------------------------------------------------

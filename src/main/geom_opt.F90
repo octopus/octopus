@@ -616,6 +616,7 @@ contains
       call geometry_translate(g_opt%geo, geometry_center(g_opt%geo))
     end if
 
+    call geometry_fold_atoms_into_cell(g_opt%geo)
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
       warn_if_not = .false., die_if_not = .true.)
 

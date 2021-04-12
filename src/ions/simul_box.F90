@@ -504,8 +504,6 @@ contains
 
     do iatom = 1, geo%natoms
 
-      geo%atom(iatom)%x(1:geo%space%dim) = geo%latt%fold_into_cell(geo%atom(iatom)%x(1:geo%space%dim))
-
       if (.not. sb%contains_point(geo%atom(iatom)%x)) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (geo%space%periodic_dim /= geo%space%dim) then
