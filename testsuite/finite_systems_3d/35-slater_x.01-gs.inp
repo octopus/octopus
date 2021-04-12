@@ -19,5 +19,4 @@ XCFunctional = slater_x + lda_c_pz
 %
 
 ConvRelDens = 5e-6
-ParKPoints = no
 FilterPotentials = filter_none

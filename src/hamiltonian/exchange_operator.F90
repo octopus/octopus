@@ -28,6 +28,7 @@ module exchange_operator_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use mesh_batch_oct_m
@@ -183,11 +184,9 @@ contains
     end if
     nullify(this%st)
 
-    if(this%useACE) then
-      this%ace%nst = 0
-      SAFE_DEALLOCATE_A(this%ace%dchi)
-      SAFE_DEALLOCATE_A(this%ace%zchi)
-    end if
+    this%ace%nst = 0
+    SAFE_DEALLOCATE_A(this%ace%dchi)
+    SAFE_DEALLOCATE_A(this%ace%zchi)
 
     call singularity_end(this%singul)
     call poisson_end(this%psolver)

@@ -75,6 +75,7 @@ module hamiltonian_elec_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
   use xc_f03_lib_m
+  use xc_functl_oct_m
 
   implicit none
 
@@ -495,8 +496,14 @@ contains
     call exchange_operator_nullify(hm%exxop)
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
-          .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
+          .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &
+           hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
+      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then 
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, &
+                 M_ZERO, M_ONE, M_ZERO)
+      else
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
+      end if
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
