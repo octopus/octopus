@@ -32,7 +32,9 @@ EigensolverTolerance = 1e-8
 %Output 
  matrix_elements
 %
-OutputMatrixElements = dipole
+%OutputMatrixElements
+  dipole
+%
 OutputMEStart = 2
 OutputMEEnd = 7
 
