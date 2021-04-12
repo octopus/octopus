@@ -48,6 +48,7 @@ module states_elec_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_group_oct_m
   use states_elec_dim_oct_m
@@ -221,10 +222,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_init(st, namespace, gr, geo, kpoints)
+  subroutine states_elec_init(st, namespace, space, geo, kpoints)
     type(states_elec_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
-    type(grid_t),                intent(in)    :: gr
+    type(space_t),               intent(in)    :: space
     type(geometry_t),            intent(in)    :: geo
     type(kpoints_t),             intent(in)    :: kpoints
 
@@ -518,7 +519,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init(st%modelmbparticles, namespace, gr)
+    call modelmb_particles_init(st%modelmbparticles, namespace, space)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))

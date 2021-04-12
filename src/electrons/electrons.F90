@@ -147,7 +147,7 @@ contains
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
              sys%space%periodic_dim, sys%gr%sb%latt)
 
-    call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo, sys%kpoints)
+    call states_elec_init(sys%st, sys%namespace, sys%space, sys%geo, sys%kpoints)
     call sys%st%write_info(sys%namespace)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
