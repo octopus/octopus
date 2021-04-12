@@ -2132,9 +2132,6 @@ contains
     integer             :: ii, is
     character(len=68)   :: buf
     FLOAT, allocatable  :: eigs(:,:)
-#if defined(HAVE_MPI) 
-    integer :: outcount, ik
-#endif
 
     PUSH_SUB(td_write_eigs)
 
