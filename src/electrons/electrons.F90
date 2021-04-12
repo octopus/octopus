@@ -120,6 +120,7 @@ contains
     type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: generate_epot
 
+    integer :: iatom
     type(profile_t), save :: prof
 
     PUSH_SUB(electrons_constructor)
@@ -142,6 +143,20 @@ contains
     if (sys%space%is_periodic()) then
       call sys%gr%sb%latt%write_info(stdout)
     end if
+
+    ! Sanity check for atomic coordinates
+    do iatom = 1, sys%geo%natoms
+      if (.not. sys%gr%sb%contains_point(sys%geo%atom(iatom)%x)) then
+        if (sys%space%periodic_dim /= sys%space%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because contains_point is too strict with atoms close to
+          ! the upper boundary to the cell.
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
+          call messages_warning(1, namespace=sys%namespace)
+        end if
+      end if
+    end do
+    call simul_box_check_atoms_are_too_close(sys%geo, sys%gr%sb, sys%namespace)
 
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &

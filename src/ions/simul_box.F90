@@ -54,7 +54,7 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_atoms_in_box,     &
+    simul_box_check_atoms_are_too_close,     &
     simul_box_copy
 
   integer, parameter, public :: &
@@ -149,10 +149,6 @@ contains
     case (BOX_IMAGE)
       sb%box => box_image_t(center, sb%lsize, filename, space%periodic_dim, namespace)
     end select
-
-    call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
-
-    call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
     POP_SUB(simul_box_init)
   contains
@@ -477,49 +473,6 @@ contains
     end subroutine read_box
 
   end subroutine simul_box_init
-
-  !> This function adjusts the coordinates defined in the geometry
-  !! object. If coordinates were given in reduced coordinates it
-  !! converts them to real coordinates and it checks that the atoms
-  !! are inside the box.
-  !!
-  !! If atoms are not in the box: if the system is periodic, the atoms
-  !! are moved inside the box, if the system is finite, nothing
-  !! happens or a warning is written, depending on the argument
-  !! warn_if_not.
-  ! ---------------------------------------------------------
-  subroutine simul_box_atoms_in_box(sb, geo, namespace, warn_if_not, die_if_not)
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(inout) :: geo
-    type(namespace_t), intent(in)    :: namespace
-    logical,           intent(in)    :: warn_if_not
-    logical, optional, intent(in)    :: die_if_not
-
-    integer :: iatom
-    logical :: die_if_not_
-
-    PUSH_SUB(simul_box_atoms_in_box)
-
-    die_if_not_ = optional_default(die_if_not, .false.)
-
-    do iatom = 1, geo%natoms
-
-      if (.not. sb%contains_point(geo%atom(iatom)%x)) then
-        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
-        if (geo%space%periodic_dim /= geo%space%dim) then
-          ! FIXME: This could fail for partial periodicity systems
-          ! because contains_point is too strict with atoms close to
-          ! the upper boundary to the cell.
-          if(warn_if_not) call messages_warning(1, namespace=namespace)
-          if(die_if_not_) call messages_fatal(1, namespace=namespace)
-        end if
-      end if
-
-    end do
-
-    POP_SUB(simul_box_atoms_in_box)
-  end subroutine simul_box_atoms_in_box
-
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)

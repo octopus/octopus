@@ -616,9 +616,21 @@ contains
       call geometry_translate(g_opt%geo, geometry_center(g_opt%geo))
     end if
 
+    ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
     call geometry_fold_atoms_into_cell(g_opt%geo)
-    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
-      warn_if_not = .false., die_if_not = .true.)
+
+    ! Some atoms might have moved outside the simulation box. We stop if this happens.
+    do iatom = 1, g_opt%geo%natoms
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%geo%atom(iatom)%x)) then
+        if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because contains_point is too strict with atoms close to
+          ! the upper boundary to the cell.
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " has moved outside the box during the geometry optimization."
+          call messages_fatal(1, namespace=g_opt%syst%namespace)
+        end if
+      end if
+    end do
 
     call geometry_write_xyz(g_opt%geo, './work-geom', g_opt%syst%namespace, append = .true.)
 

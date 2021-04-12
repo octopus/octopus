@@ -565,8 +565,8 @@ contains
 
     end if
 
+    ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
     call geometry_fold_atoms_into_cell(geo)
-    call simul_box_atoms_in_box(sb, geo, namespace, .false.)
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate
