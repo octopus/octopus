@@ -1,0 +1,24 @@
+CalculationMode = gs
+FromScratch = yes
+
+%Coordinates
+"Cl" | 0 | 0 | 0
+%
+
+PseudopotentialSet = hgh_lda
+SpinComponents = polarized
+
+Spacing = 0.3
+Radius = 8
+
+XCFunctional = oep_x + lda_c_pz
+
+%Occupations
+ 2/3 | 2/3 | 2/3
+ 1 | 1 | 1
+%
+
+ConvRelDens = 5e-6
+ParKPoints = no
+FilterPotentials = filter_none
+

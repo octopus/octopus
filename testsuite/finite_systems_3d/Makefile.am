@@ -134,6 +134,10 @@ dist_share_DATA = \
 	34-walltime.test \
         35-slater_x.01-gs.inp \
         35-slater_x.02-gs_spinors.inp \
-        35-slater_x.test
+        35-slater_x.test \
+        36-kli_x.01-gs.inp \
+        36-kli_x.02-gs_spinors.inp \
+        36-kli_x.test
+        
 
 CLEANFILES = *~ *.bak

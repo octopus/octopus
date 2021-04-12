@@ -143,9 +143,10 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, sb, fine, hm,
 #endif
 
   if (st%d%ispin==SPINORS) then
+    call xc_oep_AnalyzeEigen(oep, st, 1)
     call xc_KLI_Pauli_solve(mesh, namespace, st, oep)
     if(present(vxc)) then
-      vxc(1:mesh%np,:) = oep%vxc(1:mesh%np,:)
+      vxc(1:mesh%np, 1:4) = vxc(1:mesh%np,1:4) + oep%vxc(1:mesh%np,1:4)
     end if
     ! full OEP not implemented!
   else
