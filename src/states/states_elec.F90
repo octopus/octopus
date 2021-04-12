@@ -27,7 +27,6 @@ module states_elec_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use kpoints_oct_m
@@ -222,11 +221,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_init(st, namespace, space, geo, kpoints)
+  subroutine states_elec_init(st, namespace, space, valence_charge, kpoints)
     type(states_elec_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
     type(space_t),               intent(in)    :: space
-    type(geometry_t),            intent(in)    :: geo
+    FLOAT,                       intent(in)    :: valence_charge
     type(kpoints_t),             intent(in)    :: kpoints
 
     FLOAT :: excess_charge
@@ -375,7 +374,7 @@ contains
     ! For non-periodic systems this should just return the Gamma point
     call states_elec_choose_kpoints(st%d, kpoints, namespace)
 
-    st%val_charge = geometry_val_charge(geo)
+    st%val_charge = valence_charge
 
     st%qtot = -(st%val_charge + excess_charge)
 
