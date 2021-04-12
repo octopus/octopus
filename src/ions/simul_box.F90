@@ -43,8 +43,6 @@ module simul_box_oct_m
   use profiling_oct_m
   use space_oct_m
   use species_oct_m
-  use symm_op_oct_m
-  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -57,8 +55,7 @@ module simul_box_oct_m
     simul_box_init,             &
     simul_box_end,              &
     simul_box_atoms_in_box,     &
-    simul_box_copy,             &
-    check_ions_compatible_with_symmetries
+    simul_box_copy
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -690,55 +687,6 @@ contains
 
     POP_SUB(simul_box_min_distance)
   end function simul_box_min_distance
-
-
-  ! ---------------------------------------------------------
-  ! TODO : This routines should belong to geometry, once geo knows its box 
-  subroutine check_ions_compatible_with_symmetries(this, symm, geo, dim, namespace)
-    type(simul_box_t),  intent(in) :: this
-    type(symmetries_t), intent(in) :: symm
-    type(geometry_t),   intent(in) :: geo
-    integer,            intent(in) :: dim
-    type(namespace_t),  intent(in) :: namespace
-
-    integer :: iop, iatom, iatom_symm
-    FLOAT :: ratom(1:MAX_DIM)
-
-    PUSH_SUB(check_ions_compatible_with_symmetries)
-
-    ! We want to use for instance that
-    !
-    ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
-    !
-    ! and that the operator R should map the position of atom
-    ! iatom to the position of some other atom iatom_symm, so that
-    !
-    ! V_iatom(R*r) = V_iatom_symm(r)
-    !
-    do iop = 1, symmetries_number(symm)
-      if(iop == symmetries_identity_index(symm)) cycle
-
-      do iatom = 1, geo%natoms
-        ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
-     
-        ratom(1:geo%space%dim) = geo%latt%fold_into_cell(ratom(1:geo%space%dim))
-
-        ! find iatom_symm
-        do iatom_symm = 1, geo%natoms
-          if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
-        end do
-
-        if(iatom_symm > geo%natoms) then
-          write(message(1),'(a,i6)') 'Internal error: could not find symetric partner for atom number', iatom
-          write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-          call messages_fatal(2, namespace=namespace)
-        end if
-
-      end do
-    end do
-
-    POP_SUB(check_ions_compatible_with_symmetries)
-  end subroutine check_ions_compatible_with_symmetries
 
 end module simul_box_oct_m
 
