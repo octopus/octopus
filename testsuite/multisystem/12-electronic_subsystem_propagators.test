@@ -9,9 +9,9 @@ Enabled    : Yes
 
 # ground state
 Input      : 12-electronic_subsystem_propagators.01-gs.inp
-Precision  : 2e-08
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ;   Initial energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -10.607660535
+Precision: 3.30e-08
+match ;    Initial energy    ; GREPFIELD(static/info, 'Total       =', 3) ; -10.607660549999999
 
 Input      : 12-electronic_subsystem_propagators.02-expmid.inp
 Precision  : 1e-10

@@ -9,10 +9,10 @@ if (available libvdwxc); then
   if(available cuda); then
     match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
   else
-    Precision: 7.0e-06
-    match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -26.588908225
-    Precision: 3.0e-07
-    match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.769097225
+    Precision: 4.53e-06
+    match ;   Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -26.58890385
+    Precision: 1.87e-07
+    match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.76909704
     Precision: 1.5e-7
     match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.414032305
   endif

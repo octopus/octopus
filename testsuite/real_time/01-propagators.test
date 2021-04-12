@@ -21,7 +21,7 @@ match ;  Energy [step  1]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.607194169885
 Precision: 6.40e-11
 match ;  Multipoles [step  1]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12655193434445
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12655193445270002
 Precision: 5.30e-09
 match ;   Forces [step  1]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;   Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.08015025987516
@@ -33,7 +33,7 @@ match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.607192667675001
 Precision: 6.40e-11
 match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.1265544547434
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.1265544548517
 Precision: 5.30e-09
 match ;  Forces [step  0]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;  Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.080151578741535
@@ -45,7 +45,7 @@ match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.60719262029
 Precision: 6.29e-11
 match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12658727372974998
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.1265872738371
 Precision: 5.30e-09
 match ;  Forces [step  0]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;  Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.08015620503858001
@@ -57,7 +57,7 @@ match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.593872938
 Precision: 6.43e-11
 match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12693626886125
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12693626896985
 Precision: 5.30e-09
 match ;  Forces [step  0]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;  Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.07761355479469
@@ -69,7 +69,7 @@ match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.607194169885
 Precision: 6.40e-11
 match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12655193434445
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12655193445270002
 Precision: 5.30e-09
 match ;  Forces [step  0]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;  Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.08015025987516
@@ -90,7 +90,7 @@ match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -10.60766055
 match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -10.60719322423
 Precision: 6.41e-11
 match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.1510792319315002e-15
-match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12653139760595
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -0.12653139771435
 Precision: 5.30e-09
 match ;  Forces [step  0]   ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.085982840216105
 match ;  Forces [step 20]   ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.080131292930685

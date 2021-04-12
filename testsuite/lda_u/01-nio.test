@@ -16,7 +16,7 @@ else
   match ;  Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -246.88939736999998
   Precision: 1.77e-13
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
-  Precision: 2.26e-05
+  Precision: 3e-05
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -33.201233779999995
   Precision: 4.e-05
   match ;  Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 46.46824743
@@ -33,8 +33,8 @@ else
   Precision: 2.e-06
   match ;  Fermi energy        ; GREPFIELD(static/info, 'Fermi energy =', 4) ; 0.417533
 
-  Precision: 2.42e-05
-  match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 2.8000000000000003e-05
+  Precision: 5.1e-05
+  match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 0
   match ;  Local Magnetic Moment (Ni1)  ; GREPFIELD(static/info, '1        Ni', 3) ; 3.3432155
   match ;  Local Magnetic Moment (Ni2)  ; GREPFIELD(static/info, '2        Ni', 3) ; -3.3432165
   match ;  Local Magnetic Moment (O1)  ; GREPFIELD(static/info, '3         O', 3) ; 2e-06
@@ -50,7 +50,7 @@ else
   match ;  Eigenvalue 16  ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.4379505
   match ;  Eigenvalue 17  ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.1656445
 
-  Precision: 2.e-06
+  Precision: 3.5e-06
   match ;  Occupation Ni2 down 3d4  ; LINEFIELD(static/occ_matrices, -2, 7) ; 0.871377465
   match ;  Occupation Ni2 down 3d5  ; LINEFIELD(static/occ_matrices, -1, 9) ; 0.8864645099999999
 
