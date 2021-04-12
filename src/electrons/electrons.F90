@@ -156,7 +156,6 @@ contains
         end if
       end if
     end do
-    call simul_box_check_atoms_are_too_close(sys%geo, sys%gr%sb, sys%namespace)
 
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &

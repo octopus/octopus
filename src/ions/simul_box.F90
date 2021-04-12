@@ -54,7 +54,6 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_check_atoms_are_too_close,     &
     simul_box_copy
 
   integer, parameter, public :: &
@@ -560,84 +559,6 @@ contains
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
-
-  ! -----------------------------------------------------
-
-  subroutine simul_box_check_atoms_are_too_close(geo, sb, namespace)
-    type(geometry_t),  intent(in) :: geo
-    type(simul_box_t), intent(in) :: sb
-    type(namespace_t), intent(in) :: namespace
-
-    FLOAT :: mindist
-    FLOAT, parameter :: threshold = CNST(1e-5)
-
-    PUSH_SUB(simul_box_check_atoms_are_too_close)
-
-    if(geo%natoms == 1) then
-      POP_SUB(simul_box_check_atoms_are_too_close)
-      return
-    end if
-
-    mindist = simul_box_min_distance(geo, sb, real_atoms_only = .false.)
-    if(mindist < threshold) then
-      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
-      write(message(2), '(a)') "Please review your input files and the output geometry (in 'static/')."
-      write(message(3), '(a, f12.6, 1x, a)') "Minimum distance = ", &
-        units_from_atomic(units_out%length, mindist), trim(units_abbrev(units_out%length))
-      call messages_warning(3, namespace=namespace)
-
-      ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir(STATIC_DIR, namespace)
-      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
-    end if
-
-    if(simul_box_min_distance(geo, sb, real_atoms_only = .true.) < threshold) then
-      message(1) = "It cannot be correct to run with physical atoms so close."
-      call messages_fatal(1, namespace=namespace)
-    end if
-
-    POP_SUB(simul_box_check_atoms_are_too_close)
-  end subroutine simul_box_check_atoms_are_too_close
-
-  ! ---------------------------------------------------------
-  FLOAT function simul_box_min_distance(geo, sb, real_atoms_only) result(rmin)
-    type(geometry_t),  intent(in) :: geo
-    type(simul_box_t), intent(in) :: sb
-    logical, optional, intent(in) :: real_atoms_only
-
-    integer :: iatom, jatom, idir
-    FLOAT   :: xx(MAX_DIM)
-    logical :: real_atoms_only_
-    type(species_t), pointer :: species
-
-    PUSH_SUB(simul_box_min_distance)
-
-    real_atoms_only_ = optional_default(real_atoms_only, .false.)
-
-    rmin = huge(rmin)
-    do iatom = 1, geo%natoms
-      call atom_get_species(geo%atom(iatom), species)
-      if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-      do jatom = iatom + 1, geo%natoms
-        call atom_get_species(geo%atom(iatom), species)
-        if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        xx(:) = abs(geo%atom(iatom)%x(:) - geo%atom(jatom)%x(:))
-        do idir = 1, geo%space%periodic_dim
-          xx(idir) = xx(idir) - M_TWO * sb%lsize(idir) * floor(xx(idir)/(M_TWO * sb%lsize(idir)) + M_HALF)
-        end do
-        rmin = min(sqrt(sum(xx**2)), rmin)
-      end do
-    end do
-
-    if(.not. (geo%only_user_def .and. real_atoms_only_)) then
-      ! what if the nearest neighbors are periodic images?
-      do idir = 1, geo%space%periodic_dim
-        rmin = min(rmin, abs(sb%lsize(idir)))
-      end do
-    end if
-
-    POP_SUB(simul_box_min_distance)
-  end function simul_box_min_distance
 
 end module simul_box_oct_m
 
