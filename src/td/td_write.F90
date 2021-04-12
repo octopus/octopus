@@ -2139,18 +2139,8 @@ contains
     PUSH_SUB(td_write_eigs)
 
     SAFE_ALLOCATE(eigs(1:st%nst,1:st%d%kpt%nglobal)) 
-           
-    eigs(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
-      st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
 
-#if defined(HAVE_MPI) 
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      call lmpi_gen_allgatherv(st%lnst, st%eigenval(st%st_start:st%st_end,ik), outcount, &
-                             eigs(:, ik), st%mpi_grp)
-    end do
-
-#endif
+    eigs(1:st%nst, 1:st%d%kpt%nglobal) = st%eigenval(1:st%nst, 1:st%d%kpt%nglobal)
   
     if(.not.mpi_grp_is_root(mpi_world)) then 
       SAFE_DEALLOCATE_A(eigs)
