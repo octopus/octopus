@@ -59,6 +59,7 @@ module lattice_vectors_oct_m
     procedure :: short_info => lattice_vectors_short_info
     procedure :: cart_to_red => lattice_vectors_cart_to_red
     procedure :: red_to_cart => lattice_vectors_red_to_cart
+    procedure :: fold_into_cell => lattice_vectors_fold_into_cell
     final :: lattice_vectors_finalize
   end type lattice_vectors_t
 
@@ -371,6 +372,44 @@ contains
     xx_cart = matmul(this%rlattice, xx_red)
 
   end function lattice_vectors_red_to_cart
+
+  !--------------------------------------------------------------
+  function lattice_vectors_fold_into_cell(this, xx) result(new_xx)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx(this%space%dim)
+    FLOAT :: new_xx(this%space%dim)
+
+    integer :: idir
+
+    if (this%space%is_periodic()) then
+      ! Convert the position to reduced coordinates
+      new_xx = this%cart_to_red(xx)
+
+      do idir = 1, this%space%periodic_dim
+        ! Change of origin
+        new_xx(idir) = new_xx(idir) + M_HALF
+
+        ! Fold into cell
+        new_xx(idir) = new_xx(idir) - anint(new_xx(idir))
+        if (new_xx(idir) < -CNST(1.0e-6)) then
+          new_xx(idir) = new_xx(idir) + M_ONE
+        end if
+
+        ! Sanity checks
+        ASSERT(new_xx(idir) >= -CNST(1.0e-6))
+        ASSERT(new_xx(idir) < CNST(1.0))
+
+        ! Change origin back
+        new_xx(idir) = new_xx(idir) - M_HALF
+      end do
+
+      ! Convert back to Cartesian coordinates
+      new_xx = this%red_to_cart(new_xx)
+    else
+      new_xx = xx
+    end if
+
+  end function lattice_vectors_fold_into_cell
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)

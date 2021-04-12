@@ -244,7 +244,7 @@ subroutine X(forces_from_potential)(gr, namespace, space, geo, hm, st, force, fo
                 !We find the atom that correspond to this one, once symmetry is applied
                 ratom(1:space%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), geo%atom(iatom)%x)
 
-                call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
+                ratom(1:geo%space%dim) = geo%latt%fold_into_cell(ratom(1:geo%space%dim))
 
                 ! find iatom_symm
                 do iatom_symm = 1, geo%natoms

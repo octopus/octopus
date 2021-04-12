@@ -58,7 +58,6 @@ module simul_box_oct_m
     simul_box_end,              &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_periodic_atom_in_box, &
     check_ions_compatible_with_symmetries
 
   integer, parameter, public :: &
@@ -499,17 +498,16 @@ contains
     logical,           intent(in)    :: warn_if_not
     logical, optional, intent(in)    :: die_if_not
 
-    integer :: iatom, pd
+    integer :: iatom
     logical :: die_if_not_
 
     PUSH_SUB(simul_box_atoms_in_box)
 
     die_if_not_ = optional_default(die_if_not, .false.)
-    pd = geo%space%periodic_dim
 
     do iatom = 1, geo%natoms
 
-      call simul_box_periodic_atom_in_box(sb, geo, geo%atom(iatom)%x(:))
+      geo%atom(iatom)%x(1:geo%space%dim) = geo%latt%fold_into_cell(geo%atom(iatom)%x(1:geo%space%dim))
 
       if (.not. sb%contains_point(geo%atom(iatom)%x)) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
@@ -527,40 +525,6 @@ contains
     POP_SUB(simul_box_atoms_in_box)
   end subroutine simul_box_atoms_in_box
 
-  ! --------------------------------------------------------
-  
-  subroutine simul_box_periodic_atom_in_box(sb, geo, ratom)
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    FLOAT,             intent(inout) :: ratom(:)
-
-    FLOAT :: xx(1:MAX_DIM)
-    integer :: pd, idir
-
-    pd = geo%space%periodic_dim
-
-    if (geo%space%is_periodic()) then
-      !convert the position to reduced coordinates
-      xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
-
-      ! Put atom back inside the box
-      xx(1:pd) = xx(1:pd) + M_HALF
-      do idir = 1, pd
-        xx(idir) = xx(idir) - anint(xx(idir))
-        if(xx(idir) < -CNST(1.0e-6)) &
-          xx(idir) = xx(idir) + M_ONE
-      end do
-      ASSERT(all(xx(1:pd) >= -CNST(1.0e-6)))
-      ASSERT(all(xx(1:pd) < CNST(1.0)))
-
-      xx(1:pd) = (xx(1:pd) - M_HALF)
-
-      ! Convert back to Cartesian coordinates
-      ratom(1:pd) = matmul(sb%latt%rlattice(1:pd, 1:pd), xx(1:pd))
-    end if
-    
-
-  end subroutine simul_box_periodic_atom_in_box
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
@@ -757,7 +721,7 @@ contains
       do iatom = 1, geo%natoms
         ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
      
-        call simul_box_periodic_atom_in_box(this, geo, ratom)
+        ratom(1:geo%space%dim) = geo%latt%fold_into_cell(ratom(1:geo%space%dim))
 
         ! find iatom_symm
         do iatom_symm = 1, geo%natoms
