@@ -120,12 +120,12 @@ contains
 
     integer(8) :: what_i
     type(block_t) :: blk
-    integer :: ncols, nrows, iout
+    integer :: ncols, nrows, iout, column_index
     integer(8) :: what_no_how(6)       !> these kinds of Output do not have a how
     character(len=80) :: what_tag
     character(len=80) :: how_tag
     character(len=80) :: output_interval_tag
-
+    character(len=80) :: output_column_marker
     PUSH_SUB(io_function_read_what_how_when)
 
     how = 0_8
@@ -285,44 +285,64 @@ contains
           end if
         end do
 
-      else if(ncols == 5) then
-        !new format, Type 2
+      else 
+        !new format, Type 2 (tagged)
         !%Output
-        !  density | output_interval | 10 | output_format | cube + axis_z
-        !  wfs     | output_interval | 50 | output_format | cube       
+        !  density | output_interval | 10   | output_format   | cube + axis_z
+        !  wfs     | output_format   | cube | output_interval | 50
         !%
+        !
+        ! OR
+        !
+        !%Output
+        !  density | output_interval | 10   | output_format   | cube + axis_z
+        !  wfs     | output_format   | cube
+        !%        
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
           if(.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          if(what_i > 0) what(what_i) = .true.
-          call parse_block_integer(blk, iout - 1, 2, output_interval(what_i))
-          if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
-            .or. (what_tag /= 'Output')) then
-            call parse_block_integer(blk, iout - 1, 4, how(what_i))
-            if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
-              call messages_input_error(namespace, how_tag)
-            end if
+          if(what_i > 0) then
+            what(what_i) = .true.
+            do column_index = 0, 1  
+              call parse_block_string(blk, iout - 1, 1 + column_index * 2, output_column_marker)
+              if(output_column_marker == 'output_interval') then
+                call parse_block_integer(blk, iout - 1, 2 + column_index * 2, output_interval(what_i))
+              else if(output_column_marker == 'output_format') then
+                if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+                  .or. (what_tag /= 'Output')) then
+                  call parse_block_integer(blk, iout - 1, 2 + column_index * 2, how(what_i))
+                  if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                    call messages_input_error(namespace, how_tag)
+                  end if
+                end if
+              else if(len_trim(output_column_marker) /= 0) then
+                ! Unknown output_column_marker
+                call messages_input_error(namespace, what_tag)
+              else
+                ! no output_column_marker -> full info is not in the block
+                if(output_interval(what_i) == 0) then
+                  call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+                end if
+                if(how(what_i) == 0) then
+                  if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+                    .or. (what_tag /= 'Output')) then
+                    call parse_variable(namespace, how_tag, 0, how(what_i))
+                    if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                      call messages_input_error(namespace, how_tag)
+                    end if
+                  end if
+                end if
+              end if
+            end do
           end if
         end do
       endif
       call parse_block_end(blk)
     else
-      !old format
-      write(*,*) '***MFT DBG*** # old format'
-      call parse_variable(namespace, what_tag, 0, what_i)
-      if(.not. varinfo_valid_option(what_tag, what_i, is_flag=.true.)) then
-        call messages_input_error(namespace, what_tag)
-      end if
-      if(what_i > 0) then
-        what(what_i) = .true.
-        call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
-        if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
-          .or. (what_tag /= 'Output')) then
-          call parse_variable(namespace, how_tag, 0, how(what_i))
-        end if
-      end if
+      !MFT TODO: how should I say use the block format?
+      call messages_obsolete_variable(namespace, what_tag, 'block')
     endif
 
 
