@@ -101,7 +101,7 @@ contains
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
-      latt_iter = lattice_iterator_t(this%mesh%sb%latt, rmax)
+      latt_iter = lattice_iterator_t(geo%latt, rmax)
       do icell = 1, latt_iter%n_cells
         pos(1:this%mesh%sb%dim) = this%geo%atom(iatom)%x(1:this%mesh%sb%dim) + latt_iter%get(icell)
         !We get the non periodized density
@@ -318,7 +318,7 @@ contains
     rmax_isqu = rmax_i**2
     rmax_jsqu = rmax_j**2
 
-    latt_iter_j = lattice_iterator_t(this%mesh%sb%latt, rmax_j)
+    latt_iter_j = lattice_iterator_t(this%geo%latt, rmax_j)
     do jcell = 1, latt_iter_j%n_cells
 
       pos_j(1:this%mesh%sb%dim) = this%geo%atom(jatom)%x(1:this%mesh%sb%dim) + latt_iter_j%get(jcell)
@@ -327,7 +327,7 @@ contains
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      latt_iter_i = lattice_iterator_t(this%mesh%sb%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      latt_iter_i = lattice_iterator_t(this%geo%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
 
         pos_i(1:this%mesh%sb%dim) = pos_j(1:this%mesh%sb%dim) + latt_iter_i%get(icell) + &

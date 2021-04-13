@@ -522,7 +522,7 @@ subroutine X(calc_properties_linear)(em_vars, namespace, space, gr, kpoints, st,
           do idir = 1, space%dim
             do idir2 = 1, space%dim
               lrc_coef(idir, idir2) = M_ONE/(M_ONE - M_HALF * xc%kernel_lrc_alpha * &
-                (em_vars%alpha(idir, idir, ifactor) + em_vars%alpha(idir2, idir2, ifactor)) / gr%sb%latt%rcell_volume)
+                (em_vars%alpha(idir, idir, ifactor) + em_vars%alpha(idir2, idir2, ifactor)) / geo%latt%rcell_volume)
             end do
           end do
           do idir = 1, space%dim

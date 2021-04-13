@@ -115,10 +115,10 @@ program photoelectron_spectrum
   call space_init(space, global_namespace)
   call geometry_init(geo, global_namespace, space)
   call simul_box_init(sb, global_namespace, geo, space)
-  call symmetries_init(symm, global_namespace, geo, space, sb%latt)
+  call symmetries_init(symm, global_namespace, geo, space)
 
   ! we need k-points for periodic systems
-  call kpoints_init(kpoints, global_namespace, symm, space%dim, space%periodic_dim, sb%latt)
+  call kpoints_init(kpoints, global_namespace, symm, space%dim, space%periodic_dim, geo%latt)
   call states_elec_init(st, global_namespace, space, geometry_val_charge(geo), kpoints)
   !*
 

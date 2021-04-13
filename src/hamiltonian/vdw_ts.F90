@@ -234,7 +234,7 @@ contains
         end do
       end do
 
-      latt_iter = lattice_iterator_t(sb%latt, this%cutoff)
+      latt_iter = lattice_iterator_t(geo%latt, this%cutoff)
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
@@ -382,7 +382,7 @@ contains
       end do
     end do
 
-    latt_iter = lattice_iterator_t(sb%latt, this%cutoff)
+    latt_iter = lattice_iterator_t(geo%latt, this%cutoff)
     do jatom = 1, geo%natoms
       jspecies = species_index(geo%atom(jatom)%species)
 

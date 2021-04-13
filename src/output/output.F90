@@ -698,7 +698,7 @@ contains
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(geo%space%is_periodic())  call periodic_write_crystal(geo, gr%mesh%sb%latt, dir, namespace)
+        if(geo%space%is_periodic())  call periodic_write_crystal(geo, geo%latt, dir, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
@@ -1412,9 +1412,9 @@ contains
     subroutine bgw_setup_header()
       PUSH_SUB(output_berkeleygw.bgw_setup_header)
 
-      adot(1:3, 1:3) = matmul(gr%sb%latt%rlattice(1:3, 1:3), gr%sb%latt%rlattice(1:3, 1:3))
-      bdot(1:3, 1:3) = matmul(gr%sb%latt%klattice(1:3, 1:3), gr%sb%latt%klattice(1:3, 1:3))
-      recvol = (M_TWO * M_PI)**3 / gr%sb%latt%rcell_volume
+      adot(1:3, 1:3) = matmul(geo%latt%rlattice(1:3, 1:3), geo%latt%rlattice(1:3, 1:3))
+      bdot(1:3, 1:3) = matmul(geo%latt%klattice(1:3, 1:3), geo%latt%klattice(1:3, 1:3))
+      recvol = (M_TWO * M_PI)**3 / geo%latt%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%symm)
@@ -1489,8 +1489,8 @@ contains
         symmetries_number(gr%symm), 0, geo%natoms, &
         hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
         ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
-        gr%sb%latt%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
-        M_ONE, gr%sb%latt%klattice, bdot, mtrx, tnp, atyp, &
+        geo%latt%rcell_volume, M_ONE, geo%latt%rlattice, adot, recvol, &
+        M_ONE, geo%latt%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 

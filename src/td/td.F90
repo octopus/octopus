@@ -418,7 +418,7 @@ contains
       call v_ks_calculate_current(ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
+      call gauge_field_init_vec_pot(hm%ep%gfield, geo%latt%rcell_volume, st%qtot)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 

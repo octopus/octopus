@@ -796,7 +796,7 @@ contains
 
     rcut = CNST(6.0)/alpha
     stress_l = M_ZERO
-    latt_iter = lattice_iterator_t(sb%latt, rcut)
+    latt_iter = lattice_iterator_t(geo%latt, rcut)
     ! the short-range part is calculated directly
     do iatom = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
@@ -842,7 +842,7 @@ contains
 ! get a converged value for the cutoff in g
     rcut = huge(rcut)
     do idim = 1, sb%dim
-      rcut = min(rcut, sum(sb%latt%klattice(1:sb%dim, idim)**2))
+      rcut = min(rcut, sum(geo%latt%klattice(1:sb%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -857,8 +857,8 @@ contains
           
              if(ss == 0 .or. ss > isph**2) cycle
 
-             gg(1:sb%dim) = ix*sb%latt%klattice(1:sb%dim, 1) + iy*sb%latt%klattice(1:sb%dim, 2)&
-                          + iz*sb%latt%klattice(1:sb%dim, 3)
+             gg(1:sb%dim) = ix*geo%latt%klattice(1:sb%dim, 1) + iy*geo%latt%klattice(1:sb%dim, 2)&
+                          + iz*geo%latt%klattice(1:sb%dim, 3)
              gg2 = sum(gg(1:sb%dim)**2)
 
           ! g=0 must be removed from the sum
@@ -868,7 +868,7 @@ contains
              
              if(gx < CNST(-36.0)) cycle
 
-             factor = M_TWO*M_PI*exp(gx)/(sb%latt%rcell_volume*gg2)
+             factor = M_TWO*M_PI*exp(gx)/(geo%latt%rcell_volume*gg2)
 
              if(factor < epsilon(factor)) cycle
 
@@ -897,7 +897,7 @@ contains
     end do
 
 
-    factor = M_HALF*M_PI*charge**2/(sb%latt%rcell_volume*alpha**2)
+    factor = M_HALF*M_PI*charge**2/(geo%latt%rcell_volume*alpha**2)
     stress_l(1, 1) = stress_l(1, 1) - factor
     stress_l(2, 2) = stress_l(2, 2) - factor
     stress_l(3, 3) = stress_l(3, 3) - factor
@@ -907,10 +907,10 @@ contains
     sigma_erf = CNST(0.625)
     do idir = 1,3
        stress_l(idir,idir) = stress_l(idir,idir) &
-            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%latt%rcell_volume
+            + M_TWO*M_PI*sigma_erf**2*charge**2 /geo%latt%rcell_volume
     end do
 
-    stress_l = stress_l/sb%latt%rcell_volume
+    stress_l = stress_l/geo%latt%rcell_volume
 
     stress_Ewald = stress_l
     stress = stress + stress_l
