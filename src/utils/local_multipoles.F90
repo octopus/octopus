@@ -69,7 +69,7 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
-  integer, parameter    :: BADER = 512
+  integer, parameter    :: BADER = 9
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
