@@ -130,7 +130,7 @@ contains
 
     how = 0_8
     output_interval = 0_8
-    !what = .false.
+    ncols = 0
     what_tag = optional_default(what_tag_in, 'Output')
     how_tag = optional_default(how_tag_in, 'OutputFormat')
     output_interval_tag = optional_default(output_interval_tag_in, 'OutputInterval')
@@ -234,8 +234,10 @@ contains
       OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW /)
 
     if(parse_block(namespace, what_tag, blk) == 0) then
-      ncols = parse_block_cols(blk, 0)
       nrows = parse_block_n(blk)
+      do iout = 0, nrows - 1
+        ncols = max(ncols , parse_block_cols(blk, iout))
+      end do
 
       if(ncols == 1) then
         !new format, Type 0
