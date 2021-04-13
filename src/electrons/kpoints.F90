@@ -1354,38 +1354,34 @@ contains
     type(kpoints_grid_t),    intent(inout) :: grid
     FLOAT,                   intent(in)    :: klattice(:,:)
 
-    integer :: ig1, ig2, ig3, ik, ii    
-    FLOAT :: Gvec(MAX_DIM,27), Gvec_cart(MAX_DIM,27)
+    integer :: ig1, ig2, ik, ii
+    FLOAT :: Gvec(MAX_DIM,3**grid%dim), Gvec_cart(MAX_DIM,3**grid%dim)
     FLOAT :: vec(1:MAX_DIM), kpt(1:MAX_DIM)
     FLOAT :: d, dmin
 
     PUSH_SUB(kpoints_fold_to_1BZ)
 
     !We only need to compute the first G-vectors
-    do ig1 = 0,2
-      do ig2 = 0,2 
-        do ig3 = 0,2
-          Gvec(1,ig1*9+ig2*3+ig3+1) = ig1-1
-          Gvec(2,ig1*9+ig2*3+ig3+1) = ig2-1
-          Gvec(3,ig1*9+ig2*3+ig3+1) = ig3-1
-        end do
+    do ig1 = 1, grid%dim
+      do ig2 = 1, 3**grid%dim
+        Gvec(ig1, ig2) = modulo((ig2 - 1)/grid%dim**(grid%dim - ig1), 3) - 1
       end do
     end do
 
-    do ig1 = 1, 27
+    do ig1 = 1, 3**grid%dim
       call kpoints_to_absolute(klattice, Gvec(1:grid%dim,ig1), Gvec_cart(1:grid%dim,ig1), grid%dim)
     end do
 
     do ik = 1, grid%npoints
 
       dmin = CNST(1e10)
-      do ig1 = 1, 27
+      do ig1 = 1, 3**grid%dim
         do ii = 1, grid%dim
-          vec(ii) = Gvec_cart(ii,ig1)-grid%point(ii,ik)
+          vec(ii) = Gvec_cart(ii,ig1) - grid%point(ii,ik)
         end do
         d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
                                             !To avoid numerical error problems
-        if( d < dmin ) then
+        if (d < dmin) then
           dmin = d
           ig2 = ig1
         end if
@@ -1393,7 +1389,7 @@ contains
       do ii = 1, grid%dim
         kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
       end do
-      call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
+      call kpoints_to_absolute(klattice, kpt(1:grid%dim), grid%point1BZ(1:grid%dim, ik), grid%dim) 
     end do
 
     POP_SUB(kpoints_fold_to_1BZ)

@@ -530,7 +530,7 @@ contains
   function geometry_dipole(geo, mask) result(dipole)
     type(geometry_t),           intent(in) :: geo
     logical,          optional, intent(in) :: mask(:)
-    FLOAT :: dipole(MAX_DIM)
+    FLOAT :: dipole(geo%space%dim)
 
     integer :: ia
 

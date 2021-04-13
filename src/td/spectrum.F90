@@ -824,7 +824,8 @@ contains
     call io_skip_header(in_file)
 
     do it = 0, time_steps
-      read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
+      dipole(it, :, :) = M_ZERO
+      read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, kick%dim), ispin = 1, nspin)
     end do
     dipole(:,:,:) = units_to_atomic(file_units%length, dipole(:,:,:))
     
@@ -1325,6 +1326,11 @@ contains
 
     call spectrum_mult_info(namespace, in_file, nspin, kick, time_steps, dt, file_units)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
+
+    if (kick%dim /= 3) then
+      message(1) = "Rotatory strength can only be computed for 3D systems."
+      call messages_fatal(1)
+    end if
 
     ! load angular momentum from file
     SAFE_ALLOCATE(angular(0:time_steps, 1:3))
@@ -1858,7 +1864,8 @@ contains
     vv(1:3) = vec(1:3) / sqrt(sum(vec(1:3)**2))  
 
     do istep = 1, time_steps
-      read(iunit, *) trash, dump, (dump, (dd(idir, ispin), idir = 1, 3), ispin = 1, nspin)
+      dd = M_ZERO
+      read(iunit, *) trash, dump, (dump, (dd(idir, ispin), idir = 1, kick%dim), ispin = 1, nspin)
       select case(pol)
       case('x')
         dipole(istep) = -sum(dd(1, :))

@@ -675,18 +675,14 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2, mask = mask)
   
-  if(lmax > 0) then
-    do idim = 1, 3
-      if (idim <= mesh%sb%dim) then
-        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-        multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
-      else
-        multipole(idim+1) = M_ZERO
-      end if
+  if (lmax > 0) then
+    do idim = 1, mesh%sb%dim
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+      multipole(1 + idim) = X(mf_integrate)(mesh, ff2, mask = mask)
     end do
   end if
   
-  if(lmax>1) then
+  if (lmax > 1) then
     if (mesh%sb%dim /= 3) then
       message(1) = "multipoles for l > 1 are only available in 3D."
       call messages_fatal(1)

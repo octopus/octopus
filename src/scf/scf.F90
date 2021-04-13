@@ -986,7 +986,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
-      FLOAT :: dipole(1:MAX_DIM)
+      FLOAT :: dipole(1:space%dim)
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1054,7 +1054,7 @@ contains
 
       integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
-      FLOAT :: dipole(1:MAX_DIM)
+      FLOAT :: dipole(1:space%dim)
 
       PUSH_SUB(scf_run.scf_write_static)
 
