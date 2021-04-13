@@ -2131,16 +2131,10 @@ contains
 
     integer             :: ii, is
     character(len=68)   :: buf
-    FLOAT, allocatable  :: eigs(:,:)
 
     PUSH_SUB(td_write_eigs)
-
-    SAFE_ALLOCATE(eigs(1:st%nst,1:st%d%kpt%nglobal)) 
-
-    eigs(1:st%nst, 1:st%d%kpt%nglobal) = st%eigenval(1:st%nst, 1:st%d%kpt%nglobal)
   
     if(.not.mpi_grp_is_root(mpi_world)) then 
-      SAFE_DEALLOCATE_A(eigs)
       POP_SUB(td_write_eigs)
       return ! only first node outputs        
     end if
@@ -2182,12 +2176,10 @@ contains
     call write_iter_start(out_eigs)
     do is = 1, st%d%kpt%nglobal
       do ii =1 , st%nst
-        call write_iter_double(out_eigs, units_from_atomic(units_out%energy, eigs(ii,is)), 1)
+        call write_iter_double(out_eigs, units_from_atomic(units_out%energy, st%eigenval(ii,is)), 1)
       end do
     end do
     call write_iter_nl(out_eigs)
-
-    SAFE_DEALLOCATE_A(eigs)
 
     POP_SUB(td_write_eigs)
   end subroutine td_write_eigs
