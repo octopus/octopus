@@ -147,7 +147,7 @@ contains
 
     default_dt = M_ZERO
     call parse_variable(global_namespace, 'TDTimeStep', default_dt, dt, unit = units_inp%time)
-    if (dt <= M_ZERO) then
+    if(dt < M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file.'
       call messages_info(2)
