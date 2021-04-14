@@ -348,8 +348,14 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   call sort(boundary_to_hilbert(1:np_boundary))
 
   ! get minimum and maximum
-  istart = boundary_to_hilbert(1)
-  iend = boundary_to_hilbert(np_boundary)
+  if (np_boundary > 0) then
+    istart = boundary_to_hilbert(1)
+    iend = boundary_to_hilbert(np_boundary)
+  else
+    ! we do not have boundary points locally
+    istart = grid_to_hilbert(1)
+    iend = grid_to_hilbert(1)
+  end if
 #ifdef HAVE_MPI
   call MPI_Allreduce(MPI_IN_PLACE, istart, 1, &
     MPI_LONG_LONG, MPI_MIN, mpi_world%comm, mpi_err)
