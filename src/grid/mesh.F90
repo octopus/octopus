@@ -430,7 +430,7 @@ contains
     type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: ierr
 
-    integer :: iunit
+    integer :: iunit, ii
 
     PUSH_SUB(mesh_write_fingerprint)
 
@@ -451,7 +451,9 @@ contains
         write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
         write(iunit, '(a20,i21)')  'bits=               ', mesh%idx%bits
         write(iunit, '(a20,i21)')  'dim=                ', mesh%idx%dim
-        write(iunit, '(a20,3i21)') 'offset=             ', mesh%idx%offset(1:mesh%idx%dim)
+        do ii = 1, mesh%idx%dim
+          write(iunit, '(a7,i2,a11,i21)') 'offset(',ii,')=         ', mesh%idx%offset(ii)
+        end do
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
@@ -480,7 +482,7 @@ contains
 
     character(len=20)  :: str
     character(len=100) :: lines(7)
-    integer :: iunit, box_shape, algorithm, dim, err
+    integer :: iunit, box_shape, algorithm, dim, err, ii
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
@@ -505,7 +507,7 @@ contains
         read(lines(1), '(a20,i21)')  str, box_shape
       end if
 
-      call iopar_read(mpi_grp, iunit, lines, 7, err)
+      call iopar_read(mpi_grp, iunit, lines, 6, err)
       if (err /= 0) then
         ierr = ierr + 4
       else
@@ -519,7 +521,15 @@ contains
         if (dim /= mesh%idx%dim) then
           ierr = ierr + 8
         else
-          read(lines(7), '(a20,3i21)')  str, offset(1:dim)
+          ! read offset, has dim lines
+          call iopar_read(mpi_grp, iunit, lines, dim, err)
+          if (err /= 0) then
+            ierr = ierr + 4
+          else
+            do ii = 1, dim
+              read(lines(ii), '(a20,i21)')  str, offset(ii)
+            end do
+          end if
         end if
 
         ASSERT(read_np_part >= read_np)
