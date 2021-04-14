@@ -190,7 +190,7 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   integer :: ip, ib, ib2, np, np_boundary
   FLOAT :: pos(1:MAX_DIM)
   logical :: found
-  integer :: irank, iunique
+  integer :: irank, iunique, num_recv
   type(lihash_t) :: hilbert_to_grid, hilbert_to_boundary
   integer(8), allocatable :: boundary_to_hilbert(:), boundary_to_hilbert_global(:)
   integer(8), allocatable :: boundary_to_hilbert_recv(:)
@@ -397,8 +397,10 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
     rdispls(irank) = rdispls(irank - 1) + rcounts(irank - 1)
   end do
 
+  ! make sure the arrays get allocated also if we do not receive anything
+  num_recv = max(sum(rcounts), 1)
   ! communicate the locally sorted boundary points
-  SAFE_ALLOCATE(boundary_to_hilbert_recv(1:sum(rcounts)))
+  SAFE_ALLOCATE(boundary_to_hilbert_recv(1:num_recv))
 #ifdef HAVE_MPI
   call MPI_Alltoallv(boundary_to_hilbert(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
        boundary_to_hilbert_recv(1), rcounts(0), rdispls(0), MPI_LONG_LONG, mpi_world%comm, mpi_err)
@@ -406,21 +408,27 @@ subroutine mesh_init_stage_2(mesh, namespace, space, sb, cv, stencil)
   boundary_to_hilbert_recv(1:rcounts(0)) = boundary_to_hilbert(1:scounts(0))
 #endif
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
-  SAFE_ALLOCATE(boundary_to_hilbert(1:sum(rcounts)))
+  SAFE_ALLOCATE(boundary_to_hilbert(1:num_recv))
 
   ! do k-way merge of sorted indices
-  call merge_sorted_arrays(boundary_to_hilbert_recv, int(rcounts, 8), boundary_to_hilbert)
+  if (sum(rcounts) > 0) then
+    call merge_sorted_arrays(boundary_to_hilbert_recv, int(rcounts, 8), boundary_to_hilbert)
+  end if
 
   ! make indices unique
-  boundary_to_hilbert_recv(1) = boundary_to_hilbert(1)
-  iunique = 2
-  do ip = 1, sum(rcounts) - 1
-    if (boundary_to_hilbert(ip+1) /= boundary_to_hilbert(ip)) then
-      boundary_to_hilbert_recv(iunique) = boundary_to_hilbert(ip+1)
-      iunique = iunique + 1
-    end if
-  end do
-  np_boundary = iunique - 1
+  if (sum(rcounts) == 0) then
+    np_boundary = 0
+  else
+    boundary_to_hilbert_recv(1) = boundary_to_hilbert(1)
+    iunique = 2
+    do ip = 1, sum(rcounts) - 1
+      if (boundary_to_hilbert(ip+1) /= boundary_to_hilbert(ip)) then
+        boundary_to_hilbert_recv(iunique) = boundary_to_hilbert(ip+1)
+        iunique = iunique + 1
+      end if
+    end do
+    np_boundary = iunique - 1
+  end if
 
   SAFE_DEALLOCATE_A(scounts)
   SAFE_DEALLOCATE_A(sdispls)
@@ -667,7 +675,7 @@ contains
     integer, allocatable :: global_indices(:), global_recv(:)
     integer(8), allocatable :: index_map(:)
     integer, allocatable :: initial_sizes(:), initial_offsets(:)
-    integer :: irank, istart, iend, local_size
+    integer :: irank, istart, iend, local_size, num_recv
     integer(8) :: indstart, indend, hilbert_size
 
     integer, allocatable :: scounts(:), sdispls(:), rcounts(:), rdispls(:)
@@ -759,8 +767,10 @@ contains
       rdispls(irank) = rdispls(irank - 1) + rcounts(irank - 1)
     end do
 
+    ! make sure the arrays get allocated also if we do not receive anything
+    num_recv = max(sum(rcounts), 1)
     ! communicate the locally sorted indices
-    SAFE_ALLOCATE(reorder_recv(1:sum(rcounts)))
+    SAFE_ALLOCATE(reorder_recv(1:num_recv))
 #ifdef HAVE_MPI
     call MPI_Alltoallv(reorder_indices(1), scounts(0), sdispls(0), MPI_LONG_LONG, &
          reorder_recv(1), rcounts(0), rdispls(0), MPI_LONG_LONG, mpi_world%comm, mpi_err)
@@ -768,10 +778,10 @@ contains
     reorder_recv(1:rcounts(0)) = reorder_indices(1:scounts(0))
 #endif
     SAFE_DEALLOCATE_A(reorder_indices)
-    SAFE_ALLOCATE(reorder_indices(1:sum(rcounts)))
+    SAFE_ALLOCATE(reorder_indices(1:num_recv))
 
     ! communicate the corresponding global indices
-    SAFE_ALLOCATE(global_recv(1:sum(rcounts)))
+    SAFE_ALLOCATE(global_recv(1:num_recv))
 #ifdef HAVE_MPI
     call MPI_Alltoallv(global_indices(1), scounts(0), sdispls(0), MPI_INTEGER, &
          global_recv(1), rcounts(0), rdispls(0), MPI_INTEGER, mpi_world%comm, mpi_err)
@@ -781,8 +791,10 @@ contains
     SAFE_DEALLOCATE_A(global_indices)
 
     ! do k-way merge of sorted indices
-    SAFE_ALLOCATE(index_map(1:sum(rcounts)))
-    call merge_sorted_arrays(reorder_recv, int(rcounts, 8), reorder_indices, index_map)
+    SAFE_ALLOCATE(index_map(1:num_recv))
+    if (sum(rcounts) > 0) then
+      call merge_sorted_arrays(reorder_recv, int(rcounts, 8), reorder_indices, index_map)
+    end if
 
     ! reorder according to new order
     do ipg = 1, sum(rcounts)
