@@ -19,6 +19,8 @@
 #include "global.h"
 
 module multigrid_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use boundaries_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
@@ -53,6 +55,10 @@ module multigrid_oct_m
     zmultigrid_fine2coarse,         &
     dmultigrid_coarse2fine,         &
     zmultigrid_coarse2fine,         &
+    dmultigrid_fine2coarse_batch,   &
+    zmultigrid_fine2coarse_batch,   &
+    dmultigrid_coarse2fine_batch,   &
+    zmultigrid_coarse2fine_batch,   &
     multigrid_get_transfer_tables
 
   integer, parameter, public :: &
@@ -437,6 +443,7 @@ contains
     end do
 
   end function multigrid_number_of_levels
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -303,11 +303,12 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_clone_to(this, dest, pack, copy_data)
+  subroutine batch_clone_to(this, dest, pack, copy_data, np)
     class(batch_t),              intent(in)    :: this
     class(batch_t), allocatable, intent(out)   :: dest
     logical,        optional,    intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,        optional,    intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
+    integer,        optional,    intent(in)    :: np
 
     PUSH_SUB(batch_clone_to)
 
@@ -318,7 +319,7 @@ contains
       call messages_fatal(1)
     end if
 
-    call this%copy_to(dest, pack, copy_data)
+    call this%copy_to(dest, pack, copy_data, np)
 
     POP_SUB(batch_clone_to)
   end subroutine batch_clone_to
@@ -352,21 +353,25 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy_to(this, dest, pack, copy_data)
+  subroutine batch_copy_to(this, dest, pack, copy_data, np)
     class(batch_t),          intent(in)    :: this
     class(batch_t),          intent(out)   :: dest
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
+    integer,       optional, intent(in)    :: np !< If present, this replaces this%np in the initialization
 
     logical :: host_packed
+    integer :: np_
 
     PUSH_SUB(batch_copy_to)
 
+    np_ = optional_default(np, this%np)
+
     host_packed = this%host_buffer_count > 0
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
+      call dbatch_init(dest, this%dim, 1, this%nst, np_, packed=host_packed)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
+      call zbatch_init(dest, this%dim, 1, this%nst, np_, packed=host_packed)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -377,7 +382,10 @@ contains
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
 
-    if(optional_default(copy_data, .false.)) call this%copy_data_to(this%np, dest)
+    if(optional_default(copy_data, .false.)) then
+      ASSERT(np_ == this%np)
+      call this%copy_data_to(this%np, dest)
+    end if
 
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to

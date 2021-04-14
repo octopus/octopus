@@ -196,7 +196,129 @@
     POP_SUB(X(multigrid_restriction))
   end subroutine X(multigrid_restriction)
 
+  ! ---------------------------------------------------------
+  subroutine X(multigrid_coarse2fine_batch)(tt, coarse_der, fine_mesh, coarseb, fineb, order)
+    type(transfer_table_t),  intent(in)    :: tt
+    type(derivatives_t),     intent(in)    :: coarse_der
+    type(mesh_t),            intent(in)    :: fine_mesh
+    class(batch_t),          intent(inout) :: coarseb
+    class(batch_t),          intent(inout) :: fineb
+    integer, optional,       intent(in)    :: order
 
+    integer :: idir, order_, ii, ifactor, ist
+    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
+    FLOAT, allocatable :: factor(:), points(:)
+    R_TYPE, allocatable :: f_coarse(:), f_fine(:)
+
+    PUSH_SUB(X(multigrid_coarse2fine_batch))
+
+    call profiling_in(interp_prof, TOSTRING(X(MG_INTERPOLATION_BATCH)))
+
+    ASSERT(coarseb%nst_linear == fineb%nst_linear)
+
+    order_ = optional_default(order, 1)
+
+    SAFE_ALLOCATE(points(1:2*order_))
+    SAFE_ALLOCATE(factor(1:2*order_))
+
+    do ii = 1, 2*order_
+      points(ii) = ii
+    end do
+
+    call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
+
+    factor = factor/coarse_der%dim
+
+    call boundaries_set(coarse_der%boundaries, coarseb)
+
+    SAFE_ALLOCATE(f_coarse(1:coarse_der%mesh%np_part))
+    SAFE_ALLOCATE(f_fine(1:fine_mesh%np))
+
+    do ist = 1, coarseb%nst_linear
+      call batch_get_state(coarseb, ist, coarse_der%mesh%np_part, f_coarse)
+#ifdef HAVE_MPI
+    if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
+#endif
+
+      call batch_get_state(fineb, ist, fine_mesh%np, f_fine)
+      f_fine = M_ZERO
+
+      do ipf = 1, fine_mesh%np
+        call mesh_local_index_to_coords(fine_mesh, ipf, xf)
+
+        dd = mod(xf, 2)
+
+        do idir = 1, coarse_der%dim
+          ifactor = 1
+          do ii = -order_, order_
+            if(ii == 0) cycle
+            xc = xf + (2*ii - sign(1, ii))*dd
+            xc = xc/2
+            ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+            f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
+            ifactor = ifactor + 1
+          end do
+        end do
+
+      end do
+
+      call batch_set_state(fineb, ist, fine_mesh%np, f_fine)
+    end do
+
+    SAFE_DEALLOCATE_A(f_coarse)
+    SAFE_DEALLOCATE_A(f_fine)
+
+    call profiling_out(interp_prof)
+    POP_SUB(X(multigrid_coarse2fine_batch))
+  end subroutine X(multigrid_coarse2fine_batch)
+
+    ! ---------------------------------------------------------
+  subroutine X(multigrid_fine2coarse_batch)(tt, fine_der, coarse_mesh, fineb, coarseb, method_p)
+    type(transfer_table_t), intent(in)    :: tt
+    type(derivatives_t),    intent(in)    :: fine_der
+    type(mesh_t),           intent(in)    :: coarse_mesh
+    class(batch_t),         intent(in)    :: fineb
+    class(batch_t),         intent(inout) :: coarseb
+    integer, optional,      intent(in)    :: method_p
+
+    integer :: method, ist
+    R_TYPE, allocatable :: f_coarse(:), f_fine(:)
+
+    PUSH_SUB(X(multigrid_fine2coarse_batch))
+
+    ASSERT(coarseb%nst_linear == fineb%nst_linear)
+
+    if(present(method_p)) then
+      method=method_p
+    else
+      method=FULLWEIGHT
+    end if
+
+    SAFE_ALLOCATE(f_coarse(1:coarse_mesh%np))
+    SAFE_ALLOCATE(f_fine(1:fine_der%mesh%np_part))
+
+    do ist = 1, coarseb%nst_linear
+      call batch_get_state(coarseb, ist, coarse_mesh%np, f_coarse)
+      call batch_get_state(fineb, ist, fine_der%mesh%np, f_fine)
+
+      select case(method)
+      case(FULLWEIGHT)
+        call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse)
+      case(INJECTION)
+        call X(multigrid_injection)(tt, f_fine, f_coarse)
+      case default
+        write(message(1), '(a,i2,a)') 'Multigrid: Restriction method  = ', method, ' is not valid.'
+        call messages_fatal(1)
+      end select
+    
+      call batch_set_state(coarseb, ist, coarse_mesh%np, f_coarse)
+    end do
+
+    SAFE_DEALLOCATE_A(f_coarse)
+    SAFE_DEALLOCATE_A(f_fine)
+
+    POP_SUB(X(multigrid_fine2coarse_batch))
+  end subroutine X(multigrid_fine2coarse_batch)
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

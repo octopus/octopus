@@ -169,16 +169,17 @@ end subroutine X(derivatives_perform)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
+subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc, factor)
   type(derivatives_t),       intent(in)    :: der
   R_TYPE,                    intent(inout) :: ff(:)     !< (der%mesh%np_part)
   R_TYPE,                    intent(out)   :: op_ff(:)  !< (der%mesh%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
+  FLOAT,   optional,         intent(in)    :: factor
 
   PUSH_SUB(X(derivatives_lapl))
 
-  call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
+  call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc, factor)
 
   POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
