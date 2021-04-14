@@ -533,9 +533,13 @@ contains
         call atom_get_species(geo%atom(iatom), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
         xx(1:geo%space%dim) = abs(geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))
-        do idir = 1, geo%space%periodic_dim
-          xx(idir) = xx(idir) - norm2(geo%latt%rlattice(:,idir)) * floor(xx(idir)/norm2(geo%latt%rlattice(:,idir)) + M_HALF)
-        end do
+        if (geo%space%is_periodic()) then
+          xx = geo%latt%cart_to_red(xx)
+          do idir = 1, geo%space%periodic_dim
+            xx(idir) = xx(idir) - floor(xx(idir) + M_HALF)
+          end do
+          xx = geo%latt%red_to_cart(xx)
+        end if
         rmin = min(norm2(xx), rmin)
       end do
     end do
@@ -543,7 +547,7 @@ contains
     if(.not. (geo%only_user_def .and. real_atoms_only_)) then
       ! what if the nearest neighbors are periodic images?
       do idir = 1, geo%space%periodic_dim
-        rmin = min(rmin, M_HALF*abs(norm2(geo%latt%rlattice(:,idir))))
+        rmin = min(rmin, norm2(geo%latt%rlattice(:,idir)))
       end do
     end if
 
