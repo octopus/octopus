@@ -30,6 +30,7 @@ module charged_particle_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
+  use multisystem_debug_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -213,6 +214,10 @@ contains
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
       ! We still need to set its clock, so we set it to be in sync with the particle position.
       call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
+      call multisystem_debug_write_marker(partner%namespace, &
+        event_clock_update_t(clock_name=QUANTITY_LABEL(iq), &
+        clock = partner%quantities(iq)%clock, action="set") )
+
     case default
       ! Other quantities should be handled by the parent class
       call partner%classical_particle_t%update_exposed_quantity(iq)

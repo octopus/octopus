@@ -34,6 +34,7 @@ module system_dftb_oct_m
   use lasers_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_debug_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -480,6 +481,8 @@ contains
                + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
         end do
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+                                            clock = this%quantities(POSITION)%clock, action="tick") )
 
       case (VERLET_COMPUTE_ACC)
         do ii = size(this%prev_acc, dim=3) - 1, 1, -1
@@ -500,6 +503,9 @@ contains
             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
               this%acc(1:this%space%dim, 1:this%n_atom))
         this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                            clock = this%quantities(VELOCITY)%clock, action="tick") )
+
 
       case default
         message(1) = "Unsupported TD operation."

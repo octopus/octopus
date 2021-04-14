@@ -86,6 +86,7 @@ module multisystem_debug_oct_m
   type, extends(event_info_t) :: event_clock_update_t
     character(len=MAX_INFO_LEN) :: clock_name
     type(clock_t)               :: clock
+    character(len=MAX_INFO_LEN) :: action
   contains
     procedure :: get_info => event_clock_update_get_info
   end type event_clock_update_t
@@ -173,15 +174,17 @@ contains
 
   !-------------------------------------------------------------------
 
-  function event_clock_update_constructor(clock_name, clock) result(event)
-    character(*),  intent(in)   :: clock_name
-    type(clock_t), intent(in)   :: clock
+  function event_clock_update_constructor(clock_name, clock, action) result(event)
+    character(*),                intent(in) :: clock_name
+    type(clock_t),               intent(in) :: clock
+    character(len=MAX_INFO_LEN), intent(in) :: action
     type(event_clock_update_t)  :: event
 
     PUSH_SUB(event_function_call_constructor)
 
     event%clock = clock
     event%clock_name = clock_name
+    event%action = action
 
     POP_SUB(event_function_call_constructor)
   end function event_clock_update_constructor
@@ -193,7 +196,8 @@ contains
 
     PUSH_SUB(event_function_call_get_info)
 
-    write(info, '("type: clock_update | clock_name: ",a," | clock: ",E15.5)') trim(this%clock_name), this%clock%time()
+    write(info, '("type: clock_update | clock_name: ",a," | clock: ",E15.5," | action = ",a)') & 
+          trim(this%clock_name), this%clock%time(), trim(this%action)
 
     POP_SUB(event_function_call_get_info)
   end function event_clock_update_get_info
@@ -265,8 +269,12 @@ contains
 
     if(debug%propagation_graph .and. mpi_grp%rank == 0) then
 
-      system_name = '.'//trim(system_namespace%get())
-      if (system_name == '.') system_name = ''
+      if(present(system_namespace)) then
+        system_name = '.'//trim(system_namespace%get())
+        if (system_name == '.') system_name = ''
+      else
+        system_name = 'KEEP'
+      endif
 
       write(iunit, '("MARKER:   ",I10," | system: ",a,"| ",a)' , advance='yes' ) event_ID, & 
             trim(system_name), trim(event%get_info())

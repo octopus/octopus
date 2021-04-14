@@ -32,6 +32,7 @@ module classical_particles_oct_m
   use iso_c_binding
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_debug_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -170,6 +171,9 @@ contains
         + M_HALF * this%prop%dt**2 * this%acc(1:sdim, 1:this%np)
 
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+                                          clock = this%quantities(POSITION)%clock, action="tick") )
+
 
     case (VERLET_COMPUTE_ACC, BEEMAN_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=3) - 1, 1, -1
@@ -185,6 +189,8 @@ contains
         + M_HALF * this%prop%dt * (this%prev_acc(1:sdim, 1:this%np, 1) + this%acc(1:sdim, 1:this%np))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                          clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (BEEMAN_START)
       if (this%prop%predictor_corrector) then
@@ -203,7 +209,9 @@ contains
 
       if (.not. this%prop%predictor_corrector) then
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      end if
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+        clock = this%quantities(POSITION)%clock, action="tick") )
+end if
 
     case (BEEMAN_PREDICT_VEL)
       this%vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np)  &
@@ -211,6 +219,8 @@ contains
         CNST(5.0) * this%prev_acc(1:sdim, 1:this%np, 1) - this%prev_acc(1:sdim, 1:this%np, 2))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                          clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (BEEMAN_CORRECT_POS)
       this%pos(1:sdim, 1:this%np) = this%save_pos(1:sdim, 1:this%np) + this%prop%dt * this%save_vel(1:sdim, 1:this%np) &
@@ -225,6 +235,8 @@ contains
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                          clock = this%quantities(VELOCITY)%clock, action="set") )
 
     case (EXPMID_START)
       SAFE_ALLOCATE(this%save_pos(1:this%space%dim, 1:this%np))
@@ -248,7 +260,11 @@ contains
       this%prev_pos(1:sdim, 1:this%np, 1) = this%save_pos(1:sdim, 1:this%np)
       this%prev_vel(1:sdim, 1:this%np, 1) = this%save_vel(1:sdim, 1:this%np)
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+                                          clock = this%quantities(POSITION)%clock, action="tick") )
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                          clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (UPDATE_HAMILTONIAN)
       do ip = 1, this%np
@@ -286,7 +302,11 @@ contains
       SAFE_DEALLOCATE_A(tmp_pos)
       SAFE_DEALLOCATE_A(tmp_vel)
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+                                          clock = this%quantities(POSITION)%clock, action="tick") )
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                          clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (EXPMID_CORRECT_DT_2)
       ! only correct for dt/2 if not converged yet
@@ -294,8 +314,12 @@ contains
         this%pos(1:sdim, 1:this%np) = CNST(0.5)*(this%pos(1:sdim, 1:this%np) + this%save_pos(1:sdim, 1:this%np))
         this%vel(1:sdim, 1:this%np) = CNST(0.5)*(this%vel(1:sdim, 1:this%np) + this%save_vel(1:sdim, 1:this%np))
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+                                            clock = this%quantities(POSITION)%clock, action="tick") )
         this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      end if
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+                                            clock = this%quantities(VELOCITY)%clock, action="tick") )
+end if
 
     case default
       message(1) = "Unsupported TD operation."

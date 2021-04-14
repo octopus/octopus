@@ -192,6 +192,8 @@ contains
       if (.not. this%prop%step_is_done()) then
         ! Increment the system clock by one time-step
         this%clock = this%clock + CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="system", &
+                                            clock = this%clock, action="tick" ) )
 
         ! Execute additional operations at the end of the time step
         call this%exec_end_of_timestep_tasks()
@@ -210,6 +212,8 @@ contains
     case (UPDATE_INTERACTIONS)
       ! We increment by one algorithmic step
       this%prop%clock = this%prop%clock + CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", & 
+                                          clock = this%prop%clock, action="tick") )
 
       ! Try to update all the interactions
       all_updated = this%update_interactions()
@@ -221,6 +225,8 @@ contains
         call this%prop%next()
       else
         this%prop%clock = this%prop%clock - CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", &
+                                            clock = this%prop%clock, action="reverse") )
       end if
 
     case (START_SCF_LOOP)
@@ -297,18 +303,24 @@ contains
 
     ! Propagator clock
     this%prop%clock = this%prop%clock - accumulated_ticks*CLOCK_TICK
+    call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", & 
+                                        clock = this%prop%clock, action="reset") )
 
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
       interaction%clock = interaction%clock - accumulated_ticks*CLOCK_TICK
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=interaction%label, & 
+                                          clock = interaction%clock, action="reset") )
     end do
 
     ! Internal quantities clocks
     do iq = 1, MAX_QUANTITIES
       if (this%quantities(iq)%required) then
         this%quantities(iq)%clock = this%quantities(iq)%clock - accumulated_ticks*CLOCK_TICK
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(iq), &
+                                            clock = this%quantities(iq)%clock, action="reset") )
       end if
     end do
 
