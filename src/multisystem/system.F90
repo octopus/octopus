@@ -193,7 +193,7 @@ contains
         ! Increment the system clock by one time-step
         this%clock = this%clock + CLOCK_TICK
         call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="system", &
-                                            clock = this%clock, action="tick" ) )
+                                            clock_detail = "", clock = this%clock, action="tick" ) )
 
         ! Execute additional operations at the end of the time step
         call this%exec_end_of_timestep_tasks()
@@ -213,7 +213,7 @@ contains
       ! We increment by one algorithmic step
       this%prop%clock = this%prop%clock + CLOCK_TICK
       call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", & 
-                                          clock = this%prop%clock, action="tick") )
+                                          clock_detail = "", clock = this%prop%clock, action="tick") )
 
       ! Try to update all the interactions
       all_updated = this%update_interactions()
@@ -226,7 +226,7 @@ contains
       else
         this%prop%clock = this%prop%clock - CLOCK_TICK
         call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", &
-                                            clock = this%prop%clock, action="reverse") )
+                                            clock_detail = "", clock = this%prop%clock, action="reverse") )
       end if
 
     case (START_SCF_LOOP)
@@ -299,28 +299,42 @@ contains
     type(interaction_iterator_t) :: iter
     class(interaction_t), pointer :: interaction
 
+    character(len=MAX_INFO_LEN) :: extended_label
+ 
     PUSH_SUB(system_reset_clocks)
 
     ! Propagator clock
     this%prop%clock = this%prop%clock - accumulated_ticks*CLOCK_TICK
     call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="propagator", & 
-                                        clock = this%prop%clock, action="reset") )
+                                        clock_detail="", clock = this%prop%clock, action="reset") )
 
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
       interaction%clock = interaction%clock - accumulated_ticks*CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=interaction%label, & 
-                                          clock = interaction%clock, action="reset") )
+
+      select type (interaction)
+      class is (interaction_with_partner_t)
+        extended_label = trim(interaction%label)//"-"//trim(interaction%partner%namespace%get())
+      class default
+        extended_label = trim(interaction%label)
+      end select
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t( &
+              clock_name = "interaction", & 
+              clock_detail = extended_label, & 
+              clock = interaction%clock, & 
+              action="reset") )
     end do
 
     ! Internal quantities clocks
     do iq = 1, MAX_QUANTITIES
       if (this%quantities(iq)%required) then
         this%quantities(iq)%clock = this%quantities(iq)%clock - accumulated_ticks*CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(iq), &
-                                            clock = this%quantities(iq)%clock, action="reset") )
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                                                                 clock_detail=QUANTITY_LABEL(iq), &
+                                                                                 clock = this%quantities(iq)%clock, &
+                                                                                 action="reset") )
       end if
     end do
 

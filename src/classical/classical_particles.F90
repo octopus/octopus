@@ -171,7 +171,8 @@ contains
         + M_HALF * this%prop%dt**2 * this%acc(1:sdim, 1:this%np)
 
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", & 
+                                          clock_detail=QUANTITY_LABEL(POSITION), & 
                                           clock = this%quantities(POSITION)%clock, action="tick") )
 
 
@@ -189,7 +190,8 @@ contains
         + M_HALF * this%prop%dt * (this%prev_acc(1:sdim, 1:this%np, 1) + this%acc(1:sdim, 1:this%np))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                           clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (BEEMAN_START)
@@ -209,8 +211,9 @@ contains
 
       if (.not. this%prop%predictor_corrector) then
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
-        clock = this%quantities(POSITION)%clock, action="tick") )
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                                              clock_detail = QUANTITY_LABEL(POSITION), & 
+                                                              clock = this%quantities(POSITION)%clock, action="tick") )
 end if
 
     case (BEEMAN_PREDICT_VEL)
@@ -219,7 +222,8 @@ end if
         CNST(5.0) * this%prev_acc(1:sdim, 1:this%np, 1) - this%prev_acc(1:sdim, 1:this%np, 2))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                           clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (BEEMAN_CORRECT_POS)
@@ -235,7 +239,8 @@ end if
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                           clock = this%quantities(VELOCITY)%clock, action="set") )
 
     case (EXPMID_START)
@@ -260,10 +265,12 @@ end if
       this%prev_pos(1:sdim, 1:this%np, 1) = this%save_pos(1:sdim, 1:this%np)
       this%prev_vel(1:sdim, 1:this%np, 1) = this%save_vel(1:sdim, 1:this%np)
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(POSITION), & 
                                           clock = this%quantities(POSITION)%clock, action="tick") )
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                           clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (UPDATE_HAMILTONIAN)
@@ -302,10 +309,12 @@ end if
       SAFE_DEALLOCATE_A(tmp_pos)
       SAFE_DEALLOCATE_A(tmp_vel)
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(POSITION), & 
                                           clock = this%quantities(POSITION)%clock, action="tick") )
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+      call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                          clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                           clock = this%quantities(VELOCITY)%clock, action="tick") )
 
     case (EXPMID_CORRECT_DT_2)
@@ -314,10 +323,12 @@ end if
         this%pos(1:sdim, 1:this%np) = CNST(0.5)*(this%pos(1:sdim, 1:this%np) + this%save_pos(1:sdim, 1:this%np))
         this%vel(1:sdim, 1:this%np) = CNST(0.5)*(this%vel(1:sdim, 1:this%np) + this%save_vel(1:sdim, 1:this%np))
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                            clock_detail = QUANTITY_LABEL(POSITION), & 
                                             clock = this%quantities(POSITION)%clock, action="tick") )
         this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                            clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                             clock = this%quantities(VELOCITY)%clock, action="tick") )
 end if
 

@@ -481,7 +481,8 @@ contains
                + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
         end do
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(POSITION), & 
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                            clock_detail = QUANTITY_LABEL(POSITION), & 
                                             clock = this%quantities(POSITION)%clock, action="tick") )
 
       case (VERLET_COMPUTE_ACC)
@@ -503,7 +504,8 @@ contains
             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
               this%acc(1:this%space%dim, 1:this%n_atom))
         this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name=QUANTITY_LABEL(VELOCITY), & 
+        call multisystem_debug_write_marker(this%namespace, event_clock_update_t(clock_name="quantity", &
+                                            clock_detail = QUANTITY_LABEL(VELOCITY), & 
                                             clock = this%quantities(VELOCITY)%clock, action="tick") )
 
 

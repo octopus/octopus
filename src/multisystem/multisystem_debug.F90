@@ -85,6 +85,7 @@ module multisystem_debug_oct_m
 
   type, extends(event_info_t) :: event_clock_update_t
     character(len=MAX_INFO_LEN) :: clock_name
+    character(len=MAX_INFO_LEN) :: clock_detail
     type(clock_t)               :: clock
     character(len=MAX_INFO_LEN) :: action
   contains
@@ -163,8 +164,7 @@ contains
 
     PUSH_SUB(event_function_call_get_info)
 
-!    info = "type: function_call | function: " // trim(this%function_name) 
-    info = "function: " // trim(this%function_name) 
+    info = "type: function_call | function: " // trim(this%function_name) 
     if(this%op_label /= "NULL") then
       info = trim(info) // " | operation: " // trim(this%op_label)
     endif
@@ -174,16 +174,18 @@ contains
 
   !-------------------------------------------------------------------
 
-  function event_clock_update_constructor(clock_name, clock, action) result(event)
-    character(*),                intent(in) :: clock_name
-    type(clock_t),               intent(in) :: clock
-    character(len=MAX_INFO_LEN), intent(in) :: action
-    type(event_clock_update_t)  :: event
+  function event_clock_update_constructor(clock_name, clock_detail, clock, action) result(event)
+    character(*),     intent(in) :: clock_name
+    character(*),     intent(in) :: clock_detail
+    type(clock_t),    intent(in) :: clock
+    character(len=*), intent(in) :: action
+    type(event_clock_update_t)   :: event
 
     PUSH_SUB(event_function_call_constructor)
 
     event%clock = clock
     event%clock_name = clock_name
+    event%clock_detail = clock_detail
     event%action = action
 
     POP_SUB(event_function_call_constructor)
@@ -196,8 +198,8 @@ contains
 
     PUSH_SUB(event_function_call_get_info)
 
-    write(info, '("type: clock_update | clock_name: ",a," | clock: ",E15.5," | action = ",a)') & 
-          trim(this%clock_name), this%clock%time(), trim(this%action)
+    write(info, '("type: clock_update | clock_name: ",a," | clock_detail: ",a," | clock: ",E15.5," | action: ",a)') & 
+          trim(this%clock_name), trim(this%clock_detail), this%clock%time(), trim(this%action)
 
     POP_SUB(event_function_call_get_info)
   end function event_clock_update_get_info
