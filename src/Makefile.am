@@ -257,7 +257,6 @@ ions_f_srcs =                                 \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/multibox.F90                     \
-	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \
 	ions/spglib_f08.f90                   \

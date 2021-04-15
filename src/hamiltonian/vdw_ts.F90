@@ -27,12 +27,12 @@ module vdw_ts_oct_m
   use hirshfeld_oct_m
   use io_oct_m
   use io_function_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use simul_box_oct_m
@@ -186,14 +186,14 @@ contains
       end subroutine f90_vdw_calculate
     end interface
 
-    type(periodic_copy_t) :: pc
+    type(lattice_iterator_t) :: latt_iter
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ip 
     FLOAT :: rr, rr2, rr6, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
     FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
-    FLOAT :: x_j(1:MAX_DIM)
+    FLOAT :: x_j(sb%dim)
 
     PUSH_SUB(vdw_ts_calculate)
 
@@ -234,13 +234,13 @@ contains
         end do
       end do
 
-
+      latt_iter = lattice_iterator_t(sb%latt, this%cutoff)
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
-        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize,  geo%atom(jatom)%x, this%cutoff)
-        do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
-          x_j(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, jcopy)
+        do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
+          x_j = geo%atom(jatom)%x(1:sb%dim) + latt_iter%get(jcopy)
+
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
             rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
@@ -270,7 +270,6 @@ contains
 
           end do
         end do
-        call periodic_copy_end(pc)
       end do
 
       SAFE_DEALLOCATE_A(r0ab)
@@ -327,10 +326,10 @@ contains
     FLOAT,               intent(in)    :: density(:, :)
 
     type(hirshfeld_t) :: hirshfeld
-    type(periodic_copy_t) :: pc
+    type(lattice_iterator_t) :: latt_iter
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(sb%dim) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
     type(profile_t), save :: prof
 
@@ -383,13 +382,12 @@ contains
       end do
     end do
 
-
+    latt_iter = lattice_iterator_t(sb%latt, this%cutoff)
     do jatom = 1, geo%natoms
       jspecies = species_index(geo%atom(jatom)%species)
-      
-      call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, geo%atom(jatom)%x, this%cutoff)
-      do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
-        x_j(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, jcopy)
+
+      do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
+        x_j = geo%atom(jatom)%x(1:sb%dim) + latt_iter%get(jcopy)
         do iatom = 1, geo%natoms
           ispecies = species_index(geo%atom(iatom)%species)
           rr2 =  sum((x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2)
@@ -417,7 +415,6 @@ contains
           force_vdw(1:sb%dim, iatom)= force_vdw(1:sb%dim, iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) - x_j(1:sb%dim))/rr;
         end do
       end do
-      call periodic_copy_end(pc)
     end do
 
     do iatom = 1, geo%natoms

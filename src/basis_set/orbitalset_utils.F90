@@ -24,13 +24,13 @@ module orbitalset_utils_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_function_oct_m
+  use lattice_vectors_oct_m
   use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use orbitalset_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -95,8 +95,8 @@ contains
     integer,                      intent(in)    :: sm_poisson
 
 
-    type(periodic_copy_t) :: pc
-    FLOAT :: xat(1:MAX_DIM), xi(1:MAX_DIM)
+    type(lattice_iterator_t) :: latt_iter
+    FLOAT :: xat(geo%space%dim), xi(geo%space%dim)
     FLOAT :: rr
     integer :: inn, ist, jst
     integer :: np_sphere, ip, ios
@@ -117,15 +117,16 @@ contains
 
     this%nneighbors = 0
     if(this%iatom /= -1)then
-      xat(1:geo%space%dim) = geo%atom(this%iatom)%x(1:geo%space%dim)
+      xat = geo%atom(this%iatom)%x(1:geo%space%dim)
+
+      latt_iter = lattice_iterator_t(sb%latt, rcut)
 
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos
+        do inn = 1, latt_iter%n_cells
 
-        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
-        do inn = 1, periodic_copy_num(pc)
-          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
-          rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
+          xi = os(ios)%sphere%center(1:geo%space%dim) + latt_iter%get(inn)
+          rr = norm2(xi - xat)
 
           !This atom is too far
           if( rr >rcut + TOL_INTERSITE ) cycle
@@ -134,7 +135,6 @@ contains
 
           this%nneighbors = this%nneighbors +1
         end do
-        call periodic_copy_end(pc)
       end do
 
       !The first three values are the position of the periodic copies
@@ -149,10 +149,9 @@ contains
  
       this%nneighbors = 0
       do ios = 1, nos
-        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
-        do inn = 1, periodic_copy_num(pc)
-          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
-          rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
+        do inn = 1, latt_iter%n_cells
+          xi = os(ios)%sphere%center(1:geo%space%dim) + latt_iter%get(inn)
+          rr = norm2(xi - xat)
 
           if( rr > rcut + TOL_INTERSITE ) cycle
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
@@ -164,7 +163,6 @@ contains
           
           this%map_os(this%nneighbors) = ios
         end do
-        call periodic_copy_end(pc)
       end do
 
       write(message(1),'(a, i3, a)')    'Intersite interaction will be computed for ', this%nneighbors, ' neighboring atoms.'

@@ -61,7 +61,6 @@ module output_oct_m
   use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -699,7 +698,7 @@ contains
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(geo%space%is_periodic())  call periodic_write_crystal(geo, gr%mesh%sb%latt, gr%mesh%sb%lsize, dir, namespace)
+        if(geo%space%is_periodic())  call periodic_write_crystal(geo, gr%mesh%sb%latt, dir, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)

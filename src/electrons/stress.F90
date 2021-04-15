@@ -33,13 +33,13 @@ module stress_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use kpoints_oct_m
+  use lattice_vectors_oct_m
   use loct_math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
-  use periodic_copy_oct_m
   use poisson_fft_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -776,9 +776,9 @@ contains
     FLOAT :: stress_l(3, 3)
 
     type(simul_box_t), pointer :: sb
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, erfc, rcut
+    FLOAT :: rr, xi(geo%space%dim), zi, zj, erfc, rcut
     integer :: iatom, jatom, icopy
-    type(periodic_copy_t) :: pc
+    type(lattice_iterator_t) :: latt_iter
     integer :: ix, iy, iz, isph, ss, idim, idir, jdir
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge, Hp, charge_sq
@@ -796,19 +796,18 @@ contains
 
     rcut = CNST(6.0)/alpha
     stress_l = M_ZERO
-! the short-range part is calculated directly
+    latt_iter = lattice_iterator_t(sb%latt, rcut)
+    ! the short-range part is calculated directly
     do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
-       zi = species_zval(geo%atom(iatom)%species)
+      if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
+      zi = species_zval(geo%atom(iatom)%species)
 
-       call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, geo%atom(iatom)%x, rcut)
-      
-       do icopy = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, icopy)
+      do icopy = 1, latt_iter%n_cells
+        xi = geo%atom(iatom)%x(1:sb%dim) + latt_iter%get(icopy)
         
-          do jatom = 1,  geo%natoms
-             zj = species_zval(geo%atom(jatom)%species)
-             rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+        do jatom = 1,  geo%natoms
+          zj = species_zval(geo%atom(jatom)%species)
+          rr = norm2(xi - geo%atom(jatom)%x(1:sb%dim))
           
           if(rr < CNST(1e-5)) cycle
           
@@ -816,20 +815,15 @@ contains
           Hp = -M_TWO/sqrt(M_PI)*exp(-(alpha*rr)**2) - erfc/(alpha*rr)
           factor = M_HALF*zj*zi*alpha*Hp
           do idir = 1,3
-             do jdir =1,3
-                stress_l(idir, jdir) = stress_l(idir, jdir) &
-                     -factor&
-                     *(xi(idir) - geo%atom(jatom)%x(idir)) &
-                     *(xi(jdir) - geo%atom(jatom)%x(jdir))/(rr**2)
-                     
-             end do
+            do jdir =1,3
+              stress_l(idir, jdir) = stress_l(idir, jdir) &
+                - factor*(xi(idir) - geo%atom(jatom)%x(idir))*(xi(jdir) - geo%atom(jatom)%x(jdir))/(rr**2)
+            end do
           end do
 
         end do
 
       end do
-      
-      call periodic_copy_end(pc)
     end do
 
     if(geo%atoms_dist%parallel) then

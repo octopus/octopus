@@ -24,13 +24,13 @@ module species_pot_oct_m
   use global_oct_m
   use io_function_oct_m
   use index_oct_m
+  use lattice_vectors_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use root_solver_oct_m
@@ -86,7 +86,7 @@ contains
 #if defined(HAVE_MPI)
     integer :: in_points_red
 #endif
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
 
     PUSH_SUB(species_atom_density)
 
@@ -109,27 +109,25 @@ contains
       ! creates the external potential.
       ! This code is repeated in get_density, and should therefore be cleaned!!!!!
 
-       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-          call volume_init(volume)
-          call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
-       end if
+      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+        call volume_init(volume)
+        call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
+      end if
 
-      call periodic_copy_init(pp, space, sb%latt, sb%lsize, spread(M_ZERO, dim=1, ncopies = sb%dim), &
-        range = M_TWO * maxval(sb%lsize(1:sb%dim)))
-
+      latt_iter = lattice_iterator_t(sb%latt, maxval(norm2(sb%latt%rlattice, dim=1)))
       rho = M_ZERO
-      do icell = 1, periodic_copy_num(pp)
-        yy(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+      do icell = 1, latt_iter%n_cells
+        yy = latt_iter%get(icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
-          xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
-          rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
+          xx = xx + yy
+          rr = norm2(xx)
           
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-             if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
+            if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
           else
-             call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+            call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip, 1) = rho(ip, 1) + rerho
        end do
@@ -138,7 +136,6 @@ contains
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
          call volume_end(volume)
       end if
-      call periodic_copy_end(pp)
 
       if(spin_channels > 1) then
         rho(:, 1) = M_HALF*rho(:, 1)
@@ -242,10 +239,9 @@ contains
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
         
-        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, rmax)
-
-        do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+        latt_iter = lattice_iterator_t(sb%latt, rmax)
+        do icell = 1, latt_iter%n_cells
+          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -257,18 +253,14 @@ contains
             
           end do
         end do
-  
-        call periodic_copy_end(pp)
 
       else 
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
-        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, &
-                         range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
-      
-        do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+        latt_iter = lattice_iterator_t(sb%latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+        do icell = 1, latt_iter%n_cells
+          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -281,8 +273,6 @@ contains
               
           end do
         end do
-  
-        call periodic_copy_end(pp)
 
         ! normalize
         nrm = CNST(0.0)
@@ -395,7 +385,7 @@ contains
     FLOAT :: pos(1:MAX_DIM), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
 
     PUSH_SUB(species_atom_density_derivative)
 
@@ -417,14 +407,12 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, range = range)
+        latt_iter = lattice_iterator_t(sb%latt, range)
 
-        do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+        do icell = 1, latt_iter%n_cells
+          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
           call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
-  
-        call periodic_copy_end(pp)
       end if
        
     case default
@@ -490,7 +478,7 @@ contains
     FLOAT :: rr, pos(1:MAX_DIM), range, spline
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
 
     PUSH_SUB(species_atom_density_grad)
 
@@ -512,10 +500,10 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, range = range)
+        latt_iter = lattice_iterator_t(sb%latt, range)
 
-        do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+        do icell = 1, latt_iter%n_cells
+          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
@@ -532,8 +520,6 @@ contains
           end do
         end do
   
-        call periodic_copy_end(pp)
-
       else 
         call messages_write('The pseudopotential for')
         call messages_write(species_label(species))
@@ -566,7 +552,7 @@ contains
     FLOAT   :: delta, alpha, beta, xx(mesh%sb%dim), yy(mesh%sb%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     type(ps_t), pointer :: ps
     type(volume_t) :: volume
     logical :: have_point
@@ -718,16 +704,15 @@ contains
         call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
        
-      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
-        range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+      latt_iter = lattice_iterator_t(mesh%sb%latt, maxval(norm2(mesh%sb%latt%rlattice, dim=1)))
 
       rho = M_ZERO
-      do icell = 1, periodic_copy_num(pp)
-        yy(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+      do icell = 1, latt_iter%n_cells
+        yy = latt_iter%get(icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
-          xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
-          rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+          xx = xx + yy
+          rr = norm2(xx)
 
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
@@ -742,7 +727,6 @@ contains
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
          call volume_end(volume)
       end if
-      call periodic_copy_end(pp)
 
       rr = species_zval(species) / abs(dmf_integrate(mesh, rho(:)))
       rho(1:mesh%np) = rr * rho(1:mesh%np)
@@ -801,9 +785,9 @@ contains
     FLOAT,                   intent(inout) :: rho_core(:)
     logical, optional,       intent(in)    :: accumulate
 
-    FLOAT :: center(MAX_DIM), rr
+    FLOAT :: center(space%dim), rr
     integer :: icell, ip
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     type(ps_t), pointer :: ps
 
     PUSH_SUB(species_get_nlcc)
@@ -812,18 +796,17 @@ contains
     if(species_is_ps(species)) then
       ps => species_ps(species)
       if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
-      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, pos, &
-                     range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
-      do icell = 1, periodic_copy_num(pp)
-        center(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+
+      latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
+      do icell = 1, latt_iter%n_cells
+        center = pos(1:space%dim) + latt_iter%get(icell)
         do ip = 1, mesh%np
-          rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
+          rr = norm2(mesh%x(ip, 1:mesh%sb%dim) - center)
           if(rr < spline_range_max(ps%core)) then
             rho_core(ip) = rho_core(ip) + spline_eval(ps%core, rr)
           end if
         end do
       end do
-      call periodic_copy_end(pp)
     else
       if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
     end if
@@ -839,9 +822,9 @@ contains
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
 
-    FLOAT :: center(MAX_DIM), rr, spline
+    FLOAT :: center(space%dim), rr, spline
     integer :: icell, ip, idir
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     type(ps_t), pointer :: ps
 
     PUSH_SUB(species_get_nlcc_grad)
@@ -851,10 +834,10 @@ contains
       ps => species_ps(species)
       rho_core_grad = M_ZERO
       if(ps_has_nlcc(ps)) then
-        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, pos, &
-                 range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
-        do icell = 1, periodic_copy_num(pp)
-          center(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+
+        latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
+        do icell = 1, latt_iter%n_cells
+          center = pos(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
             rr = max(rr, R_SMALL)
@@ -866,7 +849,6 @@ contains
             end do
           end do
         end do
-        call periodic_copy_end(pp)
       end if
     else
       rho_core_grad = M_ZERO
@@ -920,11 +902,11 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(mesh%sb%dim), x_atom_per(MAX_DIM), r, r2, threshold
-    integer :: ip, err, idim, icell
+    FLOAT :: xx(space%dim), x_atom_per(space%dim), r, r2, threshold
+    integer :: ip, err, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
 
     type(profile_t), save :: prof
 
@@ -940,40 +922,34 @@ contains
 
         !Assuming that we want to take the contribution from all replica that contributes up to 0.001
         ! to the center of the cell, we arrive to a range of 1000 a.u.. 
-        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, x_atom, range = species_zval(species) / threshold)
+        latt_iter = lattice_iterator_t(mesh%sb%latt, species_zval(species) / threshold)
         vl = M_ZERO
-        do icell = 1, periodic_copy_num(pp)
-          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+        do icell = 1, latt_iter%n_cells
+          x_atom_per = x_atom(1:mesh%sb%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per)
             r2 = r*r
             vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
           end do
         end do
-        call periodic_copy_end(pp)
 
       case(SPECIES_USDEF)
-        !TODO: we should control the value of 10 by a variable. 
-        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, x_atom, &
-                                  range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+        !TODO: we should control the value of 5 by a variable.
+        latt_iter = lattice_iterator_t(mesh%sb%latt, CNST(5.0) * maxval(norm2(mesh%sb%latt%rlattice, dim=1)))
         vl = M_ZERO
-        do icell = 1, periodic_copy_num(pp)
-          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+        do icell = 1, latt_iter%n_cells
+          x_atom_per = x_atom(1:mesh%sb%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
 
             ! Note that as the spec%user_def is in input units, we have to convert
             ! the units back and forth
-            do idim = 1, mesh%sb%dim
-              xx(idim) = units_from_atomic(units_inp%length, xx(idim))
-            end do
+            xx = units_from_atomic(units_inp%length, xx)
             r = units_from_atomic(units_inp%length, r)
             zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
             vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, TOFLOAT(zpot))
           end do
         end do
-
-        call periodic_copy_end(pp)
 
       case(SPECIES_FROM_FILE)
 
@@ -996,8 +972,8 @@ contains
         
         do ip = 1, mesh%np
           
-          xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
+          xx = mesh%x(ip, :) - x_atom(1:mesh%sb%dim)
+          r = norm2(xx)
           
           if(r <= species_jradius(species)) then
             vl(ip) = (a1*(r*r - Rb2) - a2)
