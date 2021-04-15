@@ -427,13 +427,6 @@ contains
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) then
-      if (space%is_periodic()) then
-        rmin = minval(gr%sb%lsize(1:space%periodic_dim))
-      else
-        rmin = CNST(100.0)
-      end if
-    end if
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
@@ -445,7 +438,8 @@ contains
     !% The default is half the minimum distance between two atoms
     !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
-    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', min(M_HALF*rmin, CNST(100.0)), scf%lmm_r, &
+      unit=units_inp%length)
     ! this variable is also used in td/td_write.F90
 
     scf%forced_finish = .false.

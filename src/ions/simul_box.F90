@@ -43,8 +43,6 @@ module simul_box_oct_m
   use profiling_oct_m
   use space_oct_m
   use species_oct_m
-  use symm_op_oct_m
-  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -56,10 +54,7 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_atoms_in_box,     &
-    simul_box_copy,             &
-    simul_box_periodic_atom_in_box, &
-    check_ions_compatible_with_symmetries
+    simul_box_copy
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -89,7 +84,7 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    type(lattice_vectors_t) :: latt
+    type(lattice_vectors_t), pointer :: latt => NULL()
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     
@@ -106,7 +101,7 @@ contains
   subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t),                    intent(inout) :: geo
+    type(geometry_t),  target,           intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -125,7 +120,7 @@ contains
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
-    sb%latt = lattice_vectors_t(namespace, space) ! Build lattice vectors.
+    sb%latt => geo%latt
 
     call read_box()                        ! Parameters defining the simulation box.
 
@@ -153,10 +148,6 @@ contains
     case (BOX_IMAGE)
       sb%box => box_image_t(center, sb%lsize, filename, space%periodic_dim, namespace)
     end select
-
-    call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
-
-    call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
     POP_SUB(simul_box_init)
   contains
@@ -260,13 +251,6 @@ contains
         if(sb%rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
-
-        if(geo%reduced_coordinates) then
-          message(1) = "The 'minimum' box shape cannot be used if atomic positions"
-          message(2) = "are given as reduced coordinates."
-          call messages_fatal(2, namespace=namespace)
-        end if
-
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
@@ -353,90 +337,77 @@ contains
         !% single variable.
         !%End
 
-        if (all(geo%lsize(1:sb%dim) > M_ZERO)) then
-          ! use value read from XSF lattice vectors
-          sb%lsize(:) = geo%lsize(:)
+        ! lsize along the periodic dimensions must always be set from the norm of the lattice vectors
+        do idir = 1, space%periodic_dim
+          sb%lsize(idir) = sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))/M_TWO
+        end do
 
-        else
-          ! lsize along the periodic dimensions must always be set from the norm of the lattice vectors
-          do idir = 1, space%periodic_dim
+        if (space%is_periodic()) then
+          ! For mixed-periodicity, lsize along the non-periodic dimensions is
+          ! by default set from the lattice parameters (this can still be
+          ! overriden by setting Lsize, see bellow).
+          do idir = space%periodic_dim + 1, space%dim
             sb%lsize(idir) = sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))/M_TWO
           end do
 
-          if (space%is_periodic()) then
-            ! For mixed-periodicity, lsize along the non-periodic dimensions is
-            ! by default set from the lattice parameters (this can still be
-            ! overriden by setting Lsize, see bellow).
-            do idir = space%periodic_dim + 1, space%dim
-              sb%lsize(idir) = sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))/M_TWO
-            end do
-
-            ! Now we renormalize the lattice parameters along the non-periodic dimensions
-            do idir = 1, space%periodic_dim
-              factor(idir) = M_ONE
-            end do
-            do idir = space%periodic_dim + 1, space%dim
-              factor(idir) = M_ONE/sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))
-            end do
-            call sb%latt%scale(factor)
-
-          else
-            ! Lsize must be set for finite systems, as in that case we do not have the lattice parameters
-            if (.not. parse_is_defined(namespace, 'Lsize')) then
-              call messages_input_error(namespace, 'Lsize', 'Lsize is required for finite systems')
-            end if
-          end if
-
-          ! Note that for cases with mixed-periodicidy, the user still has the
-          ! option to set Lsize to override the size of the box along the
-          ! non-periodic dimensions given by the lattice parameters. This
-          ! requires the user to also set Lsize for the periodic dimensions,
-          ! which at the moment must match exactly the corresponding values
-          ! given by the lattice vectors.
-          if (parse_block(namespace, 'Lsize', blk) == 0) then
-            ! Lsize is specified as a block
-            if (parse_block_cols(blk, 0) < space%dim) then
-              call messages_input_error(namespace, 'Lsize')
-            end if
-
-            do idir = 1, space%dim
-              call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
-              if (def_rsize > M_ZERO) then
-                call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
-              end if              
-            end do
-            call parse_block_end(blk)
-
-          else if (parse_is_defined(namespace, 'Lsize')) then
-            ! Lsize is specified as a scalar
-            call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
-            if (abs(sb%lsize(1) + M_ONE) <= M_EPSILON) then
-              call messages_input_error(namespace, 'Lsize')
-            end if
-            if (def_rsize > M_ZERO) then
-              call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
-            end if
-            do idir = 2, space%dim
-              sb%lsize(idir) = sb%lsize(1)
-            end do
-
-          end if
-
-          ! Check that lsize is consistent with the lattice vectors along the periodic dimensions
+          ! Now we renormalize the lattice parameters along the non-periodic dimensions
           do idir = 1, space%periodic_dim
-            if (abs(M_TWO*sb%lsize(idir) - sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))) > M_EPSILON) then
-              call messages_input_error(namespace, 'Lsize', &
-                'Lsize must be exactly half the length of the lattice vectors along periodic dimensions')
+            factor(idir) = M_ONE
+          end do
+          do idir = space%periodic_dim + 1, space%dim
+            factor(idir) = M_ONE/sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))
+          end do
+          call sb%latt%scale(factor)
+
+        else
+          ! Lsize must be set for finite systems, as in that case we do not have the lattice parameters
+          if (.not. parse_is_defined(namespace, 'Lsize')) then
+            call messages_input_error(namespace, 'Lsize', 'Lsize is required for finite systems')
+          end if
+        end if
+
+        ! Note that for cases with mixed-periodicidy, the user still has the
+        ! option to set Lsize to override the size of the box along the
+        ! non-periodic dimensions given by the lattice parameters. This
+        ! requires the user to also set Lsize for the periodic dimensions,
+        ! which at the moment must match exactly the corresponding values
+        ! given by the lattice vectors.
+        if (parse_block(namespace, 'Lsize', blk) == 0) then
+          ! Lsize is specified as a block
+          if (parse_block_cols(blk, 0) < space%dim) then
+            call messages_input_error(namespace, 'Lsize')
+          end if
+
+          do idir = 1, space%dim
+            call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
+            if (def_rsize > M_ZERO) then
+              call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
             end if
           end do
+          call parse_block_end(blk)
+
+        else if (parse_is_defined(namespace, 'Lsize')) then
+          ! Lsize is specified as a scalar
+          call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
+          if (abs(sb%lsize(1) + M_ONE) <= M_EPSILON) then
+            call messages_input_error(namespace, 'Lsize')
+          end if
+          if (def_rsize > M_ZERO) then
+            call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
+          end if
+          do idir = 2, space%dim
+            sb%lsize(idir) = sb%lsize(1)
+          end do
+
         end if
 
-      else
-        ! if not a compatible box-shape
-        if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
-          message(1) = "Ignoring lattice vectors from XSF file."
-          call messages_warning(1, namespace=namespace)
-        end if
+        ! Check that lsize is consistent with the lattice vectors along the periodic dimensions
+        do idir = 1, space%periodic_dim
+          if (abs(M_TWO*sb%lsize(idir) - sqrt(sum(sb%latt%rlattice(1:space%dim, idir)**2))) > M_EPSILON) then
+            call messages_input_error(namespace, 'Lsize', &
+              'Lsize must be exactly half the length of the lattice vectors along periodic dimensions')
+          end if
+        end do
       end if
 
       ! read in image for box_image
@@ -502,96 +473,6 @@ contains
 
   end subroutine simul_box_init
 
-  !> This function adjusts the coordinates defined in the geometry
-  !! object. If coordinates were given in reduced coordinates it
-  !! converts them to real coordinates and it checks that the atoms
-  !! are inside the box.
-  !!
-  !! If atoms are not in the box: if the system is periodic, the atoms
-  !! are moved inside the box, if the system is finite, nothing
-  !! happens or a warning is written, depending on the argument
-  !! warn_if_not.
-  ! ---------------------------------------------------------
-  subroutine simul_box_atoms_in_box(sb, geo, namespace, warn_if_not, die_if_not)
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(inout) :: geo
-    type(namespace_t), intent(in)    :: namespace
-    logical,           intent(in)    :: warn_if_not
-    logical, optional, intent(in)    :: die_if_not
-
-    integer :: iatom, pd
-    logical :: die_if_not_
-
-    PUSH_SUB(simul_box_atoms_in_box)
-
-    die_if_not_ = optional_default(die_if_not, .false.)
-    pd = geo%space%periodic_dim
-
-    do iatom = 1, geo%natoms
-
-      call simul_box_periodic_atom_in_box(sb, geo, geo%atom(iatom)%x(:))
-
-      if(geo%reduced_coordinates) then
-        geo%atom(iatom)%x(pd + 1:geo%space%dim) = M_TWO*sb%lsize(pd + 1:geo%space%dim)*geo%atom(iatom)%x(pd + 1:geo%space%dim)
-      end if
-
-      if (.not. sb%contains_point(geo%atom(iatom)%x)) then
-        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
-        if (geo%space%periodic_dim /= geo%space%dim) then
-          ! FIXME: This could fail for partial periodicity systems
-          ! because contains_point is too strict with atoms close to
-          ! the upper boundary to the cell.
-          if(warn_if_not) call messages_warning(1, namespace=namespace)
-          if(die_if_not_) call messages_fatal(1, namespace=namespace)
-        end if
-      end if
-
-    end do
-
-    ! done with the conversion to real coordinates
-    geo%reduced_coordinates =  .false.
-
-    POP_SUB(simul_box_atoms_in_box)
-  end subroutine simul_box_atoms_in_box
-
-  ! --------------------------------------------------------
-  
-  subroutine simul_box_periodic_atom_in_box(sb, geo, ratom)
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    FLOAT,             intent(inout) :: ratom(:)
-
-    FLOAT :: xx(1:MAX_DIM)
-    integer :: pd, idir
-
-    pd = geo%space%periodic_dim
-
-    if (geo%space%is_periodic()) then
-      if(.not. geo%reduced_coordinates) then
-        !convert the position to reduced coordinates
-         xx(1:pd) = matmul(ratom(1:pd), sb%latt%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
-      else
-        ! in this case coordinates are already in reduced space
-        xx(1:pd) = ratom(1:pd)
-      end if
-
-      xx(1:pd) = xx(1:pd) + M_HALF
-      do idir = 1, pd
-        xx(idir) = xx(idir) - anint(xx(idir))
-        if(xx(idir) < -CNST(1.0e-6)) &
-          xx(idir) = xx(idir) + M_ONE
-      end do
-      ASSERT(all(xx(1:pd) >= -CNST(1.0e-6)))
-      ASSERT(all(xx(1:pd) < CNST(1.0)))
-
-      xx(1:pd) = (xx(1:pd) - M_HALF)
-      ratom(1:pd) = matmul(sb%latt%rlattice(1:pd, 1:pd), xx(1:pd))
-
-    end if
-    
-
-  end subroutine simul_box_periodic_atom_in_box
-
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
     type(simul_box_t), intent(inout) :: sb    
@@ -599,6 +480,8 @@ contains
     class(box_t), pointer :: box
 
     PUSH_SUB(simul_box_end)
+
+    nullify(sb%latt)
 
     ! We first need to bet a pointer to the box to deallocated it because of a
     ! bug in gfortran.
@@ -670,144 +553,12 @@ contains
     sbout%rsize          = sbin%rsize
     sbout%xsize          = sbin%xsize
     sbout%lsize          = sbin%lsize
-    sbout%latt           = sbin%latt
+    sbout%latt          => sbin%latt
     sbout%dim            = sbin%dim
     sbout%periodic_dim   = sbin%periodic_dim
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
-
-  ! -----------------------------------------------------
-
-  subroutine simul_box_check_atoms_are_too_close(geo, sb, namespace)
-    type(geometry_t),  intent(in) :: geo
-    type(simul_box_t), intent(in) :: sb
-    type(namespace_t), intent(in) :: namespace
-
-    FLOAT :: mindist
-    FLOAT, parameter :: threshold = CNST(1e-5)
-
-    PUSH_SUB(simul_box_check_atoms_are_too_close)
-
-    if(geo%natoms == 1) then
-      POP_SUB(simul_box_check_atoms_are_too_close)
-      return
-    end if
-
-    mindist = simul_box_min_distance(geo, sb, real_atoms_only = .false.)
-    if(mindist < threshold) then
-      write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
-      write(message(2), '(a)') "Please review your input files and the output geometry (in 'static/')."
-      write(message(3), '(a, f12.6, 1x, a)') "Minimum distance = ", &
-        units_from_atomic(units_out%length, mindist), trim(units_abbrev(units_out%length))
-      call messages_warning(3, namespace=namespace)
-
-      ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir(STATIC_DIR, namespace)
-      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
-    end if
-
-    if(simul_box_min_distance(geo, sb, real_atoms_only = .true.) < threshold) then
-      message(1) = "It cannot be correct to run with physical atoms so close."
-      call messages_fatal(1, namespace=namespace)
-    end if
-
-    POP_SUB(simul_box_check_atoms_are_too_close)
-  end subroutine simul_box_check_atoms_are_too_close
-
-  ! ---------------------------------------------------------
-  FLOAT function simul_box_min_distance(geo, sb, real_atoms_only) result(rmin)
-    type(geometry_t),  intent(in) :: geo
-    type(simul_box_t), intent(in) :: sb
-    logical, optional, intent(in) :: real_atoms_only
-
-    integer :: iatom, jatom, idir
-    FLOAT   :: xx(MAX_DIM)
-    logical :: real_atoms_only_
-    type(species_t), pointer :: species
-
-    PUSH_SUB(simul_box_min_distance)
-
-    real_atoms_only_ = optional_default(real_atoms_only, .false.)
-
-    rmin = huge(rmin)
-    do iatom = 1, geo%natoms
-      call atom_get_species(geo%atom(iatom), species)
-      if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-      do jatom = iatom + 1, geo%natoms
-        call atom_get_species(geo%atom(iatom), species)
-        if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        xx(:) = abs(geo%atom(iatom)%x(:) - geo%atom(jatom)%x(:))
-        do idir = 1, geo%space%periodic_dim
-          xx(idir) = xx(idir) - M_TWO * sb%lsize(idir) * floor(xx(idir)/(M_TWO * sb%lsize(idir)) + M_HALF)
-        end do
-        rmin = min(sqrt(sum(xx**2)), rmin)
-      end do
-    end do
-
-    if(.not. (geo%only_user_def .and. real_atoms_only_)) then
-      ! what if the nearest neighbors are periodic images?
-      do idir = 1, geo%space%periodic_dim
-        rmin = min(rmin, abs(sb%lsize(idir)))
-      end do
-    end if
-
-    POP_SUB(simul_box_min_distance)
-  end function simul_box_min_distance
-
-
-  ! ---------------------------------------------------------
-  ! TODO : This routines should belong to geometry, once geo knows its box 
-  subroutine check_ions_compatible_with_symmetries(this, symm, geo, dim, namespace)
-    type(simul_box_t),  intent(in) :: this
-    type(symmetries_t), intent(in) :: symm
-    type(geometry_t),   intent(in) :: geo
-    integer,            intent(in) :: dim
-    type(namespace_t),  intent(in) :: namespace
-
-    integer :: iop, iatom, iatom_symm
-    FLOAT :: ratom(1:MAX_DIM)
-
-    PUSH_SUB(check_ions_compatible_with_symmetries)
-
-    ! We want to use for instance that
-    !
-    ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
-    !
-    ! and that the operator R should map the position of atom
-    ! iatom to the position of some other atom iatom_symm, so that
-    !
-    ! V_iatom(R*r) = V_iatom_symm(r)
-    !
-    do iop = 1, symmetries_number(symm)
-      if(iop == symmetries_identity_index(symm)) cycle
-
-      do iatom = 1, geo%natoms
-        ratom = M_ZERO
-        if(geo%reduced_coordinates) then
-          ratom(1:this%dim) = symm_op_apply_red(symm%ops(iop), geo%atom(iatom)%x)
-        else
-          ratom(1:this%dim) = symm_op_apply_cart(symm%ops(iop), geo%atom(iatom)%x)
-        end if
-     
-        call simul_box_periodic_atom_in_box(this, geo, ratom)
-
-        ! find iatom_symm
-        do iatom_symm = 1, geo%natoms
-          if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
-        end do
-
-        if(iatom_symm > geo%natoms) then
-          write(message(1),'(a,i6)') 'Internal error: could not find symetric partner for atom number', iatom
-          write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-          call messages_fatal(2, namespace=namespace)
-        end if
-
-      end do
-    end do
-
-    POP_SUB(check_ions_compatible_with_symmetries)
-  end subroutine check_ions_compatible_with_symmetries
 
 end module simul_box_oct_m
 

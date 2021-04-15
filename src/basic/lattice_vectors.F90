@@ -46,6 +46,11 @@ module lattice_vectors_oct_m
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal = .false.
+    ! Some notes:
+    !  rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
+    !  klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
+    !  klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
+    !  The F matrix of Chelikowski is matmul(transpose(latt%klattice_primitive), latt%klattice_primitive)
   contains
     procedure :: copy => lattice_vectors_copy
     generic   :: assignment(=) => copy
@@ -54,29 +59,70 @@ module lattice_vectors_oct_m
     procedure :: short_info => lattice_vectors_short_info
     procedure :: cart_to_red => lattice_vectors_cart_to_red
     procedure :: red_to_cart => lattice_vectors_red_to_cart
+    procedure :: fold_into_cell => lattice_vectors_fold_into_cell
     final :: lattice_vectors_finalize
   end type lattice_vectors_t
 
   interface lattice_vectors_t
-    module procedure lattice_vectors_constructor
+    module procedure lattice_vectors_constructor_from_input, lattice_vectors_constructor_from_rlattice
   end interface lattice_vectors_t
 
 contains
 
   !--------------------------------------------------------------
-  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space, variable_prefix) result(latt)
+  type(lattice_vectors_t) function lattice_vectors_constructor_from_rlattice(namespace, space, rlattice) result(latt)
+    type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
+    FLOAT,                       intent(in)    :: rlattice(space%dim, space%dim)
+
+    integer :: idir
+    FLOAT :: volume_element
+
+    PUSH_SUB(lattice_vectors_constructor_from_rlattice)
+
+    latt%space = space
+
+    SAFE_ALLOCATE(latt%rlattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
+
+    latt%rlattice = rlattice
+    do idir = 1, space%dim
+      latt%rlattice_primitive(:, idir) = latt%rlattice(:, idir) / norm2(latt%rlattice_primitive(:, idir))
+    end do
+
+    call reciprocal_lattice(latt%rlattice, latt%klattice, latt%rcell_volume, space%dim, namespace)
+    latt%klattice = latt%klattice * M_TWO*M_PI
+
+    call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
+
+    if (space%dim == 3) then
+      call angles_from_rlattice_primitive(latt%rlattice_primitive, latt%alpha, latt%beta, latt%gamma)
+    else
+      ! Angles should not be used, so set them to zero
+      latt%alpha = M_ZERO
+      latt%beta  = M_ZERO
+      latt%gamma = M_ZERO
+    end if
+
+    POP_SUB(lattice_vectors_constructor_from_rlattice)
+  end function lattice_vectors_constructor_from_rlattice
+
+  !--------------------------------------------------------------
+  type(lattice_vectors_t) function lattice_vectors_constructor_from_input(namespace, space, variable_prefix) result(latt)
     type(namespace_t),           intent(in)    :: namespace
     type(space_t),               intent(in)    :: space
     character(len=*),  optional, intent(in)    :: variable_prefix
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(space%dim), volume_element, rlatt(space%dim, space%dim)
+    FLOAT :: norm, lparams(space%dim), volume_element
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:space%dim)
     character(len=:), allocatable :: prefix
 
-    PUSH_SUB(lattice_vectors_constructor)
+    PUSH_SUB(lattice_vectors_constructor_from_input)
 
     if (present(variable_prefix)) then
       prefix = variable_prefix
@@ -223,20 +269,32 @@ contains
 
     call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
 
-    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
-    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
-    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
-    ! The F matrix of Chelikowski is matmul(transpose(latt%klattice_primitive), latt%klattice_primitive)
-    rlatt = matmul(transpose(latt%rlattice_primitive), latt%rlattice_primitive)
     if (.not. has_angles .and. space%dim == 3) then
       !We compute the angles from the lattice vectors
-      latt%alpha = acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
-      latt%beta  = acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
-      latt%gamma = acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
+      call angles_from_rlattice_primitive(latt%rlattice_primitive, latt%alpha, latt%beta, latt%gamma)
     end if
 
-    POP_SUB(lattice_vectors_constructor)
-  end function lattice_vectors_constructor
+    POP_SUB(lattice_vectors_constructor_from_input)
+  end function lattice_vectors_constructor_from_input
+
+  !--------------------------------------------------------------
+  subroutine angles_from_rlattice_primitive(rlattice_primitive, alpha, beta, gamma)
+    FLOAT, intent(in)  :: rlattice_primitive(1:3, 1:3)
+    FLOAT, intent(out) :: alpha
+    FLOAT, intent(out) :: beta
+    FLOAT, intent(out) :: gamma
+
+    FLOAT  :: rlatt(1:3, 1:3)
+
+    PUSH_SUB(angles_from_rlattice_primitive)
+
+    rlatt = matmul(transpose(rlattice_primitive), rlattice_primitive)
+    alpha = acos(rlatt(2, 3)/sqrt(rlatt(2, 2)*rlatt(3, 3)))/M_PI*CNST(180.0)
+    beta  = acos(rlatt(1, 3)/sqrt(rlatt(1, 1)*rlatt(3, 3)))/M_PI*CNST(180.0)
+    gamma = acos(rlatt(1, 2)/sqrt(rlatt(1, 1)*rlatt(2, 2)))/M_PI*CNST(180.0)
+
+    POP_SUB(angles_from_rlattice_primitive)
+  end subroutine angles_from_rlattice_primitive
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_copy(this, source)
@@ -314,6 +372,44 @@ contains
     xx_cart = matmul(this%rlattice, xx_red)
 
   end function lattice_vectors_red_to_cart
+
+  !--------------------------------------------------------------
+  function lattice_vectors_fold_into_cell(this, xx) result(new_xx)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx(this%space%dim)
+    FLOAT :: new_xx(this%space%dim)
+
+    integer :: idir
+
+    if (this%space%is_periodic()) then
+      ! Convert the position to reduced coordinates
+      new_xx = this%cart_to_red(xx)
+
+      do idir = 1, this%space%periodic_dim
+        ! Change of origin
+        new_xx(idir) = new_xx(idir) + M_HALF
+
+        ! Fold into cell
+        new_xx(idir) = new_xx(idir) - anint(new_xx(idir))
+        if (new_xx(idir) < -CNST(1.0e-6)) then
+          new_xx(idir) = new_xx(idir) + M_ONE
+        end if
+
+        ! Sanity checks
+        ASSERT(new_xx(idir) >= -CNST(1.0e-6))
+        ASSERT(new_xx(idir) < CNST(1.0))
+
+        ! Change origin back
+        new_xx(idir) = new_xx(idir) - M_HALF
+      end do
+
+      ! Convert back to Cartesian coordinates
+      new_xx = this%red_to_cart(new_xx)
+    else
+      new_xx = xx
+    end if
+
+  end function lattice_vectors_fold_into_cell
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)

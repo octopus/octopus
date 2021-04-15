@@ -32,6 +32,7 @@ module system_mxll_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use iso_c_binding
+  use lattice_vectors_oct_m
   use loct_oct_m
   use lorentz_force_oct_m
   use maxwell_boundary_op_oct_m
@@ -161,8 +162,7 @@ contains
     this%geo%only_user_def = .false.
     this%geo%kinetic_energy = M_ZERO
     call distributed_nullify(this%geo%atoms_dist, 0)
-    this%geo%reduced_coordinates = .false.
-    this%geo%lsize = M_ZERO
+    this%geo%latt = lattice_vectors_t(this%namespace, this%space)
 
     call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
     call states_mxll_init(this%st, this%namespace, this%gr)

@@ -410,16 +410,10 @@ contains
     end if
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) then 
-      if (space%is_periodic()) then
-        rmin = M_TWO*minval(norm2(gr%sb%latt%rlattice(:,1:space%periodic_dim),dim=1))
-      else
-        rmin = CNST(100.0)
-      end if
-    end if
 
     ! This variable is documented in scf/scf.F90
-    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', min(M_HALF*rmin, CNST(100.0)), writ%lmm_r, &
+      unit=units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then

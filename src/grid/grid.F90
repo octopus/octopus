@@ -89,8 +89,6 @@ contains
 
     call symmetries_init(gr%symm, namespace, geo, space, gr%sb%latt)
 
-    call check_ions_compatible_with_symmetries(gr%sb, gr%symm, geo, space%dim, namespace)
-
 
     !%Variable UseFineMesh
     !%Type logical

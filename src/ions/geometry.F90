@@ -53,6 +53,7 @@ module geometry_oct_m
     geometry_partition,              &
     geometry_write_xyz,              &
     geometry_read_xyz,               &
+    geometry_fold_atoms_into_cell,         &
     geometry_min_distance,           &
     geometry_species_time_dependent, &
     geometry_val_charge,             &
@@ -77,6 +78,8 @@ module geometry_oct_m
 
     type(space_t), pointer :: space
 
+    type(lattice_vectors_t) :: latt
+
     integer                   :: natoms
     type(atom_t), allocatable :: atom(:)
 
@@ -84,8 +87,6 @@ module geometry_oct_m
     type(atom_classical_t), allocatable :: catom(:)
 
     FLOAT   :: kinetic_energy      !< the ion kinetic energy
-    logical :: reduced_coordinates !< If true the coordinates are stored in
-                                   !! reduced coordinates and need to be converted.
     type(distributed_t) :: atoms_dist
 
     !> Information about the species
@@ -93,9 +94,6 @@ module geometry_oct_m
     type(species_t), allocatable :: species(:)
     logical                      :: only_user_def          !< Do we want to treat only user-defined species?
     logical,         private     :: species_time_dependent !< For time-dependent user defined species
-
-    !> variables for passing info from XSF input to simul_box_init
-    FLOAT :: lsize(MAX_DIM)
 
     logical                 :: force_total_enforce
     type(ion_interaction_t) :: ion_interaction
@@ -117,6 +115,8 @@ contains
 
     character(len=100)  :: function_name
     integer :: ierr
+    FLOAT :: mindist
+    FLOAT, parameter :: threshold = CNST(1e-5)
 
     PUSH_SUB(geometry_init)
 
@@ -126,8 +126,31 @@ contains
     
     ! initialize geometry
     call geometry_init_xyz(geo, namespace)
+    call geometry_fold_atoms_into_cell(geo)
     call geometry_init_species(geo, namespace, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
+
+    ! Check that atoms are not too close
+    if (geo%natoms > 1) then
+      mindist = geometry_min_distance(geo, real_atoms_only = .false.)
+      if (mindist < threshold) then
+        write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
+        write(message(2), '(a)') "Please review your input files and the output geometry (in 'static/')."
+        write(message(3), '(a, f12.6, 1x, a)') "Minimum distance = ", &
+          units_from_atomic(units_out%length, mindist), trim(units_abbrev(units_out%length))
+        call messages_warning(3, namespace=namespace)
+
+        ! then write out the geometry, whether asked for or not in Output variable
+        call io_mkdir(STATIC_DIR, namespace)
+        call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
+      end if
+
+      if (geometry_min_distance(geo, real_atoms_only = .true.) < threshold) then
+        message(1) = "It cannot be correct to run with physical atoms so close."
+        call messages_fatal(1, namespace=namespace)
+      end if
+    end if
+
 
     call ion_interaction_init(geo%ion_interaction, namespace, geo%space, geo%natoms)
 
@@ -208,13 +231,21 @@ contains
       end do
     end if
 
-    geo%reduced_coordinates = xyz%source == READ_COORDS_REDUCED
-    geo%lsize(:) = xyz%lsize(:)
-    if (xyz%periodic_dim > -1 .and. xyz%periodic_dim /= geo%space%periodic_dim) then
-      message(1) = "Periodicity in XSF input is incompatible with the value of PeriodicDimensions."
-      call messages_fatal(1, namespace=namespace)
+    
+    if (allocated(xyz%latvec)) then
+      ! Build lattice vectors from the XSF input
+      geo%latt = lattice_vectors_t(namespace, geo%space, xyz%latvec)
+    else
+      ! Build lattice vectors from input file
+      geo%latt = lattice_vectors_t(namespace, geo%space)
     end if
 
+    ! Convert coordinates to Cartesian in case we have reduced coordinates
+    if (xyz%source == READ_COORDS_REDUCED) then
+      do ia = 1, geo%natoms
+        geo%atom(ia)%x(1:geo%space%dim) = geo%latt%red_to_cart(geo%atom(ia)%x(1:geo%space%dim))
+      end do
+    end if
 
     call read_coords_end(xyz)
 
@@ -345,6 +376,8 @@ contains
 
     PUSH_SUB(geometry_copy)
 
+    geo_out%latt = geo_in%latt
+
     geo_out%natoms = geo_in%natoms
     SAFE_ALLOCATE(geo_out%atom(1:geo_out%natoms))
     geo_out%atom = geo_in%atom
@@ -463,14 +496,28 @@ contains
     POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
 
-  !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
+  ! ---------------------------------------------------------
+  subroutine geometry_fold_atoms_into_cell(geo)
+    type(geometry_t),   intent(inout) :: geo
+
+    integer :: iatom
+
+    PUSH_SUB(geometry_fold_atoms_into_cell)
+
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%x(1:geo%space%dim) = geo%latt%fold_into_cell(geo%atom(iatom)%x(1:geo%space%dim))
+    end do
+
+    POP_SUB(geometry_fold_atoms_into_cell)
+  end subroutine geometry_fold_atoms_into_cell
+
   ! ---------------------------------------------------------
   FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
     type(geometry_t),  intent(in) :: geo
     logical, optional, intent(in) :: real_atoms_only
 
-    integer :: i, j
-    FLOAT   :: r
+    integer :: iatom, jatom, idir
+    FLOAT   :: xx(geo%space%dim)
     logical :: real_atoms_only_
     type(species_t), pointer :: species
 
@@ -479,18 +526,30 @@ contains
     real_atoms_only_ = optional_default(real_atoms_only, .false.)
 
     rmin = huge(rmin)
-    do i = 1, geo%natoms
-      call atom_get_species(geo%atom(i), species)
-      if (real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-      do j = i + 1, geo%natoms
-        call atom_get_species(geo%atom(i), species)
-        if (real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        r = atom_distance(geo%atom(i), geo%atom(j))
-        if (r < rmin) then
-          rmin = r
+    do iatom = 1, geo%natoms
+      call atom_get_species(geo%atom(iatom), species)
+      if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
+      do jatom = iatom + 1, geo%natoms
+        call atom_get_species(geo%atom(iatom), species)
+        if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
+        xx(1:geo%space%dim) = abs(geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))
+        if (geo%space%is_periodic()) then
+          xx = geo%latt%cart_to_red(xx)
+          do idir = 1, geo%space%periodic_dim
+            xx(idir) = xx(idir) - floor(xx(idir) + M_HALF)
+          end do
+          xx = geo%latt%red_to_cart(xx)
         end if
+        rmin = min(norm2(xx), rmin)
       end do
     end do
+
+    if(.not. (geo%only_user_def .and. real_atoms_only_)) then
+      ! what if the nearest neighbors are periodic images?
+      do idir = 1, geo%space%periodic_dim
+        rmin = min(rmin, norm2(geo%latt%rlattice(:,idir)))
+      end do
+    end if
 
     POP_SUB(geometry_min_distance)
   end function geometry_min_distance
