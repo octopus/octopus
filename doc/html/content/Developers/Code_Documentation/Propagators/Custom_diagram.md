@@ -17,6 +17,6 @@ In order to enable the output, you need to set
 Please, keep in mind that a lot of output is produced, and lower the number of time steps to the minimum to complete a few steps for all subsystems
 {{< /notice >}}
 
-Use the button below to navigate to the {{< file "propagation.txt" >}} of your calculation.
+Use the button below to navigate to the {{< file "multisystem_propagation.log" >}} of your calculation.
 
 {{< d3-sequence file="load"  viewContainers="yes" viewGhosts="yes" >}}

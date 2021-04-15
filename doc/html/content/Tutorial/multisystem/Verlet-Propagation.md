@@ -28,7 +28,8 @@ These 4 steps have to be performed for each time step.
 
 {{% expand "Detailled description of the algorithmic steps" %}}
 The following graph depicts all algorithmic steps of the state machine (see the {{% developers "Code_Documentation/Propagators/" "description of the propagator implementation" %}}).
-{{< d3-sequence file="/develop/graph_data/propagation-3-bodies-verlet.json" >}}
+{{< d3-sequence file="/develop/graph_data/propagation-3body-verlet-equal-step.json" >}}
+
 Each box in this diagram represents a function call of Octopus, which is related to the algorithmic steps of the propagation.
 It can be seen how all three systems step through the above algorithmic steps of the Verlet algorithm. You can use the (+) and (-) buttons to manually step through the algorithm to see in which order the steps are performed, and in which steps the various clocks of the systems are advanced.
 The interactive graph also allows to display the (unphysical) container systems and the so-called ''ghost'' interactions, which are always present and are an internal tool to ensure that systems stay synchronized, even if they do not have a physical interaction between them.
