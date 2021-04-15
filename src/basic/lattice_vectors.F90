@@ -34,7 +34,8 @@ module lattice_vectors_oct_m
   private
 
   public ::                   &
-    lattice_vectors_t
+    lattice_vectors_t,        &
+    lattice_iterator_t
 
   type lattice_vectors_t
     ! Components are public by default
@@ -66,6 +67,25 @@ module lattice_vectors_oct_m
   interface lattice_vectors_t
     module procedure lattice_vectors_constructor_from_input, lattice_vectors_constructor_from_rlattice
   end interface lattice_vectors_t
+
+  !> The following class implements a lattice iterator. It allows one to loop
+  !> over all cells that are within a certain range. At the moment this range is
+  !> determined using a norm-1.
+  type lattice_iterator_t
+    private
+    integer, public :: n_cells = 0
+    integer, allocatable :: icell(:,:)
+    type(lattice_vectors_t), pointer :: latt => NULL()
+  contains
+    procedure :: copy => lattice_iterator_copy
+    generic   :: assignment(=) => copy
+    procedure :: get => lattice_iterator_get
+    final :: lattice_iterator_finalize
+  end type lattice_iterator_t
+
+  interface lattice_iterator_t
+    module procedure lattice_iterator_constructor
+  end interface lattice_iterator_t
 
 contains
 
@@ -574,6 +594,84 @@ contains
 
     POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
+
+  ! ---------------------------------------------------------
+  function lattice_iterator_constructor(latt, range) result(iter)
+    type(lattice_vectors_t),  target, intent(in)  :: latt
+    FLOAT,                            intent(in)  :: range
+    type(lattice_iterator_t) :: iter
+
+    integer :: ii, jj, idir
+    integer :: n_size(latt%space%periodic_dim)
+
+    PUSH_SUB(lattice_iterator_constructor)
+
+    iter%latt => latt
+
+    ! Determine number of cells
+    iter%n_cells = 1
+    do idir = 1, latt%space%periodic_dim
+      n_size(idir) = ceiling(range/norm2(latt%rlattice(:,idir)))
+      iter%n_cells = iter%n_cells*(2*n_size(idir) + 1)
+    end do
+
+    ! Indexes of the cells
+    SAFE_ALLOCATE(iter%icell(1:latt%space%dim, 1:iter%n_cells))
+
+    do ii = 1, iter%n_cells
+      jj = ii - 1
+      do idir = latt%space%periodic_dim, 1, -1
+        iter%icell(idir, ii) = mod(jj, 2*n_size(idir) + 1) - n_size(idir)
+        if (idir > 1) jj = jj/(2*n_size(idir) + 1)
+      end do
+      iter%icell(latt%space%periodic_dim + 1:latt%space%dim, ii) = 0
+    end do
+
+    POP_SUB(lattice_iterator_constructor)
+  end function lattice_iterator_constructor
+
+  !--------------------------------------------------------------
+  subroutine lattice_iterator_copy(this, source)
+    class(lattice_iterator_t), intent(out) :: this
+    class(lattice_iterator_t), intent(in)  :: source
+
+    PUSH_SUB(lattice_iterator_copy)
+
+    this%n_cells = source%n_cells
+    SAFE_ALLOCATE_SOURCE_A(this%icell, source%icell)
+    this%latt => source%latt
+
+    POP_SUB(lattice_iterator_copy)
+  end subroutine lattice_iterator_copy
+
+  !> ---------------------------------------------------------
+  !! This function returns the Cartesian coordinates of point 'ii'
+  function lattice_iterator_get(this, ii) result(coord)
+    class(lattice_iterator_t), intent(in) :: this
+    integer,                   intent(in) :: ii
+    FLOAT :: coord(1:this%latt%space%dim)
+
+    PUSH_SUB(lattice_iterator_get)
+
+    ASSERT(ii <= this%n_cells)
+
+    coord = matmul(this%latt%rlattice, this%icell(:, ii))
+
+    POP_SUB(lattice_iterator_get)
+  end function lattice_iterator_get
+
+  ! ---------------------------------------------------------
+  subroutine lattice_iterator_finalize(this)
+    type(lattice_iterator_t), intent(inout) :: this
+
+    PUSH_SUB(lattice_iterator_finalize)
+
+    SAFE_DEALLOCATE_A(this%icell)
+    this%n_cells = 0
+    nullify(this%latt)
+
+    POP_SUB(lattice_iterator_finalize)
+  end subroutine lattice_iterator_finalize
 
 end module lattice_vectors_oct_m
 
