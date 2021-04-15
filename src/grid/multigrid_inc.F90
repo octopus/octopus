@@ -56,10 +56,19 @@
     if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
 #endif
 
+    !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
     do ipf = 1, fine_mesh%np
       call mesh_local_index_to_coords(fine_mesh, ipf, xf)
 
       dd = mod(xf, 2)
+
+      if(all(dd == 0)) then ! This point belongs to the coarse grid
+        xc = xf/2
+        ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+        f_fine(ipf) = f_coarse(ipc)
+        continue
+      end if
+
       
       f_fine(ipf) = M_ZERO
       
@@ -73,6 +82,7 @@
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
         end do
+        dd(idir) = -dd(idir)
       end do
 
     end do
@@ -237,16 +247,25 @@
     do ist = 1, coarseb%nst_linear
       call batch_get_state(coarseb, ist, coarse_der%mesh%np_part, f_coarse)
 #ifdef HAVE_MPI
-    if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
+      if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
 #endif
 
       call batch_get_state(fineb, ist, fine_mesh%np, f_fine)
-      f_fine = M_ZERO
 
+      !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
       do ipf = 1, fine_mesh%np
         call mesh_local_index_to_coords(fine_mesh, ipf, xf)
 
         dd = mod(xf, 2)
+
+        if(all(dd == 0)) then ! This point belongs to the coarse grid
+          xc = xf/2
+          ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+          f_fine(ipf) = f_coarse(ipc)
+          continue
+        end if
+
+        f_fine(ipf) = M_ZERO
 
         do idir = 1, coarse_der%dim
           ifactor = 1
@@ -258,6 +277,7 @@
             f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
             ifactor = ifactor + 1
           end do
+          dd(idir) = -dd(idir)
         end do
 
       end do
