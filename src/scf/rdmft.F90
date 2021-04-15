@@ -1265,8 +1265,7 @@ contains
 
     
     FLOAT, allocatable  :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
-    FLOAT, allocatable  :: v_ij(:,:,:)
-    FLOAT               :: ex !required input variable for doep_x, not used otherwise, might get used
+    FLOAT, allocatable  :: v_ij(:,:,:,:,:)
     FLOAT               :: dd
     type(states_elec_t) :: xst
     
@@ -1283,7 +1282,7 @@ contains
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
-      SAFE_ALLOCATE(v_ij(1:gr%mesh%np, 1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(v_ij(1:gr%mesh%np, 1:st%nst, 1:st%nst, 1:st%d%nik, 1:st%d%nik))
 
       v_ij = M_ZERO
       rdm%eone = M_ZERO
@@ -1305,7 +1304,7 @@ contains
       !
       ! only used to calculate total energy
       call dexchange_operator_compute_potentials(hm%exxop, namespace, space, gr%mesh, gr%sb%latt, &
-                                                 st, xst, hm%kpoints, ex)
+                                                 st, xst, hm%kpoints, F_out = v_ij)
 
       do ist = 1, st%nst
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
@@ -1313,11 +1312,11 @@ contains
         rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
 
         do jst = ist, st%nst
-          rdm%hartree(ist, jst) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, jst))
+          rdm%hartree(ist, jst) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, jst, 1, 1))
           rdm%hartree(jst, ist) = rdm%hartree(ist, jst)
           call states_elec_get_state(st, gr%mesh, jst, 1, dpsi2)
           rho(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-          rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho, v_ij(:, ist, jst))
+          rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho, v_ij(:, ist, jst, 1, 1))
           rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
         end do
       end do
