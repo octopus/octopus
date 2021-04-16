@@ -208,7 +208,9 @@ contains
       ! reset certain variables
       xcs%functional(FUNC_X,1)%family = XC_FAMILY_OEP
       xcs%functional(FUNC_X,1)%id     = XC_OEP_X
-      xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+      if(.not. hartree_fock) then
+        xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+      end if
     end if
 
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
