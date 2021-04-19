@@ -303,12 +303,12 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_clone_to(this, dest, pack, copy_data, np)
+  subroutine batch_clone_to(this, dest, pack, copy_data, new_np)
     class(batch_t),              intent(in)    :: this
     class(batch_t), allocatable, intent(out)   :: dest
     logical,        optional,    intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,        optional,    intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
-    integer,        optional,    intent(in)    :: np
+    integer,        optional,    intent(in)    :: new_np
 
     PUSH_SUB(batch_clone_to)
 
@@ -319,7 +319,7 @@ contains
       call messages_fatal(1)
     end if
 
-    call this%copy_to(dest, pack, copy_data, np)
+    call this%copy_to(dest, pack, copy_data, new_np)
 
     POP_SUB(batch_clone_to)
   end subroutine batch_clone_to
@@ -353,19 +353,19 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy_to(this, dest, pack, copy_data, np)
+  subroutine batch_copy_to(this, dest, pack, copy_data, new_np)
     class(batch_t),          intent(in)    :: this
     class(batch_t),          intent(out)   :: dest
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
-    integer,       optional, intent(in)    :: np !< If present, this replaces this%np in the initialization
+    integer,       optional, intent(in)    :: new_np !< If present, this replaces this%np in the initialization
 
     logical :: host_packed
     integer :: np_
 
     PUSH_SUB(batch_copy_to)
 
-    np_ = optional_default(np, this%np)
+    np_ = optional_default(new_np, this%np)
 
     host_packed = this%host_buffer_count > 0
     if(this%type() == TYPE_FLOAT) then
@@ -384,7 +384,7 @@ contains
 
     if(optional_default(copy_data, .false.)) then
       ASSERT(np_ == this%np)
-      call this%copy_data_to(this%np, dest)
+      call this%copy_data_to(min(this%np, np_), dest)
     end if
 
     POP_SUB(batch_copy_to)

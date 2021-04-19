@@ -319,7 +319,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
 
 
     ! move to level  1
-    call aa%clone_to(r1, np = mesh1%np_part)
+    call aa%clone_to(r1, new_np = mesh1%np_part)
     call X(multigrid_fine2coarse_batch)(pre%mgrid%level(1)%tt, pre%mgrid%level(0)%der, &
         pre%mgrid%level(1)%mesh, aa, r1, FULLWEIGHT)
     ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
@@ -339,14 +339,14 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
     call X(derivatives_batch_perform)(pre%mgrid%level(1)%der%lapl, pre%mgrid%level(1)%der, d1, q1, factor = -M_HALF)
 
     ! move to level  2
-    call q1%clone_to(r2, np = mesh2%np_part)
+    call q1%clone_to(r2, new_np = mesh2%np_part)
     call X(multigrid_fine2coarse_batch)(pre%mgrid%level(2)%tt, pre%mgrid%level(1)%der, &
         pre%mgrid%level(2)%mesh, q1, r2, FULLWEIGHT)
 
-    call r2%clone_to(d2, copy_data=.true., np = mesh2%np_part) 
+    call r2%clone_to(d2, copy_data=.true., new_np = mesh2%np_part) 
     call batch_scal(mesh2%np, CNST(16.0)*step, d2)
     
-    call r2%clone_to(q2, np = mesh2%np)
+    call r2%clone_to(q2, new_np = mesh2%np)
 
     ! Jacobi steps on coarsest grid
     do j = 1, pre%nmiddle
@@ -395,7 +395,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
     call d1%end()
     SAFE_DEALLOCATE_A(d1)
 
-    call q0%clone_to(d0, copy_data=.true., np = mesh0%np_part)
+    call q0%clone_to(d0, copy_data=.true., new_np = mesh0%np_part)
     call batch_scal(mesh0%np, -M_ONE, d0)
 
     ! post-smoothing
