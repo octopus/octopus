@@ -175,8 +175,9 @@ contains
       spci => atom(1)%species
       ! This depends on the area, but we should check if it is fully consistent.        
       if( species_type(spci) == SPECIES_JELLIUM_SLAB ) then
+        ! Note that this is only allowed if periodic dim = 2. In that case the lattice volume is in fact an area.
         energy = energy + &
-          M_PI*species_zval(spci)**2/(M_FOUR*lsize(1)*lsize(2))*(lsize(3) - species_jthick(spci)/M_THREE)
+          M_PI*species_zval(spci)**2/latt%rcell_volume*(lsize(3) - species_jthick(spci)/M_THREE)
       else
         call ion_interaction_periodic(this, space, latt, atom, natoms, energy, force, energy_components, force_components)
       end if
