@@ -362,7 +362,7 @@ contains
       end if
 
       if(states_are_complex(st)) then
-        call singularity_init(singul, namespace, st, gr%sb, hm%kpoints)
+        call singularity_init(singul, namespace, space, st, geo%latt, hm%kpoints)
       end if
 
       SAFE_ALLOCATE(iindex(1:2, 1:id))

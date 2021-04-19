@@ -115,12 +115,12 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, space, st, sb, der, mc, kpoints, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, space, st, latt, der, mc, kpoints, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
-    type(namespace_t),          intent(in)    :: namespace
+    type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
-    type(simul_box_t),         intent(in)    :: sb
+    type(lattice_vectors_t),   intent(in)    :: latt
     type(derivatives_t),       intent(in)    :: der
     type(multicomm_t),         intent(in)    :: mc
     type(kpoints_t),           intent(in)    :: kpoints
@@ -144,7 +144,7 @@ contains
     call parse_variable(namespace, 'AdaptivelyCompressedExchange', .false., this%useACE)
     if(this%useACE) call messages_experimental('AdaptivelyCompressedExchange')
 
-    call singularity_init(this%singul, namespace, st, sb, kpoints)
+    call singularity_init(this%singul, namespace, space, st, latt, kpoints)
     if(states_are_real(st)) then
       call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false.)
