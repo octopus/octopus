@@ -1069,10 +1069,10 @@ contains
 
             if (states_are_real(st)) then
               call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
-              ks%gr%fine, hm, st, geo%space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             else
               call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
-              ks%gr%fine, hm, st, geo%space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
 
             if (ks%oep%has_photons) then

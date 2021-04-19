@@ -99,7 +99,6 @@ module xc_oep_oct_m
 
   type(profile_t), save ::      &
     C_PROFILING_XC_OEP,         &
-    C_PROFILING_XC_EXX,         &
     C_PROFILING_XC_SIC,         &
     C_PROFILING_XC_OEP_FULL,    &
     C_PROFILING_XC_KLI

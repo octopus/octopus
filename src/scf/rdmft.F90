@@ -1269,7 +1269,7 @@ contains
     FLOAT               :: dd
     type(states_elec_t) :: xst
     
-    integer :: ist, jst, nspin_, is, jdm, iorb, jorb
+    integer :: ist, jst, nspin_, iorb, jorb
 
     PUSH_SUB(rdm_derivatives) 
 
@@ -1303,8 +1303,10 @@ contains
       ! maybe better to let that be done from the lower level routines like hamiltonian apply?
       !
       ! only used to calculate total energy
+      call xst%nullify()
       call dexchange_operator_compute_potentials(hm%exxop, namespace, space, gr%mesh, gr%sb%latt, &
                                                  st, xst, hm%kpoints, F_out = v_ij)
+      call states_elec_end(xst)
 
       do ist = 1, st%nst
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)

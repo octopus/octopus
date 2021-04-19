@@ -498,9 +498,12 @@ contains
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &
            hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER &
-          .or. bitand(hm%xc%family, XC_FAMILY_OEP)) then
-      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER .or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0 &
-         .or. hm%theory_level == RDMFT) then
+          .or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
+      !We test Slater before OEP, as Slater is treated as OEP for the moment....
+      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, &
+                 M_ZERO, M_ONE, M_ZERO)
+      else if(bitand(hm%xc%family, XC_FAMILY_OEP) /= 0 .or. hm%theory_level == RDMFT) then
         call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, &
                  hm%xc%cam_omega, hm%xc%cam_alpha, hm%xc%cam_beta)
       else
