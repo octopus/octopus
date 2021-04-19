@@ -17,13 +17,14 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order, set_bc)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
     type(mesh_t),            intent(in)    :: fine_mesh
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
     integer, optional,       intent(in)    :: order
+    logical, optional,       intent(in)    :: set_bc
 
     integer :: idir, order_, ii, ifactor
     integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
@@ -50,11 +51,13 @@
 
     factor = factor/coarse_der%dim
 
-    call boundaries_set(coarse_der%boundaries, f_coarse)
+    if(optional_default(set_bc, .true.)) then
+      call boundaries_set(coarse_der%boundaries, f_coarse)
 
 #ifdef HAVE_MPI
-    if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
+      if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
 #endif
+    end if
 
     !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
     do ipf = 1, fine_mesh%np
@@ -64,7 +67,7 @@
 
       if(all(dd == 0)) then ! This point belongs to the coarse grid
         xc = xf/2
-        ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+        ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
         f_fine(ipf) = f_coarse(ipc)
         cycle
       end if
@@ -78,7 +81,7 @@
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+          ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
         end do
@@ -257,7 +260,7 @@
 
         if(all(dd == 0)) then ! This point belongs to the coarse grid
           xc = xf/2
-          ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+          ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
           do ist = 1, coarseb%nst_linear
             fineb%X(ff_pack)(ist, ipf) = coarseb%X(ff_pack)(ist, ipc)
           end do
@@ -274,7 +277,7 @@
             if(ii == 0) cycle
             xc = xf + (2*ii - sign(1, ii))*dd
             xc = xc/2
-            ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
+            ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
             do ist = 1, coarseb%nst_linear
               fineb%X(ff_pack)(ist, ipf) = fineb%X(ff_pack)(ist, ipf) + factor(ifactor) * coarseb%X(ff_pack)(ist, ipc)
             end do
@@ -292,34 +295,7 @@
         call batch_get_state(coarseb, ist, coarse_der%mesh%np_part, f_coarse)
         call batch_get_state(fineb, ist, fine_mesh%np, f_fine)
 
-        !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
-        do ipf = 1, fine_mesh%np
-          call mesh_local_index_to_coords(fine_mesh, ipf, xf)
-
-          dd = mod(xf, 2)
-
-          if(all(dd == 0)) then ! This point belongs to the coarse grid
-            xc = xf/2
-            ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
-            f_fine(ipf) = f_coarse(ipc)
-            cycle
-           end if
-
-          f_fine(ipf) = M_ZERO
-
-          do idir = 1, coarse_der%dim
-            ifactor = 1
-            do ii = -order_, order_
-              if(ii == 0) cycle
-              xc = xf + (2*ii - sign(1, ii))*dd
-              xc = xc/2
-              ipc = mesh_local_index_from_coords(coarse_der%mesh, [xc(1), xc(2), xc(3)])
-              f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
-              ifactor = ifactor + 1
-            end do
-          end do
-
-        end do
+        call X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order=order, set_bc = .false.) 
 
         call batch_set_state(fineb, ist, fine_mesh%np, f_fine)
       end do
