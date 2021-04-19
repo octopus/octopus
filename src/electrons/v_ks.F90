@@ -1099,8 +1099,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
-            ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 

@@ -70,7 +70,7 @@ contains
     type(states_elec_t), target, intent(in)    :: st
     
     integer :: iatom, ip, isp
-    FLOAT :: rr, pos(1:MAX_DIM), rmax
+    FLOAT :: rr, pos(geo%space%dim), rmax
     FLOAT, allocatable :: atom_density(:, :), atom_density_acc(:)
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
@@ -84,36 +84,36 @@ contains
     this%geo  => geo
     this%st   => st
 
-    SAFE_ALLOCATE(this%total_density(1:this%mesh%np))
+    SAFE_ALLOCATE(this%total_density(1:mesh%np))
     SAFE_ALLOCATE(this%free_volume(1:geo%natoms))
-    SAFE_ALLOCATE(this%free_vol_r3(1:geo%natoms,1:this%mesh%np))
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
-    SAFE_ALLOCATE(atom_density_acc(1:this%mesh%np))
+    SAFE_ALLOCATE(this%free_vol_r3(1:geo%natoms,1:mesh%np))
+    SAFE_ALLOCATE(atom_density(1:mesh%np, st%d%nspin))
+    SAFE_ALLOCATE(atom_density_acc(1:mesh%np))
 
     this%total_density = CNST(0.0)
   
     do iatom = 1, geo%natoms
-      ps => species_ps(this%geo%atom(iatom)%species)
-      atom_density_acc(1:this%mesh%np) = M_ZERO
+      ps => species_ps(geo%atom(iatom)%species)
+      atom_density_acc(1:mesh%np) = M_ZERO
 
       rmax = CNST(0.0)
-      do isp = 1, this%st%d%nspin
+      do isp = 1, st%d%nspin
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
       latt_iter = lattice_iterator_t(geo%latt, rmax)
       do icell = 1, latt_iter%n_cells
-        pos(1:this%mesh%sb%dim) = this%geo%atom(iatom)%x(1:this%mesh%sb%dim) + latt_iter%get(icell)
+        pos = this%geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
+        call species_atom_density_np(mesh, geo%atom(iatom), namespace, pos, st%d%nspin, atom_density)
 
-        do ip = 1, this%mesh%np
+        do ip = 1, mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
         end do
 
-        do ip = 1, this%mesh%np
-          rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos(1:this%mesh%sb%dim))**2))
+        do ip = 1, mesh%np
+          rr = norm2(mesh%x(ip, :) - pos)
           atom_density_acc(ip) = atom_density_acc(ip) + sum(atom_density(ip, 1:this%st%d%nspin))*rr**3  
         end do
       end do
@@ -281,29 +281,29 @@ contains
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir, icell, jcell, isp
-    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(this%geo%space%dim), pos_j(this%geo%space%dim), rmax_i, rmax_j, &
              rij, rmax_isqu, rmax_jsqu
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(lattice_iterator_t) :: latt_iter_i, latt_iter_j
     type(ps_t), pointer :: ps_i, ps_j
     type(profile_t), save :: prof
-    FLOAT :: tmp, xxi(1:MAX_DIM), xxj(1:MAX_DIM)
+    FLOAT :: tmp, xxi(this%geo%space%dim), xxj(this%geo%space%dim)
 
     FLOAT :: TOL_SPACING
 
     PUSH_SUB(hirshfeld_position_derivative)
 
-    TOL_SPACING = maxval(this%mesh%spacing(1:this%mesh%sb%dim))
+    TOL_SPACING = maxval(this%mesh%spacing(1:this%geo%space%dim))
 
     call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
 
-    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
+    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%geo%space%dim))
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
-    dposition(1:this%mesh%sb%dim) = M_ZERO
-    grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
+    dposition(1:this%geo%space%dim) = M_ZERO
+    grad(1:this%mesh%np, 1:this%geo%space%dim) = M_ZERO
 
     ps_i => species_ps(this%geo%atom(iatom)%species)
     ps_j => species_ps(this%geo%atom(jatom)%species)
@@ -321,7 +321,7 @@ contains
     latt_iter_j = lattice_iterator_t(this%geo%latt, rmax_j)
     do jcell = 1, latt_iter_j%n_cells
 
-      pos_j(1:this%mesh%sb%dim) = this%geo%atom(jatom)%x(1:this%mesh%sb%dim) + latt_iter_j%get(jcell)
+      pos_j = this%geo%atom(jatom)%x(1:this%geo%space%dim) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
       call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
@@ -330,10 +330,9 @@ contains
       latt_iter_i = lattice_iterator_t(this%geo%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
 
-        pos_i(1:this%mesh%sb%dim) = pos_j(1:this%mesh%sb%dim) + latt_iter_i%get(icell) + &
-                                   (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) &
-                                   - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
-        rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
+        pos_i = pos_j + latt_iter_i%get(icell) + (this%geo%atom(iatom)%x(1:this%geo%space%dim) &
+                                                - this%geo%atom(jatom)%x(1:this%geo%space%dim))
+        rij =  norm2(pos_i - pos_j)
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
  
@@ -349,12 +348,12 @@ contains
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle
             
-            xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-            rri = sum(xxi(1:this%mesh%sb%dim)**2)
+            xxi = this%mesh%x(ip, :) - pos_i
+            rri = sum(xxi**2)
             if(rri - rmax_isqu > TOL_SPACING) cycle ! In this case atom_dens = 0
 
-            xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
-            rrj = sum(xxj(1:this%mesh%sb%dim)**2)
+            xxj = this%mesh%x(ip, :) - pos_j
+            rrj = sum(xxj**2)
             if(rrj - rmax_jsqu > TOL_SPACING) cycle ! In this case atom_der = 0
 
             rri = sqrt(rri)
@@ -368,17 +367,14 @@ contains
             atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
 
             if(rrj > TOL_HIRSHFELD) then
-              do idir = 1, this%mesh%sb%dim
+              do idir = 1, this%geo%space%dim
                 grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
               end do
             end if
 
             !Only if we really have the same atoms
             if(iatom == jatom .and. rij < TOL_HIRSHFELD) then
-              do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                    *tdensity/this%total_density(ip)*xxi(idir)
-              end do
+              grad(ip, :) = grad(ip, :) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)*tdensity/this%total_density(ip)*xxi
             end if
 
           end do
@@ -387,13 +383,13 @@ contains
       end do
     end do
 
-    do idir = 1, this%mesh%sb%dim
+    do idir = 1, this%geo%space%dim
       dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir), reduce = .false.) &
                              /this%free_volume(iatom)
     end do
 
     if(this%mesh%parallel_in_domains) then
-      call this%mesh%allreduce(dposition, dim = this%mesh%sb%dim)
+      call this%mesh%allreduce(dposition, dim = this%geo%space%dim)
     end if
 
     SAFE_DEALLOCATE_A(atom_density)

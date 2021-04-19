@@ -35,7 +35,6 @@ module vdw_ts_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use states_elec_oct_m
   use unit_oct_m
@@ -159,12 +158,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, namespace, geo, der, sb, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, geo, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
-    type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
@@ -193,7 +191,7 @@ contains
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
-    FLOAT :: x_j(sb%dim)
+    FLOAT :: x_j(geo%space%dim)
 
     PUSH_SUB(vdw_ts_calculate)
 
@@ -203,7 +201,7 @@ contains
     SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
 
     energy=M_ZERO
-    force(1:sb%dim, 1:geo%natoms) = M_ZERO
+    force(1:geo%space%dim, 1:geo%natoms) = M_ZERO
     this%derivative_coeff(1:geo%natoms) = M_ZERO
     call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
 
@@ -220,7 +218,7 @@ contains
       end do
     end do
   
-    if(sb%periodic_dim > 0) then ! periodic case
+    if (geo%space%is_periodic()) then ! periodic case
       SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
 
       !Precomputing some quantities
@@ -239,11 +237,11 @@ contains
         jspecies = species_index(geo%atom(jatom)%species)
                 
         do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-          x_j = geo%atom(jatom)%x(1:sb%dim) + latt_iter%get(jcopy)
+          x_j = geo%atom(jatom)%x(1:geo%space%dim) + latt_iter%get(jcopy)
 
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
-            rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
+            rr2 =  sum((x_j - geo%atom(iatom)%x(1:geo%space%dim))**2)
             rr =  sqrt(rr2)
             rr6 = rr2**3
 
@@ -274,11 +272,11 @@ contains
 
       SAFE_DEALLOCATE_A(r0ab)
     else ! Non periodic case 
-      SAFE_ALLOCATE(coordinates(1:sb%dim, 1:geo%natoms))
+      SAFE_ALLOCATE(coordinates(1:geo%space%dim, 1:geo%natoms))
       SAFE_ALLOCATE(zatom(1:geo%natoms))
 
       do iatom = 1, geo%natoms
-        coordinates(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
+        coordinates(:, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
         zatom(iatom) = int(species_z(geo%atom(iatom)%species))
 
       end do
@@ -310,18 +308,17 @@ contains
     SAFE_DEALLOCATE_A(dr0dvra)
 
     POP_SUB(vdw_ts_calculate)
-    end subroutine vdw_ts_calculate
+  end subroutine vdw_ts_calculate
 
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, geo, der, st, density)
     type(vdw_ts_t),      intent(in)    :: this
     type(namespace_t),   intent(in)    :: namespace
-    FLOAT,               intent(inout) :: force_vdw(:,:)
     type(geometry_t),    intent(in)    :: geo
+    FLOAT,               intent(inout) :: force_vdw(1:geo%space%dim, 1:geo%natoms)
     type(derivatives_t), intent(in)    :: der
-    type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
@@ -329,7 +326,7 @@ contains
     type(lattice_iterator_t) :: latt_iter
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(sb%dim) 
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(geo%space%dim) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
     type(profile_t), save :: prof
 
@@ -345,12 +342,12 @@ contains
     SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
 
 
-    force_vdw(1:sb%dim, 1:geo%natoms) = M_ZERO
+    force_vdw(1:geo%space%dim, 1:geo%natoms) = M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
     c6ab(1:geo%natoms,1:geo%natoms) = M_ZERO
     r0ab(1:geo%natoms,1:geo%natoms) = M_ZERO
     dr0dvra(1:geo%natoms) = M_ZERO
-    dvadrr(1:3) = M_ZERO
+    dvadrr(1:geo%space%dim) = M_ZERO
     vol_ratio(1:geo%natoms) = M_ZERO
 
 
@@ -387,10 +384,10 @@ contains
       jspecies = species_index(geo%atom(jatom)%species)
 
       do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-        x_j = geo%atom(jatom)%x(1:sb%dim) + latt_iter%get(jcopy)
+        x_j = geo%atom(jatom)%x(1:geo%space%dim) + latt_iter%get(jcopy)
         do iatom = 1, geo%natoms
           ispecies = species_index(geo%atom(iatom)%species)
-          rr2 =  sum((x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2)
+          rr2 =  sum((x_j - geo%atom(iatom)%x(1:geo%space%dim))**2)
           rr  =  sqrt(rr2)
           rr6 = rr2**3
 
@@ -402,17 +399,17 @@ contains
           !Calculate the derivative of the damping function with respect to the van der Waals radius.
           dffdr0 =  -this%damping*rr/( this%sr*r0ab(iatom, jatom)**2)*dee
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-          deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6;
+          deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6
           ! Derivative of the damping function with respecto to the volume ratio of atom A.
-          dffdvra = dffdr0*dr0dvra(iatom);
+          dffdvra = dffdr0*dr0dvra(iatom)
           ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
           deabdvra = (dffdvra*c6ab(iatom, jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
           !Summing for using later
-          derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+          derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra
 
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-          deabdrab = c6ab(iatom, jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6;
-          force_vdw(1:sb%dim, iatom)= force_vdw(1:sb%dim, iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) - x_j(1:sb%dim))/rr;
+          deabdrab = c6ab(iatom, jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6
+          force_vdw(:, iatom) = force_vdw(:, iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:geo%space%dim) - x_j)/rr
         end do
       end do
     end do
@@ -420,7 +417,7 @@ contains
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-        force_vdw(1:sb%dim, jatom)= force_vdw(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
+        force_vdw(:, jatom)= force_vdw(:, jatom) + derivative_coeff(iatom)*dvadrr  ! geo%atom(jatom)%f_vdw = sum_i coeff_i * dvadrr_ij
       end do
     end do
 
