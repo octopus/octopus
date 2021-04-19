@@ -34,7 +34,6 @@ module box_sphere_oct_m
 
   !> Class implementing a spherical box.
   type, extends(box_shape_t) :: box_sphere_t
-    private
     FLOAT   :: radius !< the radius of the sphere
   contains
     procedure :: contains_points => box_sphere_contains_points
