@@ -114,7 +114,7 @@ contains
   ! -----------------------------------------------------
 
   subroutine multigrid
-    FLOAT :: step
+    FLOAT :: alpha, step(0:2)
 
     R_TYPE, allocatable :: d0(:), q0(:)
     R_TYPE, allocatable :: r1(:), d1(:), q1(:), t1(:)
@@ -141,7 +141,16 @@ contains
     SAFE_ALLOCATE(d2(1:mesh2%np_part))
     SAFE_ALLOCATE(q2(1:mesh2%np))
 
-    step = CNST(0.66666666)/pre%diag_lapl(1)
+    ! Jacobi relaxation weight is \omega=2(1-\alpha)
+    alpha = CNST(0.66666666)
+
+    ! We get the weight of the diagonal part of the Laplacian for each level
+    ! which is correct in all cases, including non-orthogonal cells
+    ! Remark: this code is not correct for curvilinear case
+    do ip = 0, 2
+      step(ip) = -M_HALF*pre%mgrid%level(ip)%der%lapl%w(pre%mgrid%level(ip)%der%lapl%stencil%center, 1)
+      step(ip) = M_TWO*(M_ONE-alpha)/step(ip)
+    end do
 
     do idim = 1, hm%d%dim
 
@@ -160,7 +169,7 @@ contains
       ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
       do ip = 1, mesh1%np
-        d1(ip) = -CNST(4.0)*step*r1(ip)
+        d1(ip) = -step(1)*r1(ip)
       end do
 
       ! pre-smoothing
@@ -169,7 +178,7 @@ contains
 
         do ip = 1, mesh1%np
           q1(ip) = q1(ip) + r1(ip)
-          d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
+          d1(ip) = d1(ip) - step(1)*q1(ip)
         end do
       end do
 
@@ -183,7 +192,7 @@ contains
         pre%mgrid%level(2)%mesh, q1, r2, FULLWEIGHT)
 
       do ip = 1, mesh2%np
-        d2(ip) = CNST(16.0)*step*r2(ip)
+        d2(ip) = step(2)*r2(ip)
       end do
 
       ! Jacobi steps on coarsest grid
@@ -192,7 +201,7 @@ contains
 
         do ip = 1, mesh2%np
           q2(ip) = q2(ip) - r2(ip)
-          d2(ip) = d2(ip) - CNST(16.0)*step*q2(ip)
+          d2(ip) = d2(ip) - step(2)*q2(ip)
         end do
       end do
 
@@ -210,7 +219,7 @@ contains
 
         do ip = 1, mesh1%np
           q1(ip) = q1(ip) + r1(ip)
-          d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
+          d1(ip) = d1(ip) - step(1)*q1(ip)
         end do
       end do
 
@@ -228,7 +237,7 @@ contains
 
         do ip = 1, mesh0%np
           q0(ip) = q0(ip) - a(ip, idim)
-          d0(ip) = d0(ip) - step*q0(ip)
+          d0(ip) = d0(ip) - step(0)*q0(ip)
         end do
       end do
 
@@ -300,7 +309,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
    ! -----------------------------------------------------
 
   subroutine multigrid_batch
-    FLOAT :: step
+    FLOAT :: alpha, step(0:2)
 
     class(batch_t), allocatable :: d0, q0
     class(batch_t), allocatable :: r1, d1, q1, t1
@@ -315,7 +324,16 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
     mesh1 => pre%mgrid%level(1)%mesh
     mesh2 => pre%mgrid%level(2)%mesh
 
-    step = CNST(0.66666666)/pre%diag_lapl(1)
+    ! Jacobi relaxation weight is \omega=2(1-\alpha)
+    alpha = CNST(0.66666666)
+
+    ! We get the weight of the diagonal part of the Laplacian for each level
+    ! which is correct in all cases, including non-orthogonal cells
+    ! Remark: this code is not correct for curvilinear case
+    do j = 0, 2
+      step(j) = -M_HALF*pre%mgrid%level(j)%der%lapl%w(pre%mgrid%level(j)%der%lapl%stencil%center, 1)
+      step(j) = M_TWO*(M_ONE-alpha)/step(j)
+    end do
 
 
     ! move to level  1
@@ -325,7 +343,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
     ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
     call r1%clone_to(d1, copy_data=.true.)
-    call batch_scal(mesh1%np, -CNST(4.0)*step, d1)
+    call batch_scal(mesh1%np, -step(1), d1)
     call r1%clone_to(q1)
 
     ! pre-smoothing
@@ -333,7 +351,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
       call X(derivatives_batch_perform)(pre%mgrid%level(1)%der%lapl, pre%mgrid%level(1)%der, d1, q1, factor = -M_HALF)
       
       call batch_axpy(mesh1%np, M_ONE, r1, q1)
-      call batch_axpy(mesh1%np, -CNST(4.0)*step, q1, d1)
+      call batch_axpy(mesh1%np, -step(1), q1, d1)
     end do
 
     call X(derivatives_batch_perform)(pre%mgrid%level(1)%der%lapl, pre%mgrid%level(1)%der, d1, q1, factor = -M_HALF)
@@ -344,7 +362,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
         pre%mgrid%level(2)%mesh, q1, r2, FULLWEIGHT)
 
     call r2%clone_to(d2, copy_data=.true., new_np = mesh2%np_part) 
-    call batch_scal(mesh2%np, CNST(16.0)*step, d2)
+    call batch_scal(mesh2%np, step(2), d2)
     
     call r2%clone_to(q2, new_np = mesh2%np)
 
@@ -353,7 +371,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
       call X(derivatives_batch_perform)(pre%mgrid%level(2)%der%lapl, pre%mgrid%level(2)%der, d2, q2, factor = M_HALF)
 
       call batch_axpy(mesh2%np, M_ONE, r2, q2)
-      call batch_axpy(mesh2%np, CNST(16.0)*step, q2, d2)
+      call batch_axpy(mesh2%np, step(2), q2, d2)
     end do
 
     call r2%end()
@@ -379,7 +397,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
       call X(derivatives_batch_perform)(pre%mgrid%level(1)%der%lapl, pre%mgrid%level(1)%der, d1, q1, factor = -M_HALF)
 
       call batch_axpy(mesh1%np, M_ONE, r1, q1)
-      call batch_axpy(mesh1%np, -CNST(4.0)*step, q1, d1)
+      call batch_axpy(mesh1%np, -step(1), q1, d1)
     end do
 
     call q1%end()
@@ -403,7 +421,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, mesh, hm, aa, bb, ik, o
       call X(derivatives_batch_perform)(pre%mgrid%level(0)%der%lapl, pre%mgrid%level(0)%der, d0, q0, factor = M_HALF)
 
       call batch_axpy(mesh0%np, M_ONE, aa, q0)
-      call batch_axpy(mesh0%np, step, q0, d0)
+      call batch_axpy(mesh0%np, step(0), q0, d0)
     end do
 
     call q0%end()
