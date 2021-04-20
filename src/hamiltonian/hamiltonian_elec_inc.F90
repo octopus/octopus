@@ -211,6 +211,11 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
     case(HARTREE_FOCK)
       call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .false.)
+    
+    case(GENERALIZED_KOHN_SHAM_DFT)
+      if(family_is_hybrid(hm%xc)) then
+        call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .false.)
+      end if
 
     case(RDMFT)
       call X(exchange_operator_apply)(hm%exxop, namespace, hm%space, mesh, hm%d, hm%kpoints, epsib, hpsib, .true.)

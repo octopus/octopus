@@ -205,6 +205,7 @@ module hamiltonian_elec_oct_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
+    GENERALIZED_KOHN_SHAM_DFT = 5, &
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
@@ -473,6 +474,17 @@ contains
 #endif
     end if
 
+    if(hm%theory_level == GENERALIZED_KOHN_SHAM_DFT .and. family_is_hybrid(hm%xc) &
+        .and. st%parallel_in_states) then
+#ifdef HAVE_MPI2
+      call messages_experimental('Hybrid functionals parallel in states')
+#else
+      call messages_write('Hybrid functionals parallel in states required MPI 2')
+      call messages_fatal(namespace=namespace)
+#endif
+    end if
+
+
     !%Variable TimeZero
     !%Type logical
     !%Default no
@@ -490,11 +502,12 @@ contains
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &
-           hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER &
-          .or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
+       (hm%theory_level == GENERALIZED_KOHN_SHAM_DFT .and. family_is_hybrid(hm%xc)) &
+         .or.  hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER &
+         or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
       !We test Slater before OEP, as Slater is treated as OEP for the moment....
-      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
-        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
+      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then 
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, &
                  M_ZERO, M_ONE, M_ZERO)
       else if(bitand(hm%xc%family, XC_FAMILY_OEP) /= 0 .or. hm%theory_level == RDMFT) then
         call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
@@ -766,7 +779,7 @@ contains
 
       call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
       if (hm%pcm%run_pcm) then
-        if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+        if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= kohn_sham", namespace=namespace)
         if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
       end if
 

@@ -388,6 +388,7 @@ contains
     call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
     if(scf%calc_stress) then
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
+         ks%theory_level == GENERALIZED_KOHN_SHAM_DFT .or. &
         (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
         write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
         write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
@@ -1128,7 +1129,8 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+              .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
           if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
             write(iunit, '(a)') 'Photon observables:'
             write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%number(1)
@@ -1231,7 +1233,8 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+             .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
           if (ks%oep%level == XC_OEP_FULL) then
             label = 'OEP norm2ss'
             write(iunit, '(1x,a)', advance = 'no') label
@@ -1270,7 +1273,8 @@ contains
             ASSERT(.false.)
           end select
         end do
-        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+            .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
           if (ks%oep%level == XC_OEP_FULL) &
             write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
         end if

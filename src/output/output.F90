@@ -744,7 +744,8 @@ contains
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     
-    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+           .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
       if (ks%oep%level == XC_OEP_FULL) then
         if (ks%oep%has_photons) then
           if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then

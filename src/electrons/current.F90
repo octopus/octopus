@@ -375,6 +375,7 @@ contains
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
         .and. hm%lda_u_level == DFT_U_NONE .and. hm%theory_level /= HARTREE_FOCK &
+        .and. hm%theory_level /= GENERALIZED_KOHN_SHAM_DFT &
         .and. hm%theory_level /= RDMFT) then
 
         ! we can use the packed version
