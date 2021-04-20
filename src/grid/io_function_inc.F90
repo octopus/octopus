@@ -178,10 +178,13 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     end if
 
   case("csv")
-    if (mesh%sb%box_shape /= PARALLELEPIPED .and. mesh%sb%box_shape /= HYPERCUBE) then
+    select type (box => mesh%sb%box)
+    type is (box_parallelepiped_t)
+    type is (box_hypercube_t)
+    class default
       message(1) = "Box shape must be parallelepiped or hypercube when a .csv file is used."
       call messages_fatal(1)
-    end if 
+    end select
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call X(cube_function_alloc_RS)(cube, cf)

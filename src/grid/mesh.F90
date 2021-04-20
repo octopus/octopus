@@ -20,6 +20,7 @@
 
 module mesh_oct_m
   use basis_set_abst_oct_m
+  use box_hypercube_oct_m
   use comm_oct_m
   use curvilinear_oct_m
   use global_oct_m
@@ -441,13 +442,16 @@ contains
       ierr = ierr + 1
     else
       if (mpi_grp_is_root(mpi_grp)) then
-        write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
-        if(mesh%sb%box_shape /= HYPERCUBE) then
+        select type (box => mesh%sb%box)
+        type is (box_hypercube_t)
+          write(iunit, '(a20,l)')  'is_hypercube =         ', .true.
+        class default
+          write(iunit, '(a20,l)')  'is_hypercube =         ', .false.
           write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
           write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
           write(iunit, '(a20,i21)')  'algorithm=          ', 1
           write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
-        end if
+        end select
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
@@ -472,8 +476,9 @@ contains
     integer,          intent(out) :: ierr
 
     character(len=20)  :: str
+    logical :: is_hypercube
     character(len=100) :: lines(4)
-    integer :: iunit, box_shape, algorithm, err
+    integer :: iunit, algorithm, err
     integer(8) :: checksum
 
     PUSH_SUB(mesh_read_fingerprint)
@@ -490,19 +495,17 @@ contains
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
       call messages_warning(1)
     else
-      box_shape = 0
       call iopar_read(mpi_grp, iunit, lines, 1, err)
       if (err /= 0) then
         ierr = ierr + 2
       else
-        read(lines(1), '(a20,i21)')  str, box_shape
+        read(lines(1), '(a20,l)')  str, is_hypercube
       end if
 
-      if (box_shape == HYPERCUBE) then
+      if (is_hypercube) then
         ! We have a hypercube: we will assume everything is OK...
         message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
         call messages_warning(1)
-
       else
         call iopar_read(mpi_grp, iunit, lines, 4, err)
         if (err /= 0) then
@@ -566,42 +569,46 @@ contains
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
         ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
         ierr = ierr + 2
-      else if (mesh%sb%box_shape /= HYPERCUBE) then
+      else
+        select type (box => mesh%sb%box)
+        type is (box_hypercube_t)
+          ! We cannot check the compatibility if the box is an hypercube
+        class default
+          grid_changed = .true.
 
-        grid_changed = .true.
+          ! perhaps only the order of the points changed, this can only
+          ! happen if the number of points is the same and no points maps
+          ! to zero (this is checked below)
+          grid_reordered = (read_np == mesh%np_global)
 
-        ! perhaps only the order of the points changed, this can only
-        ! happen if the number of points is the same and no points maps
-        ! to zero (this is checked below)
-        grid_reordered = (read_np == mesh%np_global)
+          ! the grid is different, so we read the coordinates.
+          SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
+          ASSERT(allocated(mesh%idx%lxyz))
+          call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+          if (err /= 0) then
+            ierr = ierr + 4
+            message(1) = "Unable to read index map from '"//trim(dir)//"'."
+            call messages_warning(1)
+          else
+            ! generate the map
+            SAFE_ALLOCATE(map(1:read_np))
 
-        ! the grid is different, so we read the coordinates.
-        SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
-        ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-          message(1) = "Unable to read index map from '"//trim(dir)//"'."
-          call messages_warning(1)
-        else
-          ! generate the map
-          SAFE_ALLOCATE(map(1:read_np))
+            do ip = 1, read_np
+              xx = 0
+              xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
+              if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
+                any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
+                map(ip) = 0
+                grid_reordered = .false.
+              else
+                map(ip) = mesh_global_index_from_coords(mesh, [xx(1), xx(2), xx(3)])
+                if(map(ip) > mesh%np_global) map(ip) = 0
+              end if
+            end do
+          end if
 
-          do ip = 1, read_np
-            xx = 0
-            xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
-            if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
-                 any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
-              map(ip) = 0
-              grid_reordered = .false.
-            else
-              map(ip) = mesh_global_index_from_coords(mesh, [xx(1), xx(2), xx(3)])
-              if(map(ip) > mesh%np_global) map(ip) = 0
-            end if
-          end do
-        end if
-
-        SAFE_DEALLOCATE_A(read_lxyz)
+          SAFE_DEALLOCATE_A(read_lxyz)
+        end select
       end if
     end if
 

@@ -7,6 +7,7 @@
 
 
 module libvdwxc_oct_m
+  use box_parallelepiped_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
@@ -195,19 +196,20 @@ contains
     ! Therefore we cannot use the PFFT stuff without a frightful mess.
 
 #ifdef HAVE_LIBVDWXC
-    if(mesh%sb%box_shape == PARALLELEPIPED) then
+    select type (box => mesh%sb%box)
+    type is (box_parallelepiped_t)
       call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
         this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
         mesh%sb%latt%rlattice(3, 3), mesh%sb%latt%rlattice(2, 3), mesh%sb%latt%rlattice(1, 3), &
         mesh%sb%latt%rlattice(3, 2), mesh%sb%latt%rlattice(2, 2), mesh%sb%latt%rlattice(1, 2), &
         mesh%sb%latt%rlattice(3, 1), mesh%sb%latt%rlattice(2, 1), mesh%sb%latt%rlattice(1, 1))
-    else
+    class default
       call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
         this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
         mesh%spacing(3) * this%cube%rs_n_global(3), 0.0_8, 0.0_8, &
         0.0_8, mesh%spacing(2) * this%cube%rs_n_global(2), 0.0_8, &
         0.0_8, 0.0_8, mesh%spacing(1) * this%cube%rs_n_global(1))
-    end if
+    end select
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
       call vdwxc_init_serial(this%libvdwxc_ptr)

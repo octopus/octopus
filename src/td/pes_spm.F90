@@ -19,6 +19,8 @@
 #include "global.h"
 
 module pes_spm_oct_m
+  use box_parallelepiped_oct_m
+  use box_sphere_oct_m
   use comm_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
@@ -221,12 +223,12 @@ contains
         if(radius <= M_ZERO) call messages_input_error(namespace, 'PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else
-        select case(mesh%sb%box_shape)
-        case(PARALLELEPIPED)
-          radius = minval(mesh%sb%lsize(1:mdim))
-        case(SPHERE)
-          radius = mesh%sb%rsize
-        case default
+        select type (box => mesh%sb%box)
+        type is (box_sphere_t)
+          radius = box%radius
+        type is (box_parallelepiped_t)
+          radius = minval(box%half_length(1:mdim))
+        class default
           message(1) = "Spherical grid not implemented for this box shape."
           message(2) = "Specify sample points with block PES_spm_points."
           call messages_fatal(2, namespace=namespace)

@@ -20,6 +20,8 @@
 
 module pes_mask_oct_m
   use batch_oct_m
+  use box_sphere_oct_m
+  use box_parallelepiped_oct_m
   use boundary_op_oct_m
   use comm_oct_m
   use cube_function_oct_m
@@ -202,7 +204,7 @@ contains
    
     PUSH_SUB(pes_mask_init)
         
-    mask%mesh => mesh  
+    mask%mesh => mesh
     
     if (space%is_periodic()) &
       call messages_experimental("PES_mask with periodic dimensions")
@@ -212,11 +214,15 @@ contains
     call messages_info(1)
     
     
-    if(sb%box_shape /= SPHERE .and. .not. space%is_periodic()) then
-      message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
-      message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
-      call messages_warning(2, namespace=namespace)
-    end if
+    select type (box => sb%box)
+    type is (box_sphere_t)
+    class default
+      if (.not. space%is_periodic()) then
+        message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
+        message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
+        call messages_warning(2, namespace=namespace)
+      end if
+    end select
 
     if(hm%bc%abtype /= NOT_ABSORBING) then
       message(1) = 'PhotoElectronSpectrum = pes_mask already contains absorbing boundaries.'
@@ -593,40 +599,43 @@ contains
     end if
 
     mask%user_def = .false.
-    
+
     select case(cols_pesmask_block)
     case(0)
-      if (sb%box_shape == SPHERE) then
-        mask%mask_R(1)=mesh%sb%rsize/M_TWO
-        mask%mask_R(2)=mesh%sb%rsize
+      select type (box => sb%box)
+      type is (box_sphere_t)
+        mask%mask_R(1) = box%radius/M_TWO
+        mask%mask_R(2) = box%radius
         message(1) = "Input: PESMaskSize R(1) and R(2) not specified. Using default values for spherical mask."
-      else if(sb%box_shape == PARALLELEPIPED) then
-        mask%mask_R(1)=mesh%sb%lsize(1)/M_TWO
-        mask%mask_R(2)=mesh%sb%lsize(1)        
+      type is (box_parallelepiped_t)
+        mask%mask_R(1) = box%half_length(1)/M_TWO
+        mask%mask_R(2) = box%half_length(1)
         message(1) = "Input: PESMaskSize R(1) and R(2) not specified. Using default values for cubic mask."
-      end if    
+      end select
       call messages_info(1)
     case(1)
       call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
-      if (sb%box_shape == SPHERE) then
-        mask%mask_R(2)=mesh%sb%rsize
+      select type (box => sb%box)
+      type is (box_sphere_t)
+        mask%mask_R(2) = box%radius
         message(1) = "Input: PESMaskSize R(2) not specified. Using default value for spherical mask."
-      else if(sb%box_shape == PARALLELEPIPED) then
-        mask%mask_R(2)=mesh%sb%lsize(1)
+      type is (box_parallelepiped_t)
+        mask%mask_R(2) = box%half_length(1)
         message(1) = "Input: PESMaskSize R(2) not specified. Using default value for cubic mask."
-      end if    
+      end select
       call messages_info(1)
     case(2)
       call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
       call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
 
-      if (sb%box_shape == SPHERE) then
-        if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
+      select type (box => sb%box)
+      type is (box_sphere_t)
+        if (mask%mask_R(2) > box%radius)  mask%mask_R(2) = box%radius
         message(1) = "Info: using spherical mask."
-      else if (sb%box_shape == PARALLELEPIPED) then
-        if(mask%mask_R(2) > mesh%sb%lsize(1))  mask%mask_R(2) = mesh%sb%lsize(1) 
+      type is (box_parallelepiped_t)
+        if (mask%mask_R(2) > box%half_length(1)) mask%mask_R(2) = box%half_length(1)
         message(1) = "Info: using cubic mask."
-      end if    
+      end select
       call messages_info(1)
 
     case(3)
@@ -935,8 +944,8 @@ contains
 
         else ! mask%user_def == .false.
 
-          if(mesh%sb%box_shape == SPHERE) then
-          
+          select type (box => mesh%sb%box)
+          type is (box_sphere_t)
             dd = rr -  R(1) 
             if(dd > M_ZERO ) then 
               if (dd  <  width) then
@@ -946,7 +955,7 @@ contains
               end if
             end if
 
-          else if (mesh%sb%box_shape == PARALLELEPIPED) then
+          type is (box_parallelepiped_t)
           
             ! We are filling from the center opposite to the spherical case
             tmp = M_ONE
@@ -964,7 +973,7 @@ contains
             end do
             mask_fn(ip) = M_ONE - mask_fn(ip)
           
-          end if  
+          end select
         end if
       end do
 

@@ -19,6 +19,8 @@
 #include "global.h"
 
 module io_function_oct_m
+  use box_hypercube_oct_m
+  use box_parallelepiped_oct_m
   use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m

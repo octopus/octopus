@@ -18,6 +18,9 @@
 #include "global.h"
 
 module atomic_orbital_oct_m
+  use box_cylinder_oct_m
+  use box_minimum_oct_m
+  use box_sphere_oct_m
   use global_oct_m
   use ions_oct_m
   use lalg_basic_oct_m

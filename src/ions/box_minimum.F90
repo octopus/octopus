@@ -39,7 +39,7 @@ module box_minimum_oct_m
   !! should be benchmarked at some point).
   type, extends(box_shape_t) :: box_minimum_t
     private
-    FLOAT :: radius = M_ZERO !< Radius of the boxes when they all have the same radius.
+    FLOAT, public :: radius = M_ZERO !< Radius of the boxes when they all have the same radius.
 
     integer :: n_site_types !< How many sites types there are. Each site type has a label and a radius.
     character(len=:), allocatable :: site_type_label(:)  !< Array storing the labels of the site types

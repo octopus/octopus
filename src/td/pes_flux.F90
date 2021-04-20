@@ -20,6 +20,8 @@
 
 module pes_flux_oct_m
   use boundary_op_oct_m
+  use box_parallelepiped_oct_m
+  use box_sphere_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use global_oct_m
@@ -237,9 +239,18 @@ contains
     !% Constructs a plane perpendicular to the non-periodic dimension 
     !% at <tt>PES_Flux_Lsize</tt>.
     !%End
+
     default_shape = PES_SPHERICAL
-    if (mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
-    if (space%is_periodic()) default_shape = PES_PLANE
+    if (space%is_periodic()) then
+      default_shape = PES_PLANE
+    else if (mdim <= 2) then
+      default_shape = PES_CUBIC
+    else
+      select type (box => mesh%sb%box)
+      type is (box_parallelepiped_t)
+        default_shape = PES_CUBIC
+      end select
+    end if
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
@@ -339,12 +350,12 @@ contains
           border(1:mdim)     = floor(border(1:mdim) / mesh%spacing(1:mdim)) * mesh%spacing(1:mdim)            
         end if
       else
-        select case(mesh%sb%box_shape)
-        case(PARALLELEPIPED)
-          border(1:mdim) = mesh%sb%lsize(1:mdim) * M_HALF
-        case(SPHERE)
-          border(1:mdim) = mesh%sb%rsize / sqrt(M_TWO) * M_HALF
-        case default
+        select type (box => mesh%sb%box)
+        type is (box_sphere_t)
+          border(1:mdim) = box%radius / sqrt(M_TWO) * M_HALF
+        type is (box_parallelepiped_t)
+          border(1:mdim) = box%half_length(1:mdim) * M_HALF
+        class default
           call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
           call messages_new_line()
           call messages_write('Specify the location of the parallelepiped with block PES_Flux_Lsize.')
@@ -384,12 +395,12 @@ contains
         if(this%radius <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
       else
-        select case(mesh%sb%box_shape)
-        case(PARALLELEPIPED)
-          this%radius = minval(mesh%sb%lsize(1:mdim))
-        case(SPHERE)
-          this%radius = mesh%sb%rsize
-        case default
+        select type (box => mesh%sb%box)
+        type is (box_sphere_t)
+          this%radius = box%radius
+        type is (box_parallelepiped_t)
+          this%radius = minval(box%half_length(1:mdim))
+        class default
           message(1) = 'PES_Flux_Radius not specified. No default values available for this box shape.'
           message(2) = 'Specify the radius of the sphere with variable PES_Flux_Radius.'
           call messages_fatal(2, namespace=namespace)

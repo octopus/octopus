@@ -21,6 +21,7 @@
 
 module poisson_oct_m
   use batch_oct_m
+  use box_minimum_oct_m
   use comm_oct_m
   use cube_oct_m
   use cube_function_oct_m
@@ -475,13 +476,16 @@ contains
           call messages_fatal(2)
         end if
 
-        if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
-          message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
-          message(2) = 'Poisson solver, we have observed "sometimes" some non-'
-          message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
-          message(4) = 'solver are providing, in your case, the same results.'
-          call messages_warning(4)
-        end if
+        select type (box => der%mesh%sb%box)
+        type is (box_minimum_t)
+          if (this%method == POISSON_CG_CORRECTED) then
+            message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
+            message(2) = 'Poisson solver, we have observed "sometimes" some non-'
+            message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
+            message(4) = 'solver are providing, in your case, the same results.'
+            call messages_warning(4)
+          end if
+        end select
 
         if (this%method == POISSON_FMM) then
           call messages_experimental('FMM Poisson solver')

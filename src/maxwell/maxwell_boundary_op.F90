@@ -18,8 +18,10 @@
 #include "global.h"
 
 module maxwell_boundary_op_oct_m
-  use derivatives_oct_m
+  use box_sphere_oct_m
+  use box_parallelepiped_oct_m
   use cube_function_oct_m
+  use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
@@ -256,18 +258,18 @@ contains
 
       end select
 
-      select case (gr%sb%box_shape)
-      case(SPHERE)
+      select type (box => gr%sb%box)
+      type is (box_sphere_t)
         ab_shape_dim = 1
         if (sb%periodic_dim /= 0) then
           message(1) = "Sphere box shape can only work for non-periodic systems"
           call messages_fatal(1, namespace=namespace)
         end if
-      case (PARALLELEPIPED)
+      type is (box_parallelepiped_t)
         ab_shape_dim = sb%dim
         ab_bounds(1, idim) = bounds(1, idim)
         ab_bounds(2, idim) = bounds(1, idim)
-      case default
+      class default
         message(1) = "Box shape for Maxwell propagation not supported yet"
         call messages_fatal(1, namespace=namespace)
       end select
@@ -309,8 +311,8 @@ contains
         bc%bc_bounds(:, idim) = bounds(:, idim)
       end select
 
-      if (gr%sb%box_shape == PARALLELEPIPED) then
-
+      select type (box => gr%sb%box)
+      type is (box_parallelepiped_t)
         select case (bc%bc_ab_type(idim))
         case(MXLL_AB_CPML)
           ab_type_str = "PML"
@@ -339,7 +341,7 @@ contains
           call messages_info(2)
         end if
 
-      else
+      class default
 
          write(message(1),'(a,es10.3,3a)') &
           "  Lower bound = ", units_from_atomic(units_inp%length, ab_bounds(1, idim) ),&
@@ -349,7 +351,7 @@ contains
           ' [', trim(units_abbrev(units_inp%length)), ']'
         call messages_info(2)
 
-      end if
+      end select
 
     end do
 
@@ -1660,8 +1662,8 @@ contains
 
     else ! bc%ab_user_def == .false.
 
-      select case (mesh%sb%box_shape)
-      case (SPHERE)
+      select type (box => mesh%sb%box)
+      type is (box_sphere_t)
         dd = rr -  bounds(1, 1)
         if (dd > M_ZERO ) then
           if (dd  <  width(1)) then
@@ -1669,7 +1671,7 @@ contains
           end if
         end if
 
-      case (PARALLELEPIPED)
+      type is (box_parallelepiped_t)
         ! Limits of boundary region
         if (all(abs(xx(1:3)) <= bounds(2, 1:3))) then
           if (any(abs(xx(1:3)) > bounds(1, 1:3))) then
@@ -1681,8 +1683,8 @@ contains
           point_info = -1
         end if
 
-      case default
-        if(mesh_inborder(mesh, ions, ip, dd, width(1))) then
+      class default
+        if (mesh_inborder(mesh, ions, ip, dd, width(1))) then
           point_info = 1
         end if
 
