@@ -27,7 +27,7 @@
     logical, optional,       intent(in)    :: set_bc
 
     integer :: idir, order_, ii, ifactor
-    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
+    integer :: ipc, ipf, xf(coarse_der%dim), xc(coarse_der%dim), dd(coarse_der%dim)
     FLOAT, allocatable :: factor(:), points(:)
 
     PUSH_SUB(X(multigrid_coarse2fine))
@@ -160,6 +160,9 @@
     PUSH_SUB(X(multigrid_restriction))
     call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION)))
 
+    !The following code only works in 3D
+    ASSERT(fine_der%dim == 3)
+
     do di = -1, 1
       do dj = -1, 1
         do dk = -1, 1
@@ -218,7 +221,7 @@
     integer, optional,       intent(in)    :: order
 
     integer :: idir, order_, ii, ifactor, ist
-    integer :: ipc, ipf, xf(1:3), xc(1:3), dd(1:3)
+    integer :: ipc, ipf, xf(coarse_der%dim), xc(coarse_der%dim), dd(coarse_der%dim)
     FLOAT, allocatable :: factor(:), points(:)
     R_TYPE, allocatable :: f_coarse(:), f_fine(:)
     type(pv_handle_batch_t) :: handle
@@ -359,13 +362,16 @@
     class(batch_t),         intent(inout) :: coarseb
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
-    integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
+    integer :: nn, fn, di, dj, dk, dd, fi(3)
     R_TYPE, allocatable :: f_coarse(:), f_fine(:)
     integer :: ist
     type(pv_handle_batch_t) :: handle
 
     PUSH_SUB(X(multigrid_restriction_batch))
     call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION_BATCH)))
+
+    !The following code only works in 3D
+    ASSERT(fine_der%dim == 3)
 
     do di = -1, 1
       do dj = -1, 1
