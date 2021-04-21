@@ -18,6 +18,7 @@
 #include "global.h"
 
 module boundary_op_oct_m
+  use box_oct_m
   use box_cylinder_oct_m
   use box_sphere_oct_m
   use box_parallelepiped_oct_m
@@ -30,7 +31,6 @@ module boundary_op_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -63,13 +63,12 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, namespace, space, mesh, sb, ions)
+  subroutine bc_init(this, namespace, space, mesh, sb)
     type(bc_t),               intent(out) :: this
     type(namespace_t),        intent(in)  :: namespace
     type(space_t),            intent(in)  :: space
     type(mesh_t),             intent(in)  :: mesh
-    type(simul_box_t),        intent(in)  :: sb
-    type(ions_t),             intent(in)  :: ions
+    class(box_t),             intent(in)  :: sb
 
     integer             :: ip
     FLOAT               :: bounds(space%dim, 2)
@@ -157,17 +156,17 @@ contains
       if(parse_block(namespace, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
-      
-        select type (box => sb%box)
+
+        select type (sb)
         type is (box_sphere_t)
-          bounds(1,1) = box%radius/M_TWO
-          bounds(1,2) = box%radius
+          bounds(1,1) = sb%radius/M_TWO
+          bounds(1,2) = sb%radius
         type is (box_parallelepiped_t)
-          bounds(:,1) = box%half_length/M_TWO
-          bounds(:,2) = box%half_length
+          bounds(:,1) = sb%half_length/M_TWO
+          bounds(:,2) = sb%half_length
         type is (box_cylinder_t)
-          bounds(1,2) = box%half_length
-          bounds(2,2) = box%radius
+          bounds(1,2) = sb%half_length
+          bounds(2,2) = sb%radius
           bounds(1,1) = bounds(1,1)/M_TWO
           bounds(2,1) = bounds(2,2)/M_TWO
         class default
@@ -182,27 +181,27 @@ contains
           call parse_block_float(blk, 0, 0, bounds(1,1), units_inp%length)
           call parse_block_float(blk, 0, 1, bounds(1,2), units_inp%length)
 
-          select type (box => sb%box)
+          select type (sb)
           type is (box_sphere_t)
-            if (bounds(1,2) > box%radius) then
-              bounds(1,2) = box%radius
+            if (bounds(1,2) > sb%radius) then
+              bounds(1,2) = sb%radius
             end if
             message(1) = "Info: using spherical absorbing boundaries."
 
           type is (box_parallelepiped_t)
             do imdim = 1, space%dim
-              if (bounds(imdim,2) > box%half_length(imdim)) then
-                bounds(imdim,2) = box%half_length(imdim)
+              if (bounds(imdim,2) > sb%half_length(imdim)) then
+                bounds(imdim,2) = sb%half_length(imdim)
               end if
             end do
             message(1) = "Info: using cubic absorbing boundaries."
 
           type is (box_cylinder_t)
-            if (bounds(1,2) > box%half_length) then
-              bounds(1,2) = box%half_length
+            if (bounds(1,2) > sb%half_length) then
+              bounds(1,2) = sb%half_length
             end if
-            if (bounds(1,2) > box%radius) then
-              bounds(1,2) = box%radius
+            if (bounds(1,2) > sb%radius) then
+              bounds(1,2) = sb%radius
             end if
             message(1) = "Info: using cylindrical absorbing boundaries."
           end select
@@ -244,7 +243,7 @@ contains
       call parse_variable(namespace, 'ABWidth', abwidth_def, abwidth, units_inp%length)
       bounds(:, 1) = bounds(:, 2) - abwidth
 
-      select type (box => sb%box)
+      select type (sb)
       type is (box_sphere_t)
         maxdim = 1
       type is (box_cylinder_t)
@@ -266,7 +265,7 @@ contains
       
       ! generate boundary function
       SAFE_ALLOCATE(mf(1:mesh%np))
-      call bc_generate_mf(this, mesh, sb, ions, bounds, mf)
+      call bc_generate_mf(this, space, mesh, sb, bounds, mf)
       
       ! mask or cap
       SAFE_ALLOCATE(this%mf(1:mesh%np))
@@ -330,31 +329,29 @@ contains
   end subroutine bc_write_info
 
   ! ---------------------------------------------------------
-  subroutine bc_generate_mf(this, mesh, sb, ions, bounds, mf)
+  subroutine bc_generate_mf(this, space, mesh, sb, bounds, mf)
     type(bc_t),               intent(inout) :: this
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
-    type(simul_box_t),        intent(in)    :: sb
-    type(ions_t),             intent(in)    :: ions
-    FLOAT,                    intent(in)    :: bounds(1:sb%dim, 1:2)
+    class(box_t),             intent(in)    :: sb
+    FLOAT,                    intent(in)    :: bounds(1:space%dim, 1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
     integer :: ip, dir
-    FLOAT   :: width(1:sb%dim)
-    FLOAT   :: xx(1:sb%dim), rr, dd, ddv(1:sb%dim), tmp(1:sb%dim)
+    FLOAT   :: width(space%dim)
+    FLOAT   :: xx(space%dim), rr, dd, ddv(space%dim), tmp(space%dim)
 
     PUSH_SUB(bc_generate_mf)
 
-    ! generate the boundaries on the mesh 
-
     mf = M_ZERO
 
+    ! generate the boundaries on the mesh 
     width = bounds(:, 2) - bounds(:,1)
 
     do ip = 1, mesh%np
       xx = mesh%x(ip, :)
-      rr = sqrt(dot_product(xx, xx))
  
-      if(this%ab_user_def) then
+      if (this%ab_user_def) then
         dd = this%ab_ufn(ip) - bounds(1,1)
         if(dd > M_ZERO) then
           if(this%ab_ufn(ip) < bounds(1,2) ) then
@@ -366,9 +363,9 @@ contains
  
       else ! this%ab_user_def == .false.
  
-        select case (sb%box_shape)
-        case (SPHERE)
-        
+        select type (sb)
+        type is (box_sphere_t)
+          rr = norm2(xx)
           dd = rr -  bounds(1,1) 
           if(dd > M_ZERO ) then 
             if (dd  <  width(1)) then
@@ -378,13 +375,12 @@ contains
             end if
           end if
  
-        case (PARALLELEPIPED)
-
+        type is (box_parallelepiped_t)
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
           ddv = abs(xx) -  bounds(:, 1)
-          do dir = 1, sb%dim
+          do dir = 1, space%dim
             if(ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2
@@ -396,31 +392,27 @@ contains
           end do
           mf(ip) = M_ONE - mf(ip)
           
-        case (CYLINDER)
-          
-          rr = sqrt(dot_product(xx(2:sb%dim), xx(2:sb%dim)))
+        type is (box_cylinder_t)
+          rr = norm2(xx(2:space%dim))
           tmp = M_ONE
           mf(ip) = M_ONE
           ddv(1) = abs(xx(1)) - bounds(1,1) 
           ddv(2) = rr         - bounds(2,1) 
-          do dir=1, 2
-            if(ddv(dir) > M_ZERO ) then 
+          do dir = 1, 2
+            if (ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2
               else 
                 tmp(dir) = M_ZERO
               end if
             end if        
-          mf(ip) = mf(ip) * tmp(dir)
+            mf(ip) = mf(ip) * tmp(dir)
           end do
           mf(ip) = M_ONE - mf(ip)
 
-        case default
-
-          if (mesh_inborder(mesh, ions, ip, dd, width(1))) then
-            mf(ip) = M_ONE - sin(dd * M_PI / (M_TWO * width(1)))**2
-          end if
-
+        class default
+          ! Other box shapes are not implemented
+          ASSERT(.false.)
         end select
       end if
     end do

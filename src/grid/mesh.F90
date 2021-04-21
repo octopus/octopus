@@ -55,7 +55,6 @@ module mesh_oct_m
     mesh_check_dump_compatibility, &
     mesh_end,                      &
     mesh_double_box,               &
-    mesh_inborder,                 &
     mesh_r,                        &
     mesh_gcutoff,                  &
     mesh_write_info,               &
@@ -254,107 +253,6 @@ contains
     end if
 
   end subroutine mesh_r
-  
-  
-  !---------------------------------------------------------------------
-  !> Finds out if a given point of a mesh belongs to the "border" of the
-  !! mesh. A point belongs to the border of the mesh if it is too close
-  !! to any of the walls of the mesh. The criterion is set by input
-  !! parameter "width".
-  !!
-  !! n     : on output, the number (0<=n<=3) of "walls" of the mesh that
-  !!         the point is too close to, in order to consider it belonging
-  !!         to a mesh.
-  !!
-  !! So, if n > 0, the point is in the border.
-  ! ----------------------------------------------------------------------
-  logical function mesh_inborder(mesh, ions, ip, dist, width) result(is_on_border)
-    type(mesh_t),     intent(in)  :: mesh   !< the mesh
-    type(ions_t),     intent(in)  :: ions
-    integer,          intent(in)  :: ip     !< the point in the mesh
-    FLOAT,            intent(in)  :: width  !< the width of the border
-    !> distance from border. The distances of the point to the walls,
-    !! for each of the walls that the point is too close to.
-    FLOAT,            intent(out) :: dist   
-    
-    integer :: iatom, jatom, idir
-    FLOAT   :: xx(mesh%sb%dim), rr, dd, radius
-    
-    ! no PUSH SUB, called too often
-
-    is_on_border = .false.
-    dist = M_ZERO
-
-    select case(mesh%sb%box_shape)
-    case(SPHERE)
-      call mesh_r(mesh, ip, rr)
-      dd = rr - (mesh%sb%rsize - width)
-      if(dd > M_ZERO) then
-        is_on_border = .true.
-        dist = dd
-      end if
-
-    case(CYLINDER)
-      call mesh_r(mesh, ip, rr, coords=xx)
-      dd = sqrt(xx(2)**2 + xx(3)**2) - (mesh%sb%rsize - width)
-      if(dd > M_ZERO) then
-        is_on_border = .true.
-        dist = dd
-      end if
-      if(mesh%sb%periodic_dim == 0) then
-        dd = abs(xx(1)) - (mesh%sb%xsize - width)
-        if(dd > M_ZERO) then
-          is_on_border = .true.
-          dist = sqrt(dist*dist + dd*dd)
-        end if
-      end if
-
-    case(MINIMUM)
-      radius = mesh%sb%rsize
-      do iatom = 1, ions%natoms
-        call mesh_r(mesh, ip, rr, origin=ions%atom(iatom)%x)
-        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(ions%atom(iatom)%species)
-        dd = rr - (radius - width)
-	! check if the point is on the spherical shell of atom # iatom
-	if ((dd < M_ZERO) .or. (rr > radius)) cycle
- 
-        ! make sure that the point is not inside some other atomic sphere
-        is_on_border = .true.
-        do jatom = 1, ions%natoms
-          if(jatom == iatom) cycle
-          call mesh_r(mesh, ip, rr, origin=ions%atom(jatom)%x)
-          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(ions%atom(jatom)%species)
-          if(rr < radius - width) then 
-            is_on_border = .false.
-            exit
-          end if
-        end do
-
-        if(is_on_border) dist = dd
-      end do
-
-    case(PARALLELEPIPED, HYPERCUBE)
-      call mesh_r(mesh, ip, rr, coords=xx)
-      do idir = mesh%sb%periodic_dim+1, mesh%sb%dim
-        dd = abs(xx(idir)) - (mesh%sb%lsize(idir) - width)
-        if(dd > M_ZERO) then
-          is_on_border = .true.
-          dist = dist + dd*dd
-        end if
-      end do
-      dist = sqrt(dist)
-
-    case(BOX_IMAGE, BOX_USDEF)
-    ! not implemented
-      dist = -1 
-
-    end select
-    
-    ! This may happen if the point is on more than one border at the same time.
-    if(dist > width) dist = width
-
-  end function mesh_inborder
-  
   
   !---------------------------------------------------------------------
   !> Returns the index of the point which is nearest to a given vector
