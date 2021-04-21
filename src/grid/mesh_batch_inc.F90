@@ -577,14 +577,25 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     else
 
       ! Note: curvilinear coordinates are handled inside the mf_dotp function!
-  
-      dot(1:nst_) = M_ZERO
-      do ist = 1, nst_
-        call batch_get_state(aa, ist, mesh%np, phi)
-        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
-               reduce = .false.)
-      end do
-
+      if(mesh%use_curvilinear) then
+        dot(1:nst_) = M_ZERO
+        do ist = 1, nst_
+          call batch_get_state(aa, ist, mesh%np, phi)
+          dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
+                reduce = .false.)
+        end do
+      else
+        dot(1:nst_) = M_ZERO
+        do ist = 1, nst_
+          indb = aa%ist_idim_to_linear((/ist, 1/))
+          do ip = 1, mesh%np
+            dot(ist) = dot(ist) + R_CONJ(aa%X(ff_pack)(indb, ip)) * psi(ip, 1) &
+                                + R_CONJ(aa%X(ff_pack)(indb+1, ip)) * psi(ip, 2)
+          end do
+          dot(ist) = dot(ist) * mesh%volume_element
+        end do
+      end if
+ 
     end if
 
     SAFE_DEALLOCATE_A(phi)
