@@ -302,6 +302,7 @@ contains
           rr = sqrt( sum( (xi(1:space%dim) - atom(jatom)%x(1:space%dim))**2 ) )
           
           if(rr < CNST(1e-5)) cycle
+          if(rr > rcut) cycle
           
           erfc = M_ONE - loct_erf(this%alpha*rr)
 
