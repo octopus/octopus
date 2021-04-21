@@ -486,10 +486,9 @@ contains
 
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
-    ! Offset in periodic directions:
-    do idir = 1, geo%space%periodic_dim
-      offset(idir) = -M_HALF*sum(geo%latt%rlattice(idir,1:geo%space%periodic_dim))
-    end do
+    ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
+    ! our origin is at the center of the cell instead of being at the edge.
+    offset(1:geo%space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, geo%space%dim))
     ! Offset in aperiodic directions:
     do idir = geo%space%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
