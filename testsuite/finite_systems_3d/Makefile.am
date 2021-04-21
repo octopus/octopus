@@ -97,6 +97,7 @@ dist_share_DATA = \
 	22-preconditioner.02-filter.inp              \
 	22-preconditioner.03-jacobi.inp              \
 	22-preconditioner.05-multigrid.inp           \
+	22-preconditioner.06-multigrid_rmmdiis.inp   \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
 	23-go-na2.02-simplex.inp                     \
