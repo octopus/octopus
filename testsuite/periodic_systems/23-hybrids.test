@@ -9,14 +9,24 @@ Input      : 23-hybrids.01-ace.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -17.26981763
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.89094369
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.00746490
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.27011070
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -16.91880189
+Precision: 4.51e-07
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -17.26583146
+Precision: 1.00e-15
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
+Precision: 1.22e-06
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.886957170000002
+Precision: 2.91e-07
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.007464695
+Precision: 6.44e-07
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.270110245
+Precision: 3.36e-07
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -16.914816005
 
-match ; k-point 2 (x)  ; GREPFIELD(static/info, '#k =   2', 7) ;   0.025000
-match ; Eigenvalue  1  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -9.130643
-match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -7.120480
-match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -6.949840
+Precision: 2.50e-17
+match ;  k-point 2 (x)   ; GREPFIELD(static/info, '#k =   2', 7) ; 0.025
+Precision: 9.13e-15
+match ;  Eigenvalue  1   ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -9.12865
+Precision: 7.12e-15
+match ;  Eigenvalue  2   ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -7.118487
+Precision: 6.95e-15
+match ;  Eigenvalue  3   ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -6.947847

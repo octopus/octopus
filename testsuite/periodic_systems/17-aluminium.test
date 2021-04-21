@@ -14,22 +14,23 @@ match ;  Total k-points      ; GREPFIELD(static/info, 'Total number of k-points'
 match ;  Space group         ; GREPFIELD(out, 'Space group', 4) ; 225.0
 match ;  No. of symmetries   ; GREPFIELD(out, 'symmetries that can be used', 5) ; 48.0
 
-Precision: 5.50e-09
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -9.743506145
+Precision: 2.75e-08
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -9.743506125
 Precision: 1.00e-14
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -9.99517178
-Precision: 3.54e-16
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 0.35444999
+Precision: 2.20e-08
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 0.35445001
 Precision: 1.25e-17
 match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.01249912
 Precision: 5.50e-09
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.745542045
-Precision: 6.97e-16
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.69698281
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.745542035
 Precision: 5.50e-09
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.093816485
-Precision: 5.50e-09
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 1.587874875
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.696982805
+Precision: 1.65e-08
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.093816475
+Precision: 1.10e-08
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 1.58787488
+
 Precision: 2.34e-17
 match ;  Eigenvalue      [ k = 1, n = 1 ]  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.023446
 Precision: 2.34e-17
@@ -94,50 +95,51 @@ Precision: 9.56e-17
 match ;  Eigenvalue      [ k = 4, n = 8 ]  ; GREPFIELD(static/info, '#k =   4', 3, 8) ; 0.095617
 
 
+
 Input      : 17-aluminium.02-td.inp
 
-Precision: 5.e-09
-match ;  Energy       [step   1]  ; LINEFIELD(td.general/energy, -151, 3) ; -3.8612735656755
-Precision: 5.e-09
-match ;  Energy       [step  25]  ; LINEFIELD(td.general/energy, -126, 3) ; -3.730208379912
-Precision: 5.e-09
-match ;  Energy       [step  50]  ; LINEFIELD(td.general/energy, -101, 3) ; -4.0681241967599995
-Precision: 5..e-09
-match ;  Energy       [step  75]  ; LINEFIELD(td.general/energy, -76, 3) ; -3.6441697700035
-Precision: 1.e-08
-match ;  Energy       [step 100]  ; LINEFIELD(td.general/energy, -51, 3) ; -4.0979109235505
-Precision: 5.e-09
-match ;  Energy       [step 125]  ; LINEFIELD(td.general/energy, -26, 3) ; -3.7475037008839998
-Precision: 1.e-08
-match ;  Energy       [step 150]  ; LINEFIELD(td.general/energy, -1, 3) ; -4.024328218672
+Precision: 8.52e-09
+match ;  Energy       [step   1]  ; LINEFIELD(td.general/energy, -151, 3) ; -3.861273568385
+Precision: 8.90e-09
+match ;  Energy       [step  25]  ; LINEFIELD(td.general/energy, -126, 3) ; -3.7302083826179997
+Precision: 8.47e-09
+match ;  Energy       [step  50]  ; LINEFIELD(td.general/energy, -101, 3) ; -4.0681241994255
+Precision: 8.32e-09
+match ;  Energy       [step  75]  ; LINEFIELD(td.general/energy, -76, 3) ; -3.6441697724415
+Precision: 9.84e-09
+match ;  Energy       [step 100]  ; LINEFIELD(td.general/energy, -51, 3) ; -4.0979109264449995
+Precision: 6.10e-09
+match ;  Energy       [step 125]  ; LINEFIELD(td.general/energy, -26, 3) ; -3.7475037024324998
+Precision: 1.03e-08
+match ;  Energy       [step 150]  ; LINEFIELD(td.general/energy, -1, 3) ; -4.0243282218985
 Precision: 1.37e-13
 match ;  Gauge field  [step   1]  ; LINEFIELD(td.general/gauge_field, -151, 3) ; 137.035999139
-Precision: 1.67e-07
-match ;  Gauge field  [step  25]  ; LINEFIELD(td.general/gauge_field, -126, 3) ; -24.16351342547
-Precision: 4.54e-07
-match ;  Gauge field  [step  50]  ; LINEFIELD(td.general/gauge_field, -101, 3) ; -114.0521446386
-Precision: 4.13e-07
-match ;  Gauge field  [step  75]  ; LINEFIELD(td.general/gauge_field, -76, 3) ; 56.25064698685
-Precision: 2.10e-07
-match ;  Gauge field  [step 100]  ; LINEFIELD(td.general/gauge_field, -51, 3) ; 74.176307511075
-Precision: 6.75e-07
-match ;  Gauge field  [step 125]  ; LINEFIELD(td.general/gauge_field, -26, 3) ; -74.488318758445
-Precision: 1.00e-06
-match ;  Gauge field  [step 150]  ; LINEFIELD(td.general/gauge_field, -1, 3) ; -35.465422618435
-Precision: 1.e-08
-match ;  Current      [step   1]  ; LINEFIELD(td.general/total_current, -151, 3) ; 11.674928916315
-Precision: 1.e-08
-match ;  Current      [step  25]  ; LINEFIELD(td.general/total_current, -126, 3) ; -2.530124703088
-Precision: 7.54e-09
-match ;  Current      [step  50]  ; LINEFIELD(td.general/total_current, -101, 3) ; -8.367976706915
-Precision: 1.35e-08
-match ;  Current      [step  75]  ; LINEFIELD(td.general/total_current, -76, 3) ; 5.2994754649099995
-Precision: 5.e-08
-match ;  Current      [step 100]  ; LINEFIELD(td.general/total_current, -51, 3) ; 5.1514369295255005
-Precision: 1.e-08
-match ;  Current      [step 125]  ; LINEFIELD(td.general/total_current, -26, 3) ; -6.247983305868
-Precision: 3.47e-08
-match ;  Current      [step 150]  ; LINEFIELD(td.general/total_current, -1, 3) ; -2.1620703485365
+Precision: 3.13e-07
+match ;  Gauge field  [step  25]  ; LINEFIELD(td.general/gauge_field, -126, 3) ; -24.16351353925
+Precision: 6.27e-07
+match ;  Gauge field  [step  50]  ; LINEFIELD(td.general/gauge_field, -101, 3) ; -114.05214480595001
+Precision: 5.85e-07
+match ;  Gauge field  [step  75]  ; LINEFIELD(td.general/gauge_field, -76, 3) ; 56.25064685471
+Precision: 3.36e-07
+match ;  Gauge field  [step 100]  ; LINEFIELD(td.general/gauge_field, -51, 3) ; 74.17630740518001
+Precision: 9.59e-07
+match ;  Gauge field  [step 125]  ; LINEFIELD(td.general/gauge_field, -26, 3) ; -74.488319053395
+Precision: 1.23e-06
+match ;  Gauge field  [step 150]  ; LINEFIELD(td.general/gauge_field, -1, 3) ; -35.465423056885
+Precision: 1.43e-08
+match ;  Current      [step   1]  ; LINEFIELD(td.general/total_current, -151, 3) ; 11.674928912295
+Precision: 1.67e-08
+match ;  Current      [step  25]  ; LINEFIELD(td.general/total_current, -126, 3) ; -2.5301247063235
+Precision: 1.78e-08
+match ;  Current      [step  50]  ; LINEFIELD(td.general/total_current, -101, 3) ; -8.367976696609
+Precision: 2.05e-08
+match ;  Current      [step  75]  ; LINEFIELD(td.general/total_current, -76, 3) ; 5.2994754576575005
+Precision: 3.39e-08
+match ;  Current      [step 100]  ; LINEFIELD(td.general/total_current, -51, 3) ; 5.1514369406135
+Precision: 1.49e-08
+match ;  Current      [step 125]  ; LINEFIELD(td.general/total_current, -26, 3) ; -6.2479833083585
+Precision: 4.43e-08
+match ;  Current      [step 150]  ; LINEFIELD(td.general/total_current, -1, 3) ; -2.162070366078
 
 
 Util : oct-conductivity
@@ -145,7 +147,9 @@ Input      : 17-aluminium.03-conductivity.inp
 
 Precision: 3e-11
 match ;  conductivity  energy 0  ; LINEFIELD(td.general/conductivity, 5, 1) ; 0.0
+Precision: 3.91e-11
 match ;  Re cond xx energy 0  ; LINEFIELD(td.general/conductivity, 5, 2) ; 0.0035715363405
+Precision: 3e-11
 match ;  Im cond xx energy 0  ; LINEFIELD(td.general/conductivity, 5, 3) ; 0.0
 match ;  Re cond yy energy 0  ; LINEFIELD(td.general/conductivity, 5, 4) ; -2.4939950000000065e-14
 match ;  Im cond yy energy 0  ; LINEFIELD(td.general/conductivity, 5, 5) ; 0.0

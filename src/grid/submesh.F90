@@ -26,13 +26,13 @@ module submesh_oct_m
   use global_oct_m
   use index_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use sort_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mpi_oct_m
   use par_vec_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use space_oct_m
@@ -150,11 +150,11 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
-    FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
+    FLOAT :: r2, rc2, xx(space%dim), rc_norm_n
+    FLOAT, allocatable :: center_copies(:,:), xtmp(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
@@ -249,12 +249,11 @@ contains
 
       ! this requires some optimization
 
-      call periodic_copy_init(pp, space, sb%latt, sb%lsize, center(1:space%dim), rc)
-      
-      SAFE_ALLOCATE(center_copies(1:space%dim, 1:periodic_copy_num(pp)))
+      latt_iter = lattice_iterator_t(sb%latt, rc)
 
-      do icell = 1, periodic_copy_num(pp)
-        center_copies(1:space%dim, icell) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+      SAFE_ALLOCATE(center_copies(1:space%dim, 1:latt_iter%n_cells))
+      do icell = 1, latt_iter%n_cells
+        center_copies(1:space%dim, icell) = center(1:space%dim) + latt_iter%get(icell)
       end do
 
       !Recursive formulation for the volume of n-ellipsoid 
@@ -268,14 +267,14 @@ contains
             
       is = 0
       do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:space%dim) = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
-          r2 = sum(xx(1:space%dim)**2)
+        do icell = 1, latt_iter%n_cells
+          xx = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
+          r2 = sum(xx**2)
           if(r2 > rc2) cycle
           is = is + 1
           map_temp(is) = ip
           xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:space%dim) = xx(1:space%dim)
+          xtmp(is, 1:space%dim) = xx
           ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
@@ -288,8 +287,6 @@ contains
 
       SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
-      
-      call periodic_copy_end(pp)
 
     end if
 

@@ -11,11 +11,12 @@ Input      : 21-magnon.01-gs.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 3.e-08
+Precision: 4.e-08
 match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -123.76308618499999
 Precision: 1.65e-08
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -78.31680646
 match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.445635685
+Precision: 3.e-08
 match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 28.418400205
 match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.4989915
 match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.32675244

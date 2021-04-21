@@ -23,12 +23,12 @@ module hirshfeld_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_pot_oct_m
@@ -73,7 +73,7 @@ contains
     FLOAT :: rr, pos(1:MAX_DIM), rmax
     FLOAT, allocatable :: atom_density(:, :), atom_density_acc(:)
     type(ps_t), pointer :: ps
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     integer :: icell
     type(profile_t), save :: prof
     PUSH_SUB(hirshfeld_init)
@@ -101,10 +101,9 @@ contains
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
-      call periodic_copy_init(pp, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, this%geo%atom(iatom)%x, rmax)
-
-      do icell = 1, periodic_copy_num(pp)
-        pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, icell) 
+      latt_iter = lattice_iterator_t(this%mesh%sb%latt, rmax)
+      do icell = 1, latt_iter%n_cells
+        pos(1:this%mesh%sb%dim) = this%geo%atom(iatom)%x(1:this%mesh%sb%dim) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
         call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, pos, this%st%d%nspin, atom_density)
@@ -118,7 +117,6 @@ contains
           atom_density_acc(ip) = atom_density_acc(ip) + sum(atom_density(ip, 1:this%st%d%nspin))*rr**3  
         end do
       end do
-      call periodic_copy_end(pp)
       this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density_acc(:), reduce = .false.)
       this%free_vol_r3(iatom,:) = atom_density_acc(:)
     end do
@@ -286,7 +284,7 @@ contains
     FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
              rij, rmax_isqu, rmax_jsqu
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
-    type(periodic_copy_t) :: pp_i, pp_j
+    type(lattice_iterator_t) :: latt_iter_i, latt_iter_j
     type(ps_t), pointer :: ps_i, ps_j
     type(profile_t), save :: prof
     FLOAT :: tmp, xxi(1:MAX_DIM), xxj(1:MAX_DIM)
@@ -320,25 +318,21 @@ contains
     rmax_isqu = rmax_i**2
     rmax_jsqu = rmax_j**2
 
-    call periodic_copy_init(pp_j, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, this%geo%atom(jatom)%x, rmax_j)
-    do jcell = 1, periodic_copy_num(pp_j)
+    latt_iter_j = lattice_iterator_t(this%mesh%sb%latt, rmax_j)
+    do jcell = 1, latt_iter_j%n_cells
 
-      pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%geo%space, &
-                                    this%mesh%sb%latt, this%mesh%sb%lsize, jcell)
+      pos_j(1:this%mesh%sb%dim) = this%geo%atom(jatom)%x(1:this%mesh%sb%dim) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
       call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      call periodic_copy_init(pp_i, this%geo%space, this%mesh%sb%latt, this%mesh%sb%lsize, &
-                                   pos_j, (rmax_j+rmax_i))  ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      latt_iter_i = lattice_iterator_t(this%mesh%sb%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      do icell = 1, latt_iter_i%n_cells
 
-      do icell = 1, periodic_copy_num(pp_i)
-
-        pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%geo%space, &
-                                      this%mesh%sb%latt, this%mesh%sb%lsize, icell) + &
-                                      (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) &
-                                     - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
+        pos_i(1:this%mesh%sb%dim) = pos_j(1:this%mesh%sb%dim) + latt_iter_i%get(icell) + &
+                                   (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) &
+                                   - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
         rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
@@ -391,10 +385,8 @@ contains
             
         end if
       end do
-      call periodic_copy_end(pp_i)
     end do
 
-    call periodic_copy_end(pp_j)
     do idir = 1, this%mesh%sb%dim
       dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir), reduce = .false.) &
                              /this%free_volume(iatom)
