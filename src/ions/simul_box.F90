@@ -80,8 +80,6 @@ module simul_box_oct_m
     !! 4->parallelepiped (orthonormal, up to now).
     integer  :: box_shape   
 
-    FLOAT :: rsize          !< the radius of the sphere or of the cylinder
-    FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
     type(lattice_vectors_t), pointer :: latt => NULL()
@@ -105,7 +103,7 @@ contains
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
-    FLOAT :: def_h, def_rsize, center(space%dim)
+    FLOAT :: def_h, def_rsize, center(space%dim), rsize, xsize
     integer :: n_site_types, n_sites
     integer, allocatable :: site_type(:)
     FLOAT,   allocatable :: site_type_radius(:), site_position(:,:)
@@ -127,10 +125,9 @@ contains
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
     select case (sb%box_shape)
     case (SPHERE)
-      sb%box => box_sphere_t(space%dim, center, sb%rsize)
+      sb%box => box_sphere_t(space%dim, center, rsize)
     case (CYLINDER)
-      sb%box => box_cylinder_t(space%dim, center, sb%rsize, 1, M_TWO*sb%xsize, namespace, &
-        periodic_boundaries=(space%periodic_dim > 0))
+      sb%box => box_cylinder_t(space%dim, center, rsize, 1, M_TWO*xsize, namespace, periodic_boundaries=(space%periodic_dim > 0))
     case (PARALLELEPIPED)
       sb%box => box_parallelepiped_t(space%dim, center, M_TWO*sb%lsize(1:space%dim), n_periodic_boundaries=space%periodic_dim)
     case (HYPERCUBE)
@@ -232,7 +229,7 @@ contains
         ! Also, hypercube should be unified with parallepiped.
       end if
 
-      sb%rsize = -M_ONE
+      rsize = -M_ONE
       !%Variable Radius
       !%Type float
       !%Section Mesh::Simulation Box
@@ -247,13 +244,13 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call parse_variable(namespace, 'Radius', def_rsize, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO) call messages_input_error(namespace, 'radius')
-        if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
+        call parse_variable(namespace, 'Radius', def_rsize, rsize, units_inp%length)
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(def_rsize>M_ZERO) call messages_check_def(rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
-        default=sb%rsize
-        call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
+        default=rsize
+        call parse_variable(namespace, 'radius', default, rsize, units_inp%length)
+        if(rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
 
         n_site_types = ions%nspecies
         SAFE_ALLOCATE(site_type_label(1:ions%nspecies))
@@ -261,8 +258,8 @@ contains
 
         do ispec = 1, ions%nspecies
           site_type_label(ispec) = species_label(ions%species(ispec))
-          if (sb%rsize > M_ZERO) then
-            site_type_radius(ispec) = sb%rsize
+          if (rsize > M_ZERO) then
+            site_type_radius(ispec) = rsize
           else
             if (species_def_rsize(ions%species(ispec)) < -M_EPSILON) then
               write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
@@ -298,18 +295,18 @@ contains
         !% If <tt>BoxShape</tt> is <tt>cylinder</tt>, the total length of the cylinder is twice <tt>Xlength</tt>.
         !% Note that when PeriodicDimensions = 1, then the length of the cylinder is determined from the lattice vectors.
         !%End
-        if(sb%rsize > M_ZERO) then
-          default = sb%rsize
+        if(rsize > M_ZERO) then
+          default = rsize
         else
           default = def_rsize
         end if
 
         if (space%is_periodic()) then
-          sb%xsize = sqrt(sum(sb%latt%rlattice(1:space%periodic_dim, 1)**2))/M_TWO
+          xsize = sqrt(sum(sb%latt%rlattice(1:space%periodic_dim, 1)**2))/M_TWO
         else
-          call parse_variable(namespace, 'Xlength', default, sb%xsize, units_inp%length)
+          call parse_variable(namespace, 'Xlength', default, xsize, units_inp%length)
           if (def_rsize > M_ZERO .and. space%periodic_dim == 0) then
-            call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
+            call messages_check_def(xsize, .false., def_rsize, 'xlength', units_out%length)
           end if
         end if
       end if
@@ -452,14 +449,14 @@ contains
       ! fill in lsize structure
       select case(sb%box_shape)
       case(SPHERE)
-        sb%lsize(1:sb%dim) = sb%rsize
+        sb%lsize(1:sb%dim) = rsize
       case(CYLINDER)
-        sb%lsize(1)        = sb%xsize
-        sb%lsize(2:sb%dim) = sb%rsize
+        sb%lsize(1)        = xsize
+        sb%lsize(2:sb%dim) = rsize
       case(MINIMUM)
         do idir = 1, sb%dim
-          if(sb%rsize > M_ZERO) then
-            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + sb%rsize
+          if(rsize > M_ZERO) then
+            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + rsize
           else
             sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + def_rsize
           end if
@@ -550,8 +547,6 @@ contains
     PUSH_SUB(simul_box_copy)
 
     sbout%box_shape      = sbin%box_shape
-    sbout%rsize          = sbin%rsize
-    sbout%xsize          = sbin%xsize
     sbout%lsize          = sbin%lsize
     sbout%latt          => sbin%latt
     sbout%dim            = sbin%dim
