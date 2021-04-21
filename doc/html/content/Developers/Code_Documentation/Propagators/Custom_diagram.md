@@ -10,7 +10,7 @@ You need to checkout the ''multisystem_debug'' branch from the {{< octopus-git >
 
 In order to enable the output, you need to set
 {{< code-block >}}
-{{< variable "Debug">}} = info
+{{< variable "Debug">}} = propagation_graph
 {{< /code-block >}}
 
 {{< notice note >}}
