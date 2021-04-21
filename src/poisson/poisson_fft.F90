@@ -538,7 +538,7 @@ contains
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
           x(k) = (k-1)*(xmax/(ngp-1))
-          y(k) = poisson_cutoff_3D_1D_finite(gx, x(k), M_TWO*mesh%sb%xsize, M_TWO*mesh%sb%rsize)
+          y(k) = poisson_cutoff_3D_1D_finite(gx, x(k), M_TWO*mesh%sb%lsize(1), maxval(M_TWO*mesh%sb%lsize(2:3)))
         end do
         call spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
@@ -580,7 +580,7 @@ contains
               fft_Coulb_FS(lx, ly, lz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
             else if (mesh%sb%periodic_dim == 0) then
               fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_1D_finite(M_ZERO, M_ZERO, &
-                M_TWO*mesh%sb%xsize, M_TWO*mesh%sb%rsize)
+                M_TWO*mesh%sb%lsize(1), maxval(M_TWO*mesh%sb%lsize(2:3)))
             end if
 
           end if
