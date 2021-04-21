@@ -146,12 +146,13 @@
   end subroutine X(multigrid_injection)
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse)
+  subroutine X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse, set_bc)
     type(transfer_table_t), intent(in)    :: tt
     type(derivatives_t),    intent(in)    :: fine_der
     type(mesh_t),           intent(in)    :: coarse_mesh
     R_TYPE,                 intent(inout) :: f_fine(:)
     R_TYPE,                 intent(out)   :: f_coarse(:)
+    logical, optional,      intent(in)    :: set_bc
 
     FLOAT :: weight(-1:1,-1:1,-1:1)
 
@@ -172,11 +173,13 @@
       end do
     end do
 
-    call boundaries_set(fine_der%boundaries, f_fine)
+    if(optional_default(set_bc, .true.)) then
+      call boundaries_set(fine_der%boundaries, f_fine)
 
 #ifdef HAVE_MPI
-    if(fine_der%mesh%parallel_in_domains) call X(vec_ghost_update)(fine_der%mesh%vp, f_fine)
+      if(fine_der%mesh%parallel_in_domains) call X(vec_ghost_update)(fine_der%mesh%vp, f_fine)
 #endif
+    end if
 
     do nn = 1, tt%n_coarse
       fn = tt%to_coarse(nn)
@@ -439,33 +442,8 @@
         call batch_get_state(coarseb, ist, coarse_mesh%np, f_coarse)
         call batch_get_state(fineb, ist, fine_der%mesh%np_part, f_fine)            
 
-        do nn = 1, tt%n_coarse
-          fn = tt%to_coarse(nn)
-          call mesh_local_index_to_coords(fine_der%mesh, fn, fi)
+        call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse, set_bc = .false.)
 
-          f_coarse(nn) = M_ZERO
-
-          do di = -1, 1
-            do dj = -1, 1
-              do dk = -1, 1
-                fn = mesh_local_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
-
-                if(fine_der%mesh%use_curvilinear) then
-                  f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
-                else
-                  f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)
-                end if
-
-              end do
-            end do
-          end do
-
-          if(fine_der%mesh%use_curvilinear) then
-            f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(nn)
-          else
-            f_coarse(nn) = f_coarse(nn)*fine_der%mesh%vol_pp(1)/coarse_mesh%vol_pp(1)
-          end if
-        end do
         call batch_set_state(coarseb, ist, coarse_mesh%np, f_coarse)
       end do
       SAFE_DEALLOCATE_A(f_coarse)
