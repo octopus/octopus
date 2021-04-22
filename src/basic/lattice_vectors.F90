@@ -44,6 +44,7 @@ module lattice_vectors_oct_m
     FLOAT, allocatable :: rlattice          (:,:)  !< lattice vectors
     FLOAT, allocatable :: klattice_primitive(:,:)  !< reciprocal-lattice primitive vectors
     FLOAT, allocatable :: klattice          (:,:)  !< reciprocal-lattice vectors
+    FLOAT, allocatable, private :: rlattice_inverse(:,:)
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal = .false.
@@ -106,6 +107,7 @@ contains
     SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
     SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
     SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice_inverse(1:space%dim, 1:space%dim))
 
     latt%rlattice = rlattice
     do idir = 1, space%dim
@@ -113,6 +115,7 @@ contains
     end do
 
     call reciprocal_lattice(latt%rlattice, latt%klattice, latt%rcell_volume, space%dim, namespace)
+    latt%rlattice_inverse = transpose(latt%klattice)
     latt%klattice = latt%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
@@ -156,6 +159,7 @@ contains
     SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
     SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
     SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice_inverse(1:space%dim, 1:space%dim))
 
     latt%alpha = CNST(90.0)
     latt%beta  = CNST(90.0)
@@ -285,6 +289,7 @@ contains
     end do
 
     call reciprocal_lattice(latt%rlattice, latt%klattice, latt%rcell_volume, space%dim, namespace)
+    latt%rlattice_inverse = transpose(latt%klattice)
     latt%klattice = latt%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
@@ -328,6 +333,7 @@ contains
     SAFE_ALLOCATE_SOURCE_A(this%rlattice, source%rlattice)
     SAFE_ALLOCATE_SOURCE_A(this%klattice_primitive, source%klattice_primitive)
     SAFE_ALLOCATE_SOURCE_A(this%klattice, source%klattice)
+    SAFE_ALLOCATE_SOURCE_A(this%rlattice_inverse, source%rlattice_inverse)
     this%alpha = source%alpha
     this%beta = source%beta
     this%gamma = source%gamma
@@ -347,6 +353,7 @@ contains
     SAFE_DEALLOCATE_A(this%rlattice)
     SAFE_DEALLOCATE_A(this%klattice_primitive)
     SAFE_DEALLOCATE_A(this%klattice)
+    SAFE_DEALLOCATE_A(this%rlattice_inverse)
     this%nonorthogonal = .false.
 
     POP_SUB(lattice_vectors_finalize)
@@ -368,6 +375,7 @@ contains
 
     ! Regenerate the lattice in reciprocal space
     call reciprocal_lattice(this%rlattice, this%klattice, this%rcell_volume, this%space%dim)
+    this%rlattice_inverse = transpose(this%klattice)
     this%klattice = this%klattice * M_TWO*M_PI
     
     POP_SUB(lattice_vectors_scale)
@@ -379,7 +387,7 @@ contains
     FLOAT,                    intent(in) :: xx_cart(this%space%dim)
     FLOAT :: xx_red(this%space%dim)
 
-    xx_red = matmul(xx_cart, this%klattice)/(M_TWO*M_PI)
+    xx_red = matmul(this%rlattice_inverse, xx_cart)
 
   end function lattice_vectors_cart_to_red
 
