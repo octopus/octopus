@@ -156,14 +156,16 @@ contains
     POP_SUB(exchange_operator_init)
   end subroutine exchange_operator_init
 
-  subroutine exchange_operator_reinit(this, st, omega, alpha, beta)
-    type(exchange_operator_t), intent(inout) :: this
-    type(states_elec_t), target, intent(in)  :: st
-    FLOAT,                     intent(in)    :: omega, alpha, beta
+  subroutine exchange_operator_reinit(this, omega, alpha, beta, st)
+    type(exchange_operator_t),           intent(inout) :: this
+    FLOAT,                               intent(in)    :: omega, alpha, beta
+    type(states_elec_t), target, optional, intent(in)  :: st
 
     PUSH_SUB(exchange_operator_reinit)
 
-    this%st => st
+    if(present(st)) then
+      this%st => st
+    end if
 
     this%cam_omega = omega
     this%cam_alpha = alpha

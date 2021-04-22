@@ -301,7 +301,7 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, latt, st, xst, kpoints)
+subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, latt, st, xst, kpoints, ex, F_out)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(space_t),             intent(in)    :: space
@@ -310,6 +310,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
   type(states_elec_t),       intent(in)    :: st 
   type(states_elec_t),       intent(inout) :: xst
   type(kpoints_t),           intent(in)    :: kpoints
+  FLOAT, optional,           intent(out)   :: ex
+  R_TYPE, optional,          intent(out)   :: F_out(:,:,:,:,:) !< For RDMFT
 
   integer :: ib, ii, ik, ist, ikloc, node_fr, node_to
   integer :: ip, idim, is, nsend, nreceiv
@@ -333,6 +335,11 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
   PUSH_SUB(X(exchange_operator_compute_potentials))
 
+  if(present(ex)) ex = M_ZERO
+
+  if(present(F_out)) then
+    ASSERT(.not.(st%parallel_in_states .or. st%d%kpt%parallel))
+  end if
    
   !Weight of the exchange operator
   exx_coef = max(this%cam_alpha,this%cam_beta)
@@ -582,6 +589,10 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
  
   end do !is
 
+  if(present(ex) .and. (st%parallel_in_states .or. st%d%kpt%parallel)) then
+    call comm_allreduce(st%st_kpt_mpi_grp, ex)
+  end if
+
   if(st%symmetrize_density) then
     call symmetrizer_end(symmetrizer)
   end if
@@ -728,6 +739,16 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
               call X(poisson_solve)(this%psolver, pot(:,ii2), rho(:,ii2), all_nodes = .false.)
              end do
            end if
+ 
+           !for rdmft we need the matrix elements and no summation
+           if (present(F_out)) then
+             do ii2 = 1, st%group%psib(ib2, ik2)%nst
+               ist2 = st%group%psib(ib2, ik2)%ist(ii2)
+               F_out(:, ist, ist2, ik, ik2) = pot(:,ii2)
+             end do
+             cycle
+           end if
+
 
            !Accumulate the result into xpsi
            call profiling_in(prof_acc, "EXCHANGE_ACCUMULATE")
@@ -771,6 +792,15 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
                  end do
                end do
              end select
+
+             !Energy, if requested
+             if(present(ex)) then
+               do ii2 = 1, st%group%psib(ib2, ik2)%nst
+                 ist2 = st%group%psib(ib2, ik2)%ist(ii2)
+                 ff2 = st%d%kweights(ik2)*st%occ(ist2, ik2)
+                 ex = ex - M_HALF * ff * ff2 * R_REAL(X(mf_dotp)(mesh, rho(:,ii2), pot(:,ii2)))
+               end do
+             end if
            end if
 
            !This is what needs to be used by the sending task
