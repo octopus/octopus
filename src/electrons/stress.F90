@@ -792,6 +792,8 @@ contains
     call profiling_in(prof, "STRESS_FROM_EWALD")    
     PUSH_SUB(stress_from_Ewald_sum)
 
+    ! Currently this is only implemented for 3D
+    ASSERT(geo%space%dim == 3)
 
     alpha = geo%ion_interaction%alpha
 
@@ -883,7 +885,7 @@ contains
              factor = factor*abs(sumatoms)**2
              
              do idir = 1, 3
-                do jdir =1, 3
+                do jdir = 1, 3
                   stress_l(idir, jdir) = stress_l(idir, jdir) &
                         - M_TWO*factor*gg(idir)*gg(jdir)/gg2*(CNST(0.25)*gg2/alpha**2+M_ONE)
                    
