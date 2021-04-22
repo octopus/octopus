@@ -1640,7 +1640,6 @@ contains
     width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-    rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
 
     if (bc%ab_user_def) then
 
@@ -1655,6 +1654,7 @@ contains
 
       select type (box => mesh%sb%box)
       type is (box_sphere_t)
+        rr = norm2(xx -  box%center)
         dd = rr -  bounds(1, 1)
         if (dd > M_ZERO ) then
           if (dd  <  width(1)) then
@@ -1664,8 +1664,8 @@ contains
 
       type is (box_parallelepiped_t)
         ! Limits of boundary region
-        if (all(abs(xx(1:3)) <= bounds(2, 1:3))) then
-          if (any(abs(xx(1:3)) > bounds(1, 1:3))) then
+        if (all(abs(xx(1:3) - box%center) <= bounds(2, 1:3))) then
+          if (any(abs(xx(1:3) - box%center) > bounds(1, 1:3))) then
             point_info = 1
           else
             point_info = 0

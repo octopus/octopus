@@ -365,7 +365,7 @@ contains
  
         select type (sb)
         type is (box_sphere_t)
-          rr = norm2(xx)
+          rr = norm2(xx - sb%center)
           dd = rr -  bounds(1,1) 
           if(dd > M_ZERO ) then 
             if (dd  <  width(1)) then
@@ -379,7 +379,7 @@ contains
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv = abs(xx) -  bounds(:, 1)
+          ddv = abs(xx - sb%center) -  bounds(:, 1)
           do dir = 1, space%dim
             if(ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
@@ -393,10 +393,10 @@ contains
           mf(ip) = M_ONE - mf(ip)
           
         type is (box_cylinder_t)
-          rr = norm2(xx(2:space%dim))
+          rr = norm2(xx(2:space%dim) - sb%center(2:space%dim))
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv(1) = abs(xx(1)) - bounds(1,1) 
+          ddv(1) = abs(xx(1) - sb%center(1)) - bounds(1,1) 
           ddv(2) = rr         - bounds(2,1) 
           do dir = 1, 2
             if (ddv(dir) > M_ZERO ) then 

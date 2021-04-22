@@ -63,7 +63,7 @@ subroutine X(get_atomic_orbital) (ions, mesh, sm, iatom, ii, ll, jj, os, orbind,
         write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
         call messages_fatal(3)
       end if
-      if (norm2(ions%atom(iatom)%x(1:mesh%sb%dim)) + radius > box%radius) then
+      if (norm2(ions%atom(iatom)%x(1:mesh%sb%dim) - box%center) + radius > box%radius) then
         message(1) = "An orbital set has points outside of the simulatio box."
         message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
         write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
@@ -84,13 +84,13 @@ subroutine X(get_atomic_orbital) (ions, mesh, sm, iatom, ii, ll, jj, os, orbind,
         call messages_fatal(3)
       end if
 
-      if (norm2(ions%atom(iatom)%x(2:mesh%sb%dim)) + radius > box%radius) then
+      if (norm2(ions%atom(iatom)%x(2:mesh%sb%dim) - box%center(2:mesh%sb%dim)) + radius > box%radius) then
         message(1) = "An orbital set has points outside of the simulatio box."
         message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
         write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
         call messages_fatal(3)
       end if
-      if (abs(ions%atom(iatom)%x(1)) + radius > box%half_length) then
+      if (abs(ions%atom(iatom)%x(1) - box%center(1)) + radius > box%half_length) then
         message(1) = "An orbital set has points outside of the simulatio box."
         message(2) = "Increase the value of Xlength or decrease the value of OrbitalsThreshold_LDAU."
         write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
