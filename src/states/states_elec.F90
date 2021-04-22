@@ -167,6 +167,9 @@ module states_elec_oct_m
 
     integer                     :: randomization      !< Method used to generate random states
     
+    integer                     :: photo_ist          !< state index for photo excited charge
+    FLOAT                       :: photo_charge       !< photo excited charge for photo-doping calculation
+    
     contains 
       procedure :: nullify => states_elec_null
       procedure :: write_info => states_elec_write_info
@@ -282,6 +285,24 @@ contains
     !% from the system.
     !%End
     call parse_variable(namespace, 'ExcessCharge', M_ZERO, excess_charge)
+
+    !%Variable PhotoDopingStateIndex
+    !%Type integer
+    !%Default 0
+    !%Section States
+    !%Description
+    !% Index of the lowest state whcih carries the photo excited charge
+    !%End
+    call parse_variable(namespace, 'PhotoDopingStateIndex', 0, st%photo_ist)
+
+    !%Variable PhotoDopingCharge
+    !%Type float
+    !%Default 0.0
+    !%Section States
+    !%Description
+    !% Excited charge used for photo doping
+    !%End
+    call parse_variable(namespace, 'PhotoDopingCharge', M_ZERO, st%photo_charge)
 
     !%Variable CalcEigenvalues
     !%Type logical
@@ -1623,10 +1644,32 @@ contains
 
     PUSH_SUB(states_elec_fermi)
 
-    call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
-      st%d%nik, st%nst, st%d%kweights)
+    if (st%photo_ist > 0) then
+      ! compute fermi level of photo excited density of state
+      call smear_find_fermi_energy(st%smear, namespace, st%eigenval(st%photo_ist:st%nst,1:st%d%nik), &
+        st%occ(st%photo_ist:st%nst,1:st%d%nik), st%photo_charge, st%d%nik, st%nst-st%photo_ist, st%d%kweights)
+      
+      write(message(1),'(a,f12.6,a)') "Photo excited Fermi energy ", &
+           units_from_atomic(units_out%energy, st%smear%e_fermi), trim(units_abbrev(units_out%energy))
+      call messages_info(1)
 
-    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%nik, st%nst)
+      call smear_fill_occupations(st%smear, st%eigenval(st%photo_ist:st%nst,1:st%d%nik), &
+        st%occ(st%photo_ist:st%nst,1:st%d%nik), st%d%kweights, st%d%nik, st%nst-st%photo_ist)
+      
+      ! compute fermi leve of remaining valence charge
+      call smear_find_fermi_energy(st%smear, namespace, st%eigenval(1:st%photo_ist-1,1:st%d%nik), & 
+        st%occ(1:st%photo_ist-1,1:st%d%nik), st%qtot-st%photo_charge, st%d%nik, st%photo_ist-1, st%d%kweights)
+
+      call smear_fill_occupations(st%smear, st%eigenval(1:st%photo_ist-1,1:st%d%nik), &
+        st%occ(1:st%photo_ist-1,1:st%d%nik), st%d%nik, st%photo_ist-1)
+
+    else
+
+     call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
+       st%d%nik, st%nst, st%d%kweights)
+
+      call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%nik, st%nst)
+    end if
         
     ! check if everything is OK
     charge = M_ZERO
