@@ -25,6 +25,7 @@ module curvilinear_oct_m
   use global_oct_m
   use ions_oct_m
   use lalg_adv_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -165,18 +166,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_chi2x(sb, cv, chi, x)
-    type(simul_box_t),   intent(in)  :: sb
-    type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi(:)  !< chi(1:sb%dim)
-    FLOAT,               intent(out) :: x(:)    !< x(1:sb%dim)
+  subroutine curvilinear_chi2x(sb, latt, cv, chi, x)
+    type(simul_box_t),       intent(in)  :: sb
+    type(lattice_vectors_t), intent(in)  :: latt
+    type(curvilinear_t),     intent(in)  :: cv
+    FLOAT,                   intent(in)  :: chi(:)  !< chi(1:sb%dim)
+    FLOAT,                   intent(out) :: x(:)    !< x(1:sb%dim)
 
     ! no push_sub because called too frequently
     x = M_ZERO
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x(1:sb%dim) = matmul(sb%latt%rlattice_primitive(1:sb%dim,1:sb%dim), chi(1:sb%dim))
+      x(1:sb%dim) = matmul(latt%rlattice_primitive(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, cv%gygi, cv%rs, chi, x)
     case(CURV_METHOD_BRIGGS)
@@ -189,11 +191,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_x2chi(sb, cv, x, chi)
-    type(simul_box_t),   intent(in)  :: sb
-    type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: x(MAX_DIM)
-    FLOAT,               intent(out) :: chi(MAX_DIM)
+  subroutine curvilinear_x2chi(sb, latt, cv, x, chi)
+    type(simul_box_t),       intent(in)  :: sb
+    type(lattice_vectors_t), intent(in)  :: latt
+    type(curvilinear_t),     intent(in)  :: cv
+    FLOAT,                   intent(in)  :: x(MAX_DIM)
+    FLOAT,                   intent(out) :: chi(MAX_DIM)
 
     PUSH_SUB(curvilinear_x2chi)
 
@@ -201,7 +204,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      chi(1:sb%dim) = matmul(x(1:sb%dim), sb%latt%klattice_primitive)
+      chi(1:sb%dim) = matmul(x(1:sb%dim), latt%klattice_primitive)
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
@@ -214,11 +217,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function curvilinear_det_Jac(sb, cv, x, chi) result(jdet)
-    type(simul_box_t),   intent(in)  :: sb
-    type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: x(:)    !<   x(sb%dim)
-    FLOAT,               intent(in)  :: chi(:)  !< chi(sb%dim)
+  FLOAT function curvilinear_det_Jac(sb, latt, cv, x, chi) result(jdet)
+    type(simul_box_t),       intent(in)  :: sb
+    type(lattice_vectors_t), intent(in)  :: latt
+    type(curvilinear_t),     intent(in)  :: cv
+    FLOAT,                   intent(in)  :: x(:)    !<   x(sb%dim)
+    FLOAT,                   intent(in)  :: chi(:)  !< chi(sb%dim)
 
     FLOAT :: dummy(MAX_DIM)
     FLOAT, allocatable :: Jac(:,:)
@@ -230,7 +234,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      Jac(1:sb%dim, 1:sb%dim) = sb%latt%rlattice_primitive(1:sb%dim, 1:sb%dim)
+      Jac(1:sb%dim, 1:sb%dim) = latt%rlattice_primitive(1:sb%dim, 1:sb%dim)
       jdet = lalg_determinant(sb%dim, Jac, preserve_mat = .false.)      
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, cv%gygi, x, dummy, Jac)

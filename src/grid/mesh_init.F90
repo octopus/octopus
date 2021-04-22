@@ -100,7 +100,7 @@ subroutine mesh_init_stage_1(mesh, namespace, space, sb, cv, spacing, enlarge)
       jj = jj + 1
       chi(idir) = TOFLOAT(jj)*mesh%spacing(idir)
       if ( mesh%use_curvilinear ) then
-        call curvilinear_chi2x(sb, cv, chi(1:space%dim), x(1:space%dim))
+        call curvilinear_chi2x(sb, sb%latt, cv, chi(1:space%dim), x(1:space%dim))
         out = x(idir) > sb%lsize(idir) + DELTA_
       else
         ! do the same comparison here as in simul_box_contains_points
@@ -243,7 +243,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
       chi(2) = TOFLOAT(iy) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = TOFLOAT(ix) * mesh%spacing(1)
-        call curvilinear_chi2x(sb, cv, chi(:), xx(ix, :))
+        call curvilinear_chi2x(sb, sb%latt, cv, chi(:), xx(ix, :))
       end do
 
       in_box = sb%contains_points(mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx)
@@ -504,7 +504,7 @@ contains
 #ifdef HAVE_MPI
                   if(.not. mesh%parallel_in_domains) then
 #endif
-                    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+                    call curvilinear_chi2x(mesh%sb, mesh%sb%latt, mesh%cv, chi, xx)
                     mesh%x(il, 1:space%dim) = xx(1:space%dim)
 #ifdef HAVE_MPI
                   end if
@@ -568,7 +568,7 @@ contains
           chi(2) = TOFLOAT(iy)*mesh%spacing(2)
           chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
-          call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+          call curvilinear_chi2x(mesh%sb, mesh%sb%latt, mesh%cv, chi, xx)
           mesh%x(il, 1:space%dim) = xx(1:space%dim)
 #ifdef HAVE_MPI
         end if
@@ -633,7 +633,7 @@ contains
               chi(2) = TOFLOAT(iy)*mesh%spacing(2)
               chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
-              call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+              call curvilinear_chi2x(mesh%sb, mesh%sb%latt, mesh%cv, chi, xx)
               mesh%x(il, 1:space%dim) = xx(1:space%dim)
 #ifdef HAVE_MPI
             end if
@@ -864,7 +864,7 @@ contains
     do ip = 1, np
       call mesh_local_index_to_coords(mesh, ip, jj)
       chi(1:space%dim) = jj(1:sb%dim)*mesh%spacing(1:space%dim)
-      mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
+      mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, sb%latt, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
     end do
 
     if(mesh%use_curvilinear) then
