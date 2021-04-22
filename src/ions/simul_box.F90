@@ -76,10 +76,6 @@ module simul_box_oct_m
                                            !! multibox_t (and thus store this in
                                            !! a list).
 
-    !> 1->sphere, 2->cylinder, 3->sphere around each atom,
-    !! 4->parallelepiped (orthonormal, up to now).
-    integer  :: box_shape   
-
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
     type(lattice_vectors_t), pointer :: latt => NULL()
@@ -103,6 +99,7 @@ contains
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
+    integer :: box_shape
     FLOAT :: def_h, def_rsize, center(space%dim), rsize, xsize
     integer :: n_site_types, n_sites
     integer, allocatable :: site_type(:)
@@ -123,7 +120,7 @@ contains
     call read_box()                        ! Parameters defining the simulation box.
 
     center = M_ZERO ! Currently all the boxes have to be centered at the origin.
-    select case (sb%box_shape)
+    select case (box_shape)
     case (SPHERE)
       sb%box => box_sphere_t(space%dim, center, rsize)
     case (CYLINDER)
@@ -201,9 +198,9 @@ contains
       else
         default_boxshape = MINIMUM
       end if
-      call parse_variable(namespace, 'BoxShape', default_boxshape, sb%box_shape)
-      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error(namespace, 'BoxShape')
-      select case(sb%box_shape)
+      call parse_variable(namespace, 'BoxShape', default_boxshape, box_shape)
+      if(.not.varinfo_valid_option('BoxShape', box_shape)) call messages_input_error(namespace, 'BoxShape')
+      select case(box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
         if(sb%dim > 1 .and. space%is_periodic()) call messages_input_error(namespace, 'BoxShape')
       case(CYLINDER)
@@ -215,14 +212,14 @@ contains
       end select
 
       ! ignore box_shape in 1D
-      if (sb%dim == 1 .and. sb%box_shape /= PARALLELEPIPED .and. sb%box_shape /= HYPERCUBE) then
-        sb%box_shape = SPHERE
+      if (sb%dim == 1 .and. box_shape /= PARALLELEPIPED .and. box_shape /= HYPERCUBE) then
+        box_shape = SPHERE
       end if
 
       ! Cannot use images in 1D or 3D
-      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error(namespace, 'BoxShape')
+      if(sb%dim /= 2 .and. box_shape == BOX_IMAGE) call messages_input_error(namespace, 'BoxShape')
 
-      if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
+      if(sb%dim > 3 .and. box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
         call messages_fatal(1, namespace=namespace)
         ! FIXME: why not a hypersphere as another option?
@@ -242,7 +239,7 @@ contains
       !% <tt>minimum</tt>, a different radius is used for each
       !% species, while for other shapes, the maximum radius is used.
       !%End
-      select case(sb%box_shape)
+      select case(box_shape)
       case(SPHERE, CYLINDER)
         call parse_variable(namespace, 'Radius', def_rsize, rsize, units_inp%length)
         if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
@@ -286,7 +283,7 @@ contains
 
       end select
 
-      if(sb%box_shape == CYLINDER) then
+      if(box_shape == CYLINDER) then
         !%Variable Xlength
         !%Default <tt>Radius</tt>
         !%Type float
@@ -312,8 +309,8 @@ contains
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
-         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+      if(box_shape == PARALLELEPIPED .or. box_shape == HYPERCUBE .or. &
+         box_shape == BOX_IMAGE .or. box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -408,7 +405,7 @@ contains
       end if
 
       ! read in image for box_image
-      if(sb%box_shape == BOX_IMAGE) then
+      if(box_shape == BOX_IMAGE) then
 
         !%Variable BoxShapeImage
         !%Type string
@@ -432,7 +429,7 @@ contains
       end if
 
       ! read in box shape for user-defined boxes
-      if(sb%box_shape == BOX_USDEF) then
+      if(box_shape == BOX_USDEF) then
 
         !%Variable BoxShapeUsDef
         !%Type string
@@ -447,7 +444,7 @@ contains
       end if
 
       ! fill in lsize structure
-      select case(sb%box_shape)
+      select case(box_shape)
       case(SPHERE)
         sb%lsize(1:sb%dim) = rsize
       case(CYLINDER)
@@ -546,7 +543,6 @@ contains
 
     PUSH_SUB(simul_box_copy)
 
-    sbout%box_shape      = sbin%box_shape
     sbout%lsize          = sbin%lsize
     sbout%latt          => sbin%latt
     sbout%dim            = sbin%dim
