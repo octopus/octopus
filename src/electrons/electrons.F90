@@ -141,7 +141,7 @@ contains
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
     if (sys%space%is_periodic()) then
-      call sys%gr%sb%latt%write_info(stdout)
+      call sys%geo%latt%write_info(stdout)
     end if
 
     ! Sanity check for atomic coordinates
@@ -158,8 +158,7 @@ contains
     end do
 
     ! we need k-points for periodic systems
-    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
-             sys%space%periodic_dim, sys%gr%sb%latt)
+    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, sys%space%periodic_dim, sys%geo%latt)
 
     call states_elec_init(sys%st, sys%namespace, sys%space, geometry_val_charge(sys%geo), sys%kpoints)
     call sys%st%write_info(sys%namespace)

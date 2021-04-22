@@ -119,7 +119,7 @@ contains
     if(this%iatom /= -1)then
       xat = geo%atom(this%iatom)%x(1:geo%space%dim)
 
-      latt_iter = lattice_iterator_t(sb%latt, rcut)
+      latt_iter = lattice_iterator_t(geo%latt, rcut)
 
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos

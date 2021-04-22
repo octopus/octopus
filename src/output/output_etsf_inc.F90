@@ -76,7 +76,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
       call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", &
         geometry_dims, geometry_flags, ncid, namespace)
 
-      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -96,7 +96,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
     call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -125,7 +125,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
       call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
     end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
@@ -163,7 +163,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
       call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
@@ -255,9 +255,8 @@ end subroutine output_etsf_geometry_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
+subroutine output_etsf_geometry_write(geo, symm, ncid, namespace)
   type(geometry_t),       intent(in)    :: geo
-  type(simul_box_t),      intent(in)    :: sb
   type(symmetries_t),     intent(in)    :: symm
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
@@ -273,7 +272,7 @@ subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
   ! Primitive vectors
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
   do idir = 1, geo%space%dim
-    geometry%primitive_vectors(1:3, idir) = sb%latt%rlattice(1:3, idir)
+    geometry%primitive_vectors(1:3, idir) = geo%latt%rlattice(1:3, idir)
   end do
 
   ! The symmetries
@@ -316,7 +315,7 @@ subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
   SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:geo%natoms))
 
   offset = M_ZERO
-  offset(1:geo%space%dim) = -M_HALF*sum(sb%latt%rlattice, dim=2)
+  offset(1:geo%space%dim) = -M_HALF*sum(geo%latt%rlattice, dim=2)
 
   do i = 1, geo%natoms
     ! this is only valid if the primitive vectors are along the x, y, and z directions.

@@ -1004,7 +1004,7 @@ contains
       integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
       FLOAT, allocatable :: coords(:, :)
-      FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
+      FLOAT :: vdw_stress(1:3, 1:3)
       integer, allocatable :: atnum(:)
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
@@ -1099,8 +1099,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
-            ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 
@@ -1113,8 +1112,8 @@ contains
           end do
           
           if (space%is_periodic()) then
-            latvec(1:3, 1:3) = ks%gr%sb%latt%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, geo%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
+              vdw_stress)
           else
             call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
           end if

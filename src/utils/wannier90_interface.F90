@@ -245,7 +245,7 @@ program wannier90_interface
   ! create setup files
   select case(w90_mode) 
   case(OPTION__WANNIER90MODE__W90_SETUP)
-    call wannier90_setup(sys%gr%sb, sys%geo, sys%kpoints)
+    call wannier90_setup(sys%geo, sys%kpoints)
 
   ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
@@ -296,8 +296,7 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup(sb, geo, kpoints)
-    type(simul_box_t), intent(in) :: sb
+  subroutine wannier90_setup(geo, kpoints)
     type(geometry_t),  intent(in) :: geo
     type(kpoints_t),   intent(in) :: kpoints
 
@@ -317,14 +316,14 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim = 1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%latt%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, geo%latt%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a)') 'begin atoms_frac'
-    do ia = 1, sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), sb%latt%cart_to_red(geo%atom(ia)%x(1:3))
+    do ia = 1, geo%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), geo%latt%cart_to_red(geo%atom(ia)%x(1:3))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -839,7 +838,7 @@ contains
          iknn = (iknn-1)*2 + w90_spin_channel
        end if
 
-       Gr(1:3) = matmul(G(1:3), sys%gr%sb%latt%klattice(1:3,1:3))
+       Gr(1:3) = matmul(G(1:3), sys%geo%latt%klattice(1:3,1:3))
 
        if(any(G(1:3) /= 0)) then
          do ip = 1, mesh%np

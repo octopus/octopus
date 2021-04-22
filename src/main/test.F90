@@ -1107,7 +1107,7 @@ contains
     sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%space, sys%gr%sb%latt, sys%geo%atom, sys%geo%natoms, sys%geo%catom, sys%geo%ncatoms, &
+    call ion_interaction_test(sys%space, sys%geo%latt, sys%geo%atom, sys%geo%natoms, sys%geo%catom, sys%geo%ncatoms, &
       sys%gr%sb%lsize, namespace, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)

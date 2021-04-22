@@ -92,12 +92,11 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, namespace, geo, space, latt)
+  subroutine symmetries_init(this, namespace, geo, space)
     type(symmetries_t),     intent(out) :: this
     type(namespace_t),      intent(in)  :: namespace
     type(geometry_t),       intent(in)  :: geo
     type(space_t),          intent(in)  :: space
-    type(lattice_vectors_t),intent(in)  :: latt
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iatom_symm, iop, verbosity, point_group
@@ -200,7 +199,7 @@ contains
         position(1:3,iatom) = M_ZERO
 
         ! Transform atomic positions to reduced coordinates
-        position(1:dim4syms,iatom) = latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
+        position(1:dim4syms,iatom) = geo%latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
         do idir = 1, dim4syms
           position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
@@ -213,7 +212,7 @@ contains
       lattice = M_ZERO
       !NOTE: Why "inverse matrix" ? (NTD)
       ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:space%dim, 1:space%dim) = latt%rlattice(1:space%dim, 1:space%dim)
+      lattice(1:space%dim, 1:space%dim) = geo%latt%rlattice(1:space%dim, 1:space%dim)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
@@ -320,8 +319,8 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), latt%rlattice(1:dim4syms,1:dim4syms), &
-                              latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), geo%latt%rlattice(1:dim4syms,1:dim4syms), &
+                              geo%latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
                               TOFLOAT(translation(1:3, iop)))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
@@ -386,7 +385,7 @@ contains
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  latt%rlattice, latt%klattice, dim4syms)
+                  geo%latt%rlattice, geo%latt%klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       

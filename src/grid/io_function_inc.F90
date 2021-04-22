@@ -1175,13 +1175,13 @@ contains
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    ! the offset is different in periodic directions
-    do idir = 1, mesh%sb%periodic_dim
-      offset(idir) = units_from_atomic(units_out%length, -M_HALF*sum(mesh%sb%latt%rlattice(idir,1:mesh%sb%periodic_dim)))
-    end do
+    ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
+    ! our origin is at the center of the cell instead of being at the corner.
+    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
     do idir = mesh%sb%periodic_dim + 1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
+      offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
+    offset = units_from_atomic(units_out%length, offset)
 
     ! just for nice formatting of the output
     write(nitems,*) cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
@@ -1246,10 +1246,9 @@ contains
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    ! the offset is different in periodic directions
-    do idir = 1, mesh%sb%periodic_dim
-      offset(idir) = -M_HALF*sum(mesh%sb%latt%rlattice(idir, 1:mesh%sb%periodic_dim))
-    end do
+    ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
+    ! our origin is at the center of the cell instead of being at the corner.
+    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
     do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do

@@ -159,7 +159,7 @@ contains
 
     PUSH_SUB(calc_dipole)
 
-    ASSERT(.not. gr%sb%latt%nonorthogonal)
+    ASSERT(.not. geo%latt%nonorthogonal)
 
     dipole(1:space%dim) = M_ZERO
 
@@ -175,8 +175,8 @@ contains
         dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
         ! use quantum of polarization to reduce to smallest possible magnitude
-        nquantumpol = nint(dipole(idir)/norm2(gr%sb%latt%rlattice(:, idir)))
-        dipole(idir) = dipole(idir) - nquantumpol * norm2(gr%sb%latt%rlattice(:, idir))
+        nquantumpol = nint(dipole(idir)/norm2(geo%latt%rlattice(:, idir)))
+        dipole(idir) = dipole(idir) - nquantumpol * norm2(geo%latt%rlattice(:, idir))
        ! in aperiodic directions use normal dipole formula
 
       else

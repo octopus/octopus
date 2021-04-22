@@ -126,7 +126,7 @@ contains
     call stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     
     ! Stress from Ewald summation
-    call stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
+    call stress_from_Ewald_sum(geo, stress, stress_Ewald)
     
 
     ! Stress from kinetic energy of ion
@@ -495,6 +495,7 @@ contains
     call profiling_out(prof)
     POP_SUB(stress_from_xc)
   end subroutine stress_from_xc
+
   ! -------------------------------------------------------
   subroutine stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     type(grid_t),      target,        intent(in) :: gr !< grid
@@ -505,6 +506,7 @@ contains
     type(derivatives_t),  pointer :: der
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_ps(3, 3) ! temporal
+
     FLOAT :: stress_l(3, 3)
     FLOAT :: stress_t_SR(3, 3), stress_t_LR(3, 3), stress_t_NL(3, 3)
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), rppsi(:, :, :)
@@ -741,7 +743,8 @@ contains
     call profiling_out(prof)
     POP_SUB(epot_local_pseudopotential_sr)
   end subroutine epot_local_pseudopotential_SR
-! -------------------------------------------------------
+
+  ! -------------------------------------------------------
   subroutine poisson_fft_gg_transform_l(gg_in, temp, sb, qq, gg, modg2)
     integer,           intent(in)    :: gg_in(:)
     FLOAT,             intent(in)    :: temp(:)
@@ -766,21 +769,20 @@ contains
     modg2 = sum(gg(1:3)**2)
 
   end subroutine poisson_fft_gg_transform_l
-! ---------------------------------------------------------
-  subroutine stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
-    type(grid_t),     target, intent(in)    :: gr !< grid
-    type(geometry_t), target, intent(in)    :: geo
+
+  ! ---------------------------------------------------------
+  subroutine stress_from_Ewald_sum(geo, stress, stress_Ewald)
+    type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(inout) :: stress(:, :)
     FLOAT,                    intent(out)   :: stress_Ewald(3, 3) ! temporal
 
     FLOAT :: stress_l(3, 3)
 
-    type(simul_box_t), pointer :: sb
     FLOAT :: rr, xi(geo%space%dim), zi, zj, erfc, rcut
     integer :: iatom, jatom, icopy
     type(lattice_iterator_t) :: latt_iter
     integer :: ix, iy, iz, isph, ss, idim, idir, jdir
-    FLOAT   :: gg(1:MAX_DIM), gg2, gx
+    FLOAT   :: gg(geo%space%dim), gg2, gx
     FLOAT   :: factor, charge, Hp, charge_sq
     FLOAT   :: alpha
     CMPLX   :: sumatoms, aa
@@ -790,24 +792,25 @@ contains
     call profiling_in(prof, "STRESS_FROM_EWALD")    
     PUSH_SUB(stress_from_Ewald_sum)
 
+    ! Currently this is only implemented for 3D
+    ASSERT(geo%space%dim == 3)
 
     alpha = geo%ion_interaction%alpha
-    sb   => gr%sb
 
     rcut = CNST(6.0)/alpha
     stress_l = M_ZERO
-    latt_iter = lattice_iterator_t(sb%latt, rcut)
+    latt_iter = lattice_iterator_t(geo%latt, rcut)
     ! the short-range part is calculated directly
     do iatom = geo%atoms_dist%start, geo%atoms_dist%end
       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
       do icopy = 1, latt_iter%n_cells
-        xi = geo%atom(iatom)%x(1:sb%dim) + latt_iter%get(icopy)
+        xi = geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icopy)
         
         do jatom = 1,  geo%natoms
           zj = species_zval(geo%atom(jatom)%species)
-          rr = norm2(xi - geo%atom(jatom)%x(1:sb%dim))
+          rr = norm2(xi - geo%atom(jatom)%x(1:geo%space%dim))
           
           if(rr < CNST(1e-5)) cycle
           
@@ -830,7 +833,7 @@ contains
        call comm_allreduce(geo%atoms_dist%mpi_grp, stress_l)
     end if
 
-! And the long-range part, using an Ewald sum
+    ! And the long-range part, using an Ewald sum
     charge = M_ZERO
     charge_sq = M_ZERO
     do iatom = 1, geo%natoms
@@ -839,10 +842,10 @@ contains
        charge_sq = charge_sq + zi**2
     end do
     
-! get a converged value for the cutoff in g
+    ! get a converged value for the cutoff in g
     rcut = huge(rcut)
-    do idim = 1, sb%dim
-      rcut = min(rcut, sum(sb%latt%klattice(1:sb%dim, idim)**2))
+    do idim = 1, geo%space%dim
+      rcut = min(rcut, sum(geo%latt%klattice(1:geo%space%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -857,35 +860,33 @@ contains
           
              if(ss == 0 .or. ss > isph**2) cycle
 
-             gg(1:sb%dim) = ix*sb%latt%klattice(1:sb%dim, 1) + iy*sb%latt%klattice(1:sb%dim, 2)&
-                          + iz*sb%latt%klattice(1:sb%dim, 3)
-             gg2 = sum(gg(1:sb%dim)**2)
+             gg = ix*geo%latt%klattice(:, 1) + iy*geo%latt%klattice(:, 2) + iz*geo%latt%klattice(:, 3)
+             gg2 = sum(gg**2)
 
-          ! g=0 must be removed from the sum
+             ! g=0 must be removed from the sum
              if(gg2 < M_EPSILON) cycle
           
              gx = -CNST(0.25)*gg2/alpha**2
              
              if(gx < CNST(-36.0)) cycle
 
-             factor = M_TWO*M_PI*exp(gx)/(sb%latt%rcell_volume*gg2)
+             factor = M_TWO*M_PI*exp(gx)/(geo%latt%rcell_volume*gg2)
 
              if(factor < epsilon(factor)) cycle
 
              sumatoms = M_Z0
 
              do iatom = 1, geo%natoms
-                gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
+                gx = sum(gg*geo%atom(iatom)%x(1:geo%space%dim))
                 aa = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
                 sumatoms = sumatoms + aa
              end do
 
              factor = factor*abs(sumatoms)**2
              
-             do idir = 1,3
-                do jdir =1,3
-                   
-                   stress_l(idir, jdir) = stress_l(idir, jdir) &
+             do idir = 1, 3
+                do jdir = 1, 3
+                  stress_l(idir, jdir) = stress_l(idir, jdir) &
                         - M_TWO*factor*gg(idir)*gg(jdir)/gg2*(CNST(0.25)*gg2/alpha**2+M_ONE)
                    
                 end do
@@ -897,20 +898,20 @@ contains
     end do
 
 
-    factor = M_HALF*M_PI*charge**2/(sb%latt%rcell_volume*alpha**2)
+    factor = M_HALF*M_PI*charge**2/(geo%latt%rcell_volume*alpha**2)
     stress_l(1, 1) = stress_l(1, 1) - factor
     stress_l(2, 2) = stress_l(2, 2) - factor
     stress_l(3, 3) = stress_l(3, 3) - factor
 
 
-! Contribition from G=0 component of the long-range part    
+    ! Contribition from G=0 component of the long-range part    
     sigma_erf = CNST(0.625)
     do idir = 1,3
-       stress_l(idir,idir) = stress_l(idir,idir) &
-            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%latt%rcell_volume
+      stress_l(idir,idir) = stress_l(idir,idir) &
+            + M_TWO*M_PI*sigma_erf**2*charge**2 /geo%latt%rcell_volume
     end do
 
-    stress_l = stress_l/sb%latt%rcell_volume
+    stress_l = stress_l/geo%latt%rcell_volume
 
     stress_Ewald = stress_l
     stress = stress + stress_l

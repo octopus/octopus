@@ -87,7 +87,7 @@ contains
 
     call simul_box_init(gr%sb, namespace, geo, space)
 
-    call symmetries_init(gr%symm, namespace, geo, space, gr%sb%latt)
+    call symmetries_init(gr%symm, namespace, geo, space)
 
 
     !%Variable UseFineMesh

@@ -295,7 +295,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
     ! if we use vdw TS, we need to compute it now
     if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
-      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, st, st%rho)
     end if
 
     do iatom = 1, geo%natoms

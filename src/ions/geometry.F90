@@ -317,6 +317,14 @@ contains
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
         call messages_fatal(1, namespace=namespace)
       end if
+
+      if (species_type(geo%species(k)) == SPECIES_JELLIUM_SLAB) then
+        if (geo%space%is_periodic() .and. geo%space%periodic_dim /= 2) then
+          message(1) = "Periodic jelium slab can only be used if PeriodicDim = 2"
+          call messages_fatal(1, namespace=namespace)
+        end if
+      end if
+
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
