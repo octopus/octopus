@@ -20,8 +20,9 @@
 
 module stencil_stargeneral_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use stencil_oct_m
 
   implicit none
@@ -39,50 +40,52 @@ module stencil_stargeneral_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine stencil_stargeneral_get_arms(this, sb)
-    type(stencil_t),     intent(inout) :: this 
-    type(simul_box_t),      intent(in) :: sb
+  subroutine stencil_stargeneral_get_arms(this, space, latt)
+    type(stencil_t),         intent(inout) :: this 
+    type(space_t),           intent(in)    :: space
+    type(lattice_vectors_t), intent(in)    :: latt
     
     integer :: dim
-    FLOAT   :: vec1(1:3), vec2(1:3), theta(3)
-    integer :: arm(1:3)
+    FLOAT   :: vec1(space%dim), vec2(space%dim), theta(space%dim)
+    integer :: arm(space%dim)
     integer :: ii, jj, kk
-    FLOAT   :: norm, min_norm(3)
-    
+    FLOAT   :: norm, min_norm(space%dim)
+
     PUSH_SUB(stencil_stargeneral_get_arms)  
 
-    dim = sb%dim    
+    ASSERT(space%dim <= 3)
+
+    dim = space%dim
        
-    vec1(:) = M_ZERO
-    vec2(:) = M_ZERO
+    vec1 = M_ZERO
+    vec2 = M_ZERO
     
     this%stargeneral%narms = 0
     this%stargeneral%arms = 0
 
-    if (dim == 1 ) then 
+    if (dim == 1) then 
       !we are done 
       POP_SUB(stencil_stargeneral_get_arms)      
       return 
     end if   
     
-    if(dim == 2) then
-      vec1(1:dim)=sb%latt%rlattice_primitive(1:dim, 1)
-      vec2(1:dim)=sb%latt%rlattice_primitive(1:dim, 2)
+    if (dim == 2) then
+      vec1 = latt%rlattice_primitive(:, 1)
+      vec2 = latt%rlattice_primitive(:, 2)
       !get the angle between the primitive vectors
-      theta(1) = acos(dot_product(vec1(1:dim),vec2(1:dim)))
+      theta(1) = acos(dot_product(vec1, vec2))
     
-
       if (theta(1) < M_PI*M_HALF) then
         this%stargeneral%narms = this%stargeneral%narms + 1
-        arm(1:3) = (/1,-1,0/)
-        this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm(1:dim)
+        arm = (/1,-1/)
+        this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm
       else if(theta(1) > M_PI*M_HALF) then
         this%stargeneral%narms = this%stargeneral%narms + 1
-        arm(1:3) = (/1,+1,0/)
-        this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm(1:dim)
+        arm = (/1,+1/)
+        this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm
       end if
       !if theta == pi/2 we do not need additional arms
-    
+
       ! NB: you have supposed the axis of the 2D system is along z.
       !we are done 
       POP_SUB(stencil_stargeneral_get_arms)      
@@ -92,19 +95,19 @@ contains
     ! dim>2
 
     !We first count how many arms we need
-    vec1(1:dim)=sb%latt%rlattice_primitive(1:dim, 1)
-    vec2(1:dim)=sb%latt%rlattice_primitive(1:dim, 2)
-    theta(1) = acos(dot_product(vec1(1:dim),vec2(1:dim)))
+    vec1 = latt%rlattice_primitive(:, 1)
+    vec2 = latt%rlattice_primitive(:, 2)
+    theta(1) = acos(dot_product(vec1, vec2))
     if (abs(theta(1) - M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
-    vec1(1:dim) = sb%latt%rlattice_primitive(1:dim, 2)
-    vec2(1:dim) = sb%latt%rlattice_primitive(1:dim, 3)
-    theta(2) = acos(dot_product(vec1(1:dim), vec2(1:dim)))
+    vec1 = latt%rlattice_primitive(:, 2)
+    vec2 = latt%rlattice_primitive(:, 3)
+    theta(2) = acos(dot_product(vec1, vec2))
     if (abs(theta(2)-M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
-    vec1(1:dim) = sb%latt%rlattice_primitive(1:dim, 3)
-    vec2(1:dim) = sb%latt%rlattice_primitive(1:dim, 1)
-    theta(3) = acos(dot_product(vec1(1:dim), vec2(1:dim)))
+    vec1 = latt%rlattice_primitive(:, 3)
+    vec2 = latt%rlattice_primitive(:, 1)
+    theta(3) = acos(dot_product(vec1, vec2))
     if (abs(theta(3) - M_PI*M_HALF) > CNST(1e-8)) this%stargeneral%narms = this%stargeneral%narms + 1
 
 
@@ -130,10 +133,10 @@ contains
           if (abs(theta(2) - M_PI*M_HALF) <= CNST(1e-8) .and. ii == 0) cycle
           if (abs(theta(3) - M_PI*M_HALF) <= CNST(1e-8) .and. jj == 0) cycle
 
-          vec1(1:3) =   ii*sb%latt%rlattice_primitive(1:3, 1) &
-                      + jj*sb%latt%rlattice_primitive(1:3, 2) &
-                      + kk*sb%latt%rlattice_primitive(1:3, 3)
-          norm = sum(vec1(1:3)**2)
+          vec1 =   ii*latt%rlattice_primitive(:, 1) &
+                 + jj*latt%rlattice_primitive(:, 2) &
+                 + kk*latt%rlattice_primitive(:, 3)
+          norm = norm2(vec1)
 
           if (norm < min_norm(1)) then
             if (min_norm(1) < min_norm(2) .and. this%stargeneral%narms == 2) then
