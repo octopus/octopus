@@ -34,7 +34,6 @@ module submesh_oct_m
   use mpi_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use types_oct_m
     
@@ -738,7 +737,7 @@ contains
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi = matmul(sm%x(ip,:), sm%mesh%sb%latt%klattice_primitive)
+      chi = matmul(sm%x(ip,:), sm%mesh%latt%klattice_primitive)
       
       do idir = 1, space%dim
         db(idir) = max(db(idir), nint(abs(chi(idir))/sm%mesh%spacing(idir) + M_HALF))
@@ -765,16 +764,16 @@ contains
 
     !The center of the submesh does not belong to the mesh
     !So we first need to find the closest grid point, and center the cube to it
-    chi = matmul(sm%center, sm%mesh%sb%latt%klattice_primitive)
+    chi = matmul(sm%center, sm%mesh%latt%klattice_primitive)
     do idir = 1, space%dim
       shift(idir) = nint(chi(idir)/sm%mesh%spacing(idir))*sm%mesh%spacing(idir)
     end do
-    shift = matmul(sm%mesh%sb%latt%rlattice_primitive, shift)
+    shift = matmul(sm%mesh%latt%rlattice_primitive, shift)
     shift = shift - sm%center
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi = matmul(sm%x(ip,:) - shift, sm%mesh%sb%latt%klattice_primitive)
+      chi = matmul(sm%x(ip,:) - shift, sm%mesh%latt%klattice_primitive)
       do idir = 1, space%dim
         sm%cube_map%map(idir, ip) = nint(chi(idir)/sm%mesh%spacing(idir))
       end do

@@ -1739,8 +1739,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
      ! We convert the force to Cartesian coordinates
      ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-     if (space%is_periodic() .and. mesh%sb%latt%nonorthogonal) then
-        ff(1:space%dim) = matmul(mesh%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), ff(1:space%dim))
+     if (space%is_periodic() .and. mesh%latt%nonorthogonal) then
+        ff(1:space%dim) = matmul(mesh%latt%klattice_primitive(1:space%dim, 1:space%dim), ff(1:space%dim))
       end if
 
      force(1:space%dim, iatom) = force(1:space%dim, iatom) - os%Ueff*TOFLOAT(ff(1:space%dim))

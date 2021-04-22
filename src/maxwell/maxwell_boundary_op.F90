@@ -145,13 +145,12 @@ module maxwell_boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_init(bc, namespace, space, gr, st, sb, dt)
+  subroutine bc_mxll_init(bc, namespace, space, gr, st, dt)
     type(bc_mxll_t),          intent(inout) :: bc
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(inout) :: st
-    type(simul_box_t),        intent(in)    :: sb
     FLOAT, optional,          intent(in)    :: dt
 
     integer             :: idim, nlines, icol, ncols, ab_shape_dim
@@ -240,7 +239,7 @@ contains
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
-        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%latt%nonorthogonal) then
+        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. gr%mesh%latt%nonorthogonal) then
           message(1) = "Maxwell propagation does not work for non-orthogonal cells in periodic systems"
           call messages_fatal(1, namespace=namespace)
         end if

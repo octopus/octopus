@@ -37,7 +37,6 @@ module derivatives_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use stencil_cube_oct_m
   use stencil_star_oct_m
@@ -672,8 +671,8 @@ contains
             x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
           end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
-          if (mesh%sb%latt%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
-              x(1:dim) = matmul(mesh%sb%latt%rlattice_primitive(1:dim,1:dim), x(1:dim))
+          if (mesh%latt%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
+              x(1:dim) = matmul(mesh%latt%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
@@ -761,8 +760,8 @@ contains
     PUSH_SUB(derivatives_get_lapl)
 
     call nl_operator_init(op(1), name)
-    if(this%mesh%sb%latt%nonorthogonal) then
-      call stencil_stargeneral_get_arms(op(1)%stencil, space, this%mesh%sb%latt)
+    if(this%mesh%latt%nonorthogonal) then
+      call stencil_stargeneral_get_arms(op(1)%stencil, space, this%mesh%latt)
       call stencil_stargeneral_get_lapl(op(1)%stencil, this%dim, order)
     else
       call stencil_star_get_lapl(op(1)%stencil, this%dim, order)
@@ -770,13 +769,13 @@ contains
     call nl_operator_build(space, this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
 
     !At the moment this code is almost copy-pasted from derivatives_build.
-    if(this%mesh%sb%latt%nonorthogonal) then
+    if(this%mesh%latt%nonorthogonal) then
       op(1)%stencil%npoly = op(1)%stencil%size &
          + order*(2*order-1)*op(1)%stencil%stargeneral%narms
     end if
     SAFE_ALLOCATE(polynomials(1:this%dim, 1:op(1)%stencil%npoly))
     SAFE_ALLOCATE(rhs(1:op(1)%stencil%size, 1:1))
-    if(this%mesh%sb%latt%nonorthogonal) then
+    if(this%mesh%latt%nonorthogonal) then
       call stencil_stargeneral_pol_lapl(op(1)%stencil, this%dim, order, polynomials)
     else
       call stencil_star_polynomials_lapl(this%dim, order, polynomials)

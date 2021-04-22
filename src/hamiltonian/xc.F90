@@ -85,7 +85,6 @@ module xc_oct_m
     logical :: xcd_minimum
     logical :: xcd_normalize
     logical :: parallel
-
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -132,7 +131,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_init(xcs, namespace, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
-    type(xc_t),        intent(out) :: xcs
+    type(xc_t),        intent(inout) :: xcs
     type(namespace_t), intent(in)  :: namespace
     integer,           intent(in)  :: ndim
     integer,           intent(in)  :: periodic_dim

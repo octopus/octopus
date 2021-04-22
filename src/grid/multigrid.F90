@@ -175,7 +175,7 @@ contains
       
       call multigrid_mesh_half(space, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
-      call derivatives_init(mgrid%level(i)%der, namespace, space, mesh%sb%latt, cv%method /= CURV_METHOD_UNIFORM, order=order)
+      call derivatives_init(mgrid%level(i)%der, namespace, space, mesh%latt, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
       call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, space, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 
@@ -332,6 +332,8 @@ contains
     mesh_out%cv               => mesh_in%cv
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
+    allocate(mesh_out%latt)
+    mesh_out%latt        = mesh_in%latt
     mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))/2
     mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))/2
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
@@ -362,6 +364,7 @@ contains
     mesh_out%cv             => mesh_in%cv
 
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
+    mesh_out%latt        = mesh_in%latt
     mesh_out%idx%nr(1,:) = (mesh_in%idx%nr(1,:)+mesh_in%idx%enlarge(:))*2
     mesh_out%idx%nr(2,:) = (mesh_in%idx%nr(2,:)-mesh_in%idx%enlarge(:))*2
     ! We need to make the possible number of grid points larger by one for

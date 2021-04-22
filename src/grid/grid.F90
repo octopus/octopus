@@ -25,6 +25,7 @@ module grid_oct_m
   use derivatives_oct_m
   use global_oct_m
   use ions_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
   use messages_oct_m
@@ -74,6 +75,7 @@ contains
     type(ions_t),      intent(inout) :: ions
     type(space_t),     intent(in)    :: space
 
+    type(lattice_vectors_t) :: mesh_latt
     type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
     type(block_t) :: blk
@@ -177,11 +179,15 @@ contains
       call messages_experimental('PeriodicBoundaryMask')
     end if
 
+    ! Create the mesh lattice. We will use the ionic lattice, but renormalizing the vectors to unity
+    mesh_latt = ions%latt
+    call mesh_latt%scale(M_ONE/norm2(mesh_latt%rlattice, dim=1))
+
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, namespace, gr%sb, ions, grid_spacing)
 
     ! initialize derivatives
-    call derivatives_init(gr%der, namespace, space, gr%sb%latt, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, namespace, space, mesh_latt, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, space%dim, order = 2)
@@ -192,7 +198,7 @@ contains
     enlarge(1:space%dim) = 2
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    call mesh_init_stage_1(gr%mesh, namespace, space, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_1(gr%mesh, namespace, space, mesh_latt, gr%sb, gr%cv, grid_spacing, enlarge)
     call mesh_init_stage_2(gr%mesh, space, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)

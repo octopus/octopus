@@ -29,6 +29,7 @@ module mesh_oct_m
   use io_oct_m
   use io_binary_oct_m
   use ions_oct_m
+  use lattice_vectors_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -90,7 +91,11 @@ module mesh_oct_m
     logical :: use_curvilinear
     
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
-    
+    type(lattice_vectors_t), allocatable :: latt !< Lattice that generates the mesh points.
+                                             !< Note that the lattice vectors are normalized to one, so one needs to multiply 
+                                             !< by the spacing to obtain the points coordinates.
+                                             !< (This is an allocatable as a workaround for a bug in older versions of gfortran) that would
+
     !> When running serially, the local number of points is
     !! equal to the global number of points.
     !! Otherwise, the next two are different on each node.
@@ -534,6 +539,10 @@ contains
       call partition_end(this%partition)
     end if
 
+    if (allocated(this%latt)) then
+      deallocate(this%latt)
+    end if
+
     POP_SUB(mesh_end)
   end subroutine mesh_end
 
@@ -621,7 +630,7 @@ contains
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
-      call curvilinear_chi2x(mesh%sb, mesh%sb%latt, mesh%cv, chi, xx)
+      call curvilinear_chi2x(mesh%sb, mesh%latt, mesh%cv, chi, xx)
     else
       xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     end if

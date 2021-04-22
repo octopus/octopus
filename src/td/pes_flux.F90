@@ -2528,7 +2528,7 @@ contains
       end do
       
       do isp = 1, this%nsrfcpnts
-        xx(1:mdim) = matmul(mesh%sb%latt%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
+        xx(1:mdim) = matmul(mesh%latt%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
         this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       
@@ -2660,7 +2660,7 @@ contains
         RSmax = M_ZERO
         do isp = isp_start, isp_end
           !measure in reduced coordinates 
-          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%latt%klattice_primitive(1:mdim, 1:mdim))
+          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%latt%klattice_primitive(1:mdim, 1:mdim))
           idim = 1
           do idir = 1, mdim 
             if (idir == n_dir ) cycle

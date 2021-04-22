@@ -265,8 +265,8 @@ subroutine X(forces_from_potential)(gr, namespace, space, ions, hm, st, force, f
 
                 ! We convert the force to Cartesian coordinates before symmetrization
                 ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-                if (space%is_periodic() .and. gr%sb%latt%nonorthogonal ) then 
-                  force_psi(1:space%dim) = matmul(gr%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), force_psi(1:space%dim))
+                if (space%is_periodic() .and. gr%mesh%latt%nonorthogonal ) then 
+                  force_psi(1:space%dim) = matmul(gr%mesh%latt%klattice_primitive(1:space%dim, 1:space%dim), force_psi(1:space%dim))
                 end if
 
                 !Let us now apply the symmetry to the force
@@ -289,8 +289,8 @@ subroutine X(forces_from_potential)(gr, namespace, space, ions, hm, st, force, f
               end do
 
               ! We convert the forces to Cartesian coordinates
-              if (space%is_periodic() .and. gr%sb%latt%nonorthogonal ) then
-                force_psi(1:space%dim) = matmul(gr%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), force_psi(1:space%dim))
+              if (space%is_periodic() .and. gr%mesh%latt%nonorthogonal) then
+                force_psi(1:space%dim) = matmul(gr%mesh%latt%klattice_primitive(1:space%dim, 1:space%dim), force_psi(1:space%dim))
               end if
 
               force_nl(1:space%dim, iatom) = force_nl(1:space%dim, iatom) + force_psi(1:space%dim)
@@ -321,9 +321,10 @@ subroutine X(forces_from_potential)(gr, namespace, space, ions, hm, st, force, f
   if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
     .not. (st%symmetrize_density .and. hm%kpoints%use_symmetries)) then
     ! We convert the forces to Cartesian coordinates
-    if (space%is_periodic() .and. gr%sb%latt%nonorthogonal) then
+    if (space%is_periodic() .and. gr%mesh%latt%nonorthogonal) then
       do iatom = 1, ions%natoms
-        force_nl(1:space%dim, iatom) = matmul(gr%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), force_nl(1:space%dim,iatom))
+        force_nl(1:space%dim, iatom) = &
+          matmul(gr%mesh%latt%klattice_primitive(1:space%dim, 1:space%dim), force_nl(1:space%dim,iatom))
       end do
     end if
   end if
@@ -341,9 +342,9 @@ subroutine X(forces_from_potential)(gr, namespace, space, ions, hm, st, force, f
   ! We convert the gradient of the density to cartesian coordinates before symmetrization
   ! as the two operation do not commute
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-  if (space%is_periodic() .and. gr%sb%latt%nonorthogonal)  then
+  if (space%is_periodic() .and. gr%mesh%latt%nonorthogonal)  then
     do ip = 1, gr%mesh%np
-      grad_rho(ip, 1:space%dim) = matmul(gr%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), grad_rho(ip, 1:space%dim))
+      grad_rho(ip, 1:space%dim) = matmul(gr%mesh%latt%klattice_primitive(1:space%dim, 1:space%dim), grad_rho(ip, 1:space%dim))
     end do
   end if
 
