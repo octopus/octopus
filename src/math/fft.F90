@@ -92,7 +92,7 @@ module fft_oct_m
   
   type fft_t
     private
-    integer         :: slot    !< in which slot do we have this fft
+    integer         :: slot = 0 !< in which slot do we have this fft
 
     integer, public :: type    !< is the fft real or complex
     integer, public :: library !< what library are we using
@@ -933,6 +933,7 @@ contains
         fft_refs(ii) = FFT_NULL
       end if
     end if
+    this%slot = 0
 
     POP_SUB(fft_end)
   end subroutine fft_end
