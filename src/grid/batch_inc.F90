@@ -32,7 +32,7 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
 
   this%type_of = R_TYPE_VAL
   this%X(ff) => psi(:, :, st_start:)
-  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
+  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)
 
   ASSERT(ubound(psi, dim=3) >= st_end)
   ASSERT(ubound(psi, dim=2) == dim)
@@ -88,7 +88,7 @@ subroutine X(batch_allocate_unpacked_host)(this)
   else
     SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
   end if
-  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
+  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)
 
   this%is_allocated = .true.
 
