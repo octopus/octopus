@@ -156,11 +156,11 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), namespace, x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), namespace, c_id, ndim, nel, isp)
+      call xc_functl_init(xcs%functional(FUNC_X, isp), namespace, x_id, ndim, nel, isp)
+      call xc_functl_init(xcs%functional(FUNC_C, isp), namespace, c_id, ndim, nel, isp)
 
-      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), namespace, xk_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), namespace, ck_id, ndim, nel, isp)
+      call xc_functl_init(xcs%kernel(FUNC_X, isp), namespace, xk_id, ndim, nel, isp)
+      call xc_functl_init(xcs%kernel(FUNC_C, isp), namespace, ck_id, ndim, nel, isp)
 
     end do
 

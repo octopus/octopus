@@ -36,7 +36,7 @@ module xc_functl_oct_m
   private
   public ::                     &
     xc_functl_t,                &
-    xc_functl_init_functl,      &
+    xc_functl_init,             &
     xc_functl_end,              &
     xc_functl_write_info
 
@@ -65,12 +65,12 @@ module xc_functl_oct_m
 
   type xc_functl_t
     ! Components are public by default
-    integer         :: family            !< LDA, GGA, etc.
-    integer         :: type              !< exchange, correlation, or exchange-correlation
-    integer         :: id                !< identifier
+    integer         :: family = 0            !< LDA, GGA, etc.
+    integer         :: type   = 0            !< exchange, correlation, or exchange-correlation
+    integer         :: id     = 0            !< identifier
 
-    integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
-    integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
+    integer         :: spin_channels = 0     !< XC_UNPOLARIZED | XC_POLARIZED
+    integer         :: flags         = 0     !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
     type(xc_f03_func_t)               :: conf         !< the pointer used to call the library
     type(xc_f03_func_info_t), private :: info         !< information about the functional
@@ -80,41 +80,23 @@ module xc_functl_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_init(functl, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
-    integer,           intent(in)  :: spin_channels
-
-    PUSH_SUB(xc_functl_init)
-
-    functl%family = 0
-    functl%type   = 0
-    functl%id     = 0
-    functl%flags  = 0
-    functl%spin_channels = spin_channels
-
-    POP_SUB(xc_functl_init)
-  end subroutine xc_functl_init
-
-  ! ---------------------------------------------------------
-
- subroutine xc_functl_init_functl(functl, namespace, id, ndim, nel, spin_channels)
-   type(xc_functl_t),  intent(out) :: functl
-   type(namespace_t),  intent(in)  :: namespace
-    integer,           intent(in)  :: id
-    integer,           intent(in)  :: ndim
-    FLOAT,             intent(in)  :: nel
-    integer,           intent(in)  :: spin_channels
+  subroutine xc_functl_init(functl, namespace, id, ndim, nel, spin_channels)
+    type(xc_functl_t),  intent(inout) :: functl
+    type(namespace_t),  intent(in)    :: namespace
+    integer,            intent(in)    :: id
+    integer,            intent(in)    :: ndim
+    FLOAT,              intent(in)    :: nel
+    integer,            intent(in)    :: spin_channels
 
     integer :: interact_1d
     FLOAT   :: alpha, parameters(2)
     logical :: ok
 
-    PUSH_SUB(xc_functl_init_functl)
+    PUSH_SUB(xc_functl_init)
 
     ! initialize structure
-    call xc_functl_init(functl, spin_channels)
-
     functl%id = id
+    functl%spin_channels = spin_channels
 
     if(functl%id == 0) then
       functl%family = XC_FAMILY_NONE
@@ -303,8 +285,8 @@ contains
       end if
     end select
 
-    POP_SUB(xc_functl_init_functl)
-  end subroutine xc_functl_init_functl
+    POP_SUB(xc_functl_init)
+  end subroutine xc_functl_init
   
 
   ! ---------------------------------------------------------
