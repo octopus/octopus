@@ -153,7 +153,6 @@ contains
     !At the moment this is only implemented in 3D.
     ASSERT(space%dim == 3)
 
-    call distributed_nullify(dist_kpt, 0)
     kpt_start = st%d%kpt%start
     kpt_end = st%d%kpt%end
 

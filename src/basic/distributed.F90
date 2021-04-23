@@ -40,11 +40,11 @@ module distributed_oct_m
 
   type distributed_t
     ! Components are public by default
-    integer              :: start
-    integer              :: end
-    integer              :: nlocal
-    integer              :: nglobal
-    logical              :: parallel
+    integer              :: start = 1
+    integer              :: end   = 0
+    integer              :: nlocal  = 0
+    integer              :: nglobal = 0
+    logical              :: parallel = .false.
     integer, allocatable :: node(:)
     integer, allocatable :: range(:, :)
     integer, allocatable :: num(:)
@@ -60,17 +60,11 @@ contains
 
     PUSH_SUB(distributed_nullify)
 
-    this%start           = 1
-
     if(present(total)) then
       this%end             = total
       this%nlocal          = total
       this%nglobal         = total
     end if
-
-    this%parallel        = .false.
-
-    call mpi_grp_init(this%mpi_grp, -1)
 
     POP_SUB(distributed_nullify)
   end subroutine distributed_nullify

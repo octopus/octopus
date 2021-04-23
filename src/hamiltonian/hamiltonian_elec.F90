@@ -436,7 +436,6 @@ contains
     !%End
     call parse_variable(namespace, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
-    call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)

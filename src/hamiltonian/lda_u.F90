@@ -63,7 +63,6 @@ module lda_u_oct_m
 
   public ::                          &
     lda_u_t,                         &
-    lda_u_nullify,                   &
     lda_u_init,                      &
     dlda_u_apply,                    &
     zlda_u_apply,                    &
@@ -93,10 +92,20 @@ module lda_u_oct_m
     dcompute_dftu_energy,            &
     zcompute_dftu_energy
 
+  
+  integer, public, parameter ::        &
+    DFT_U_NONE                    = 0, &
+    DFT_U_EMPIRICAL               = 1, &
+    DFT_U_ACBN0                   = 2
 
+  integer, public, parameter ::        &
+    DFT_U_FLL                     = 0, &
+    DFT_U_AMF                     = 1
+
+  
   type lda_u_t
     private
-    integer,            public   :: level
+    integer,            public   :: level = DFT_U_NONE
     FLOAT, allocatable, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
     FLOAT, allocatable           :: dV(:,:,:,:) !> Potentials for the standard scheme
 
@@ -108,82 +117,41 @@ module lda_u_oct_m
     FLOAT, allocatable           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
 
     FLOAT, allocatable           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
-                                                   !> (for the ACBN0 functional)
+                                                       !> (for the ACBN0 functional)
     CMPLX, allocatable           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
-                                                        !> (for the ACBN0 functional with spinors)
+                                                            !> (for the ACBN0 functional with spinors)
 
-    type(orbitalbasis_t),        public :: basis        !> The full basis of localized orbitals
-    type(orbitalset_t), pointer, public :: orbsets(:)   !> All the orbital setss of the system
-    integer,                     public :: norbsets
+    type(orbitalbasis_t),        public :: basis                !> The full basis of localized orbitals
+    type(orbitalset_t), pointer, public :: orbsets(:) => NULL() !> All the orbital setss of the system
+    integer,                     public :: norbsets = 0
 
-    integer,              public :: nspins
-    integer,              public :: spin_channels
-    integer                      :: nspecies
-    integer,              public :: maxnorbs           !> Maximal number of orbitals for all the atoms
-    integer                      :: max_np             !> Maximum number of points in all orbitals submesh spheres
+    integer,              public :: nspins = 0
+    integer,              public :: spin_channels = 0
+    integer                      :: nspecies = 0
+    integer,              public :: maxnorbs = 0           !> Maximal number of orbitals for all the atoms
+    integer                      :: max_np = 0             !> Maximum number of points in all orbitals submesh spheres
 
-    logical                      :: useAllOrbitals     !> Do we use all atomic orbitals possible
-    logical                      :: skipSOrbitals      !> Not using s orbitals
-    logical                      :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
-    logical                      :: freeze_u           !> U is not recomputed during TD evolution
-    logical,              public :: intersite          !> intersite V are computed or not
-    FLOAT                        :: intersite_radius   !> Maximal distance for considering neighboring atoms
-    logical,              public :: basisfromstates    !> We can construct the localized basis from user-defined states
-    FLOAT                        :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
+    logical                      :: useAllOrbitals = .false.       !> Do we use all atomic orbitals possible
+    logical                      :: skipSOrbitals = .true.         !> Not using s orbitals
+    logical                      :: freeze_occ = .false.           !> Occupation matrices are not recomputed during TD evolution
+    logical                      :: freeze_u = .false.             !> U is not recomputed during TD evolution
+    logical,              public :: intersite = .false.            !> intersite V are computed or not
+    FLOAT                        :: intersite_radius = M_ZERO      !> Maximal distance for considering neighboring atoms
+    logical,              public :: basisfromstates = .false.      !> We can construct the localized basis from user-defined states
+    FLOAT                        :: acbn0_screening = M_ONE        !> We use or not the screening in the ACBN0 functional
     integer, allocatable, public :: basisstates(:)
-    logical                      :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
-    integer                      :: double_couting     !> Double-couting term
-    integer                      :: sm_poisson         !> Poisson solver used for computing Coulomb integrals
+    logical                      :: rot_inv = .false.              !> Use a rotationally invariant formula for U and J (ACBN0 case)
+    integer                      :: double_couting = DFT_U_FLL     !> Double-couting term
+    integer                      :: sm_poisson = SM_POISSON_DIRECT !> Poisson solver used for computing Coulomb integrals
 
     type(distributed_t) :: orbs_dist
 
-    integer, public     :: maxneighbors
+    integer, public     :: maxneighbors = 0
     FLOAT, allocatable  :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
     CMPLX, allocatable  :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
   end type lda_u_t
 
-  integer, public, parameter ::        &
-    DFT_U_NONE                    = 0, &
-    DFT_U_EMPIRICAL               = 1, &
-    DFT_U_ACBN0                   = 2
-
-  integer, public, parameter ::        &
-    DFT_U_FLL                     = 0, &
-    DFT_U_AMF                     = 1
-
 contains
-
-  subroutine lda_u_nullify(this)
-    type(lda_u_t),             intent(inout) :: this
-
-    PUSH_SUB(lda_u_nullify)
-
-    this%level = DFT_U_NONE
-    this%norbsets = 0
-    this%max_np = 0
-    this%maxnorbs = 0
-    this%nspins = 0
-    this%spin_channels = 0
-    this%nspecies = 0
-    this%useAllOrbitals = .false.
-    this%skipSOrbitals = .true.
-    this%freeze_occ = .false.
-    this%freeze_u = .false.
-    this%intersite = .false.
-    this%intersite_radius = M_ZERO
-    this%maxneighbors = 0
-    this%basisfromstates = .false.
-    this%acbn0_screening = M_ONE
-    this%rot_inv = .false.
-    this%double_couting = DFT_U_FLL
-    this%sm_poisson = SM_POISSON_DIRECT
-
-    nullify(this%orbsets)
-
-    call distributed_nullify(this%orbs_dist, 0)
-
-    POP_SUB(lda_u_nullify)
-  end subroutine lda_u_nullify
 
   ! ---------------------------------------------------------
   subroutine lda_u_init(this, namespace, space, level, gr, geo, st, psolver, kpoints)

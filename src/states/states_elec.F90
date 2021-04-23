@@ -147,7 +147,7 @@ module states_elec_oct_m
     FLOAT,   allocatable :: mmb_proj(:)        !< projection of the state onto the chosen Young diagram
 
     !> This is stuff needed for the parallelization in states.
-    logical                     :: parallel_in_states !< Am I parallel in states?
+    logical                     :: parallel_in_states = .false. !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
     type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domains-states "plane".
     type(mpi_grp_t)             :: st_kpt_mpi_grp     !< The MPI group related to the states-kpoints "plane".
@@ -203,14 +203,7 @@ contains
 
     PUSH_SUB(states_elec_null)
 
-    call states_elec_dim_null(st%d)
-    call distributed_nullify(st%dist)
-    
-    st%d%orth_method = 0
-
     st%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
-
-    st%parallel_in_states = .false.
 
     st%packed = .false.
 
