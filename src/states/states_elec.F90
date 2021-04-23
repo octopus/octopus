@@ -204,11 +204,9 @@ contains
     PUSH_SUB(states_elec_null)
 
     call states_elec_dim_null(st%d)
-    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist)
     
     st%d%orth_method = 0
-    call modelmb_particles_nullify(st%modelmbparticles)
 
     st%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 

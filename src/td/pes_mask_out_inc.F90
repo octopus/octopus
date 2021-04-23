@@ -459,7 +459,6 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   SAFE_ALLOCATE(RhoAB(1:mesh%np_part, 1:st%d%nspin))
   SAFE_ALLOCATE(psi(1:mesh%np_part))
 
-  call cube_function_null(cf)    
   call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.)
 
   RhoAB= M_ZERO
@@ -799,7 +798,6 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   PUSH_SUB(pes_mask_output_full_mapM)
 
   call cube_init(cube, ll, sb, namespace)
-  call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
   
@@ -1931,7 +1929,6 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo
     SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
     wfAk = M_z0
   
-    call cube_function_null(cf1)    
     call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
     call cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
 
@@ -2301,10 +2298,8 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
   PUSH_SUB(pes_mask_restart_map)
 
   SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  call cube_function_null(cf1)    
   call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
   call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
-  call cube_function_null(cf2)    
   call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
 
   SAFE_ALLOCATE(psi(1:mask%mesh%np))

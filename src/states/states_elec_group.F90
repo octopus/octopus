@@ -32,7 +32,6 @@ module states_elec_group_oct_m
 
   public ::                           &
     states_elec_group_t,                   &
-    states_elec_group_null,                &
     states_elec_group_end,                 &
     states_elec_group_copy
 
@@ -48,21 +47,10 @@ module states_elec_group_oct_m
     logical, allocatable     :: block_is_local(:, :)  !< It is true if the block is in this node.
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
-    logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
+    logical                  :: block_initialized = .false. !< For keeping track of the blocks to avoid memory leaks
   end type states_elec_group_t
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine states_elec_group_null(this)
-    type(states_elec_group_t), intent(out)   :: this
-
-    PUSH_SUB(states_elec_group_null)
-
-    this%block_initialized = .false.
-
-    POP_SUB(states_elec_group_null)
-  end subroutine states_elec_group_null
 
   ! ---------------------------------------------------------
   subroutine states_elec_group_end(this, d)
@@ -96,19 +84,17 @@ contains
   end subroutine states_elec_group_end
 
   !---------------------------------------------------------
-
   subroutine states_elec_group_copy(d, group_in, group_out, copy_data)
     type(states_elec_dim_t),   intent(in)    :: d
     type(states_elec_group_t), intent(in)    :: group_in
-    type(states_elec_group_t), intent(out)   :: group_out
-    logical, optional,    intent(in)    :: copy_data
+    type(states_elec_group_t), intent(inout) :: group_out
+    logical, optional,         intent(in)    :: copy_data
 
     integer :: qn_start, qn_end, ib, iqn
     
     PUSH_SUB(states_elec_group_copy)
 
-    call states_elec_group_null(group_out)
-
+    call states_elec_group_end(group_out, d)
     
     group_out%nblocks           = group_in%nblocks
     group_out%block_start       = group_in%block_start

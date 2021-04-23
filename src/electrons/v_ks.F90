@@ -77,7 +77,6 @@ module v_ks_oct_m
   private
   public ::             &
     v_ks_t,             &
-    v_ks_nullify,       &
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
@@ -119,48 +118,28 @@ module v_ks_oct_m
 
   type v_ks_t
     private
-    integer,                  public :: theory_level
+    integer,                  public :: theory_level = -1
 
-    logical,                  public :: frozen_hxc !< For RPA and SAE calculations.
+    logical,                  public :: frozen_hxc = .false. !< For RPA and SAE calculations.
 
-    integer,                  public :: xc_family  !< the XC stuff
-    integer,                  public :: xc_flags   !< the XC flags
-    integer,                  public :: sic_type   !< what kind of self-interaction correction to apply
+    integer,                  public :: xc_family = 0  !< the XC stuff
+    integer,                  public :: xc_flags = 0  !< the XC flags
+    integer,                  public :: sic_type = -1  !< what kind of self-interaction correction to apply
     type(xc_t),               public :: xc
     type(xc_OEP_t),           public :: oep
     type(xc_ks_inversion_t),  public :: ks_inversion
     type(grid_t), pointer,    public :: gr
     type(v_ks_calc_t)                :: calc
-    logical                          :: calculate_current
+    logical                          :: calculate_current = .false.
     type(current_t)                  :: current_calculator
-    integer,                  public :: vdw_correction
-    logical                          :: vdw_self_consistent
+    integer,                  public :: vdw_correction = -1
+    logical                          :: vdw_self_consistent = .false.
     type(vdw_ts_t),           public :: vdw_ts
     type(dftd3_calc)                 :: vdw_d3
-    logical                          :: include_td_field
+    logical                          :: include_td_field = .false.
   end type v_ks_t
 
 contains
- 
-  ! ---------------------------------------------------------
-  subroutine v_ks_nullify(ks)
-    type(v_ks_t),            intent(inout) :: ks
-
-    PUSH_SUB(v_ks_nullify)
-
-    ks%theory_level = -1
-    ks%frozen_hxc = .false.
-    ks%xc_family = 0
-    ks%xc_flags = 0
-    ks%sic_type = -1
-    ks%calculate_current = .false.
-    ks%vdw_correction = -1
-    ks%vdw_self_consistent = .false.
-    ks%include_td_field = .false.
-
-    POP_SUB(v_ks_nullify)
-  end subroutine v_ks_nullify
-  
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space, kpoints)

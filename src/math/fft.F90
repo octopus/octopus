@@ -940,11 +940,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)
-    type(fft_t), intent(in)  :: fft_i
-    type(fft_t), intent(out) :: fft_o
+    type(fft_t), intent(in)    :: fft_i
+    type(fft_t), intent(inout) :: fft_o
 
     PUSH_SUB(fft_copy)
 
+    if (fft_o%slot > 0) then
+      call fft_end(fft_o)
+    end if
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
 

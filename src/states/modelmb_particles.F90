@@ -32,8 +32,7 @@ module modelmb_particles_oct_m
 
   private
 
-  public :: modelmb_particles_nullify,   &
-            modelmb_particles_init,      &
+  public :: modelmb_particles_init,      &
             modelmb_particles_end,       &
             modelmb_particles_copy,      &
             modelmb_copy_masses,         &
@@ -51,7 +50,7 @@ module modelmb_particles_oct_m
                                          !!  modelmb in MAX_DIM dimensional space
     integer :: max_particles_per_type    !< max number of different particle
 
-    integer, public :: nparticle         !< number of particles 
+    integer, public :: nparticle = 0     !< number of particles 
 
     integer :: ndensities_to_calculate
 
@@ -89,17 +88,6 @@ module modelmb_particles_oct_m
   end type modelmb_particle_t
 
 contains
-
-  subroutine modelmb_particles_nullify(this)
-    type(modelmb_particle_t), intent(inout) :: this
-    
-    PUSH_SUB(modelmb_particles_nullify)
-    
-    this%nparticle = 0
-    
-    POP_SUB(modelmb_particles_nullify)
-  end subroutine modelmb_particles_nullify
-  
   
   !>==============================================================
   !!  initialization function for modelmb particles information
@@ -286,11 +274,13 @@ contains
   end subroutine modelmb_particles_end
   
   subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
-    type(modelmb_particle_t), intent(in)  :: modelmb_in
-    type(modelmb_particle_t), intent(out) :: modelmb_out
+    type(modelmb_particle_t), intent(in)    :: modelmb_in
+    type(modelmb_particle_t), intent(inout) :: modelmb_out
     
     PUSH_SUB(modelmb_particles_copy)
     
+    call modelmb_particles_end(modelmb_out)
+
     modelmb_out%ndim = modelmb_in%ndim
     modelmb_out%ntype_of_particle = modelmb_in%ntype_of_particle
     modelmb_out%max_particles_per_type = modelmb_in%max_particles_per_type

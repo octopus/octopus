@@ -133,11 +133,8 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       ierr = 2
     else
       call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-      call cube_function_null(cf)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
-      call cube_function_null(re)
-      call cube_function_null(im)
       call dcube_function_alloc_RS(cube, re)
       call dcube_function_alloc_RS(cube, im)
       call read_netcdf()
@@ -187,7 +184,6 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     end if 
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
     call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
@@ -568,7 +564,6 @@ contains
     SAFE_ALLOCATE(cf(1:vector_dim))
 
     do ivd = 1, vector_dim
-      call cube_function_null(cf(ivd))
       call X(cube_function_alloc_RS)(cube, cf(ivd))
       call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
@@ -1171,7 +1166,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1242,7 +1236,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1329,7 +1322,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1424,7 +1416,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1460,7 +1451,6 @@ contains
     end do
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 

@@ -43,7 +43,6 @@ module submesh_oct_m
 
   public ::                      &
     submesh_t,                   &
-    submesh_null,                &
     submesh_init,                &
     submesh_merge,               &
     submesh_shift_center,        &
@@ -81,15 +80,15 @@ module submesh_oct_m
   type submesh_t
     ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
-    FLOAT                 :: radius
-    integer               :: np             !< number of points inside the submesh
+    FLOAT                 :: radius = M_ZERO
+    integer               :: np = -1        !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
     integer,  allocatable :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
     FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
-    type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
+    type(mesh_t), pointer :: mesh => NULL() !< pointer to the underlying mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
                                             !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
-    integer               :: np_global      !< total number of points in the entire mesh
+    integer               :: np_global = -1 !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
     integer,  allocatable :: global2local(:)
@@ -107,21 +106,6 @@ module submesh_oct_m
 
 contains
   
-  subroutine submesh_null(sm)
-    type(submesh_t), intent(inout) :: sm !< valgrind objects to intent(out) due to the initializations above
-
-    PUSH_SUB(submesh_null)
-
-    sm%np = -1
-    sm%radius = M_ZERO
-    nullify(sm%mesh)
-
-    sm%np_global = -1
-
-    POP_SUB(submesh_null)
-
-  end subroutine submesh_null
-
   ! -------------------------------------------------------------
 
   ! Multipliers for recursive formulation of n-ellipsoid volume 
@@ -143,7 +127,7 @@ contains
 ! -------------------------------------------------------------
 
   subroutine submesh_init(this, space, sb, mesh, center, rc)
-    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(submesh_t),      intent(inout)  :: this
     type(space_t),        intent(in)     :: space
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
@@ -162,8 +146,6 @@ contains
     
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
-
-    call submesh_null(this)
 
     this%mesh => mesh
 
@@ -493,18 +475,17 @@ contains
     end if
 
     POP_SUB(submesh_end)
-
   end subroutine submesh_end
 
   ! --------------------------------------------------------------
 
   subroutine submesh_copy(sm_in, sm_out)
-    type(submesh_t), target,  intent(in)   :: sm_in
-    type(submesh_t),          intent(out)  :: sm_out
+    type(submesh_t), target,  intent(in)    :: sm_in
+    type(submesh_t),          intent(inout) :: sm_out
 
     PUSH_SUB(submesh_copy)
     
-    ASSERT(sm_out%np == -1)
+    call submesh_end(sm_out)
 
     sm_out%mesh => sm_in%mesh
 
@@ -521,7 +502,6 @@ contains
     sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)) = sm_in%x(1:sm_in%np_part, 0:ubound(sm_in%x, 2))
 
     POP_SUB(submesh_copy)
-
   end subroutine submesh_copy
 
   ! --------------------------------------------------------------

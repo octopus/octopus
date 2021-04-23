@@ -41,7 +41,6 @@ module kpoints_oct_m
   public ::                       &
     kpoints_grid_t,               &
     kpoints_t,                    &
-    kpoints_nullify,              &
     kpoints_init,                 &
     kpoints_end,                  &
     kpoints_copy,                 &
@@ -68,10 +67,10 @@ module kpoints_oct_m
     FLOAT, allocatable :: point1BZ(:, :)
     FLOAT, allocatable :: red_point(:, :)
     FLOAT, allocatable :: weight(:)
-    integer            :: nshifts            !< number of shifts
+    integer            :: nshifts = 1      !< number of shifts
     FLOAT, allocatable :: shifts(:,:)
-    integer            :: npoints
-    integer            :: dim
+    integer            :: npoints = 0
+    integer            :: dim = 0
   end type kpoints_grid_t
 
   type kpoints_t
@@ -79,22 +78,22 @@ module kpoints_oct_m
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
-    integer              :: method
+    integer              :: method = 0
 
-    logical              :: use_symmetries
-    logical              :: use_time_reversal
-    integer              :: nik_skip=0 !< number of user defined points with zero weight
+    logical              :: use_symmetries = .false.
+    logical              :: use_time_reversal = .false.
+    integer              :: nik_skip = 0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer                       :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer                       :: niq_axis(MAX_DIM)    !< number of MP divisions
+    integer                       :: nik_axis(MAX_DIM) = 0 !< number of MP divisions
+    integer                       :: niq_axis(MAX_DIM) = 0   !< number of MP divisions
     integer, allocatable, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, allocatable, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
     FLOAT, allocatable            :: coord_along_path(:)
 
-    integer              :: downsampling(MAX_DIM) !< downsampling coefficients
+    integer              :: downsampling(MAX_DIM) = 1 !< downsampling coefficients
 
     type(symmetries_t), pointer :: symm => null()
 
@@ -115,15 +114,7 @@ module kpoints_oct_m
 
 contains
 
-  elemental subroutine  kpoints_grid_nullify(this)
-    type(kpoints_grid_t), intent(out) :: this
-
-    this%npoints = 0
-    this%dim = 0
-    this%nshifts = 1
-  
-  end subroutine kpoints_grid_nullify
-
+  ! ---------------------------------------------------------
   subroutine kpoints_grid_init(dim, this, npoints, nshifts)
     integer,              intent(in)  :: dim
     type(kpoints_grid_t), intent(out) :: this
@@ -144,8 +135,6 @@ contains
     POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
 
-
-
   ! ---------------------------------------------------------
   subroutine kpoints_grid_end(this)
     type(kpoints_grid_t), intent(inout) :: this
@@ -161,14 +150,14 @@ contains
     POP_SUB(kpoints_grid_end)
   end subroutine kpoints_grid_end
 
-
   ! ---------------------------------------------------------
   subroutine kpoints_grid_copy(bb, aa)
-    type(kpoints_grid_t), intent(in)  :: bb
-    type(kpoints_grid_t), intent(out) :: aa
+    type(kpoints_grid_t), intent(in)    :: bb
+    type(kpoints_grid_t), intent(inout) :: aa
 
     PUSH_SUB(kpoints_grid_copy)
     
+    call kpoints_grid_end(aa)
     call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
     aa%weight(1:bb%npoints) = bb%weight(1:bb%npoints)
     aa%point(1:bb%dim, 1:bb%npoints)  = bb%point(1:bb%dim, 1:bb%npoints)
@@ -228,23 +217,6 @@ contains
     POP_SUB(kpoints_grid_addto)
   end subroutine kpoints_grid_addto
 
-
-  ! ---------------------------------------------------------
-  elemental subroutine kpoints_nullify(this)
-    type(kpoints_t), intent(out) :: this
-
-    call kpoints_grid_nullify(this%full)
-    call kpoints_grid_nullify(this%reduced)
-    this%method = 0
-    this%use_symmetries = .false.
-    this%use_time_reversal = .false.
-    this%nik_skip = 0
-    this%nik_axis = 0
-    this%niq_axis = 0
-    this%downsampling = 1
-
-  end subroutine kpoints_nullify
-
   ! ---------------------------------------------------------
   subroutine kpoints_init(this, namespace, symm, dim, periodic_dim, latt)
     type(kpoints_t),            intent(out) :: this
@@ -263,7 +235,6 @@ contains
 
     ASSERT(dim <= MAX_DIM)
 
-    call kpoints_nullify(this)
     this%nik_axis(1:MAX_DIM) = 1
 
     only_gamma = (periodic_dim == 0)
@@ -786,8 +757,6 @@ contains
       POP_SUB(kpoints_init.read_path) 
     end subroutine read_path
 
-
-
     ! ---------------------------------------------------------
     subroutine read_user_kpoints()
       type(block_t) :: blk
@@ -958,7 +927,6 @@ contains
     POP_SUB(kpoints_to_absolute)
   end subroutine kpoints_to_absolute
 
-
   ! ---------------------------------------------------------
   subroutine kpoints_to_reduced(rlattice, kin, kout, dim)
     FLOAT,   intent(in)  :: rlattice(:,:)
@@ -982,12 +950,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kpoints_copy(kin, kout)
-    type(kpoints_t), intent(in)  :: kin
-    type(kpoints_t), intent(out) :: kout
+    type(kpoints_t), intent(in)    :: kin
+    type(kpoints_t), intent(inout) :: kout
 
     PUSH_SUB(kpoints_copy)
 
-    call kpoints_nullify(kout)
+    call kpoints_end(kout)
 
     kout%method = kin%method
 

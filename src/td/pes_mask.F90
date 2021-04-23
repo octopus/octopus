@@ -528,7 +528,6 @@ contains
 
 !     print *, mpi_world%rank, " mask%ll", mask%ll(1:3), "states -",st%st_start,st%st_end
     !Allocations
-    call cube_function_null(mask%cM)    
     call zcube_function_alloc_RS(mask%cube, mask%cM, force_alloc = .true.)
     
     SAFE_ALLOCATE(mask%Lk(1:maxval(mask%fs_n_global(:)),1:3))
@@ -1152,7 +1151,6 @@ contains
 !       call zfft_forward(mask%cube%fft, wfin, wfout)
       
     case(PW_MAP_PFFT)
-      call cube_function_null(cf_tmp)    
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%zRs = wfin
@@ -1208,7 +1206,6 @@ contains
       
     case(PW_MAP_PFFT)
       
-      call cube_function_null(cf_tmp)    
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%fs  = wfin
@@ -1318,10 +1315,8 @@ contains
 
     if (time > mask%start_time) then ! record photoelectrons only after mask%start_time
       
-      call cube_function_null(cf1)    
       call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
       call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
-      call cube_function_null(cf2)    
       call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
       call  cube_function_alloc_FS(mask%cube, cf2, force_alloc = .true.)
       

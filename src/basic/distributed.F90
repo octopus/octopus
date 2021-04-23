@@ -155,13 +155,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine distributed_copy(in, out)
-    type(distributed_t), intent(in)  :: in
-    type(distributed_t), intent(out) :: out
+    type(distributed_t), intent(in)    :: in
+    type(distributed_t), intent(inout) :: out
 
     integer :: size
 
     PUSH_SUB(distributed_copy)
 
+    call distributed_end(out)
+    
     out%start    = in%start
     out%end      = in%end
     out%nlocal   = in%nlocal

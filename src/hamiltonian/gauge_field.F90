@@ -48,7 +48,6 @@ module gauge_field_oct_m
 
   public ::                               &
     gauge_field_t,                        &
-    gauge_field_nullify,                  &
     gauge_field_init,                     &
     gauge_field_init_vec_pot,             &
     gauge_field_is_applied,               &
@@ -73,7 +72,7 @@ module gauge_field_oct_m
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
-    logical, public :: with_gauge_field
+    logical, public :: with_gauge_field = .false.
     integer :: dynamics
     FLOAT   :: kicktime 
  
@@ -81,15 +80,6 @@ module gauge_field_oct_m
   end type gauge_field_t
 
 contains
-
-  subroutine gauge_field_nullify(this)
-    type(gauge_field_t), intent(out) :: this
-
-    PUSH_SUB(gauge_field_nullify)
-    this%with_gauge_field = .false.
-
-    POP_SUB(gauge_field_nullify)
-  end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
   subroutine gauge_field_init(this, namespace, kpoints)

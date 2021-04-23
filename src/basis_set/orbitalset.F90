@@ -41,9 +41,8 @@ module orbitalset_oct_m
 
   private
 
-  public ::                             &
+  public ::                            &
        orbitalset_t,                   &
-       orbitalset_nullify,             &
        orbitalset_init,                &
        orbitalset_end,                 &
        orbitalset_update_phase,        &
@@ -91,18 +90,6 @@ module orbitalset_oct_m
   end type orbitalset_t
 
 contains
-
- subroutine orbitalset_nullify(this)
-  type(orbitalset_t),             intent(inout) :: this
-
-  PUSH_SUB(orbitalset_nullify)
-
-  call submesh_null(this%sphere)
-  call orbitalset_init(this)
-
-  POP_SUB(orbitalset_nullify)
-
- end subroutine orbitalset_nullify
 
  subroutine orbitalset_init(this)
   type(orbitalset_t),             intent(inout) :: this

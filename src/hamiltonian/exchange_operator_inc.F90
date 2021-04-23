@@ -124,7 +124,6 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
 
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
-    call fourier_space_op_nullify(coulb)
     qq = M_ZERO
     call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega)
   end if
@@ -627,7 +626,6 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
 
     use_external_kernel = (st%d%nik > st%d%spin_channels .or. this%cam_omega > M_EPSILON)
     if(use_external_kernel) then
-      call fourier_space_op_nullify(coulb)
       call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega)
     end if
 

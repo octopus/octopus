@@ -304,7 +304,7 @@ contains
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
-          call orbitalset_nullify(os)
+          call orbitalset_init(os)
 
           !We count the orbitals
           work2 = 0
@@ -324,7 +324,6 @@ contains
           os%ndim = 1
           os%submesh = .false.
           os%spec => geo%atom(ia)%species
-          call submesh_null(os%sphere)
  
           do work = 1, os%norbs
             ! We obtain the orbital

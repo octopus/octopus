@@ -182,10 +182,7 @@ contains
 
     call distributed_nullify(this%orbs_dist, 0)
 
-    call orbitalbasis_nullify(this%basis)
-
     POP_SUB(lda_u_nullify)
-
   end subroutine lda_u_nullify
 
   ! ---------------------------------------------------------

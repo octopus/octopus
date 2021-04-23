@@ -40,7 +40,6 @@ module cube_function_oct_m
   private
   public ::                        &
     cube_function_t,               &
-    cube_function_null,            &
     dcube_function_alloc_RS,       &
     zcube_function_alloc_RS,       &
     dcube_function_free_RS,        &
@@ -64,33 +63,16 @@ module cube_function_oct_m
 
   type cube_function_t
     ! Components are public by default
-    FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
-    CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
-    CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
-    logical            :: forced_alloc !< Forced to be allocated even when PFFT is associated with the cube
-    logical            :: in_device_memory
+    FLOAT, pointer :: dRS(:, :, :) => NULL() !< real-space grid
+    CMPLX, pointer :: zRS(:, :, :) => NULL() !< real-space grid, complex numbers
+    CMPLX, pointer :: FS(:, :, :)  => NULL() !< Fourier-space grid
+    logical            :: forced_alloc = .false. !< Forced to be allocated even when PFFT is associated with the cube
+    logical            :: in_device_memory = .false.
     type(accel_mem_t) :: real_space_buffer
     type(accel_mem_t) :: fourier_space_buffer
   end type cube_function_t
 
 contains
-
-  ! ---------------------------------------------------------
-  !> Nullifies the real space and Fourier space grids
-  subroutine cube_function_null(cf)
-    type(cube_function_t), intent(out) :: cf
-    
-    PUSH_SUB(cube_function_null)
-
-    nullify(cf%zRS)
-    nullify(cf%dRS)
-    nullify(cf%FS)
-    cf%in_device_memory = .false.
-    cf%forced_alloc = .false.
-
-    POP_SUB(cube_function_null) 
-  end subroutine cube_function_null
-
 
 #include "undef.F90"
 #include "real.F90"

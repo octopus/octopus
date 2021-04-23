@@ -29,80 +29,42 @@ module energy_oct_m
 
   public ::         &
     energy_t,       &
-    energy_nullify, &
     energy_copy
 
   type energy_t
     ! Components are public by default
     ! Energies
-    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
-                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
-    FLOAT :: eigenvalues !< Sum[Eigenvalues]
-    FLOAT :: exchange
-    FLOAT :: correlation
-    FLOAT :: vdw
-    FLOAT :: xc_j
-    FLOAT :: intnvxc     !< Int[n vxc]
-    FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
-    FLOAT :: int_ee_pcm  !< 1/2 [v_Hartree]*[q_pcm_e] dot product of vectors of dimension n_tesserae
-    FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n] 
-    FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e] 
-    FLOAT :: int_nn_pcm  !< 1/2 [v_n]*[q_pcm_n]
-    FLOAT :: int_e_ext_pcm  !< [v_Hartree]*[q_pcm_ext]
-    FLOAT :: int_n_ext_pcm  !< [v_n]*[q_pcm_ext]
-    FLOAT :: pcm_corr    !< Int[n (v_e_rs + v_n_rs)]
-    FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
-    FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
-    FLOAT :: extern_local !< The local part of the external energy ( Int[n v] )
-    FLOAT :: extern_non_local !< The part of the external energy coming from the non-local part of the pseudos
-    FLOAT :: entropy
-    FLOAT :: ts          !< TS
-    FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
-    FLOAT :: delta_xc    !< the XC derivative discontinuity
-    FLOAT :: dft_u       !DFT+U contribution
-    FLOAT :: int_dft_u !< Int[n v_U]
-    FLOAT :: intnvstatic !< Int[n v_static} (static electric field)
-    FLOAT :: photon_exchange
-
+    FLOAT :: total            = M_ZERO !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
+                                       !! - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
+    FLOAT :: eigenvalues      = M_ZERO !< Sum[Eigenvalues]
+    FLOAT :: exchange         = M_ZERO
+    FLOAT :: correlation      = M_ZERO
+    FLOAT :: vdw              = M_ZERO
+    FLOAT :: xc_j             = M_ZERO
+    FLOAT :: intnvxc          = M_ZERO !< Int[n vxc]
+    FLOAT :: hartree          = M_ZERO !< Hartree      U = (1/2)*Int [n v_Hartree]
+    FLOAT :: int_ee_pcm       = M_ZERO !< 1/2 [v_Hartree]*[q_pcm_e] dot product of vectors of dimension n_tesserae
+    FLOAT :: int_en_pcm       = M_ZERO !< 1/2 [v_Hartree]*[q_pcm_n] 
+    FLOAT :: int_ne_pcm       = M_ZERO !< 1/2 [v_n]*[q_pcm_e] 
+    FLOAT :: int_nn_pcm       = M_ZERO !< 1/2 [v_n]*[q_pcm_n]
+    FLOAT :: int_e_ext_pcm    = M_ZERO !< [v_Hartree]*[q_pcm_ext]
+    FLOAT :: int_n_ext_pcm    = M_ZERO !< [v_n]*[q_pcm_ext]
+    FLOAT :: pcm_corr         = M_ZERO !< Int[n (v_e_rs + v_n_rs)]
+    FLOAT :: kinetic          = M_ZERO !< Kinetic energy of the non-interacting (KS) system of electrons
+    FLOAT :: extern           = M_ZERO !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
+    FLOAT :: extern_local     = M_ZERO !< The local part of the external energy ( Int[n v] )
+    FLOAT :: extern_non_local = M_ZERO !< The part of the external energy coming from the non-local part of the pseudos
+    FLOAT :: entropy          = M_ZERO
+    FLOAT :: ts               = M_ZERO !< TS
+    FLOAT :: berry            = M_ZERO !< Berry energy correction = -mu.E - <Vberry>
+    FLOAT :: delta_xc         = M_ZERO !< the XC derivative discontinuity
+    FLOAT :: dft_u            = M_ZERO !< DFT+U contribution
+    FLOAT :: int_dft_u        = M_ZERO !< Int[n v_U]
+    FLOAT :: intnvstatic      = M_ZERO !< Int[n v_static} (static electric field)
+    FLOAT :: photon_exchange  = M_ZERO
   end type energy_t
 
 contains
-
-  subroutine energy_nullify(this)
-    type(energy_t), intent(out) :: this
-
-    PUSH_SUB(energy_nullify)
-
-    this%total        = M_ZERO
-    this%eigenvalues  = M_ZERO
-    this%exchange     = M_ZERO
-    this%correlation  = M_ZERO
-    this%vdw          = M_ZERO
-    this%xc_j         = M_ZERO
-    this%intnvxc      = M_ZERO
-    this%hartree      = M_ZERO
-    this%int_ee_pcm   = M_ZERO
-    this%int_en_pcm   = M_ZERO
-    this%int_ne_pcm   = M_ZERO
-    this%int_nn_pcm   = M_ZERO
-    this%int_e_ext_pcm   = M_ZERO
-    this%int_n_ext_pcm   = M_ZERO
-    this%pcm_corr     = M_ZERO
-    this%kinetic      = M_ZERO
-    this%extern       = M_ZERO
-    this%extern_local = M_ZERO
-    this%extern_non_local = M_ZERO
-    this%entropy      = M_ZERO
-    this%ts           = M_ZERO
-    this%berry        = M_ZERO
-    this%delta_xc     = M_ZERO
-    this%dft_u        = M_ZERO
-    this%int_dft_u    = M_ZERO
-    this%intnvstatic  = M_ZERO
-    this%photon_exchange  = M_ZERO
-
-    POP_SUB(energy_nullify)
-  end subroutine energy_nullify
 
   subroutine energy_copy(ein, eout)
     type(energy_t), intent(in)  :: ein

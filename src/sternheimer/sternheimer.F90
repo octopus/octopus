@@ -104,10 +104,10 @@ module sternheimer_oct_m
      type(scf_tol_t)       :: scf_tol
      FLOAT, allocatable    :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
      FLOAT, allocatable    :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
-     FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
-     CMPLX, pointer        :: zrhs(:, :, :, :)
-     FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
-     CMPLX, pointer        :: zinhomog(:, :, :, :, :)
+     FLOAT, pointer        :: drhs(:, :, :, :) => NULL() !< precomputed bare perturbation on RHS
+     CMPLX, pointer        :: zrhs(:, :, :, :) => NULL()
+     FLOAT, pointer        :: dinhomog(:, :, :, :, :) => NULL() !< fixed inhomogeneous term on RHS
+     CMPLX, pointer        :: zinhomog(:, :, :, :, :) => NULL()
      logical               :: add_fxc
      logical               :: add_hartree
      logical               :: ok
@@ -152,8 +152,6 @@ contains
     logical :: default_preorthog
 
     PUSH_SUB(sternheimer_init)
-
-    call sternheimer_nullify(this)
 
     if(st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
@@ -307,20 +305,6 @@ contains
 
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
-
-  !-----------------------------------------------------------
-  subroutine sternheimer_nullify(this)
-    type(sternheimer_t), intent(inout) :: this
-
-    PUSH_SUB(sternheimer_nullify)
-
-    nullify(this%drhs)
-    nullify(this%zrhs)
-    nullify(this%dinhomog)
-    nullify(this%zinhomog)
-
-    POP_SUB(sternheimer_nullify)
-  end subroutine sternheimer_nullify
 
   !-----------------------------------------------------------
   subroutine sternheimer_end(this)

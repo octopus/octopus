@@ -125,6 +125,7 @@ module controlfunction_oct_m
     type(tdf_t), allocatable :: td_penalty(:)                      !< The penalties, if these are time-dependent.
   end type controlfunction_common_t
 
+
   !> This is the data type used to hold a control function.
   type controlfunction_t
     private
@@ -154,21 +155,6 @@ module controlfunction_oct_m
   type(controlfunction_common_t) :: cf_common
 
 contains
-
-
-
-  elemental subroutine controlfunction_common_nullify(this)
-    type(controlfunction_common_t), intent(out) :: this
-    !
-    this%representation      = 0
-    this%omegamax            = M_ZERO
-    this%targetfluence       = M_ZERO
-    this%fix_initial_fluence = .false.
-    this%w0                  = M_ZERO
-    this%mode                = controlfunction_mode_none
-    this%no_controlfunctions = 0
-
-  end subroutine controlfunction_common_nullify
 
   !> Initializes the module, should be the first subroutine to be called (the last one
   !! should be controlfunction_mod_close, when the module is no longer to be used).
@@ -200,8 +186,6 @@ contains
       message(1) = "Internal error: Cannot call controlfunction_mod_init twice."
       call messages_fatal(1)
     end if
-
-    call controlfunction_common_nullify(cf_common)
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
 
@@ -509,19 +493,8 @@ contains
     call messages_print_stress(stdout)
     POP_SUB(controlfunction_mod_init)
   end subroutine controlfunction_mod_init
+
   ! ---------------------------------------------------------
-
-  elemental subroutine controlfunction_nullify(this)
-    type(controlfunction_t), intent(out) :: this
-
-    this%no_controlfunctions    = 0
-    this%dim                    = 0
-    this%dof                    = 0
-    this%current_representation = 0
-    this%w0                     = M_ZERO
-
-  end subroutine controlfunction_nullify
-  
   !> Before using an controlfunction_t variable, it needs
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
@@ -534,8 +507,6 @@ contains
     integer :: ipar
 
     PUSH_SUB(controlfunction_init)
-
-    call controlfunction_nullify(cp)
 
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions

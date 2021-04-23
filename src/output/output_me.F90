@@ -350,7 +350,6 @@ contains
         write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k2|n2-k2, n2-k1)'
       end if
 
-      call singularity_nullify(singul)
       if(bitand(this%what, output_me_two_body) /= 0) then
         if(states_are_real(st)) then
           id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8

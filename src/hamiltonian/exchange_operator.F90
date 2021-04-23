@@ -58,7 +58,6 @@ module exchange_operator_oct_m
   private
   public ::                          &
     exchange_operator_t,             &
-    exchange_operator_nullify,       &
     exchange_operator_init,          &
     exchange_operator_reinit,        &
     exchange_operator_end,           &
@@ -84,37 +83,21 @@ module exchange_operator_oct_m
   end type ACE_t
 
   type exchange_operator_t
-    type(states_elec_t), public, pointer :: st
-    FLOAT :: cam_omega
-    FLOAT :: cam_alpha
-    FLOAT :: cam_beta
+    type(states_elec_t), public, pointer :: st => NULL()
+    FLOAT :: cam_omega = M_ZERO
+    FLOAT :: cam_alpha = M_ZERO
+    FLOAT :: cam_beta = M_ZERO
 
     type(poisson_t) :: psolver      !< Poisson solver
 
     type(singularity_t) :: singul !< Coulomb singularity
 
-    logical       :: useACE
+    logical       :: useACE = .false.
     type(ACE_t)   :: ace
   end type exchange_operator_t
  
 contains
 
-  subroutine exchange_operator_nullify(this)
-    type(exchange_operator_t), intent(out) :: this
-
-    PUSH_SUB(exchange_operator_nullify)
-
-    nullify(this%st)
-
-    this%cam_omega = M_ZERO
-    this%cam_alpha = M_ZERO
-    this%cam_beta  = M_ZERO
-
-    this%useACE = .false.
-
-    POP_SUB(exchange_operator_nullify)
-  end subroutine exchange_operator_nullify
- 
   subroutine exchange_operator_init(this, namespace, space, st, latt, der, mc, kpoints, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace

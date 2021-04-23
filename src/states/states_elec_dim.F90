@@ -88,10 +88,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_elec_dim_copy(dout, din)
-    type(states_elec_dim_t), intent(out) :: dout
-    type(states_elec_dim_t), intent(in)  :: din
+    type(states_elec_dim_t), intent(inout) :: dout
+    type(states_elec_dim_t), intent(in)    :: din
 
     PUSH_SUB(states_elec_dim_copy)
+
+    call states_elec_dim_end(dout)
 
     dout%dim            = din%dim
     dout%nik            = din%nik

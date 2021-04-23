@@ -130,7 +130,6 @@ contains
 
     PUSH_SUB(build_valconf)
 
-    call valconf_null(conf)
     conf%symbol = psf_file%namatm
     conf%p = psf_file%npotd
     write(char2,'(i1)') conf%p

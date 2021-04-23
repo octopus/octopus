@@ -232,7 +232,6 @@ contains
     
     PUSH_SUB(poisson_isf_solve)
 
-    call cube_function_null(rho_cf)
     call dcube_function_alloc_RS(cube, rho_cf)
 
     if(present(sm)) then
