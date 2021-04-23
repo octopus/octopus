@@ -1240,10 +1240,10 @@ contains
 
   !---------------------------------------------------------
   subroutine pes_mask_mesh_to_cube(mask, mf, cf, local)
-    type(pes_mask_t),      intent(in) :: mask
-    CMPLX,                 intent(in) :: mf(:)
-    type(cube_function_t), intent(out):: cf
-    logical, optional,     intent(in) :: local
+    type(pes_mask_t),      intent(in)    :: mask
+    CMPLX,                 intent(in)    :: mf(:)
+    type(cube_function_t), intent(inout) :: cf
+    logical, optional,     intent(in)    :: local
     
     logical :: local_
     
