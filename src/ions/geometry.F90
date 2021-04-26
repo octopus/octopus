@@ -1031,9 +1031,8 @@ contains
   ! ----------------------------------------------------------------
   !> This subroutine creates a crystal by replicating the geometry and
   !! writes the result to dir//'crystal.xyz'
-  subroutine geometry_write_crystal(geo, latt, dir, namespace)
+  subroutine geometry_write_crystal(geo, dir, namespace)
     class(geometry_t),       intent(in) :: geo 
-    type(lattice_vectors_t), intent(in) :: latt
     character(len=*),        intent(in) :: dir
     type(namespace_t),       intent(in) :: namespace 
     
@@ -1043,8 +1042,8 @@ contains
 
     PUSH_SUB(geometry_write_crystal)
     
-    radius = maxval(M_HALF*norm2(latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
-    latt_iter = lattice_iterator_t(latt, radius)
+    radius = maxval(M_HALF*norm2(geo%latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
+    latt_iter = lattice_iterator_t(geo%latt, radius)
 
     if(mpi_grp_is_root(mpi_world)) then
       
