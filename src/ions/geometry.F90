@@ -48,7 +48,6 @@ module geometry_oct_m
   private
   public ::                          &
     geometry_t,                      &
-    geometry_copy,                   &
     geometry_partition,              &
     geometry_write_xyz,              &
     geometry_read_xyz,               &
@@ -100,6 +99,8 @@ module geometry_oct_m
     logical,     private :: global_force
     type(tdf_t), private :: global_force_function
   contains
+    procedure :: copy => geometry_copy
+    generic   :: assignment(=) => copy
     final :: geometry_finalize
   end type geometry_t
 
@@ -384,12 +385,10 @@ contains
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)
-    type(geometry_t), intent(inout) :: geo_out
-    type(geometry_t), intent(in)    :: geo_in
+    class(geometry_t), intent(out) :: geo_out
+    class(geometry_t), intent(in)  :: geo_in
 
     PUSH_SUB(geometry_copy)
-
-    call geometry_end(geo_out)
 
     geo_out%latt = geo_in%latt
 

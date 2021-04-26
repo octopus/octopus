@@ -206,7 +206,7 @@ contains
       end do
       
       SAFE_ALLOCATE(this%geo_t0)
-      call geometry_copy(this%geo_t0, geo)
+      this%geo_t0 = geo
       
     end if
     
