@@ -545,7 +545,7 @@ contains
       do jatom = iatom + 1, this%natoms
         call atom_get_species(this%atom(iatom), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        xx(1:this%space%dim) = abs(this%atom(iatom)%x(1:this%space%dim) - this%atom(jatom)%x(1:this%space%dim))
+        xx = abs(this%atom(iatom)%x(1:this%space%dim) - this%atom(jatom)%x(1:this%space%dim))
         if (this%space%is_periodic()) then
           xx = this%latt%cart_to_red(xx)
           do idir = 1, this%space%periodic_dim
@@ -613,8 +613,7 @@ contains
       if (present(mask)) then
         if (.not. mask(ia)) cycle
       end if
-      dipole(1:this%space%dim) = dipole(1:this%space%dim) + &
-        species_zval(this%atom(ia)%species)*this%atom(ia)%x(1:this%space%dim)
+      dipole = dipole + species_zval(this%atom(ia)%species)*this%atom(ia)%x(1:this%space%dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -626,7 +625,7 @@ contains
     class(geometry_t),           intent(in) :: this
     logical,           optional, intent(in) :: mask(:)
     logical,           optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
-    FLOAT :: pos(MAX_DIM)
+    FLOAT :: pos(this%space%dim)
 
     FLOAT :: mass, total_mass
     integer :: ia
@@ -643,10 +642,10 @@ contains
       if (.not. optional_default(pseudo, .false.)) then
         mass = species_mass(this%atom(ia)%species)
       end if
-      pos(1:this%space%dim) = pos(1:this%space%dim) + mass*this%atom(ia)%x(1:this%space%dim)
+      pos = pos + mass*this%atom(ia)%x(1:this%space%dim)
       total_mass = total_mass + mass
     end do
-    pos(1:this%space%dim) = pos(1:this%space%dim)/total_mass
+    pos = pos/total_mass
 
     POP_SUB(geometry_center_of_mass)
   end function geometry_center_of_mass
@@ -654,7 +653,7 @@ contains
   ! ---------------------------------------------------------
   function geometry_center_of_mass_vel(this) result(vel)
     class(geometry_t), intent(in) :: this
-    FLOAT :: vel(MAX_DIM)
+    FLOAT :: vel(this%space%dim)
 
     FLOAT :: mass, total_mass
     integer :: iatom
@@ -666,9 +665,9 @@ contains
     do iatom = 1, this%natoms
       mass = species_mass(this%atom(iatom)%species)
       total_mass = total_mass + mass
-      vel(1:this%space%dim) = vel(1:this%space%dim) + mass*this%atom(iatom)%v(1:this%space%dim)
+      vel = vel + mass*this%atom(iatom)%v(1:this%space%dim)
     end do
-    vel(1:this%space%dim) = vel(1:this%space%dim)/total_mass
+    vel = vel/total_mass
 
     POP_SUB(geometry_center_of_mass_vel)
   end function geometry_center_of_mass_vel
@@ -676,9 +675,9 @@ contains
   ! ---------------------------------------------------------
   function geometry_center(this) result(pos)
     class(geometry_t), intent(in) :: this
-    FLOAT :: pos(MAX_DIM)
+    FLOAT :: pos(this%space%dim)
 
-    FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
+    FLOAT :: xmin(this%space%dim), xmax(this%space%dim)
     integer  :: i, j
 
     PUSH_SUB(geometry_center)
@@ -692,8 +691,7 @@ contains
       end do
     end do
 
-    pos = M_ZERO
-    pos(1:this%space%dim) = (xmax(1:this%space%dim) + xmin(1:this%space%dim))/M_TWO
+    pos = (xmax + xmin)/M_TWO
 
     POP_SUB(geometry_center)
   end function geometry_center
@@ -701,7 +699,7 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_axis_large(this, x, x2)
     class(geometry_t), intent(in)  :: this
-    FLOAT,             intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+    FLOAT,             intent(out) :: x(this%space%dim), x2(this%space%dim)
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
@@ -712,23 +710,23 @@ contains
     rmax = -M_HUGE
     do i = 1, this%natoms
       do j = 1, this%natoms/2 + 1
-        r = sqrt(sum((this%atom(i)%x(1:this%space%dim)-this%atom(j)%x(1:this%space%dim))**2))
+        r = norm2(this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim))
         if (r > rmax) then
           rmax = r
-          x = this%atom(i)%x - this%atom(j)%x
+          x = this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim)
         end if
       end do
     end do
-    x  = x /sqrt(sum(x(1:this%space%dim)**2))
+    x  = x /norm2(x)
 
     ! now let us find out what is the second most important axis
     rmax = -M_HUGE
     do i = 1, this%natoms
-      r2 = sum(x(1:this%space%dim) * this%atom(i)%x(1:this%space%dim))
-      r = sqrt(sum((this%atom(i)%x(1:this%space%dim) - r2*x(1:this%space%dim))**2))
+      r2 = sum(x * this%atom(i)%x(1:this%space%dim))
+      r = norm2(this%atom(i)%x(1:this%space%dim) - r2*x)
       if (r > rmax) then
         rmax = r
-        x2 = this%atom(i)%x - r2*x
+        x2 = this%atom(i)%x(1:this%space%dim) - r2*x
       end if
     end do
 
@@ -740,10 +738,10 @@ contains
   !! center of mass of the system
   subroutine geometry_axis_inertia(this, x, x2, pseudo)
     class(geometry_t), intent(in)  :: this
-    FLOAT,             intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+    FLOAT,             intent(out) :: x(this%space%dim), x2(this%space%dim)
     logical,           intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
 
-    FLOAT :: mass, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
+    FLOAT :: mass, tinertia(this%space%dim, this%space%dim), eigenvalues(this%space%dim)
     integer :: ii, jj, iatom
     type(unit_t) :: unit
 
@@ -774,8 +772,7 @@ contains
 
     call lalg_eigensolve(this%space%dim, tinertia, eigenvalues)
 
-    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
-      (units_from_atomic(unit, eigenvalues(jj)), jj = 1, this%space%dim)
+    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', units_from_atomic(unit, eigenvalues)
     call messages_info(1)
 
     ! make a choice to fix the sign of the axis.
@@ -790,19 +787,19 @@ contains
   end subroutine geometry_axis_inertia
 
   ! ---------------------------------------------------------
-  subroutine geometry_translate(this, x)
+  subroutine geometry_translate(this, xx)
     class(geometry_t), intent(inout) :: this
-    FLOAT,             intent(in)    :: x(MAX_DIM)
+    FLOAT,             intent(in)    :: xx(this%space%dim)
 
     integer  :: iatom
 
     PUSH_SUB(geometry_translate)
 
     do iatom = 1, this%natoms
-      this%atom(iatom)%x(1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim) - x(1:this%space%dim)
+      this%atom(iatom)%x(1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim) - xx
     end do
     do iatom = 1, this%ncatoms
-      this%catom(iatom)%x(1:this%space%dim) = this%catom(iatom)%x(1:this%space%dim) - x(1:this%space%dim)
+      this%catom(iatom)%x(1:this%space%dim) = this%catom(iatom)%x(1:this%space%dim) - xx
     end do
 
     POP_SUB(geometry_translate)
@@ -812,13 +809,13 @@ contains
   subroutine geometry_rotate(this, namespace, from, from2, to)
     class(geometry_t), intent(inout) :: this
     type(namespace_t), intent(in)    :: namespace
-    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+    FLOAT,             intent(in)    :: from(this%space%dim)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(this%space%dim)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(this%space%dim)     !< assumed to be normalized
 
     integer :: iatom, idim
-    FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
-    FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
+    FLOAT :: m1(3, 3), m2(3, 3)
+    FLOAT :: m3(3, 3), f2(3), per(3)
     FLOAT :: alpha, r
 
     PUSH_SUB(geometry_rotate)
@@ -829,7 +826,7 @@ contains
 
     ! initialize matrices
     m1 = M_ZERO
-    do idim = 1, MAX_DIM
+    do idim = 1, this%space%dim
       m1(idim, idim) = M_ONE
     end do
 
@@ -846,9 +843,9 @@ contains
     per(1) = -f2(2)
     per(2) =  f2(1)
     per(3) = M_ZERO
-    r = sqrt(sum(per(1:3)**2))
+    r = norm2(per)
     if (r > M_ZERO) then
-      per(1:3) = per(1:3)/r
+      per = per/r
     else
       per(2) = M_ONE
     end if
@@ -877,13 +874,13 @@ contains
     ! now transform the coordinates
     ! it is written in this way to avoid what I consider a bug in the Intel compiler
     do iatom = 1, this%natoms
-      f2 = this%atom(iatom)%x
-      this%atom(iatom)%x = matmul(m1, f2)
+      f2 = this%atom(iatom)%x(1:this%space%dim)
+      this%atom(iatom)%x(1:this%space%dim) = matmul(m1, f2)
     end do
 
     do iatom = 1, this%ncatoms
-      f2 = this%catom(iatom)%x
-      this%catom(iatom)%x = matmul(m1, f2)
+      f2 = this%catom(iatom)%x(1:this%space%dim)
+      this%catom(iatom)%x(1:this%space%dim) = matmul(m1, f2)
     end do
 
     POP_SUB(geometry_rotate)
@@ -891,11 +888,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine rotate(m, angle, dir)
-      FLOAT,   intent(inout) :: m(MAX_DIM, MAX_DIM)
+      FLOAT,   intent(inout) :: m(3, 3)
       FLOAT,   intent(in)    :: angle
       integer, intent(in)    :: dir
 
-      FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+      FLOAT :: aux(3, 3), ca, sa
 
       PUSH_SUB(geometry_rotate.rotate)
 

@@ -69,12 +69,17 @@ contains
 
     type(geometry_t), pointer :: geo
     type(space_t)     :: space
-    FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
+    FLOAT, allocatable :: center(:), x1(:), x2(:), to(:)
     integer :: axis_type, idir, default
     type(block_t) :: blk
 
     call space_init(space, global_namespace)
     geo => geometry_t(global_namespace, space)
+
+    SAFE_ALLOCATE(center(1:geo%space%dim))
+    SAFE_ALLOCATE(x1(1:geo%space%dim))
+    SAFE_ALLOCATE(x2(1:geo%space%dim))
+    SAFE_ALLOCATE(to(1:geo%space%dim))
 
     ! is there something to do
     if (geo%natoms > 1) then
@@ -100,9 +105,9 @@ contains
         to(:) = M_ZERO
         to(1) = M_ONE
       end if
-      to = to / sqrt(sum(to(1:geo%space%dim)**2))
+      to = to / norm2(to)
 
-      write(message(1),'(a,6f15.6)') 'Using main axis ', to(1:geo%space%dim)
+      write(message(1),'(a,6f15.6)') 'Using main axis ', to
       call messages_info(1)
 
       !%Variable AxisType
@@ -139,7 +144,7 @@ contains
         center = geo%center_of_mass(pseudo = (axis_type==PSEUDO))
 
         write(message(1),'(3a,99f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
-          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+          units_from_atomic(units_out%length, center)
         call messages_info(1)
 
         call geo%translate(center)
@@ -148,7 +153,7 @@ contains
         center = geo%center()
 
         write(message(1),'(3a,99f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
-          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+          units_from_atomic(units_out%length, center)
         call messages_info(1)
 
         call geo%translate(center)
@@ -158,13 +163,14 @@ contains
         call messages_fatal(1, namespace=global_namespace)
       end select
 
-      write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
-      write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
+      write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1
+      write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2
       call messages_info(2)
 
       if (axis_type /= NONE) then
         call geo%rotate(global_namespace, x1, x2, to)
       end if
+
     end if
 
     ! recenter
@@ -174,6 +180,10 @@ contains
     ! write adjusted geometry
     call geo%write_xyz('./adjusted', global_namespace)
 
+    SAFE_DEALLOCATE_A(center)
+    SAFE_DEALLOCATE_A(x1)
+    SAFE_DEALLOCATE_A(x2)
+    SAFE_DEALLOCATE_A(to)
     SAFE_DEALLOCATE_P(geo)
 
   end subroutine center_geo

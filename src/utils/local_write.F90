@@ -593,7 +593,7 @@ contains
       call write_iter_flush(out_multip%handle)
     end if
 
-    center = geo%center_of_mass(mask=ions_mask)
+    center(1:geo%space%dim) = geo%center_of_mass(mask=ions_mask)
 
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     multipole = M_ZERO
