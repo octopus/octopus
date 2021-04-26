@@ -586,14 +586,15 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
         end do
       else
         dot(1:nst_) = M_ZERO
-        do ist = 1, nst_
-          indb = aa%ist_idim_to_linear((/ist, 1/))
-          do ip = 1, mesh%np
+        !$omp parallel do reduction(+:dot) private(indb)
+        do ip = 1, mesh%np
+          do ist = 1, nst_
+            indb = aa%ist_idim_to_linear((/ist, 1/))
             dot(ist) = dot(ist) + R_CONJ(aa%X(ff_pack)(indb, ip)) * psi(ip, 1) &
                                 + R_CONJ(aa%X(ff_pack)(indb+1, ip)) * psi(ip, 2)
           end do
-          dot(ist) = dot(ist) * mesh%volume_element
         end do
+        dot = dot * mesh%volume_element
       end if
  
     end if
