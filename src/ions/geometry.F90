@@ -1012,21 +1012,21 @@ contains
   end subroutine geometry_set_positions
 
   ! ---------------------------------------------------------
-  subroutine geometry_global_force(geo, time, force)
+  function geometry_global_force(geo, time) result(force)
     class(geometry_t),    intent(in)    :: geo
     FLOAT,                intent(in)    :: time
-    FLOAT,                intent(out)   :: force(:)
+    FLOAT :: force(geo%space%dim)
 
     PUSH_SUB(geometry_global_force)
 
-    force(1:geo%space%dim) = CNST(0.0)
+    force = M_ZERO
 
     if (geo%apply_global_force) then
       force(1) = units_to_atomic(units_inp%force, tdf(geo%global_force_function, time))
     end if
 
     POP_SUB(geometry_global_force)
-  end subroutine geometry_global_force
+  end function geometry_global_force
 
   ! ----------------------------------------------------------------
   !> This subroutine creates a crystal by replicating the geometry and

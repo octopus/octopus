@@ -267,7 +267,7 @@ contains
     FLOAT,     optional, intent(in)    :: dt
 
     integer :: j, iatom, idir
-    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
+    FLOAT :: x(MAX_DIM), time, global_force(geo%space%dim)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
     FLOAT, allocatable :: force_nlcc(: ,:)
     FLOAT, allocatable :: force_scf(:, :)
@@ -305,12 +305,12 @@ contains
     end do
 
     if(present(t)) then
-      call geo%global_force(time, global_force)
+      global_force = geo%global_force(time)
 
       ! the ion-ion term is already calculated
       do iatom = 1, geo%natoms
-        geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) + global_force(1:geo%space%dim)
-        geo%atom(iatom)%f_ii(1:geo%space%dim) = geo%atom(iatom)%f_ii(1:geo%space%dim) + global_force(1:geo%space%dim)
+        geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) + global_force
+        geo%atom(iatom)%f_ii(1:geo%space%dim) = geo%atom(iatom)%f_ii(1:geo%space%dim) + global_force
       end do
     end if
 
