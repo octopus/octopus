@@ -26,6 +26,7 @@ program xyzanim
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use profiling_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -63,7 +64,7 @@ contains
     integer :: ierr, sampling, i, coords_unit, iter, j, record_length
     logical :: multifiles
     FLOAT :: time
-    type(geometry_t)  :: geo
+    type(geometry_t), pointer :: geo
     type(space_t)     :: space
 
     ! Sets the filenames
@@ -93,7 +94,7 @@ contains
     call parse_variable(global_namespace, 'AnimationMultiFiles', .false., multifiles)
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
+    geo => geometry_t(global_namespace, space)
 
     record_length = 100 + geo%space%dim*geo%natoms*3*20
 
@@ -125,7 +126,7 @@ contains
       end if
     end do
 
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
 
     call io_close(coords_unit)
 

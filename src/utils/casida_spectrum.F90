@@ -46,7 +46,7 @@ program casida_spectrum
   type(casida_spectrum_t) :: cs
   FLOAT :: rotation(MAX_DIM, MAX_DIM), rot2(MAX_DIM, MAX_DIM), identity(MAX_DIM, MAX_DIM), coord(MAX_DIM)
   type(block_t) :: blk
-  type(geometry_t) :: geo
+  type(geometry_t), pointer :: geo
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -146,13 +146,13 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    call geometry_init(geo, global_namespace, cs%space)
+    geo => geometry_t(global_namespace, cs%space)
     do iatom = 1, geo%natoms
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
     call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated', global_namespace)
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
   else
     rotation(:,:) = identity(:,:)
   end if

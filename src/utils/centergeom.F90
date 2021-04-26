@@ -26,6 +26,7 @@ program centergeom
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use profiling_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -66,14 +67,14 @@ contains
       PSEUDO  = 2,        &
       LARGE   = 3
 
-    type(geometry_t)  :: geo
+    type(geometry_t), pointer :: geo
     type(space_t)     :: space
     FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
     integer :: axis_type, idir, default
     type(block_t) :: blk
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
+    geo => geometry_t(global_namespace, space)
 
     ! is there something to do
     if (geo%natoms > 1) then
@@ -172,7 +173,7 @@ contains
     ! write adjusted geometry
     call geometry_write_xyz(geo, './adjusted', global_namespace)
 
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
 
   end subroutine center_geo
 

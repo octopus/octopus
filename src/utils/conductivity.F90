@@ -44,7 +44,7 @@
     FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :)
     FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:)
     CMPLX, allocatable :: invdielectric(:, :)
-    type(geometry_t)  :: geo 
+    type(geometry_t), pointer :: geo 
     type(space_t)     :: space
     type(spectrum_t) :: spectrum
     type(block_t)     :: blk
@@ -108,7 +108,7 @@
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
+    geo => geometry_t(global_namespace, space)
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
@@ -492,7 +492,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
 
     SAFE_DEALLOCATE_A(time)
 

@@ -76,7 +76,7 @@ module electrons_oct_m
 
   type, extends(system_t) :: electrons_t
     ! Components are public by default
-    type(geometry_t)             :: geo
+    type(geometry_t), pointer    :: geo => NULL()
     type(grid_t)                 :: gr    !< the mesh
     type(states_elec_t)          :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
@@ -138,7 +138,7 @@ contains
       call messages_experimental('Support for mixed periodicity systems')
     end if
 
-    call geometry_init(sys%geo, sys%namespace, sys%space)
+    sys%geo => geometry_t(sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
     if (sys%space%is_periodic()) then
       call sys%geo%latt%write_info(stdout)
@@ -538,7 +538,7 @@ contains
 
     call states_elec_end(sys%st)
 
-    call geometry_end(sys%geo)
+    SAFE_DEALLOCATE_P(sys%geo)
 
     call kpoints_end(sys%kpoints)
 

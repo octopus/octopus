@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -47,7 +48,6 @@ module geometry_oct_m
   private
   public ::                          &
     geometry_t,                      &
-    geometry_init,                   &
     geometry_copy,                   &
     geometry_partition,              &
     geometry_write_xyz,              &
@@ -69,7 +69,6 @@ module geometry_oct_m
     geometry_get_positions,          &
     geometry_set_positions,          &
     geometry_global_force,           &
-    geometry_end,                    &
     periodic_write_crystal
 
   type geometry_t
@@ -100,24 +99,31 @@ module geometry_oct_m
     !> variables for external forces over the ions
     logical,     private :: global_force
     type(tdf_t), private :: global_force_function
-
+  contains
+    final :: geometry_finalize
   end type geometry_t
+
+  interface geometry_t
+    procedure geometry_constructor
+  end interface geometry_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, namespace, space, print_info)
-    type(geometry_t),           intent(inout) :: geo
+  function geometry_constructor(namespace, space, print_info) result(geo)
     type(namespace_t),          intent(in)    :: namespace
     type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
+    class(geometry_t), pointer :: geo
 
     character(len=100)  :: function_name
     integer :: ierr
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
 
-    PUSH_SUB(geometry_init)
+    PUSH_SUB(geometry_constructor)
+
+    SAFE_ALLOCATE(geo)
 
     geo%space => space
 
@@ -194,8 +200,8 @@ contains
   
     end if
 
-    POP_SUB(geometry_init)
-  end subroutine geometry_init
+    POP_SUB(geometry_constructor)
+  end function geometry_constructor
 
   ! ---------------------------------------------------------------
   !> initializes the xyz positions of the atoms in the structure geo
@@ -1008,10 +1014,10 @@ contains
   end subroutine geometry_set_positions
 
   ! ---------------------------------------------------------
-  subroutine geometry_end(geo)
+  subroutine geometry_finalize(geo)
     type(geometry_t), intent(inout) :: geo
 
-    PUSH_SUB(geometry_end)
+    PUSH_SUB(geometry_finalize)
 
     call distributed_end(geo%atoms_dist)
 
@@ -1028,8 +1034,8 @@ contains
 
     call species_end_global()
 
-    POP_SUB(geometry_end)
-  end subroutine geometry_end
+    POP_SUB(geometry_finalize)
+  end subroutine geometry_finalize
 
   ! ---------------------------------------------------------
 

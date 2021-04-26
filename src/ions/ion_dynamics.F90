@@ -472,7 +472,7 @@ contains
       end if
       SAFE_DEALLOCATE_A(this%td_displacements)
       if (any (this%td_displacements(:)%move)) then
-        call geometry_end(this%geo_t0)
+        SAFE_DEALLOCATE_P(this%geo_t0)
       end if
     end if
 
