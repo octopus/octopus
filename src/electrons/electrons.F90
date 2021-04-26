@@ -160,7 +160,7 @@ contains
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, sys%space%periodic_dim, sys%geo%latt)
 
-    call states_elec_init(sys%st, sys%namespace, sys%space, geometry_val_charge(sys%geo), sys%kpoints)
+    call states_elec_init(sys%st, sys%namespace, sys%space, sys%geo%val_charge(), sys%kpoints)
     call sys%st%write_info(sys%namespace)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
@@ -212,7 +212,7 @@ contains
     call multicomm_init(this%mc, this%namespace, this%grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
       mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call geometry_partition(this%geo, this%mc)
+    call this%geo%partition(this%mc)
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
     call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)

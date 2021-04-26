@@ -136,23 +136,23 @@ contains
 
       select case (axis_type)
       case (NONE, INERTIA, PSEUDO)
-        center = geometry_center_of_mass(geo, pseudo = (axis_type==PSEUDO))
+        center = geo%center_of_mass(pseudo = (axis_type==PSEUDO))
 
         write(message(1),'(3a,99f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
-        call geometry_translate(geo, center)
-        call geometry_axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
+        call geo%translate(center)
+        call geo%axis_inertia(x1, x2, pseudo = (axis_type==PSEUDO))
       case (LARGE)
-        center = geometry_center(geo)
+        center = geo%center()
 
         write(message(1),'(3a,99f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
-        call geometry_translate(geo, center)
-        call geometry_axis_large(geo, x1, x2)
+        call geo%translate(center)
+        call geo%axis_large(x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
         call messages_fatal(1, namespace=global_namespace)
@@ -162,16 +162,17 @@ contains
       write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
 
-      if (axis_type /= NONE) call geometry_rotate(geo, global_namespace, x1, x2, to)
-
+      if (axis_type /= NONE) then
+        call geo%rotate(global_namespace, x1, x2, to)
+      end if
     end if
 
     ! recenter
-    center = geometry_center(geo)
-    call geometry_translate(geo, center)
+    center = geo%center()
+    call geo%translate(center)
 
     ! write adjusted geometry
-    call geometry_write_xyz(geo, './adjusted', global_namespace)
+    call geo%write_xyz('./adjusted', global_namespace)
 
     SAFE_DEALLOCATE_P(geo)
 

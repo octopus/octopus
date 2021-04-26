@@ -46,29 +46,7 @@ module geometry_oct_m
   implicit none
 
   private
-  public ::                          &
-    geometry_t,                      &
-    geometry_partition,              &
-    geometry_write_xyz,              &
-    geometry_read_xyz,               &
-    geometry_fold_atoms_into_cell,         &
-    geometry_min_distance,           &
-    geometry_species_time_dependent, &
-    geometry_val_charge,             &
-    geometry_dipole,                 &
-    geometry_center_of_mass,         &
-    geometry_center_of_mass_vel,     &
-    geometry_center,                 &
-    geometry_axis_large,             &
-    geometry_axis_inertia,           &
-    geometry_translate,              &
-    geometry_rotate,                 &
-    geometry_grid_defaults,          &
-    geometry_grid_defaults_info,     &
-    geometry_get_positions,          &
-    geometry_set_positions,          &
-    geometry_global_force,           &
-    periodic_write_crystal
+  public :: geometry_t
 
   type geometry_t
     ! Components are public by default
@@ -96,11 +74,32 @@ module geometry_oct_m
     type(ion_interaction_t) :: ion_interaction
   
     !> variables for external forces over the ions
-    logical,     private :: global_force
+    logical,     private :: apply_global_force
     type(tdf_t), private :: global_force_function
   contains
     procedure :: copy => geometry_copy
     generic   :: assignment(=) => copy
+    procedure :: partition => geometry_partition
+    procedure :: write_xyz => geometry_write_xyz
+    procedure :: read_xyz => geometry_read_xyz
+    procedure :: fold_atoms_into_cell => geometry_fold_atoms_into_cell
+    procedure :: min_distance => geometry_min_distance
+    procedure :: has_time_dependent_species => geometry_has_time_dependent_species
+    procedure :: val_charge => geometry_val_charge
+    procedure :: dipole => geometry_dipole
+    procedure :: center_of_mass => geometry_center_of_mass
+    procedure :: center_of_mass_vel => geometry_center_of_mass_vel
+    procedure :: center => geometry_center
+    procedure :: axis_large => geometry_axis_large
+    procedure :: axis_inertia => geometry_axis_inertia
+    procedure :: translate => geometry_translate
+    procedure :: rotate => geometry_rotate
+    procedure :: grid_defaults => geometry_grid_defaults
+    procedure :: grid_defaults_info => geometry_grid_defaults_info
+    procedure :: get_positions => geometry_get_positions
+    procedure :: set_positions => geometry_set_positions
+    procedure :: global_force => geometry_global_force
+    procedure :: write_crystal => geometry_write_crystal
     final :: geometry_finalize
   end type geometry_t
 
@@ -148,7 +147,7 @@ contains
 
         ! then write out the geometry, whether asked for or not in Output variable
         call io_mkdir(STATIC_DIR, namespace)
-        call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
+        call geo%write_xyz(trim(STATIC_DIR)//'/geometry', namespace)
       end if
 
       if (geometry_min_distance(geo, real_atoms_only = .true.) < threshold) then
@@ -184,7 +183,7 @@ contains
   
     if(parse_is_defined(namespace, 'TDGlobalForce')) then
   
-      geo%global_force = .true.
+      geo%apply_global_force = .true.
   
       call parse_variable(namespace, 'TDGlobalForce', 'none', function_name)
       call tdf_read(geo%global_force_function, namespace, trim(function_name), ierr)
@@ -197,7 +196,7 @@ contains
   
     else
   
-      geo%global_force = .false.
+      geo%apply_global_force = .false.
   
     end if
 
@@ -416,7 +415,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_partition(geo, mc)
-    type(geometry_t),            intent(inout) :: geo
+    class(geometry_t),           intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc
 
     PUSH_SUB(geometry_partition)
@@ -430,7 +429,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_write_xyz(geo, fname, namespace, append, comment)
-    type(geometry_t),           intent(in) :: geo
+    class(geometry_t),           intent(in) :: geo
     character(len=*),           intent(in) :: fname
     type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: append
@@ -475,7 +474,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_read_xyz(geo, fname, namespace, comment)
-    type(geometry_t),           intent(inout) :: geo
+    class(geometry_t),          intent(inout) :: geo
     character(len=*),           intent(in)    :: fname
     type(namespace_t),          intent(in)    :: namespace
     character(len=*), optional, intent(in)    :: comment
@@ -512,7 +511,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_fold_atoms_into_cell(geo)
-    type(geometry_t),   intent(inout) :: geo
+    class(geometry_t),   intent(inout) :: geo
 
     integer :: iatom
 
@@ -527,8 +526,8 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
-    type(geometry_t),  intent(in) :: geo
-    logical, optional, intent(in) :: real_atoms_only
+    class(geometry_t),  intent(in) :: geo
+    logical,  optional, intent(in) :: real_atoms_only
 
     integer :: iatom, jatom, idir
     FLOAT   :: xx(geo%space%dim)
@@ -569,20 +568,20 @@ contains
   end function geometry_min_distance
 
   ! ---------------------------------------------------------
-  logical function geometry_species_time_dependent(geo) result(time_dependent)
-    type(geometry_t), intent(in) :: geo
+  logical function geometry_has_time_dependent_species(geo) result(time_dependent)
+    class(geometry_t), intent(in) :: geo
 
-    PUSH_SUB(geometry_species_time_dependent)
+    PUSH_SUB(geometry_has_time_dependent_species)
 
     time_dependent = geo%species_time_dependent
 
-    POP_SUB(geometry_species_time_dependent)
-  end function geometry_species_time_dependent
+    POP_SUB(geometry_has_time_dependent_species)
+  end function geometry_has_time_dependent_species
 
   ! ---------------------------------------------------------
   FLOAT function geometry_val_charge(geo, mask) result(val_charge)
-    type(geometry_t),          intent(in) :: geo
-    logical,         optional, intent(in) :: mask(:)
+    class(geometry_t),          intent(in) :: geo
+    logical,          optional, intent(in) :: mask(:)
 
     integer :: iatom
 
@@ -601,8 +600,8 @@ contains
 
   ! ---------------------------------------------------------
   function geometry_dipole(geo, mask) result(dipole)
-    type(geometry_t),           intent(in) :: geo
-    logical,          optional, intent(in) :: mask(:)
+    class(geometry_t),           intent(in) :: geo
+    logical,           optional, intent(in) :: mask(:)
     FLOAT :: dipole(geo%space%dim)
 
     integer :: ia
@@ -624,9 +623,9 @@ contains
 
   ! ---------------------------------------------------------
   function geometry_center_of_mass(geo, mask, pseudo) result(pos)
-    type(geometry_t),           intent(in) :: geo
-    logical,          optional, intent(in) :: mask(:)
-    logical,          optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
+    class(geometry_t),           intent(in) :: geo
+    logical,           optional, intent(in) :: mask(:)
+    logical,           optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
     FLOAT :: pos(MAX_DIM)
 
     FLOAT :: mass, total_mass
@@ -654,7 +653,7 @@ contains
 
   ! ---------------------------------------------------------
   function geometry_center_of_mass_vel(geo) result(vel)
-    type(geometry_t), intent(in) :: geo
+    class(geometry_t), intent(in) :: geo
     FLOAT :: vel(MAX_DIM)
 
     FLOAT :: mass, total_mass
@@ -676,7 +675,7 @@ contains
 
   ! ---------------------------------------------------------
   function geometry_center(geo) result(pos)
-    type(geometry_t), intent(in) :: geo
+    class(geometry_t), intent(in) :: geo
     FLOAT :: pos(MAX_DIM)
 
     FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
@@ -701,8 +700,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_axis_large(geo, x, x2)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+    class(geometry_t), intent(in)  :: geo
+    FLOAT,             intent(out) :: x(MAX_DIM), x2(MAX_DIM)
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
@@ -740,9 +739,9 @@ contains
   !> This subroutine assumes that the origin of the coordinates is the
   !! center of mass of the system
   subroutine geometry_axis_inertia(geo, x, x2, pseudo)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: x(MAX_DIM), x2(MAX_DIM)
-    logical,          intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
+    class(geometry_t), intent(in)  :: geo
+    FLOAT,             intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+    logical,           intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
 
     FLOAT :: mass, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
     integer :: ii, jj, iatom
@@ -792,8 +791,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_translate(geo, x)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: x(MAX_DIM)
+    class(geometry_t), intent(inout) :: geo
+    FLOAT,             intent(in)    :: x(MAX_DIM)
 
     integer  :: iatom
 
@@ -811,7 +810,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_rotate(geo, namespace, from, from2, to)
-    type(geometry_t),  intent(inout) :: geo
+    class(geometry_t), intent(inout) :: geo
     type(namespace_t), intent(in)    :: namespace
     FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
     FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
@@ -934,8 +933,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults(geo, def_h, def_rsize)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: def_h, def_rsize
+    class(geometry_t), intent(in)  :: geo
+    FLOAT,             intent(out) :: def_h, def_rsize
 
     integer :: ispec
 
@@ -953,7 +952,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults_info(geo)
-    type(geometry_t), intent(in) :: geo
+    class(geometry_t), intent(in) :: geo
 
     integer :: ispec
 
@@ -982,8 +981,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_get_positions(geo, q)
-    type(geometry_t), intent(in)    :: geo
-    FLOAT,            intent(inout) :: q(:, :)
+    class(geometry_t), intent(in)    :: geo
+    FLOAT,             intent(inout) :: q(:, :)
 
     integer :: iatom
 
@@ -998,8 +997,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geometry_set_positions(geo, q)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: q(:, :)
+    class(geometry_t), intent(inout) :: geo
+    FLOAT,             intent(in)    :: q(:, :)
 
     integer :: iatom
 
@@ -1011,6 +1010,61 @@ contains
 
     POP_SUB(geometry_get_positions)
   end subroutine geometry_set_positions
+
+  ! ---------------------------------------------------------
+  subroutine geometry_global_force(geo, time, force)
+    class(geometry_t),    intent(in)    :: geo
+    FLOAT,                intent(in)    :: time
+    FLOAT,                intent(out)   :: force(:)
+
+    PUSH_SUB(geometry_global_force)
+
+    force(1:geo%space%dim) = CNST(0.0)
+
+    if (geo%apply_global_force) then
+      force(1) = units_to_atomic(units_inp%force, tdf(geo%global_force_function, time))
+    end if
+
+    POP_SUB(geometry_global_force)
+  end subroutine geometry_global_force
+
+  ! ----------------------------------------------------------------
+  !> This subroutine creates a crystal by replicating the geometry and
+  !! writes the result to dir//'crystal.xyz'
+  subroutine geometry_write_crystal(geo, latt, dir, namespace)
+    class(geometry_t),       intent(in) :: geo 
+    type(lattice_vectors_t), intent(in) :: latt
+    character(len=*),        intent(in) :: dir
+    type(namespace_t),       intent(in) :: namespace 
+    
+    type(lattice_iterator_t) :: latt_iter
+    FLOAT :: radius, pos(geo%space%dim)
+    integer :: iatom, icopy, iunit
+
+    PUSH_SUB(geometry_write_crystal)
+    
+    radius = maxval(M_HALF*norm2(latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
+    latt_iter = lattice_iterator_t(latt, radius)
+
+    if(mpi_grp_is_root(mpi_world)) then
+      
+      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
+      
+      write(iunit, '(i9)') geo%natoms*latt_iter%n_cells
+      write(iunit, '(a)') '#generated by Octopus'
+      
+      do iatom = 1, geo%natoms
+        do icopy = 1, latt_iter%n_cells
+          pos = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icopy))
+          write(iunit, '(a, 99f12.6)') geo%atom(iatom)%label, pos
+        end do
+      end do
+
+      call io_close(iunit)
+    end if
+
+    POP_SUB(geometry_write_crystal)
+  end subroutine geometry_write_crystal
 
   ! ---------------------------------------------------------
   subroutine geometry_finalize(geo)
@@ -1035,62 +1089,6 @@ contains
 
     POP_SUB(geometry_finalize)
   end subroutine geometry_finalize
-
-  ! ---------------------------------------------------------
-
-  subroutine geometry_global_force(geo, time, force)
-    type(geometry_t),     intent(in)    :: geo
-    FLOAT,                intent(in)    :: time
-    FLOAT,                intent(out)   :: force(:)
-
-    PUSH_SUB(geometry_global_force)
-
-    force(1:geo%space%dim) = CNST(0.0)
-
-    if(geo%global_force) then
-      force(1) = units_to_atomic(units_inp%force, tdf(geo%global_force_function, time))
-    end if
-
-    POP_SUB(geometry_global_force)
-  end subroutine geometry_global_force
-
-  ! ----------------------------------------------------------------
-  !> This subroutine creates a crystal by replicating the geometry and
-  !! writes the result to dir//'crystal.xyz'
-  subroutine periodic_write_crystal(geo, latt, dir, namespace)
-    type(geometry_t),        intent(in) :: geo 
-    type(lattice_vectors_t), intent(in) :: latt
-    character(len=*),        intent(in) :: dir
-    type(namespace_t),       intent(in) :: namespace 
-    
-    type(lattice_iterator_t) :: latt_iter
-    FLOAT :: radius, pos(geo%space%dim)
-    integer :: iatom, icopy, iunit
-
-    PUSH_SUB(periodic_write_crystal)
-    
-    radius = maxval(M_HALF*norm2(latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
-    latt_iter = lattice_iterator_t(latt, radius)
-
-    if(mpi_grp_is_root(mpi_world)) then
-      
-      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
-      
-      write(iunit, '(i9)') geo%natoms*latt_iter%n_cells
-      write(iunit, '(a)') '#generated by Octopus'
-      
-      do iatom = 1, geo%natoms
-        do icopy = 1, latt_iter%n_cells
-          pos = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icopy))
-          write(iunit, '(a, 99f12.6)') geo%atom(iatom)%label, pos
-        end do
-      end do
-
-      call io_close(iunit)
-    end if
-
-    POP_SUB(periodic_write_crystal)
-  end subroutine periodic_write_crystal
 
 end module geometry_oct_m
 

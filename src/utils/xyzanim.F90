@@ -115,13 +115,11 @@ contains
         write(comment, '(i10,f20.6)') iter, time
         if(.not.multifiles)then
           call io_mkdir('td.general', global_namespace)
-          call geometry_write_xyz(geo, 'td.general/movie', global_namespace, &
-            append = .true., comment = trim(comment))
+          call geo%write_xyz('td.general/movie', global_namespace, append = .true., comment = trim(comment))
         else
           call io_mkdir('td.general/movie/', global_namespace)
           write(coords_file,'(i7.7)')iter
-          call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), global_namespace, &
-            append = .false.)
+          call geo%write_xyz('td.general/movie/geo-' + trim(coords_file), global_namespace, append = .false.)
         end if
       end if
     end do

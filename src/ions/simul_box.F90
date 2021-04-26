@@ -115,7 +115,7 @@ contains
 
     PUSH_SUB(simul_box_init)
 
-    call geometry_grid_defaults(geo, def_h, def_rsize)
+    call geo%grid_defaults(def_h, def_rsize)
 
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim

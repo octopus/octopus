@@ -664,7 +664,7 @@ contains
 
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
           call ion_dynamics_propagate(td%ions, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt, sys%namespace)
-          call geometry_get_positions(sys%geo, qinitial)
+          call sys%geo%get_positions(qinitial)
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
 
           SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:sys%gr%sb%dim))
@@ -692,7 +692,7 @@ contains
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
-          call geometry_set_positions(sys%geo, qinitial)
+          call sys%geo%set_positions(qinitial)
           call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, psi, time = abs((i-1)*td%dt))
         end if
 

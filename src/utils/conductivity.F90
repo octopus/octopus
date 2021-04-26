@@ -112,7 +112,7 @@
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
-    qtot = -(geometry_val_charge(geo) + excess_charge)
+    qtot = -(geo%val_charge() + excess_charge)
 
     if(from_forces) then
 

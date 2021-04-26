@@ -305,7 +305,7 @@ contains
     end do
 
     if(present(t)) then
-      call geometry_global_force(geo, time, global_force)
+      call geo%global_force(time, global_force)
 
       ! the ion-ion term is already calculated
       do iatom = 1, geo%natoms

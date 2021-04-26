@@ -151,7 +151,7 @@ program casida_spectrum
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
-    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated', global_namespace)
+    call geo%write_xyz(trim(CASIDA_DIR)//'rotated', global_namespace)
     SAFE_DEALLOCATE_P(geo)
   else
     rotation(:,:) = identity(:,:)

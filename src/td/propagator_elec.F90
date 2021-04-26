@@ -544,7 +544,7 @@ contains
       call gauge_field_do_td(hm%ep%gfield, OP_VERLET_COMPUTE_ACC, dt, time, namespace)
     end if
 
-    if(generate .or. geometry_species_time_dependent(geo)) then
+    if(generate .or. geo%has_time_dependent_species()) then
       call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = abs(nt*dt))
     end if
 

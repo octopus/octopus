@@ -119,7 +119,7 @@ program photoelectron_spectrum
 
   ! we need k-points for periodic systems
   call kpoints_init(kpoints, global_namespace, symm, space%dim, space%periodic_dim, geo%latt)
-  call states_elec_init(st, global_namespace, space, geometry_val_charge(geo), kpoints)
+  call states_elec_init(st, global_namespace, space, geo%val_charge(), kpoints)
   !*
 
   !Initialize variables

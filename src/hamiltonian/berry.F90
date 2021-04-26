@@ -167,7 +167,7 @@ contains
       call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
     end do
 
-    n_dip = geometry_dipole(geo)
+    n_dip = geo%dipole()
 
     do idir = 1, space%dim
       ! in periodic directions use single-point Berry`s phase calculation

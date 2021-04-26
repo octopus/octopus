@@ -331,7 +331,7 @@ contains
 
       kin1 = ion_dynamics_kinetic_energy(geo)
 
-      x = geometry_center_of_mass_vel(geo)
+      x = geo%center_of_mass_vel()
       do i = 1, geo%natoms
         geo%atom(i)%v = geo%atom(i)%v - x
       end do
@@ -564,7 +564,7 @@ contains
     end if
 
     ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
-    call geometry_fold_atoms_into_cell(geo)
+    call geo%fold_atoms_into_cell()
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate
