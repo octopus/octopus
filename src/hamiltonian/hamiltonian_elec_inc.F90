@@ -396,12 +396,15 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   type(wfs_elec_t),         intent(inout) :: psib
   type(wfs_elec_t),         intent(inout) :: hpsib
 
-  integer :: ispin, ii, ip, idir, idim
+  integer :: ispin, ii, idir
   R_TYPE, allocatable :: grad(:,:,:), diverg(:,:)
   type(wfs_elec_t) :: divb
   class(wfs_elec_t), allocatable :: gradb(:)
+#ifdef R_TCOMPLEX
   CMPLX :: tmp
-  
+  integer :: idim, ip
+#endif  
+
   PUSH_SUB(X(h_mgga_terms))
 
   ispin = hm%d%get_spin_index(psib%ik)
@@ -440,6 +443,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
     end do
 
   else
+#ifdef R_TCOMPLEX
     !Here we treat the full spinor directly, because of the cross terms
     do ii = 1, psib%nst
       
@@ -449,8 +453,8 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
 
       do idir = 1, mesh%sb%dim
         do ip = 1, mesh%np
-          tmp = grad(ip, 1, idir)*cmplx(hm%vtau(ip, 3),-hm%vtau(ip, 4))
-          grad(ip, 1, idir) = grad(ip, 1, idir)*hm%vtau(ip, 1) + grad(ip, 2, idir)*cmplx(hm%vtau(ip, 3),hm%vtau(ip, 4)) 
+          tmp = grad(ip, 1, idir)*TOCMPLX(hm%vtau(ip, 3),-hm%vtau(ip, 4))
+          grad(ip, 1, idir) = grad(ip, 1, idir)*hm%vtau(ip, 1) + grad(ip, 2, idir)*TOCMPLX(hm%vtau(ip, 3),hm%vtau(ip, 4)) 
           grad(ip, 2, idir) = grad(ip, 2, idir)*hm%vtau(ip, 2) + tmp
         end do
       end do
@@ -461,6 +465,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
 
       call batch_set_state(divb, ii, mesh%np, diverg)
     end do
+#endif
   end if
 
   call batch_axpy(mesh%np, CNST(-1.0), divb, hpsib)

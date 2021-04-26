@@ -55,6 +55,7 @@ module xc_functl_oct_m
     XC_HYB_GGA_XC_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
     XC_HYB_GGA_XC_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
     XC_MGGA_X_NC_BR = 923,           &  !< Noncollinear version of the Becke-Roussel functional
+    XC_MGGA_X_NC_BR_1 = 924,         &  !< Noncollinear version of the Becke-Roussel functional, gamma=1
     XC_RDMFT_XC_M = 601              !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
@@ -131,7 +132,7 @@ contains
         case(XC_HYB_GGA_XC_MVORB_HSE06, XC_HYB_GGA_XC_MVORB_PBEH)
           functl%family = XC_FAMILY_HYB_GGA
  
-        case(XC_MGGA_X_NC_BR) 
+        case(XC_MGGA_X_NC_BR, XC_MGGA_X_NC_BR_1) 
           functl%family = XC_FAMILY_NC_MGGA
 
         case default
@@ -158,7 +159,7 @@ contains
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
 
-    else if(functl%id == XC_MGGA_X_NC_BR) then
+    else if(functl%id == XC_MGGA_X_NC_BR .or. functl%id == XC_MGGA_X_NC_BR_1) then
       functl%type = XC_EXCHANGE
       functl%flags = XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
 
@@ -356,6 +357,11 @@ contains
     else if(functl%id == XC_MGGA_X_NC_BR) then
       write(message(1), '(2x,a)') 'Exchange'
       write(message(2), '(4x,a)') 'Noncollinear Becke-Roussel'
+      call messages_info(2, iunit)
+
+    else if(functl%id == XC_MGGA_X_NC_BR_1) then
+      write(message(1), '(2x,a)') 'Exchange'
+      write(message(2), '(4x,a)') 'Noncollinear Becke-Roussel, gamma=1'
       call messages_info(2, iunit)
 
     else if(functl%id == XC_HALF_HARTREE) then

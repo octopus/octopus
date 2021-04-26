@@ -373,7 +373,7 @@ contains
         l_sigma(2, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)**2 &
             + gdens(ib + ip - 1, 1:der%mesh%sb%dim, 3)**2 + gdens(ib + ip - 1, 1:der%mesh%sb%dim, 4)**2)
 
-        tmp =cmplx(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 3),gdens(ib + ip - 1, 1:der%mesh%sb%dim, 4))
+        tmp = TOCMPLX(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 3), gdens(ib + ip - 1, 1:der%mesh%sb%dim, 4))
         tmp_sum = sum( tmp * (gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1) + gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)))
         l_sigma(3, ib) = TOFLOAT(tmp_sum)
         l_sigma(4, ib) = aimag(tmp_sum)
@@ -394,7 +394,6 @@ contains
   !!   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine nc_lda_init()
     integer :: ii
-    FLOAT   :: dtot, dpol
 
     PUSH_SUB(xc_get_nc_vxc.nc_lda_init)
 
@@ -627,6 +626,7 @@ end subroutine xc_get_nc_vxc
     FLOAT, optional,   intent(out)   :: l_zk(:,:)       ! Energy density
 
     integer :: ib
+    FLOAT :: gamma
 
     PUSH_SUB(nc_mgga_exc_vxc)
 
@@ -635,15 +635,21 @@ end subroutine xc_get_nc_vxc
     end if
 
     select case(functl%id)
-    case(XC_MGGA_X_NC_BR)
+    case(XC_MGGA_X_NC_BR, XC_MGGA_X_NC_BR_1)
+
+      if(functl%id == XC_MGGA_X_NC_BR) then
+        gamma = CNST(0.8)
+      else
+        gamma = M_ONE
+      end if
 
       do ib = 1, n_block
 
         if(present(l_zk)) then
-          call nc_br_vxc_exc(l_dens(:, ib), l_sigma(:, ib), l_ldens(:, ib), l_tau(:, ib), &
+          call nc_br_vxc_exc(l_dens(:, ib), l_sigma(:, ib), l_ldens(:, ib), l_tau(:, ib), gamma, &
                   l_dedd(:,ib), l_vsigma(:,ib), l_deddldens(:,ib), l_dedtau(:,ib), l_zk(:,ib)) 
         else
-          call nc_br_vxc_exc(l_dens(:, ib), l_sigma(:, ib), l_ldens(:, ib), l_tau(:, ib), &
+          call nc_br_vxc_exc(l_dens(:, ib), l_sigma(:, ib), l_ldens(:, ib), l_tau(:, ib), gamma, &
                   l_dedd(:,ib), l_vsigma(:,ib), l_deddldens(:,ib), l_dedtau(:,ib))
         end if
       end do
@@ -658,11 +664,12 @@ end subroutine xc_get_nc_vxc
   !Computes the local curvature of the exchange-hole and get the corresponding values of x and b
   !This allows to compute the local Coulomb potential and the energy
   !The exchange potential is finally constructed from the potential
-  subroutine nc_br_vxc_exc(l_dens, l_sigma, l_ldens, l_tau, l_dedd, l_vsigma, l_dedldens, l_dedtau, l_zk)
+  subroutine nc_br_vxc_exc(l_dens, l_sigma, l_ldens, l_tau, gamma, l_dedd, l_vsigma, l_dedldens, l_dedtau, l_zk)
     FLOAT,             intent(in)    :: l_dens(:)     ! Density 
     FLOAT,             intent(in)    :: l_sigma(:)    ! Modulus squared of the gradient of the density
     FLOAT,             intent(in)    :: l_ldens(:)    ! Laplacian of the density
     FLOAT,             intent(in)    :: l_tau(:)      ! Kinetic energy density
+    FLOAT,             intent(in)    :: gamma 
     FLOAT,             intent(out)   :: l_dedd(:)     ! Derivative of the energy versus l_dens
     FLOAT,             intent(out)   :: l_vsigma(:)   ! Derivative of the energy versus l_sigma
     FLOAT,             intent(out)   :: l_dedldens(:) ! Derivative of the energy versus the l_dens
@@ -672,9 +679,8 @@ end subroutine xc_get_nc_vxc
     integer :: is
     FLOAT :: l_ontop, l_curv, xx_BR, l_dens_tol(2)
     FLOAT :: cnst, U_BR, P_BR, dUdx
-    FLOAT :: dtop_dn(3), dcurv_dn(3), dcurv_d_dn(3)
-    CMPLX :: offdiag
-    FLOAT, parameter :: gamma = CNST(0.8)
+    FLOAT :: dtop_dn(3), dcurv_dn(3)
+    FLOAT :: offdiag
     FLOAT, parameter :: tol_Q = CNST(1e-20)
     FLOAT, parameter :: tol_den = M_EPSILON
     FLOAT, parameter :: tol_x = CNST(1e-7)
@@ -697,7 +703,7 @@ end subroutine xc_get_nc_vxc
       !We also compute of the curvature and we normalize it properly
       l_curv = l_ldens(is) - M_TWO*gamma*(l_tau(is) - M_FOURTH*l_sigma(is)/(l_dens_tol(is)))
       !Off-diagonal term of the curvature
-      offdiag = l_dens(3)*(l_ldens(3)-M_TWO*gamma*l_tau(3)) + l_dens(4)*(l_ldens(4)-M_TWO*gamma*l_tau(4))
+      offdiag = TOFLOAT(l_dens(3)*(l_ldens(3)-M_TWO*gamma*l_tau(3)) + l_dens(4)*(l_ldens(4)-M_TWO*gamma*l_tau(4)))
       l_curv = (l_curv + offdiag / (l_dens_tol(is))) / CNST(6.0)
       !Avoids division by zero
       if(abs(l_ontop) < tol_Q) l_ontop = sign(tol_Q, l_ontop)
