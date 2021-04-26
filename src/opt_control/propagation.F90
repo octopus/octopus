@@ -663,7 +663,7 @@ contains
           qtildehalf = q
 
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
-          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt, sys%namespace)
+          call ion_dynamics_propagate(td%ions, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt, sys%namespace)
           call geometry_get_positions(sys%geo, qinitial)
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
 

@@ -28,7 +28,6 @@ module ion_dynamics_oct_m
   use namespace_oct_m
   use parser_oct_m
   use read_coords_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use tdfunction_oct_m
   use profiling_oct_m
@@ -481,9 +480,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_propagate(this, sb, geo, time, dt, namespace)
+  subroutine ion_dynamics_propagate(this, geo, time, dt, namespace)
     type(ion_dynamics_t), intent(inout) :: this
-    type(simul_box_t),    intent(in)    :: sb
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(in)    :: dt
