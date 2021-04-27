@@ -1,4 +1,5 @@
 !! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel
+!! Copyright (C) 2021 Sebastian Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -34,6 +35,7 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
+  integer, allocatable :: local_vec(:) !< mapping of points
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
   type(profile_t), save :: prof_scatter
 
@@ -52,6 +54,11 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal_vec - 1
 
+  if (root == vp%rank) then
+    SAFE_ALLOCATE(local_vec(1:vp%np_global))
+  end if
+  call gather_local_vec(vp, root, local_vec)
+
   SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank == root) then
   ! Fill send buffer.
@@ -61,8 +68,9 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal_vec(r):xlocal_vec(r)+np_local_vec(r)-1).
     do ii = 1, vp%np_global
-      v_tmp(ii) = v(vp%local_vec(ii))
+      v_tmp(ii) = v(local_vec(ii))
     end do
+    SAFE_DEALLOCATE_A(local_vec)
   end if
 
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
@@ -100,6 +108,7 @@ subroutine X(vec_gather)(vp, root, v_local, v)
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
+  integer, allocatable :: local_vec(:) !< mapping of points
 
   PUSH_SUB(X(vec_gather))
 
@@ -125,13 +134,17 @@ subroutine X(vec_gather)(vp, root, v_local, v)
 #endif
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
+  if (root == vp%rank) then
+    SAFE_ALLOCATE(local_vec(1:vp%np_global))
+  end if
+  call gather_local_vec(vp, root, local_vec)
+
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank == root) then
     do ii = 1, vp%np_global
-!!$    do ii = vp%xlocal, vp%xlocal + vp%np_local - 1
-      v(vp%local_vec(ii)) = v_tmp(ii)
+      v(local_vec(ii)) = v_tmp(ii)
     end do
-
+    SAFE_DEALLOCATE_A(local_vec)
   end if
 
   SAFE_DEALLOCATE_A(v_tmp)
@@ -154,6 +167,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
   type(profile_t), save :: prof_allgather
+  integer, allocatable :: local_vec(:) !< mapping of points
 
   PUSH_SUB(X(vec_allgather))
   call profiling_in(prof_allgather, TOSTRING(X(VEC_ALLGATHER)))
@@ -180,10 +194,13 @@ subroutine X(vec_allgather)(vp, v, v_local)
 #endif
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
+  SAFE_ALLOCATE(local_vec(1:vp%np_global))
+  call allgather_local_vec(vp, local_vec)
   ! Copy values from v_tmp to their original position in v.
   do ii = 1, vp%np_global
-    v(vp%local_vec(ii)) = v_tmp(ii)
+    v(local_vec(ii)) = v_tmp(ii)
   end do
+  SAFE_DEALLOCATE_A(local_vec)
 
   SAFE_DEALLOCATE_A(v_tmp)
   SAFE_DEALLOCATE_A(displs)

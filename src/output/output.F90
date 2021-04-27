@@ -66,13 +66,14 @@ module output_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use string_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
   use states_mxll_oct_m
+  use string_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
@@ -157,9 +158,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, sb, st, nst, ks)
+  subroutine output_init(outp, namespace, space, sb, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
@@ -302,6 +304,8 @@ contains
     !%Option photon_correlator bit(34)
     !% Outputs the electron-photon correlation function. The output file is
     !% called <tt>photon_correlator</tt>.
+    !%Option xc_torque bit(35)
+    !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -324,6 +328,17 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
+    end if
+
+    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
+      if(st%d%ispin /= SPINORS) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed for spinors.'
+        call messages_fatal(1, namespace=namespace)
+      end if
+      if(space%dim /= 3) then
+        write(message(1), '(a)') 'The output xc_torque can only be computed in the 3D case.'
+        call messages_fatal(1, namespace=namespace)
+      end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
@@ -481,7 +496,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, namespace, outp%bgw, sb%periodic_dim)
+      call output_berkeleygw_init(nst, namespace, outp%bgw, space%periodic_dim)
     end if
 
     !%Variable OutputLDA_U
@@ -641,9 +656,10 @@ contains
   end subroutine output_init
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
+  subroutine output_all(outp, namespace, space, dir, gr, geo, st, hm, ks)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
@@ -673,9 +689,9 @@ contains
     end if
     
     call output_states(outp, namespace, dir, st, gr, geo, hm)
-    call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
-    call output_current_flow(outp, namespace, dir, gr, st)
+    call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
@@ -683,7 +699,7 @@ contains
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir, namespace)
+        if(geo%space%is_periodic())  call periodic_write_crystal(geo, gr%mesh%sb%latt, gr%mesh%sb%lsize, dir, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
@@ -692,22 +708,22 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
+        call write_bild_forces_file(dir, "forces", geo, namespace)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, namespace, dir, st, gr, geo, hm)
+      call output_me(outp%me, namespace, space, dir, st, gr, geo, hm)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, dir, st, gr, geo)
+      call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, geo)
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
+      call output_berkeleygw(outp%bgw, namespace, space, dir, st, gr, ks, hm, geo)
     end if
     
     call output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
@@ -723,7 +739,7 @@ contains
         call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, allocated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
@@ -740,6 +756,8 @@ contains
         end if
       end if
     end if
+
+    call output_xc_torque(outp, namespace, dir, gr%mesh, hm, st, geo, geo%space)
 
     call profiling_out(prof)
     POP_SUB(output_all)
@@ -775,7 +793,7 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%sb%dim /= 1)
 
-      call elf_calc(st, gr, f_loc)
+      call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
@@ -883,7 +901,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
+    call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -936,7 +954,7 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+      call states_elec_calc_quantities(gr%der, st, hm%kpoints, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
       do is = 1, st%d%nspin
@@ -958,7 +976,7 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
       do is = 1, st%d%nspin
         do ip = 1, gr%fine%mesh%np
@@ -1202,9 +1220,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, namespace, dir, st, gr, ks, hm, geo)
+  subroutine output_berkeleygw(bgw, namespace, space, dir, st, gr, ks, hm, geo)
     type(output_bgw_t),       intent(in)    :: bgw
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
     type(grid_t), target,     intent(in)    :: gr
@@ -1217,8 +1236,9 @@ contains
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character(len=3) :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48), ecutrho, ecutwfc
-    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
-    CMPLX, pointer :: field_g(:,:), zpsi(:,:)
+    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:)
+    FLOAT, allocatable :: vxc(:,:), dpsi(:,:)
+    CMPLX, allocatable :: field_g(:,:), zpsi(:,:)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell_density, shell_wfn
@@ -1226,41 +1246,38 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
-    if(gr%sb%dim /= 3) then
+    if (space%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if(st%d%ispin == SPINORS) &
-      call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
+    if (st%d%ispin == SPINORS) call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
 
-    if(st%parallel_in_states) &
-      call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+    if (st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
 
-    if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
+    if (st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) then
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
+    end if
 
-    if(hm%ep%nlcc) &
-      call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
+    if (hm%ep%nlcc) call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
 
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
+      call dbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     else
-      call zbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
+      call zbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
@@ -1274,7 +1291,7 @@ contains
     call cube_function_alloc_fs(cube, cf)
 
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
-    call fourier_shell_init(shell_density, cube, gr%mesh)
+    call fourier_shell_init(shell_density, space, cube, gr%mesh)
     ecutrho = shell_density%ekin_cutoff
     SAFE_ALLOCATE(field_g(1:shell_density%ngvectors, 1:st%d%nspin))
 
@@ -1304,7 +1321,7 @@ contains
     vxc(:,:) = vxc(:,:) * M_TWO / (product(cube%rs_n_global(1:3)) * gr%mesh%volume_element)
     call dbgw_write_FS(iunit, vxc, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
-    SAFE_DEALLOCATE_P(vxc)
+    SAFE_DEALLOCATE_A(vxc)
 
 
     message(1) = "BerkeleyGW output: RHO"
@@ -1320,7 +1337,7 @@ contains
 
     message(1) = "BerkeleyGW output: WFN"
     write(message(2),'(a,f12.6,a)') "Wavefunction cutoff for BerkeleyGW: ", &
-      fourier_shell_cutoff(cube, gr%mesh, .true.) * M_TWO, " Ry"
+      fourier_shell_cutoff(space, cube, gr%mesh, .true.) * M_TWO, " Ry"
     call messages_info(2)
 
     if(states_are_real(st)) then
@@ -1339,7 +1356,7 @@ contains
 
     ! FIXME: is parallelization over k-points possible?
     do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-      call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+      call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
 
       if(mpi_grp_is_root(mpi_world)) &
         call write_binary_gvectors(iunit, shell_wfn%ngvectors, shell_wfn%ngvectors, shell_wfn%red_gvec)
@@ -1369,12 +1386,12 @@ contains
     call cube_end(cube)
     
     if(states_are_real(st)) then
-      SAFE_DEALLOCATE_P(dpsi)
+      SAFE_DEALLOCATE_A(dpsi)
     else
-      SAFE_DEALLOCATE_P(zpsi)
+      SAFE_DEALLOCATE_A(zpsi)
     end if
-    SAFE_DEALLOCATE_P(vxc)
-    SAFE_DEALLOCATE_P(field_g)
+    SAFE_DEALLOCATE_A(vxc)
+    SAFE_DEALLOCATE_A(field_g)
     SAFE_DEALLOCATE_P(ifmin)
     SAFE_DEALLOCATE_P(ifmax)
     SAFE_DEALLOCATE_P(ngk)
@@ -1396,21 +1413,21 @@ contains
     subroutine bgw_setup_header()
       PUSH_SUB(output_berkeleygw.bgw_setup_header)
 
-      adot(1:3, 1:3) = matmul(gr%sb%rlattice(1:3, 1:3), gr%sb%rlattice(1:3, 1:3))
-      bdot(1:3, 1:3) = matmul(gr%sb%klattice(1:3, 1:3), gr%sb%klattice(1:3, 1:3))
-      recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+      adot(1:3, 1:3) = matmul(gr%sb%latt%rlattice(1:3, 1:3), gr%sb%latt%rlattice(1:3, 1:3))
+      bdot(1:3, 1:3) = matmul(gr%sb%latt%klattice(1:3, 1:3), gr%sb%latt%klattice(1:3, 1:3))
+      recvol = (M_TWO * M_PI)**3 / gr%sb%latt%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
-      do itran = 1, symmetries_number(gr%sb%symm)
-        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%sb%symm%ops(itran))
-        tnp(:, itran) = symm_op_translation_vector_red(gr%sb%symm%ops(itran))
+      do itran = 1, symmetries_number(gr%symm)
+        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%symm%ops(itran))
+        tnp(:, itran) = symm_op_translation_vector_red(gr%symm%ops(itran))
       end do
       ! some further work on conventions of mtrx and tnp is required!
       
-      SAFE_ALLOCATE(ifmin(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(ifmax(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(energies(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
-      SAFE_ALLOCATE(occupations(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(ifmin(1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(ifmax(1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(energies(1:st%nst, 1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
+      SAFE_ALLOCATE(occupations(1:st%nst, 1:hm%kpoints%reduced%npoints, 1:st%d%nspin))
 
       ifmin(:,:) = 1
 !     This is how semiconducting smearing "should" work, but not in our implementation.
@@ -1418,8 +1435,8 @@ contains
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
 !      end if
       do ik = 1, st%d%nik
-        is = states_elec_dim_get_spin_index(st%d, ik)
-        ikk = states_elec_dim_get_kpoint_index(st%d, ik)
+        is = st%d%get_spin_index(ik)
+        ikk = st%d%get_kpoint_index(ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
         do ist = 1, st%nst
@@ -1432,9 +1449,9 @@ contains
         end do
       end do
 
-      SAFE_ALLOCATE(ngk(1:gr%sb%kpoints%reduced%npoints))
+      SAFE_ALLOCATE(ngk(1:hm%kpoints%reduced%npoints))
       do ik = 1, st%d%nik, st%d%nspin
-        call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, ik))
+        call fourier_shell_init(shell_wfn, space, cube, gr%mesh, kk = hm%kpoints%reduced%red_point(:, ik))
         if(ik == 1) ecutwfc = shell_wfn%ekin_cutoff ! should be the same for all, anyway
         ngk(ik) = shell_wfn%ngvectors
         call fourier_shell_end(shell_wfn)
@@ -1448,7 +1465,7 @@ contains
         apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
       end do
 
-      if(any(gr%sb%kpoints%nik_axis(1:3) == 0)) then
+      if(any(hm%kpoints%nik_axis(1:3) == 0)) then
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"
         message(2) = "or this WFN will only be usable in BerkeleyGW's inteqp."
         call messages_warning(1, namespace=namespace)
@@ -1466,15 +1483,15 @@ contains
 
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
-      weight => gr%sb%kpoints%reduced%weight
-      red_point => gr%sb%kpoints%reduced%red_point
+      weight => hm%kpoints%reduced%weight
+      red_point => hm%kpoints%reduced%red_point
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
-        symmetries_number(gr%sb%symm), 0, geo%natoms, &
-        gr%sb%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
-        ecutwfc * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%full%shifts, &
-        gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
-        M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
+        symmetries_number(gr%symm), 0, geo%natoms, &
+        hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
+        ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
+        gr%sb%latt%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
+        M_ONE, gr%sb%latt%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 

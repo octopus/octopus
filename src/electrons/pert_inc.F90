@@ -121,14 +121,12 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
         call boundaries_set(gr%der%boundaries, f_in_copy(:, idim))
       end do
     else
-      do idim = 1, hm%d%dim
-        call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
-      end do 
+      call lalg_copy(gr%mesh%np_part, hm%d%dim, f_in, f_in_copy)
     end if
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION__KDOTPVELMETHOD__HCOM_VEL) &
     apply_kpoint = .false.
@@ -330,7 +328,7 @@ contains
     f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, gr%sb%dim
+      do idir = 1, geo%space%dim
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
@@ -372,7 +370,7 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
-  call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
+  call epot_local_potential(hm%ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vloc)
 
   SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
@@ -430,7 +428,7 @@ subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, ik, f_in, f_out)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
+  apply_kpoint = allocated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
     .and. this%pert_type /= PERTURBATION_KDOTP
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   ! kdotp has the perturbation written in terms of the periodic part with the phase
@@ -590,8 +588,8 @@ contains
     f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, gr%sb%dim
-        do jdir = 1, gr%sb%dim
+      do idir = 1, geo%space%dim
+        do jdir = 1, geo%space%dim
           
           if (this%ionic%pure_dir &
                .and. iatom /= this%atom1 .and. idir /= this%dir &
@@ -742,7 +740,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   do ip = 1, gr%mesh%np
     vloc(ip) = M_ZERO
   end do
-  call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
+  call epot_local_potential(hm%ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
@@ -819,7 +817,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
 
   do ist = 1, st%nst
 
-    call states_elec_get_state(st, gr%der%mesh, ist, ik, psi)
+    call states_elec_get_state(st, gr%mesh, ist, ik, psi)
     
     do idim = 1, st%d%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), gpsi(:, idim, :))
@@ -836,7 +834,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
       do ip = 1, gr%mesh%np
         vloc(ip) = M_ZERO
       end do
-      call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
+      call epot_local_potential(hm%ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vloc)
 
       do jdir = 1, gr%sb%dim
         jmat = vibrations_get_index(vib, iatom, jdir)
@@ -884,8 +882,8 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, st, psia, 
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   R_TYPE,                   intent(out)   :: density(:)
   integer, optional,        intent(in)    :: pert_order
 
@@ -935,8 +933,8 @@ R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, st, psi
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(states_elec_t),      intent(in)    :: st
-  R_TYPE,                   pointer       :: psia(:, :, :, :)
-  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psia(:, :, :, :)
+  R_TYPE,                   intent(in)    :: psib(:, :, :, :)
   integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: density(:)
@@ -1006,7 +1004,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(pert_apply_batch)(this, namespace, gr, geo, hm, st%group%psib(ib, ik), hpsib)
-      call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
       call hpsib%end(copy = .false.)
 
@@ -1018,7 +1016,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
     
   end do
 
-  if(st%parallel_in_states) call comm_allreduce(st%mpi_grp%comm, expval)
+  if(st%parallel_in_states) call comm_allreduce(st%mpi_grp, expval)
 
 
   POP_SUB(X(pert_states_elec_expectation_value))

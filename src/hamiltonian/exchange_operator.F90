@@ -28,6 +28,7 @@ module exchange_operator_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use mesh_batch_oct_m
@@ -39,9 +40,9 @@ module exchange_operator_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
   use singularity_oct_m
+  use space_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
   use states_abst_oct_m
@@ -67,8 +68,6 @@ module exchange_operator_oct_m
     zexchange_operator_apply,        &
     dexchange_operator_hartree_apply,&
     zexchange_operator_hartree_apply,&
-    dexchange_operator_scdm_apply,   &
-    zexchange_operator_scdm_apply,   &
     exchange_operator_rdmft_occ_apply,&
     dexchange_operator_compute_potentials, &
     zexchange_operator_compute_potentials, &
@@ -92,14 +91,10 @@ module exchange_operator_oct_m
 
     type(poisson_t) :: psolver      !< Poisson solver
 
-    type(scdm_t)  :: scdm
-
     type(singularity_t) :: singul !< Coulomb singularity
 
     logical       :: useACE
     type(ACE_t)   :: ace
-    type(states_elec_t) :: xst !< The states after the application of the Fock operator
-                               !! This is needed to construct the ACE operator
   end type exchange_operator_t
  
 contains
@@ -120,13 +115,15 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, st, sb, der, mc, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, space, st, sb, der, mc, kpoints, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
-    type(namespace_t), target, intent(in)    :: namespace
+    type(namespace_t),          intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
     type(derivatives_t),       intent(in)    :: der
     type(multicomm_t),         intent(in)    :: mc
+    type(kpoints_t),           intent(in)    :: kpoints
     FLOAT,                     intent(in)    :: omega, alpha, beta
 
     PUSH_SUB(exchange_operator_init)
@@ -147,16 +144,12 @@ contains
     call parse_variable(namespace, 'AdaptivelyCompressedExchange', .false., this%useACE)
     if(this%useACE) call messages_experimental('AdaptivelyCompressedExchange')
 
-    if(this%useACE) then
-      call this%xst%nullify()
-    end if
-
-    call singularity_init(this%singul, namespace, st, sb)
+    call singularity_init(this%singul, namespace, st, sb, kpoints)
     if(states_are_real(st)) then
-      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+      call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false.)
     else
-      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+      call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false., force_cmplx = .true.)
     end if
 
@@ -191,12 +184,9 @@ contains
     end if
     nullify(this%st)
 
-    if(this%useACE) then
-      call states_elec_end(this%xst)
-      this%ace%nst = 0
-      SAFE_DEALLOCATE_A(this%ace%dchi)
-      SAFE_DEALLOCATE_A(this%ace%zchi)
-    end if
+    this%ace%nst = 0
+    SAFE_DEALLOCATE_A(this%ace%dchi)
+    SAFE_DEALLOCATE_A(this%ace%zchi)
 
     call singularity_end(this%singul)
     call poisson_end(this%psolver)

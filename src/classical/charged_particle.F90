@@ -49,7 +49,7 @@ module charged_particle_oct_m
   type, extends(classical_particle_t) :: charged_particle_t
     private
 
-    FLOAT :: charge
+    FLOAT :: charge(1)
 
   contains
     procedure :: init_interaction => charged_particle_init_interaction
@@ -105,8 +105,8 @@ contains
     !%Description
     !% Charge of classical particle
     !%End
-    call parse_variable(namespace, 'ParticleCharge', M_ONE, this%charge)
-    call messages_print_var_value(stdout, 'ParticleCharge', this%charge)
+    call parse_variable(namespace, 'ParticleCharge', M_ONE, this%charge(1))
+    call messages_print_var_value(stdout, 'ParticleCharge', this%charge(1))
 
     call this%supported_interactions%add(LORENTZ_FORCE)
     call this%supported_interactions%add(COULOMB_FORCE)
@@ -124,9 +124,9 @@ contains
 
     select type (interaction)
     type is (coulomb_force_t)
-      call interaction%init(this%space%dim, this%quantities, this%charge, this%pos)
+      call interaction%init(this%space%dim, 1, this%quantities, this%charge, this%pos)
     type is (lorentz_force_t)
-      call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
+      call interaction%init(this%space%dim, 1, this%quantities, this%charge, this%pos, this%vel)
     class default
       call this%classical_particle_t%init_interaction(interaction)
     end select
@@ -230,8 +230,18 @@ contains
 
     select type (interaction)
     type is (coulomb_force_t)
-      interaction%partner_charge = partner%charge
-      interaction%partner_pos = partner%pos
+      interaction%partner_np = 1
+
+      if (.not. allocated(interaction%partner_charge)) then
+        SAFE_ALLOCATE(interaction%partner_charge(1))
+      end if
+      interaction%partner_charge(1) = partner%charge(1)
+
+      if (.not. allocated(interaction%partner_pos)) then
+        SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
+      end if
+      interaction%partner_pos(:,1) = partner%pos(:, 1)
+
     class default
       call partner%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select

@@ -65,7 +65,7 @@ contains
     ! from the gpaw source code.
 
     call nl_operator_init(op, "Mix metric")
-    call stencil_cube_get_lapl(op%stencil, der%mesh%sb%dim, 1)
+    call stencil_cube_get_lapl(op%stencil, der%dim, 1)
     
     call nl_operator_build(der%mesh, op, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
 
@@ -79,7 +79,7 @@ contains
       
       do is = 1, op%stencil%size
 
-        inb = sum(abs(op%stencil%points(1:der%mesh%sb%dim, is)))
+        inb = sum(abs(op%stencil%points(1:der%dim, is)))
 
         select case(inb)
         case(0)
@@ -104,7 +104,7 @@ contains
 
     end do
     
-    call nl_operator_update_weights(op)
+    call nl_operator_output_weights(op)
 
     POP_SUB(mixing_metric_init)
   end subroutine mixing_metric_init

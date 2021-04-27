@@ -58,6 +58,7 @@ module poisson_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use submesh_oct_m
   use types_oct_m
   use unit_oct_m
@@ -148,24 +149,26 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, qtot, label, solver, verbose, force_serial, force_cmplx)
-    type(poisson_t),             intent(out) :: this
-    type(namespace_t),           intent(in)  :: namespace
-    type(derivatives_t), target, intent(in)  :: der
-    type(multicomm_t),           intent(in)  :: mc
-    FLOAT,                       intent(in)  :: qtot !< total charge
-    character(len=*),  optional, intent(in)  :: label
-    integer,           optional, intent(in)  :: solver
-    logical,           optional, intent(in)  :: verbose
-    logical,           optional, intent(in)  :: force_serial
-    logical,           optional, intent(in)  :: force_cmplx
+  subroutine poisson_init(this, namespace, space, der, mc, qtot, label, solver, verbose, force_serial, force_cmplx)
+    type(poisson_t),             intent(inout) :: this
+    type(space_t),               intent(in)    :: space
+    type(namespace_t),           intent(in)    :: namespace
+    type(derivatives_t), target, intent(in)    :: der
+    type(multicomm_t),           intent(in)    :: mc
+    FLOAT,                       intent(in)    :: qtot !< total charge
+    character(len=*),  optional, intent(in)    :: label
+    integer,           optional, intent(in)    :: solver
+    logical,           optional, intent(in)    :: verbose
+    logical,           optional, intent(in)    :: force_serial
+    logical,           optional, intent(in)    :: force_cmplx
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
     FLOAT :: fft_alpha
     character(len=60) :: str
 
-    if(this%method /= POISSON_NULL) return ! already initialized
+    ! Make sure we do not try to initialize an already initialized solver
+    ASSERT(this%method == POISSON_NULL)
 
     PUSH_SUB(poisson_init)
 
@@ -198,7 +201,7 @@ contains
     if (this%is_dressed) then
       call messages_experimental('Dressed Orbitals')
       ASSERT(qtot > M_ZERO)
-      call photon_mode_init(this%photons, namespace, der%mesh, der%mesh%sb%dim-1, qtot)
+      call photon_mode_init(this%photons, namespace, der%mesh, der%dim-1, qtot)
       if (this%photons%nmodes > 1) then
         call messages_not_implemented('DressedOrbitals for more than one photon mode.')
       end if
@@ -265,9 +268,9 @@ contains
 
     default_solver = POISSON_FFT
 
-    if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
+    if (space%dim == 3 .and. .not. space%is_periodic()) default_solver = POISSON_ISF
 
-    if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
+    if (space%dim > 3) default_solver = POISSON_NO ! Kernel for higher dimensions is not implemented.
 
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
@@ -276,7 +279,7 @@ contains
 #endif
 
     if(der%mesh%use_curvilinear) then
-      select case(der%mesh%sb%dim)
+      select case (space%dim)
       case(1)
         default_solver = POISSON_DIRECT_SUM
       case(2)
@@ -321,6 +324,10 @@ contains
       call messages_info(1)
     end if
 
+    if (space%dim > 3 .and. this%method /= POISSON_NO) then
+      call messages_input_error(namespace, 'PoissonSolver', 'Currently no Poisson solver is available for Dimensions > 3')
+    end if
+
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
     else
@@ -355,23 +362,23 @@ contains
       !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
       !%End
 
-      select case(der%mesh%sb%dim)
+      select case (space%dim)
       case(1)
-        if(der%mesh%sb%periodic_dim == 0) then
+        if (.not. space%is_periodic()) then
           default_kernel = POISSON_FFT_KERNEL_SPH
         else
           default_kernel = POISSON_FFT_KERNEL_NOCUT
         end if
       case(2)
-        if (der%mesh%sb%periodic_dim == 2) then
+        if (space%periodic_dim == 2) then
           default_kernel = POISSON_FFT_KERNEL_NOCUT
-        else if (der%mesh%sb%periodic_dim > 0) then
-          default_kernel = der%mesh%sb%periodic_dim
+        else if (space%is_periodic()) then
+          default_kernel = space%periodic_dim
         else
           default_kernel = POISSON_FFT_KERNEL_SPH
         end if
       case(3)
-        default_kernel = der%mesh%sb%periodic_dim
+        default_kernel = space%periodic_dim
       end select
 
       call parse_variable(namespace, 'PoissonFFTKernel', default_kernel, this%kernel)
@@ -384,30 +391,30 @@ contains
 
     !We assume the developer knows what he is doing by providing the solver option
     if(.not. present(solver)) then
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
+      if (space%is_periodic() .and. this%method == POISSON_DIRECT_SUM) then
         message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
         call messages_fatal(1)
       end if
 
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
+      if (space%is_periodic() .and. this%method == POISSON_CG_CORRECTED) then
         message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
         call messages_fatal(1)
       end if
 
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG) then
+      if (space%is_periodic() .and. this%method == POISSON_CG) then
         message(1) = 'A periodic system may not use the cg Poisson solver.'
         call messages_fatal(1)
       end if
 
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_MULTIGRID) then
+      if (space%is_periodic() .and. this%method == POISSON_MULTIGRID) then
         message(1) = 'A periodic system may not use the multigrid Poisson solver.'
         call messages_fatal(1)
       end if
 
-      select case(der%mesh%sb%dim)
+      select case (space%dim)
       case(1)
 
-        select case(der%mesh%sb%periodic_dim)
+        select case (space%periodic_dim)
         case(0)
           if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
             message(1) = 'A finite 1D system may only use fft or direct_sum Poisson solvers.'
@@ -441,24 +448,23 @@ contains
 
       case(3)
 
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
+        if (space%is_periodic() .and. this%method == POISSON_FMM) then
           call messages_not_implemented('FMM for periodic systems')
         end if
 
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
+        if (space%is_periodic() .and. this%method == POISSON_ISF) then
           call messages_write('The ISF solver can only be used for finite systems.')
           call messages_fatal()
         end if
 
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-          this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
-          write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
+        if (space%is_periodic() .and. this%method == POISSON_FFT .and. &
+          this%kernel /= space%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
+          write(message(1), '(a,i1,a)')'The system is periodic in ', space%periodic_dim ,' dimension(s),'
           write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
           call messages_warning(2)
         end if
 
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-          this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
+        if (space%is_periodic() .and. this%method == POISSON_FFT .and. this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
           write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
           call messages_fatal(1)
         end if
@@ -547,16 +553,16 @@ contains
         call messages_fatal(2)
       end if
 
-      if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
+      if (space%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
         call messages_not_implemented('PFFT support for dimensionality other than 3')
       end if
 
-      select case (der%mesh%sb%dim)
+      select case (space%dim)
 
       case (1)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box = der%mesh%idx%ll
         end select
@@ -564,10 +570,10 @@ contains
       case (2)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(1:2) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box(:) = der%mesh%idx%ll(:)
         end select
@@ -575,16 +581,16 @@ contains
       case (3)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(:) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
           box(2) = maxval(box(2:3)) ! max of finite directions
           box(3) = maxval(box(2:3)) ! max of finite directions
         case(POISSON_FFT_KERNEL_CORRECTED)
           box(:) = der%mesh%idx%ll(:)
         case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+          call mesh_double_box(space, der%mesh, fft_alpha, box)
         end select
 
       end select
@@ -599,8 +605,8 @@ contains
 #endif
 
       call messages_experimental('Poke library')
-      ASSERT(der%mesh%sb%dim == 3)
-      box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
+      ASSERT(space%dim == 3)
+      box(1:space%dim) = der%mesh%idx%ll(1:space%dim)
       need_cube = .true.
       fft_type = FFTLIB_NONE
     end if
@@ -618,7 +624,7 @@ contains
 
 #ifdef HAVE_POKE
       this%poke_grid = PokeGrid(der%mesh%spacing, this%cube%rs_n)
-      if(der%mesh%sb%periodic_dim > 0) then
+      if (space%is_periodic()) then
         call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
       else
         call this%poke_grid%set_boundaries(POKE_BOUNDARIES_FREE)
@@ -633,7 +639,7 @@ contains
       call messages_fatal(1)
     end if
 
-    call poisson_kernel_init(this, namespace, mc%master_comm)
+    call poisson_kernel_init(this, namespace, space, mc%master_comm)
 
     POP_SUB(poisson_init)
   end subroutine poisson_init
@@ -865,7 +871,7 @@ contains
 
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      if ( (this%is_dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
+      if ( (this%is_dressed .and. this%der%dim - 1 > 3) .or. this%der%dim > 3) then
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end if
@@ -949,9 +955,10 @@ contains
   end subroutine dpoisson_solve
 
   !-----------------------------------------------------------------
-  subroutine poisson_init_sm(this, namespace, main, der, sm, method, force_cmplx)
-    type(poisson_t),             intent(out)   :: this
+  subroutine poisson_init_sm(this, namespace, space, main, der, sm, method, force_cmplx)
+    type(poisson_t),             intent(inout) :: this
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(poisson_t),             intent(in)    :: main
     type(derivatives_t), target, intent(in)    :: der
     type(submesh_t),             intent(inout) :: sm
@@ -1013,7 +1020,7 @@ contains
       call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, &
                      need_partition=.not.der%mesh%parallel_in_domains)
       qq = M_ZERO
-      call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube, M_ZERO, qq, force_isolated=.true.)
+      call poisson_psolver_init(this%psolver_solver, namespace, space, this%der%mesh, this%cube, M_ZERO, qq, force_isolated=.true.)
       call poisson_psolver_get_dims(this%psolver_solver, this%cube)
     case(POISSON_FFT)
       !Here we impose zero boundary conditions
@@ -1035,7 +1042,7 @@ contains
         call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_REAL, &
                        need_partition=.not.der%mesh%parallel_in_domains)
       end if
-      call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel)
+      call poisson_fft_init(this%fft_solver, namespace, space, this%der%mesh, this%cube, this%kernel)
     end select
 
     POP_SUB(poisson_init_sm)
@@ -1048,8 +1055,9 @@ contains
   !! For periodic systems, the periodic copies of the Gaussian
   !! are taken into account up to to a certain threshold that can
   !! be specified in the input file.
-  subroutine poisson_test(this, mesh, namespace, repetitions)
+  subroutine poisson_test(this, space, mesh, namespace, repetitions)
     type(poisson_t),   intent(in) :: this
+    type(space_t),     intent(in) :: space
     type(mesh_t),      intent(in) :: mesh
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: repetitions
@@ -1088,8 +1096,8 @@ contains
     SAFE_ALLOCATE(     rho(1:mesh%np))
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
-    SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
-    SAFE_ALLOCATE(xx_per(1:mesh%sb%dim))
+    SAFE_ALLOCATE(xx(1:space%dim, 1:n_gaussians))
+    SAFE_ALLOCATE(xx_per(1:space%dim))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
@@ -1097,7 +1105,7 @@ contains
     write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
     write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
     call messages_info(2)
-    beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
+    beta = M_ONE / ( alpha**space%dim * sqrt(M_PI)**space%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
     call messages_info(1)
@@ -1105,10 +1113,10 @@ contains
     ! Set the centers of the Gaussians by hand
     xx(1, 1) = M_ONE
     xx(2, 1) = -M_HALF
-    if(mesh%sb%dim == 3) xx(3, 1) = M_TWO
+    if(space%dim == 3) xx(3, 1) = M_TWO
     xx(1, 2) = -M_TWO
     xx(2, 2) = M_ZERO
-    if(mesh%sb%dim == 3) xx(3, 2) = -M_ONE
+    if(space%dim == 3) xx(3, 2) = -M_ONE
     xx = xx * alpha
 
     ! Density as sum of Gaussians
@@ -1132,16 +1140,16 @@ contains
     vh_exact = M_ZERO
     do nn = 1, n_gaussians
       ! sum over all periodic copies for each Gaussian
-      call periodic_copy_init(pp, mesh%sb, xx(:, nn), range=M_ONE/threshold)
+      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, xx(:, nn), range=M_ONE/threshold)
       write(message(1), '(a,i2,a,i9,a)') 'Computing Gaussian ', nn, ' for ', periodic_copy_num(pp), ' periodic copies.'
       call messages_info(1)
 
       do icell = 1, periodic_copy_num(pp)
-        xx_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        xx_per(1:space%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
         !$omp parallel do private(rr, ralpha)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin=xx_per(1:mesh%sb%dim))
-          select case(mesh%sb%dim)
+          call mesh_r(mesh, ip, rr, origin=xx_per(1:space%dim))
+          select case(space%dim)
           case(3)
             if(rr > R_SMALL) then
               vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
@@ -1393,19 +1401,19 @@ contains
 
   !----------------------------------------------------------------
 
-  subroutine poisson_build_kernel(this, namespace, sb, coulb, qq, mu, singul)
-    type(poisson_t),  intent(in) :: this
-    type(namespace_t),intent(in) :: namespace
-    type(simul_box_t),intent(in) :: sb
+  subroutine poisson_build_kernel(this, namespace, space, coulb, qq, mu, singul)
+    type(poisson_t),          intent(in)    :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(fourier_space_op_t), intent(inout) :: coulb
-    FLOAT,            intent(in) :: qq(:)
-    FLOAT,            intent(in) :: mu
-    FLOAT, optional,  intent(in) :: singul
+    FLOAT,                    intent(in)    :: qq(:)
+    FLOAT,                    intent(in)    :: mu
+    FLOAT,          optional, intent(in)    :: singul
 
     PUSH_SUB(poisson_build_kernel)
 
-    if(simul_box_is_periodic(sb)) then
-      ASSERT(ubound(qq, 1) >= sb%periodic_dim)
+    if (space%is_periodic()) then
+      ASSERT(ubound(qq, 1) >= space%periodic_dim)
       ASSERT(this%method == POISSON_FFT)
     end if
 
@@ -1422,12 +1430,12 @@ contains
     select case(this%method)
     case(POISSON_FFT)
       !We only reinitialize the poisson sover if needed
-      if(any(abs(coulb%qq(1:sb%periodic_dim) - qq(1:sb%periodic_dim)) > M_EPSILON)) then
+      if(any(abs(coulb%qq(1:space%periodic_dim) - qq(1:space%periodic_dim)) > M_EPSILON)) then
         call fourier_space_op_end(coulb)
-        coulb%qq(1:sb%periodic_dim) = qq(1:sb%periodic_dim)
+        coulb%qq(1:space%periodic_dim) = qq(1:space%periodic_dim)
         !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
         coulb%singularity = optional_default(singul, M_ZERO)
-        call poisson_fft_get_kernel(namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+        call poisson_fft_get_kernel(namespace, space, this%der%mesh, this%cube, coulb, this%kernel, &
           this%poisson_soft_coulomb_param)
       end if
     case default

@@ -35,8 +35,6 @@ module index_oct_m
     index_from_coords,     &
     index_from_coords_vec, &
     index_to_coords,       &
-    index_dump,            &
-    index_load,            &
     index_dump_lxyz,       &
     index_load_lxyz
 
@@ -134,116 +132,6 @@ contains
     end if
   end subroutine index_to_coords
 
-
-  ! --------------------------------------------------------------
-  subroutine index_dump(idx, dir, filename, mpi_grp, namespace, ierr)
-    type(index_t),     intent(in)  :: idx 
-    character(len=*),  intent(in)  :: dir
-    character(len=*),  intent(in)  :: filename
-    type(mpi_grp_t),   intent(in)  :: mpi_grp
-    type(namespace_t), intent(in)  :: namespace
-    integer,           intent(out) :: ierr
-
-    integer :: iunit, idir
-
-    PUSH_SUB(index_dump)
-
-    ierr = 0
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
-      position="append", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
-    else
-      !Only root writes to the file
-      if (mpi_grp_is_root(mpi_grp)) then
-        write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,l1)')  'is_hypercube=       ', idx%is_hypercube
-        write(iunit, '(a20,i21)') 'dim=                ', idx%dim
-        if (.not. idx%is_hypercube) then
-          write(iunit, '(a20,7i8)') 'nr(1, :)=           ', (idx%nr(1, idir), idir = 1, idx%dim)
-          write(iunit, '(a20,7i8)') 'nr(2, :)=           ', (idx%nr(2, idir), idir = 1, idx%dim)
-          write(iunit, '(a20,7i8)') 'l(:)=               ', idx%ll(1:idx%dim)
-          write(iunit, '(a20,7i8)') 'enlarge(:)=         ', idx%enlarge(1:idx%dim)
-          ! The next two lines should always come last
-          write(iunit, '(a20,i21)') 'algorithm=          ', 1
-          write(iunit, '(a20,i21)') 'checksum=           ', idx%checksum
-        end if
-      end if
-
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    POP_SUB(index_dump)
-  end subroutine index_dump
-
-
-  ! --------------------------------------------------------------
-  subroutine index_load(idx, dir, filename, mpi_grp, namespace, ierr)
-    type(index_t),     intent(inout) :: idx
-    character(len=*),  intent(in)    :: dir
-    character(len=*),  intent(in)    :: filename
-    type(mpi_grp_t),   intent(in)    :: mpi_grp
-    type(namespace_t), intent(in)    :: namespace
-    integer,           intent(out)   :: ierr
-
-    integer :: iunit, idir, err
-    character(len=100) :: lines(6)
-    character(len=20)  :: str
-
-    PUSH_SUB(index_load)
-
-    ierr = 0
-
-    idx%nr = 0
-    idx%ll = 0
-    idx%enlarge = 0
-    idx%is_hypercube = .false.
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action="read", &
-      status="old", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
-    else
-      ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
-      if (err /= 0) ierr = ierr + 2
-
-      if (ierr == 0) then
-        idx%is_hypercube = .false.
-        call iopar_read(mpi_grp, iunit, lines, 2, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-        else
-          read(lines(1), '(a20,l1)')  str, idx%is_hypercube
-          read(lines(2), '(a20,i21)') str, idx%dim
-        end if
-
-        if (.not. idx%is_hypercube) then
-          call iopar_read(mpi_grp, iunit, lines, 6, err)
-          if (err /= 0) then
-            ierr = ierr + 8            
-          else
-            read(lines(1), '(a20,7i8)') str, (idx%nr(1, idir), idir = 1,idx%dim)
-            read(lines(2), '(a20,7i8)') str, (idx%nr(2, idir), idir = 1,idx%dim)
-            read(lines(3), '(a20,7i8)') str, idx%ll(1:idx%dim)
-            read(lines(4), '(a20,7i8)') str, idx%enlarge(1:idx%dim)
-            !For the moment we do not read the algorithm, as it is always set to 1
-            read(lines(6), '(a20,i21)') str, idx%checksum
-          end if
-        end if
-      end if
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    POP_SUB(index_load)
-  end subroutine index_load
-
-
   ! --------------------------------------------------------------
   subroutine index_dump_lxyz(idx, np, dir, mpi_grp, namespace, ierr)
     type(index_t),    intent(in)  :: idx
@@ -260,6 +148,10 @@ contains
     ierr = 0
 
     if (.not. idx%is_hypercube) then
+      if (int(np, 8)*idx%dim > huge(0)) then
+        message(1) = "Too many global mesh points to write restart file for lxyz.obf."
+        call messages_fatal(1)
+      end if
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(allocated(idx%lxyz))

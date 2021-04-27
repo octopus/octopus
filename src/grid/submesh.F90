@@ -35,6 +35,7 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use types_oct_m
     
   implicit none
@@ -141,8 +142,9 @@ contains
 
 ! -------------------------------------------------------------
 
-  subroutine submesh_init(this, sb, mesh, center, rc)
+  subroutine submesh_init(this, space, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(space_t),        intent(in)     :: space
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
     FLOAT,                intent(in)     :: center(:)
@@ -165,14 +167,14 @@ contains
 
     this%mesh => mesh
 
-    this%center(1:sb%dim) = center(1:sb%dim)
+    this%center(1:space%dim) = center(1:space%dim)
 
     this%radius = rc
     rc2 = rc**2
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
-    if(.not. simul_box_is_periodic(sb)) then 
+    if(.not. space%is_periodic()) then
 
       SAFE_ALLOCATE(map_inv(0:this%mesh%np_part))
       map_inv(0:this%mesh%np_part) = 0
@@ -181,13 +183,13 @@ contains
       nmax = 0
 
       ! get a cube of points that contains the sphere
-      nmin(1:sb%dim) = int((center(1:sb%dim) - abs(rc))/mesh%spacing(1:sb%dim)) - 1
-      nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc))/mesh%spacing(1:sb%dim)) + 1
+      nmin(1:space%dim) = int((center(1:space%dim) - abs(rc))/mesh%spacing(1:space%dim)) - 1
+      nmax(1:space%dim) = int((center(1:space%dim) + abs(rc))/mesh%spacing(1:space%dim)) + 1
 
       ! make sure that the cube is inside the grid
       ! parts of the cube which would fall outside the simulation box are chopped off.
-      nmin(1:sb%dim) = max(mesh%idx%nr(1, 1:sb%dim), nmin(1:sb%dim))
-      nmax(1:sb%dim) = min(mesh%idx%nr(2, 1:sb%dim), nmax(1:sb%dim))
+      nmin(1:space%dim) = max(mesh%idx%nr(1, 1:space%dim), nmin(1:space%dim))
+      nmax(1:space%dim) = min(mesh%idx%nr(2, 1:space%dim), nmax(1:space%dim))
 
       ! Get the total number of points inside the sphere
       is = 0   ! this index counts inner points
@@ -195,11 +197,9 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = index_from_coords(mesh%idx, [ix, iy, iz])
+            ip = mesh_local_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
-            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-            if(ip == 0) cycle
-            r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
+            r2 = sum((mesh%x(ip, 1:space%dim) - center(1:space%dim))**2)
             if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
@@ -217,15 +217,14 @@ contains
       this%np_part = is + isb
       
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
+      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:space%dim))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = index_from_coords(mesh%idx, [ix, iy, iz])
+            ip = mesh_local_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
-            if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
@@ -234,8 +233,8 @@ contains
               map_inv(ip) = is
             end if
             this%map(is) = ip
-            xtmp(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
-            xtmp(is, 0) = sqrt(sum(xtmp(is, 1:sb%dim)**2))
+            xtmp(is, 1:space%dim) = mesh%x(ip, 1:space%dim) - center(1:space%dim)
+            xtmp(is, 0) = sqrt(sum(xtmp(is, 1:space%dim)**2))
           end do
         end do
       end do
@@ -250,33 +249,33 @@ contains
 
       ! this requires some optimization
 
-      call periodic_copy_init(pp, sb, center(1:sb%dim), rc)
+      call periodic_copy_init(pp, space, sb%latt, sb%lsize, center(1:space%dim), rc)
       
-      SAFE_ALLOCATE(center_copies(1:sb%dim, 1:periodic_copy_num(pp)))
+      SAFE_ALLOCATE(center_copies(1:space%dim, 1:periodic_copy_num(pp)))
 
       do icell = 1, periodic_copy_num(pp)
-        center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
+        center_copies(1:space%dim, icell) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
       end do
 
       !Recursive formulation for the volume of n-ellipsoid 
       !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
-      rc_norm_n = product(ceiling(rc / mesh%spacing(1:sb%dim)) + 1.0)
+      rc_norm_n = product(ceiling(rc / mesh%spacing(1:space%dim)) + 1.0)
       if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling_product
-      max_elements_count = 3**sb%dim * int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim)) 
+      max_elements_count = 3**space%dim * int(M_PI**floor(0.5 * space%dim) * rc_norm_n * f_n(space%dim)) 
 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
-      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:space%dim))
             
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
-          r2 = sum(xx(1:sb%dim)**2)
+          xx(1:space%dim) = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
+          r2 = sum(xx(1:space%dim)**2)
           if(r2 > rc2) cycle
           is = is + 1
           map_temp(is) = ip
           xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
+          xtmp(is, 1:space%dim) = xx(1:space%dim)
           ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
@@ -297,7 +296,7 @@ contains
     ! now order points for better locality
 
     SAFE_ALLOCATE(order(1:this%np_part))
-    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 0:space%dim))
 
     do ip = 1, this%np_part
       order(ip) = ip
@@ -306,7 +305,7 @@ contains
     call sort(this%map, order)
 
     do ip = 1, this%np_part
-      this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+      this%x(ip, 0:space%dim) = xtmp(order(ip), 0:space%dim)
     end do
 
     !check whether points overlap (i.e. whetehr a submesh contains the same point more than once)
@@ -557,7 +556,7 @@ contains
 
     !no PUSH_SUB, called too often
 
-    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+    if (sm1%mesh%sb%periodic_dim == 0) then
       !first check the distance
       distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
@@ -610,7 +609,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-    call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
+    call this%mesh%allreduce(part_np)
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -632,9 +631,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
-    call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
+    call this%mesh%allreduce(this%x_global)
+    call this%mesh%allreduce(this%part_v)
+    call this%mesh%allreduce(this%global2local)
 
     SAFE_DEALLOCATE_A(part_np)
 
@@ -738,7 +737,7 @@ contains
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
-      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call this%mesh%allreduce(dotp)
       call profiling_out(prof_sm_reduce)
     end if 
  
@@ -761,7 +760,7 @@ contains
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi(1:dim) = matmul(sm%x(ip,1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+      chi(1:dim) = matmul(sm%x(ip,1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
       
       do idir = 1, dim
         db(idir) = max(db(idir), nint(abs(chi(idir))/sm%mesh%spacing(idir) + M_HALF))
@@ -790,16 +789,16 @@ contains
 
     !The center of the submesh does not belong to the mesh
     !So we first need to find the closest grid point, and center the cube to it
-    chi(1:dim) = matmul(sm%center(1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+    chi(1:dim) = matmul(sm%center(1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
     do idir = 1, dim
       shift(idir) = nint(chi(idir)/sm%mesh%spacing(idir))*sm%mesh%spacing(idir)
     end do
-    shift(1:dim) = matmul(sm%mesh%sb%rlattice_primitive(1:dim,1:dim), shift(1:dim)) 
+    shift(1:dim) = matmul(sm%mesh%sb%latt%rlattice_primitive(1:dim,1:dim), shift(1:dim)) 
     shift(1:dim) = shift(1:dim) - sm%center(1:dim) 
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi(1:dim) = matmul(sm%x(ip,1:dim) - shift(1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+      chi(1:dim) = matmul(sm%x(ip,1:dim) - shift(1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
       do idir = 1, dim
         sm%cube_map%map(idir,ip) = nint(chi(idir)/sm%mesh%spacing(idir))
       end do

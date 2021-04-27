@@ -28,7 +28,6 @@ module states_elec_dim_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
 
   implicit none
 
@@ -42,8 +41,6 @@ module states_elec_dim_oct_m
     is_spin_down,                     &
     is_spin_up,                       &
     states_elec_choose_kpoints,            &
-    states_elec_dim_get_spin_index,        &
-    states_elec_dim_get_kpoint_index,      &
     kpoints_distribute
 
   !> Parameters...
@@ -70,6 +67,9 @@ module states_elec_dim_oct_m
     integer :: orth_method
     logical :: pack_states
     FLOAT   :: cl_states_mem
+  contains
+    procedure :: get_spin_index => states_elec_dim_get_spin_index
+    procedure :: get_kpoint_index => states_elec_dim_get_kpoint_index
   end type states_elec_dim_t
 
 contains
@@ -147,8 +147,8 @@ contains
 
   ! ---------------------------------------------------------
   integer pure function states_elec_dim_get_spin_index(this, iq) result(index)
-    type(states_elec_dim_t), intent(in) :: this
-    integer,                 intent(in) :: iq
+    class(states_elec_dim_t), intent(in) :: this
+    integer,                  intent(in) :: iq
 
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + mod(iq - 1, 2)
@@ -161,8 +161,8 @@ contains
 
   ! ---------------------------------------------------------
   integer pure function states_elec_dim_get_kpoint_index(this, iq) result(index)
-    type(states_elec_dim_t), intent(in) :: this
-    integer,                 intent(in) :: iq
+    class(states_elec_dim_t), intent(in) :: this
+    integer,                  intent(in) :: iq
     
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + (iq - 1)/2
@@ -185,24 +185,24 @@ contains
   end subroutine kpoints_distribute
   
   ! ---------------------------------------------------------
-  subroutine states_elec_choose_kpoints(dd, sb, namespace)
+  subroutine states_elec_choose_kpoints(dd, kpoints, namespace)
     type(states_elec_dim_t), intent(inout) :: dd
-    type(simul_box_t),       intent(in)    :: sb
+    type(kpoints_t),         intent(in)    :: kpoints
     type(namespace_t),       intent(in)    :: namespace
 
     integer :: ik, iq
 
     PUSH_SUB(states_elec_choose_kpoints)
 
-    dd%nik = kpoints_number(sb%kpoints)
+    dd%nik = kpoints_number(kpoints)
 
     if (dd%ispin == SPIN_POLARIZED) dd%nik = 2*dd%nik
 
     SAFE_ALLOCATE(dd%kweights(1:dd%nik))
 
     do iq = 1, dd%nik
-      ik = states_elec_dim_get_kpoint_index(dd, iq)
-      dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
+      ik = dd%get_kpoint_index(iq)
+      dd%kweights(iq) = kpoints%get_weight(ik)
     end do
 
     if(debug%info) call print_kpoints_debug
@@ -216,7 +216,7 @@ contains
       
       call io_mkdir('debug/', namespace)
       iunit = io_open('debug/kpoints', namespace, action = 'write')
-      call kpoints_write_info(sb%kpoints, namespace, iunit, absolute_coordinates = .true.)      
+      call kpoints%write_info(namespace, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)
 
       POP_SUB(states_elec_choose_kpoints.print_kpoints_debug)

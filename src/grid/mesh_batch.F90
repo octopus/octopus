@@ -62,7 +62,9 @@ module mesh_batch_oct_m
     dmesh_batch_mf_dotp,            &
     zmesh_batch_mf_dotp,            &
     dmesh_batch_codensity,          &
-    zmesh_batch_codensity
+    zmesh_batch_codensity,          &
+    dmesh_batch_normalize,          &
+    zmesh_batch_normalize
 
 contains
 
@@ -84,7 +86,7 @@ contains
     
     if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
       nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
-      call comm_allreduce(mesh%mpi_grp%comm, nrm2, dim = aa%nst)
+      call mesh%allreduce(nrm2, dim = aa%nst)
       nrm2(1:aa%nst) = sqrt(nrm2(1:aa%nst))
     end if
 

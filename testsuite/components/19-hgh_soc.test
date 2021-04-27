@@ -5,9 +5,9 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 1
 Input: 19-hgh_soc.01-3d.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.765384
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.791197
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.777859
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.754540
+Precision: 1e-15
+match ;  Norm state  1 ; GREPFIELD(out, 'Norm state  1', 4) ; 0.921153
+match ;  Norm state  2 ; GREPFIELD(out, 'Norm state  2', 4) ; 0.887581
+match ;  Norm state  3 ; GREPFIELD(out, 'Norm state  3', 4) ; 0.884488
+match ;  Norm state  4 ; GREPFIELD(out, 'Norm state  4', 4) ; 0.884481

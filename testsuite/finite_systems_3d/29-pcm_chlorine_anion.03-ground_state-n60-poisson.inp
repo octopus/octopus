@@ -26,4 +26,3 @@ PCMStaticEpsilon = 78.39
 PCMCalcMethod = pcm_poisson
 MixField = density
 StatesPack = yes
-LCAOStart = lcao_full

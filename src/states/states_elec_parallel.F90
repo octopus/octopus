@@ -109,7 +109,7 @@ contains
     
     PUSH_SUB(states_elec_parallel_remote_access_start)
 
-    ASSERT(associated(this%group%psib))
+    ASSERT(allocated(this%group%psib))
 
     if(this%mpi_grp%size == 1) then 
       POP_SUB(states_elec_parallel_remote_access_start)
@@ -146,7 +146,7 @@ contains
     
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
-    ASSERT(associated(this%group%psib))
+    ASSERT(allocated(this%group%psib))
     
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks

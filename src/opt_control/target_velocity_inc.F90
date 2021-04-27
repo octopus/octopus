@@ -133,7 +133,7 @@
       do iatom = 1, geo%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vl)
+        call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         do ist = 1, gr%mesh%np
           do jst=1, gr%sb%dim
@@ -163,14 +163,17 @@
   subroutine target_end_velocity(tg, oct)
     type(target_t), intent(inout) :: tg
     type(oct_t),    intent(in)    :: oct
+
     PUSH_SUB(target_end_velocity)
+
     if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG .or. oct%algorithm  ==  OPTION__OCTSCHEME__OCT_BFGS) then
-      SAFE_DEALLOCATE_P(tg%vel_der_array)
-      SAFE_DEALLOCATE_P(tg%grad_local_pot)
-      SAFE_DEALLOCATE_P(tg%rho)
+      SAFE_DEALLOCATE_A(tg%vel_der_array)
+      SAFE_DEALLOCATE_A(tg%grad_local_pot)
+      SAFE_DEALLOCATE_A(tg%rho)
      end if
-     SAFE_DEALLOCATE_P(tg%td_fitness)
-    POP_SUB(target_end_velocity)
+     SAFE_DEALLOCATE_A(tg%td_fitness)
+
+     POP_SUB(target_end_velocity)
   end subroutine target_end_velocity
 
 

@@ -27,7 +27,6 @@ module states_elec_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use kpoints_oct_m
@@ -48,6 +47,7 @@ module states_elec_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_group_oct_m
   use states_elec_dim_oct_m
@@ -107,33 +107,33 @@ module states_elec_oct_m
     character(len=1024), allocatable :: user_def_states(:,:,:)
 
     !> the densities and currents (after all we are doing DFT :)
-    FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
-    FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+    FLOAT, allocatable :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
+    FLOAT, allocatable :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     !> k-point resolved current
-    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np gr%sb%dim, kpt_start:kpt_end)
+    FLOAT, allocatable :: current_kpt(:,:,:) !< current(gr%mesh%np gr%sb%dim, kpt_start:kpt_end)
 
 
-    FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
+    FLOAT, allocatable :: rho_core(:)      !< core charge for nl core corrections
 
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
-    FLOAT, pointer :: frozen_rho(:, :)
-    FLOAT, pointer :: frozen_tau(:, :)
-    FLOAT, pointer :: frozen_gdens(:,:,:)
-    FLOAT, pointer :: frozen_ldens(:,:)
+    FLOAT, allocatable :: frozen_rho(:, :)
+    FLOAT, allocatable :: frozen_tau(:, :)
+    FLOAT, allocatable :: frozen_gdens(:,:,:)
+    FLOAT, allocatable :: frozen_ldens(:,:)
 
-    logical        :: calc_eigenval
-    logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
+    logical            :: calc_eigenval
+    logical            :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
     
-    FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
-    logical        :: fixed_occ     !< should the occupation numbers be fixed?
-    logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
-    logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
-    FLOAT, pointer :: occ(:,:)      !< the occupation numbers
-    logical, private :: fixed_spins   !< In spinors mode, the spin direction is set
+    FLOAT, allocatable :: eigenval(:,:) !< obviously the eigenvalues
+    logical            :: fixed_occ     !< should the occupation numbers be fixed?
+    logical            :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
+    logical            :: restart_reorder_occs !< used for restart with altered occupation numbers
+    FLOAT, allocatable :: occ(:,:)      !< the occupation numbers
+    logical, private   :: fixed_spins   !< In spinors mode, the spin direction is set
                                     !< for the initial (random) orbitals.
-    FLOAT, pointer :: spin(:, :, :)
+    FLOAT, allocatable :: spin(:, :, :)
 
     FLOAT          :: qtot          !< (-) The total charge in the system (used in Fermi)
     FLOAT          :: val_charge    !< valence charge
@@ -142,9 +142,9 @@ module states_elec_oct_m
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
     type(modelmb_particle_t) :: modelmbparticles
-    integer,pointer:: mmb_nspindown(:,:) !< number of down spins in the selected Young diagram for each type and state
-    integer,pointer:: mmb_iyoung(:,:)    !< index of the selected Young diagram for each type and state
-    FLOAT, pointer :: mmb_proj(:)        !< projection of the state onto the chosen Young diagram
+    integer, allocatable :: mmb_nspindown(:,:) !< number of down spins in the selected Young diagram for each type and state
+    integer, allocatable :: mmb_iyoung(:,:)    !< index of the selected Young diagram for each type and state
+    FLOAT,   allocatable :: mmb_proj(:)        !< projection of the state onto the chosen Young diagram
 
     !> This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states !< Am I parallel in states?
@@ -159,8 +159,8 @@ module states_elec_oct_m
     logical                     :: scalapack_compatible !< Whether the states parallelization uses ScaLAPACK layout
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
-    integer, pointer            :: node(:)            !< To which node belongs each state.
-    integer, pointer            :: st_kpt_task(:,:)   !< For a given task, what are kpt and st start/end
+    integer, allocatable        :: node(:)            !< To which node belongs each state.
+    integer, allocatable        :: st_kpt_task(:,:)   !< For a given task, what are kpt and st start/end
     type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -209,21 +209,10 @@ contains
     
     st%d%orth_method = 0
     call modelmb_particles_nullify(st%modelmbparticles)
-    nullify(st%mmb_nspindown)
-    nullify(st%mmb_iyoung)
-    nullify(st%mmb_proj)
 
     st%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
-    nullify(st%rho, st%current)
-    nullify(st%current_kpt)
-    nullify(st%rho_core, st%frozen_rho)
-    nullify(st%frozen_tau, st%frozen_gdens, st%frozen_ldens)
-    nullify(st%eigenval, st%occ, st%spin)
-
     st%parallel_in_states = .false.
-    nullify(st%node)
-    nullify(st%st_kpt_task)
 
     st%packed = .false.
 
@@ -232,11 +221,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_init(st, namespace, gr, geo)
+  subroutine states_elec_init(st, namespace, space, valence_charge, kpoints)
     type(states_elec_t), target, intent(inout) :: st
-    type(namespace_t), target,   intent(in)    :: namespace
-    type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
+    type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
+    FLOAT,                       intent(in)    :: valence_charge
+    type(kpoints_t),             intent(in)    :: kpoints
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default
@@ -275,7 +265,7 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) call states_set_complex(st)
 
-    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+    if(st%d%ispin /= UNPOLARIZED .and. kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
       message(2) = "Use KPointsUseTimeReversal = no."
       call messages_fatal(2, namespace=namespace)
@@ -382,9 +372,9 @@ contains
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
+    call states_elec_choose_kpoints(st%d, kpoints, namespace)
 
-    st%val_charge = geometry_val_charge(geo)
+    st%val_charge = valence_charge
 
     st%qtot = -(st%val_charge + excess_charge)
 
@@ -466,7 +456,7 @@ contains
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
-    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
+    if (.not. kpoints%gamma_only()) then
       call states_set_complex(st)
     end if
 
@@ -494,8 +484,6 @@ contains
 
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
-    else
-      nullify(st%spin)
     end if
 
     !%Variable StatesRandomization
@@ -516,7 +504,7 @@ contains
     call parse_variable(namespace, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_elec_read_initial_occs(st, namespace, excess_charge, gr%sb%kpoints)
+    call states_elec_read_initial_occs(st, namespace, excess_charge, kpoints)
     call states_elec_read_initial_spins(st, namespace)
 
     st%st_start = 1
@@ -530,7 +518,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init(st%modelmbparticles, namespace, gr)
+    call modelmb_particles_init(st%modelmbparticles, namespace, space)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
@@ -549,7 +537,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call parse_variable(namespace, 'SymmetrizeDensity', kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     !%Variable ForceComplex
@@ -1036,7 +1024,7 @@ contains
     st%group%nblocks = 0
     bstart(1) = istmin
     do ist = istmin, istmax
-      INCR(ib, 1)
+      ib = ib + 1
 
       st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
 
@@ -1049,7 +1037,7 @@ contains
 
       if(ib == st%d%block_size .or. ist == istmax .or. .not. same_node) then
         ib = 0
-        INCR(st%group%nblocks, 1)
+        st%group%nblocks = st%group%nblocks + 1
         bend(st%group%nblocks) = ist
         if(ist /= istmax) bstart(st%group%nblocks + 1) = ist + 1
       end if
@@ -1092,7 +1080,7 @@ contains
 
     SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
 
-    ASSERT(associated(st%node))
+    ASSERT(allocated(st%node))
     ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
     
     do ib = 1, st%group%nblocks
@@ -1181,17 +1169,17 @@ contains
 
   !---------------------------------------------------------------------
   subroutine states_elec_allocate_current(st, gr)
-    type(states_elec_t), target, intent(inout) :: st
-    type(grid_t),                intent(in)    :: gr
+    type(states_elec_t), intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
 
     PUSH_SUB(states_elec_allocate_current)
     
-    if(.not. associated(st%current)) then
+    if (.not. allocated(st%current)) then
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
 
-    if(.not. associated(st%current_kpt)) then
+    if (.not. allocated(st%current_kpt)) then
       SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
@@ -1324,9 +1312,9 @@ contains
 
     call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
     if (stin%modelmbparticles%nparticle > 0) then
-      SAFE_ALLOCATE_SOURCE_P(stout%mmb_nspindown, stin%mmb_nspindown)
-      SAFE_ALLOCATE_SOURCE_P(stout%mmb_iyoung, stin%mmb_iyoung)
-      SAFE_ALLOCATE_SOURCE_P(stout%mmb_proj, stin%mmb_proj)
+      SAFE_ALLOCATE_SOURCE_A(stout%mmb_nspindown, stin%mmb_nspindown)
+      SAFE_ALLOCATE_SOURCE_A(stout%mmb_iyoung, stin%mmb_iyoung)
+      SAFE_ALLOCATE_SOURCE_A(stout%mmb_proj, stin%mmb_proj)
     end if
 
     stout%wfs_type = stin%wfs_type
@@ -1335,16 +1323,16 @@ contains
     stout%only_userdef_istates = stin%only_userdef_istates
 
     if(.not. exclude_wfns_) then
-      SAFE_ALLOCATE_SOURCE_P(stout%rho, stin%rho)
+      SAFE_ALLOCATE_SOURCE_A(stout%rho, stin%rho)
     end if
 
     stout%calc_eigenval = stin%calc_eigenval
     stout%uniform_occ = stin%uniform_occ
     
     if(.not. optional_default(exclude_eigenval, .false.)) then
-      SAFE_ALLOCATE_SOURCE_P(stout%eigenval, stin%eigenval)
-      SAFE_ALLOCATE_SOURCE_P(stout%occ, stin%occ)
-      SAFE_ALLOCATE_SOURCE_P(stout%spin, stin%spin)
+      SAFE_ALLOCATE_SOURCE_A(stout%eigenval, stin%eigenval)
+      SAFE_ALLOCATE_SOURCE_A(stout%occ, stin%occ)
+      SAFE_ALLOCATE_SOURCE_A(stout%spin, stin%spin)
     end if
 
     ! the call to init_block is done at the end of this subroutine
@@ -1353,14 +1341,13 @@ contains
 
     SAFE_ALLOCATE_SOURCE_A(stout%user_def_states, stin%user_def_states)
 
-    SAFE_ALLOCATE_SOURCE_P(stout%current, stin%current)
-    SAFE_ALLOCATE_SOURCE_P(stout%current_kpt, stin%current_kpt)
- 
-    SAFE_ALLOCATE_SOURCE_P(stout%rho_core, stin%rho_core)
-    SAFE_ALLOCATE_SOURCE_P(stout%frozen_rho, stin%frozen_rho)
-    SAFE_ALLOCATE_SOURCE_P(stout%frozen_tau, stin%frozen_tau)
-    SAFE_ALLOCATE_SOURCE_P(stout%frozen_gdens, stin%frozen_gdens)
-    SAFE_ALLOCATE_SOURCE_P(stout%frozen_ldens, stin%frozen_ldens)
+    SAFE_ALLOCATE_SOURCE_A(stout%current, stin%current)
+    SAFE_ALLOCATE_SOURCE_A(stout%current_kpt, stin%current_kpt)
+    SAFE_ALLOCATE_SOURCE_A(stout%rho_core, stin%rho_core)
+    SAFE_ALLOCATE_SOURCE_A(stout%frozen_rho, stin%frozen_rho)
+    SAFE_ALLOCATE_SOURCE_A(stout%frozen_tau, stin%frozen_tau)
+    SAFE_ALLOCATE_SOURCE_A(stout%frozen_gdens, stin%frozen_gdens)
+    SAFE_ALLOCATE_SOURCE_A(stout%frozen_ldens, stin%frozen_ldens)
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1377,8 +1364,8 @@ contains
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
     stout%dom_st_mpi_grp     = stin%dom_st_mpi_grp
-    SAFE_ALLOCATE_SOURCE_P(stout%node, stin%node)
-    SAFE_ALLOCATE_SOURCE_P(stout%st_kpt_task, stin%st_kpt_task)
+    SAFE_ALLOCATE_SOURCE_A(stout%node, stin%node)
+    SAFE_ALLOCATE_SOURCE_A(stout%st_kpt_task, stin%st_kpt_task)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
@@ -1415,9 +1402,9 @@ contains
     call states_elec_dim_end(st%d)
 
     if (st%modelmbparticles%nparticle > 0) then
-      SAFE_DEALLOCATE_P(st%mmb_nspindown)
-      SAFE_DEALLOCATE_P(st%mmb_iyoung)
-      SAFE_DEALLOCATE_P(st%mmb_proj)
+      SAFE_DEALLOCATE_A(st%mmb_nspindown)
+      SAFE_DEALLOCATE_A(st%mmb_iyoung)
+      SAFE_DEALLOCATE_A(st%mmb_proj)
     end if
     call modelmb_particles_end(st%modelmbparticles)
 
@@ -1426,18 +1413,18 @@ contains
 
     SAFE_DEALLOCATE_A(st%user_def_states)
 
-    SAFE_DEALLOCATE_P(st%rho)
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_A(st%rho)
+    SAFE_DEALLOCATE_A(st%eigenval)
 
-    SAFE_DEALLOCATE_P(st%current)
-    SAFE_DEALLOCATE_P(st%current_kpt)
-    SAFE_DEALLOCATE_P(st%rho_core)
-    SAFE_DEALLOCATE_P(st%frozen_rho)
-    SAFE_DEALLOCATE_P(st%frozen_tau)
-    SAFE_DEALLOCATE_P(st%frozen_gdens)
-    SAFE_DEALLOCATE_P(st%frozen_ldens)
-    SAFE_DEALLOCATE_P(st%occ)
-    SAFE_DEALLOCATE_P(st%spin)
+    SAFE_DEALLOCATE_A(st%current)
+    SAFE_DEALLOCATE_A(st%current_kpt)
+    SAFE_DEALLOCATE_A(st%rho_core)
+    SAFE_DEALLOCATE_A(st%frozen_rho)
+    SAFE_DEALLOCATE_A(st%frozen_tau)
+    SAFE_DEALLOCATE_A(st%frozen_gdens)
+    SAFE_DEALLOCATE_A(st%frozen_ldens)
+    SAFE_DEALLOCATE_A(st%occ)
+    SAFE_DEALLOCATE_A(st%spin)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
@@ -1445,8 +1432,8 @@ contains
 
     call distributed_end(st%dist)
 
-    SAFE_DEALLOCATE_P(st%node)
-    SAFE_DEALLOCATE_P(st%st_kpt_task)
+    SAFE_DEALLOCATE_A(st%node)
+    SAFE_DEALLOCATE_A(st%st_kpt_task)
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_A(st%ap%schedule)
@@ -1457,10 +1444,10 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_elec_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
+  subroutine states_elec_generate_random(st, mesh, kpoints, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
     type(states_elec_t),    intent(inout) :: st
     type(mesh_t),           intent(in)    :: mesh
-    type(simul_box_t),      intent(in)    :: sb
+    type(kpoints_t),        intent(in)    :: kpoints
     integer, optional,      intent(in)    :: ist_start_
     integer, optional,      intent(in)    :: ist_end_
     integer, optional,      intent(in)    :: ikpt_start_
@@ -1493,9 +1480,9 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
-        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+        ikpoint = st%d%get_kpoint_index(ik)
         do ist = ist_start, ist_end
-          if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+          if (states_are_real(st).or.kpoints_point_is_gamma(kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
               call dmf_random(mesh, dpsi(:, 1), &
                 pre_shift = mesh%vp%xlocal-1, &
@@ -1535,9 +1522,9 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
-          ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
+          ikpoint = st%d%get_kpoint_index(ik)
           do ist = ist_start, ist_end
-            if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+            if(kpoints_point_is_gamma(kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call dmf_random(mesh, dpsi(:, 1), &
                   pre_shift = mesh%vp%xlocal-1, &
@@ -1671,7 +1658,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi)
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+        call comm_allreduce(st%st_kpt_mpi_grp, st%spin)
       end if
             
     end if
@@ -1702,7 +1689,7 @@ contains
       end if
     end do
 
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp, tot)
 
     POP_SUB(states_elec_eigenvalues_sum)
   end function states_elec_eigenvalues_sum
@@ -1786,11 +1773,12 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_elec_calc_quantities(der, st, nlcc, &
+  subroutine states_elec_calc_quantities(der, st, kpoints, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, &
     gi_kinetic_energy_density, st_end)
     type(derivatives_t),     intent(in)    :: der
     type(states_elec_t),     intent(in)    :: st
+    type(kpoints_t),         intent(in)    :: kpoints
     logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
@@ -1824,7 +1812,7 @@ contains
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
     SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
     SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np, 1:st%d%dim))
@@ -1842,7 +1830,7 @@ contains
     ! current and the kinetic energy density
     if(present(gi_kinetic_energy_density)) then
       if(.not. present(paramagnetic_current) .and. states_are_complex(st)) then
-        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%dim, 1:st%d%nspin))
       end if
       if(.not. present(kinetic_energy_density)) then
         SAFE_ALLOCATE(tau(1:der%mesh%np, 1:st%d%nspin))
@@ -1857,8 +1845,8 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
-      is = states_elec_dim_get_spin_index(st%d, ik)
+      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
+      is = st%d%get_spin_index(ik)
 
       do ist = st%st_start, st_end_
         ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -1902,7 +1890,7 @@ contains
           end if
         end if
         
-        do i_dim = 1, der%mesh%sb%dim
+        do i_dim = 1, der%dim
 
           !We precompute some quantites, to avoid to compute it many times
           psi_gpsi(1:der%mesh%np, 1:st%d%dim) = wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*gwf_psi(1:der%mesh%np,i_dim,1:st%d%dim)
@@ -1976,6 +1964,9 @@ contains
 
               do ii = 1, der%mesh%np
                 c_tmp = gwf_psi(ii, i_dim, 1)*conjg(gwf_psi(ii, i_dim, 2))
+                c_tmp = c_tmp + abs(kpoint(i_dim))**2*real(wf_psi_conj(ii, 2)*wf_psi(ii, 1))
+                c_tmp = c_tmp - M_zI * (wf_psi_conj(ii, 2)*gwf_psi(ii,i_dim,1) &
+                                      - wf_psi(ii, 1)*conjg(gwf_psi(ii,i_dim,2)))*kpoint(i_dim)
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
                 tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
               end do
@@ -2010,31 +2001,31 @@ contains
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
     if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
+      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%dim))
+      call symmetrizer_init(symmetrizer, der%mesh, kpoints%symm)
       do is = 1, st%d%nspin
         if(associated(tau)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = tau(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field = tau(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(present(density_laplacian)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = density_laplacian(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field = density_laplacian(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(associated(jp)) then 
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field_vector = jp(:, :, is), symmfield_vector = symm, &
             suppress_warning = .true.)
-          jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+          jp(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if
  
         if(present(density_gradient)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh, field_vector = density_gradient(:, :, is), &
             symmfield_vector = symm, suppress_warning = .true.)
-          density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+          density_gradient(1:der%mesh%np, 1:der%dim, is) = symm(1:der%mesh%np, 1:der%dim)
         end if   
       end do
       call symmetrizer_end(symmetrizer)
@@ -2042,7 +2033,7 @@ contains
     end if
 
 
-    if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
+    if (allocated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
        do ii = 1, der%mesh%np
          wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
        end do
@@ -2053,8 +2044,8 @@ contains
          ! calculate gradient of the NLCC
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
-           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
-                                                                    real(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1))
+           density_gradient(1:der%mesh%np, 1:der%dim, is) = density_gradient(1:der%mesh%np, 1:der%dim, is) + &
+                                                                    real(gwf_psi(1:der%mesh%np, 1:der%dim,1))
          end do
        end if
 
@@ -2070,23 +2061,23 @@ contains
 
     !If we freeze some of the orbitals, we need to had the contributions here
     !Only in the case we are not computing it
-    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
+    if (allocated(st%frozen_tau) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
         do ii = 1, der%mesh%np
           tau(ii, is) = tau(ii, is) + st%frozen_tau(ii, is)
         end do
       end do
     end if
-    if(associated(st%frozen_gdens) .and. .not. present(st_end)) then
+    if (allocated(st%frozen_gdens) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
-        do idir = 1, der%mesh%sb%dim
+        do idir = 1, der%dim
           do ii = 1, der%mesh%np
             density_gradient(ii, idir, is) = density_gradient(ii, idir, is) + st%frozen_gdens(ii, idir, is)
           end do
         end do
       end do
     end if
-    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
+    if (allocated(st%frozen_tau) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
         do ii = 1, der%mesh%np
           density_laplacian(ii, is) = density_laplacian(ii, is) + st%frozen_ldens(ii, is)
@@ -2109,7 +2100,7 @@ contains
           do ii = 1, der%mesh%np
             if(st%rho(ii, is) < CNST(1.0e-7)) cycle
             gi_kinetic_energy_density(ii, is) = &
-              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%mesh%sb%dim, is)**2)/st%rho(ii, is)
+              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%dim, is)**2)/st%rho(ii, is)
           end do
         end if
       end do
@@ -2134,15 +2125,15 @@ contains
 
       PUSH_SUB(states_elec_calc_quantities.reduce_all)
 
-      if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
+      if(associated(tau)) call comm_allreduce(grp, tau, dim = (/der%mesh%np, st%d%nspin/))
 
-      if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
+      if (present(density_laplacian)) call comm_allreduce(grp, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
 
       do is = 1, st%d%nspin
-        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
+        if(associated(jp)) call comm_allreduce(grp, jp(:, :, is), dim = (/der%mesh%np, der%dim/))
 
         if(present(density_gradient)) &
-          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
+          call comm_allreduce(grp, density_gradient(:, :, is), dim = (/der%mesh%np, der%dim/))
       end do
 
       POP_SUB(states_elec_calc_quantities.reduce_all)
@@ -2581,15 +2572,16 @@ end subroutine  states_elec_set_phase
     PUSH_SUB(states_elec_kpoints_distribution)
 
     !We want to know for a fiven task the start and end of the states contained
-    if(.not.associated(st%st_kpt_task)) &
+    if (.not. allocated(st%st_kpt_task)) then
       SAFE_ALLOCATE(st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4))
+    end if
     st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4) = 0
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,1) = st%st_start
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,2) = st%st_end
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
+      call comm_allreduce(st%st_kpt_mpi_grp, st%st_kpt_task)
     end if
 
     POP_SUB(states_elec_kpoints_distribution)

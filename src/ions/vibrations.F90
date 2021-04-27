@@ -27,7 +27,6 @@ module vibrations_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -71,10 +70,9 @@ module vibrations_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vibrations_init(this, geo, sb, suffix, namespace)
+  subroutine vibrations_init(this, geo, suffix, namespace)
     type(vibrations_t),        intent(out) :: this
     type(geometry_t),          intent(in)  :: geo
-    type(simul_box_t),         intent(in)  :: sb
     character (len=2),         intent(in)  :: suffix
     type(namespace_t), target, intent(in)  :: namespace
 
@@ -82,9 +80,9 @@ contains
 
     PUSH_SUB(vibrations_init)
 
-    this%ndim = sb%dim
+    this%ndim = geo%space%dim
     this%natoms = geo%natoms
-    this%num_modes = geo%natoms*sb%dim
+    this%num_modes = geo%natoms*geo%space%dim
     this%namespace => namespace
     SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%infrared(1:this%num_modes, 1:this%ndim))

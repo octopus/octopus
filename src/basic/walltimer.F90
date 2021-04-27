@@ -29,6 +29,7 @@ module walltimer_oct_m
   use io_oct_m
   use loct_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
 
@@ -172,9 +173,13 @@ contains
   end subroutine walltimer_tap
 
   !> indicate whether time is up
-  logical function walltimer_alarm(print)
+  logical function walltimer_alarm(comm, print)
+    integer,           intent(in) :: comm
     logical, optional, intent(in) :: print
 
+#ifdef HAVE_MPI
+    logical :: alarm
+#endif
     FLOAT :: now
 
     PUSH_SUB(walltimer_alarm)
@@ -190,6 +195,12 @@ contains
     if(auto_tap) call walltimer_tap()
 
     walltimer_alarm = active .and. (now > start_time + duration - iteration_time - margin) 
+
+    ! All processes need to know that the walltimer was triggered.
+#ifdef HAVE_MPI
+    call MPI_Allreduce(walltimer_alarm, alarm, 1, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+    walltimer_alarm = alarm
+#endif
 
     if(walltimer_alarm) then
       write(message(1), '("Walltimer stopping execution after = ",F6.2," minutes.")') (now - start_time)/CNST(60.0)

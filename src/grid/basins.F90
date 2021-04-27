@@ -20,7 +20,6 @@
 
 module basins_oct_m
   use global_oct_m
-  use index_oct_m
   use mesh_oct_m
   use messages_oct_m
   use par_vec_oct_m
@@ -162,12 +161,7 @@ contains
       PUSH_SUB(basins_analyze.get_max)
 
       point = 0
-      if(mesh%parallel_in_domains) then
-        ! When running in parallel, get global number of point i.
-        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ii - 1), point)
-      else
-        call index_to_coords(mesh%idx, ii, point)
-      end if
+      call mesh_local_index_to_coords(mesh, ii, point)
 
       f_max   = f(ii)
       get_max = -1
@@ -181,11 +175,8 @@ contains
             point2(2) = point2(2) + yy
             point2(3) = point2(3) + zz
 
-            index = index_from_coords(mesh%idx, point2)
-            !From global to local
-#ifdef HAVE_MPI
-            if(mesh%parallel_in_domains) index = vec_global2local(mesh%vp, index, mesh%vp%partno)
-#endif
+            index = mesh_local_index_from_coords(mesh, point2)
+
             if(index <= 0 .or. index > mesh%np) cycle
             if(this%map(index) == -2) cycle
 

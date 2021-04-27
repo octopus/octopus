@@ -16,9 +16,10 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
+subroutine X(bgw_vxc_dat)(bgw, namespace, space, dir, st, gr, hm, vxc)
   type(output_bgw_t),          intent(in)    :: bgw
   type(namespace_t),           intent(in)    :: namespace
+  type(space_t),               intent(in)    :: space
   character(len=*),            intent(in)    :: dir
   type(states_elec_t), target, intent(in)    :: st
   type(grid_t),                intent(in)    :: gr
@@ -93,7 +94,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   ! in that case, we can write x.dat file as well
   
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-    kpoint(1:gr%sb%dim) = gr%sb%kpoints%reduced%red_point(1:gr%sb%dim, ik) ! crystal coordinates
+    kpoint(1:space%dim) = hm%kpoints%reduced%red_point(1:space%dim, ik) ! crystal coordinates
 
     do ispin = 1, st%d%nspin
       ikk = ik + ispin - 1
@@ -103,7 +104,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:, :) = M_ZERO
-          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, .false.)
+          call X(exchange_operator_single)(hm%exxop, namespace, space, gr%mesh, hm%d, hm%kpoints, ist, ikk, psi, xpsi, .false.)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         end if
       end do
@@ -116,7 +117,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
-          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, .false.)
+          call X(exchange_operator_single)(hm%exxop, namespace, space, gr%mesh, hm%d, hm%kpoints, ist, ikk, psi, xpsi, .false.)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         end if
       end do

@@ -33,6 +33,7 @@ module propagator_rk_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
@@ -42,8 +43,9 @@ module propagator_rk_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
-  use species_oct_m
+  use space_oct_m
   use sparskit_oct_m
+  use species_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
   use propagation_ops_elec_oct_m
@@ -70,9 +72,10 @@ module propagator_rk_oct_m
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
+  subroutine td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions, geo, qcchi)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
+    type(space_t),                               intent(in)    :: space
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
     type(grid_t),                        target, intent(inout) :: gr
     type(states_elec_t),                 target, intent(inout) :: st
@@ -361,7 +364,7 @@ contains
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+        call v_ks_calc(ks, namespace, space, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                  time = tau, calc_energy = .false., calc_eigenval = .false.)
       else
         call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
@@ -488,9 +491,10 @@ contains
   end subroutine td_explicit_runge_kutta4
 
 
-  subroutine td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta2(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),        target, intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -527,7 +531,7 @@ contains
     sp_kp1 = kp1
     sp_kp2 = kp2
     sp_parallel = st%parallel_in_states .or. st%d%kpt%parallel
-    if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
+    if(sp_parallel) call mpi_grp_copy(sp_grp, st%st_kpt_mpi_grp)
 
     ! define pointer and variables for usage in td_rk2op, td_rk2opt routines
     mesh_p    => gr%mesh
@@ -606,7 +610,7 @@ contains
           end do
         end do
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield),&
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield),&
                                         calc_energy = .false., calc_eigenval = .false.)
       end if
       if(ion_dynamics_ions_move(ions)) then
@@ -678,7 +682,7 @@ contains
         end do
       end do
 
-      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, dres)
+      call comm_allreduce(st%dom_st_kpt_mpi_grp, dres)
 
       if(sqrt(dres) < tr%scf_threshold) exit
     end do
@@ -706,9 +710,10 @@ contains
 
   !----------------------------------------------------------------------------
 
-  subroutine td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta4(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),        target, intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -757,7 +762,7 @@ contains
     sp_kp1 = kp1
     sp_kp2 = kp2
     sp_parallel = st%parallel_in_states .or. st%d%kpt%parallel
-    if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
+    if(sp_parallel) call mpi_grp_copy(sp_grp, st%st_kpt_mpi_grp)
 
     ! define pointer and variables for usage in td_rk4op, td_rk4opt routines
     mesh_p    => gr%mesh
@@ -809,7 +814,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -850,7 +855,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), &
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -953,7 +958,7 @@ contains
           end do
         end do
       end do
-      if(sp_parallel) call comm_allreduce(sp_comm, dres)
+      if(sp_parallel) call comm_allreduce(sp_grp, dres)
       !write(*, *) 'Residual = ', dres
 
       if(sqrt(dres) < tr%scf_threshold) exit

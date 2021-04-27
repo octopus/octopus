@@ -39,7 +39,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
-  ispin = states_elec_dim_get_spin_index(d, psib%ik)
+  ispin = d%get_spin_index(psib%ik)
   if(d%ispin == UNPOLARIZED) then
     el_per_state = 2
   else
@@ -152,7 +152,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   type(mesh_t),        intent(in)    :: mesh
   type(states_elec_t), intent(in)    :: st
   FLOAT,               intent(inout) :: lda_u_energy
-  CMPLX,     optional, pointer       :: phase(:,:) 
+  CMPLX,     optional, intent(in)    :: phase(1:mesh%np_part, st%d%kpt%start:st%d%kpt%end)
 
   integer :: ios, im, ik, ist, ispin, norbs, idim, inn, im2, ios2
   R_TYPE, allocatable :: psi(:,:) 
@@ -185,7 +185,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
 
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin =  states_elec_dim_get_spin_index(st%d,ik)
+    ispin =  st%d%get_spin_index(ik)
 
     do ist = st%st_start, st%st_end
 
@@ -421,13 +421,13 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   SAFE_DEALLOCATE_A(muliken_charge)
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
+    call comm_allreduce(st%st_kpt_mpi_grp, this%X(n))
     if(this%level == DFT_U_ACBN0) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
+      call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt))
       if(this%intersite) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_ij))
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt_ij))
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt_ii))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_ij))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt_ij))
+        call comm_allreduce(st%st_kpt_mpi_grp, this%X(n_alt_ii))
       end if
     end if
   end if
@@ -579,7 +579,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
+    call comm_allreduce(this%orbs_dist%mpi_grp, this%X(V))
   end if
 
   POP_SUB(lda_u_update_potential)
@@ -1094,9 +1094,10 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
+subroutine X(compute_coulomb_integrals) (this, namespace, space, mesh, der, psolver)
   type(lda_u_t),       intent(inout)  :: this
   type(namespace_t),   intent(in)     :: namespace
+  type(space_t),       intent(in)     :: space
   type(mesh_t),        intent(in)     :: mesh
   type(derivatives_t), intent(in)     :: der
   type(poisson_t),     intent(in)     :: psolver
@@ -1138,13 +1139,13 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
 
     select case (this%sm_poisson)
     case(SM_POISSON_DIRECT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
     case(SM_POISSON_ISF)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_ISF)
     case(SM_POISSON_PSOLVER)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_PSOLVER)
     case(SM_POISSON_FFT)
-      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT)
+      call poisson_init_sm(os%poisson, namespace, space, psolver, der, os%sphere, method = POISSON_FFT)
     end select
  
     ijst=0
@@ -1203,11 +1204,11 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   end do !iorb
 
   if(mesh%parallel_in_domains) then 
-    call comm_allreduce(mesh%mpi_grp%comm, this%coulomb)
+    call mesh%allreduce(this%coulomb)
   end if 
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
+    call comm_allreduce(this%orbs_dist%mpi_grp, this%coulomb)
   end if
 
   SAFE_DEALLOCATE_A(nn)
@@ -1218,9 +1219,10 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
+subroutine X(compute_periodic_coulomb_integrals)(this, namespace, space, der, mc)
   type(lda_u_t),       intent(inout)  :: this
   type(namespace_t),   intent(in)     :: namespace
+  type(space_t),       intent(in)     :: space
   type(derivatives_t), intent(in)     :: der
   type(multicomm_t),   intent(in)     :: mc
 
@@ -1256,7 +1258,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, namespace, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, namespace, space, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs
@@ -1357,7 +1359,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets))
    SAFE_ALLOCATE(reduced(1:d%dim,1:this%maxnorbs, 1:this%norbsets))
 
-   ispin = states_elec_dim_get_spin_index(d, ik)
+   ispin = d%get_spin_index(ik)
    if(d%ispin == UNPOLARIZED) then
      el_per_state = 2
    else
@@ -1551,7 +1553,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       end if
     end do !ios
  
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, dot) 
+    if(mesh%parallel_in_domains) call mesh%allreduce(dot)
 
     do ios = 1, this%norbsets
        os => this%orbsets(ios)
@@ -1611,12 +1613,13 @@ end subroutine X(compute_periodic_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
- subroutine X(lda_u_force)(this, namespace, mesh, st, iq, ndim, psib, grad_psib, force, phase)
+ subroutine X(lda_u_force)(this, namespace, space, mesh, st, iq, psib, grad_psib, force, phase)
    type(lda_u_t),             intent(in)    :: this
    type(namespace_t),         intent(in)    :: namespace
+   type(space_t),             intent(in)    :: space
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
-   integer,                   intent(in)    :: iq, ndim
+   integer,                   intent(in)    :: iq
    type(wfs_elec_t),          intent(in)    :: psib
    type(wfs_elec_t),          intent(in)    :: grad_psib(:)
    FLOAT,                     intent(inout) :: force(:, :)
@@ -1624,7 +1627,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    integer :: ios, iatom, ibatch, ist, im, imp, ispin, idir
    type(orbitalset_t), pointer  :: os
-   R_TYPE :: ff(1:ndim)
+   R_TYPE :: ff(1:space%dim)
    R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
    R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
    FLOAT :: weight
@@ -1651,16 +1654,16 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
    SAFE_ALLOCATE(gpsi(1:mesh%np, 1:st%d%dim))
    SAFE_ALLOCATE(dot(1:st%d%dim, 1:this%maxnorbs))
-   SAFE_ALLOCATE(gdot(1:st%d%dim, 1:this%maxnorbs,1:ndim))
-   SAFE_ALLOCATE(gradn(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:ndim))
+   SAFE_ALLOCATE(gdot(1:st%d%dim, 1:this%maxnorbs,1:space%dim))
+   SAFE_ALLOCATE(gradn(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:space%dim))
 
-   ispin = states_elec_dim_get_spin_index(st%d, iq)
+   ispin = st%d%get_spin_index(iq)
 
    do ios = 1, this%norbsets 
      os => this%orbsets(ios)
      iatom = os%iatom
 
-     gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = R_TOTYPE(M_ZERO)
+     gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:space%dim) = R_TOTYPE(M_ZERO)
 
      do ibatch = 1, psib%nst
        ist = psib%ist(ibatch)
@@ -1675,7 +1678,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
        ! 
        call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
 
-       do idir = 1, ndim
+       do idir = 1, space%dim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
@@ -1712,35 +1715,35 @@ end subroutine X(compute_periodic_coulomb_integrals)
      end do !ibatch
 
      if(st%d%ispin /= SPINORS) then
-       ff(1:ndim) = M_ZERO
+       ff(1:space%dim) = M_ZERO
        do im = 1, os%norbs
          do imp = 1, os%norbs
-          ff(1:ndim) = ff(1:ndim) - this%X(n)(imp,im,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
+          ff(1:space%dim) = ff(1:space%dim) - this%X(n)(imp,im,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:space%dim)
          end do !imp
-       ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
+       ff(1:space%dim) = ff(1:space%dim) + CNST(0.5)*gradn(im, im, ispin,1:space%dim)
        end do !im
      else
-       ff(1:ndim) = M_ZERO
+       ff(1:space%dim) = M_ZERO
        do ispin = 1, st%d%nspin
          do im = 1, os%norbs
            do imp = 1, os%norbs
              !We use R_CONJ to get n(imp,im, sigmap, sigma) from n(im,imp, sigma,sigmap)
-             ff(1:ndim) = ff(1:ndim) - R_CONJ(this%X(n)(im,imp,ispin,ios))/st%smear%el_per_state &
-                                           *gradn(im,imp,ispin,1:ndim)
+             ff(1:space%dim) = ff(1:space%dim) - R_CONJ(this%X(n)(im,imp,ispin,ios))/st%smear%el_per_state &
+                                           *gradn(im,imp,ispin,1:space%dim)
            end do !imp 
            if(ispin <= this%spin_channels) &
-             ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
+             ff(1:space%dim) = ff(1:space%dim) + CNST(0.5)*gradn(im, im, ispin,1:space%dim)
          end do !im
        end do !ispin
      end if
 
      ! We convert the force to Cartesian coordinates
      ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-     if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
-        ff(1:ndim) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ff(1:ndim))
+     if (space%is_periodic() .and. mesh%sb%latt%nonorthogonal) then
+        ff(1:space%dim) = matmul(mesh%sb%latt%klattice_primitive(1:space%dim, 1:space%dim), ff(1:space%dim))
       end if
 
-     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*TOFLOAT(ff(1:ndim))
+     force(1:space%dim, iatom) = force(1:space%dim, iatom) - os%Ueff*TOFLOAT(ff(1:space%dim))
    end do !ios
 
    SAFE_DEALLOCATE_A(psi)

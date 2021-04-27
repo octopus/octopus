@@ -260,9 +260,9 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
-    call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
+    call poisson_test(sys%hm%psolver, sys%space, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
@@ -284,7 +284,7 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     ! We need to set up some auxiliary quantities called by the linear solver
@@ -292,14 +292,14 @@ contains
     ! Shift of the linear equation
     shift_aux = CNST(0.25)
     ! Preconditioner used for the QMR algorithm
-    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc)
+    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc, sys%space)
     ! Derivative object needed 
     call set_der_aux(sys%gr%der)
 
     ! Here we put a Gaussian as the right-hand side of the linear solver
     ! Values are taken from the poisson_test routine
     alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
-    beta = M_ONE / ( alpha**sys%gr%sb%dim * sqrt(M_PI)**sys%gr%sb%dim )
+    beta = M_ONE / ( alpha**sys%space%dim * sqrt(M_PI)**sys%space%dim )
     ! The Gaussian is centered around the origin
     center = M_ZERO
 
@@ -319,15 +319,6 @@ contains
     write(message(1),'(a,i6,a)')  "Info: CG converged with ", iter, " iterations."
     write(message(2),'(a,e14.6)')    "Info: The residue is ", res
     write(message(3),'(a,e14.6)') "Info: Norm solution CG ", dmf_nrm2(sys%gr%mesh, x)
-    call messages_info(3)
-
-    !Test the QMR linear solver
-    x = M_ZERO
-    iter = 1000
-    call dqmr_sym_spec_dotu(sys%gr%mesh%np, x, rho, laplacian_op, prec_op, iter, res, threshold)
-    write(message(1),'(a,i6,a)')  "Info: QMR converged with ", iter, " iterations."
-    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
-    write(message(3),'(a,e14.6)') "Info: Norm solution QMR ", dmf_nrm2(sys%gr%mesh, x)
     call messages_info(3)
 
     call preconditioner_end(prec_aux)
@@ -364,22 +355,6 @@ contains
 
      end subroutine laplacian_op
 
-     ! ---------------------------------------------------------
-     subroutine prec_op (x, hx)
-       FLOAT,      intent(in)    :: x(:)   !<  x(gr%mesh%np)
-       FLOAT,      intent(out)   :: hx(:)  !< Hx(gr%mesh%np)
- 
-       FLOAT, allocatable :: tmpx(:)
- 
-       ASSERT(associated(mesh_aux))
-  
-       SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
-       call lalg_copy(mesh_aux%np, x, tmpx)
-       call dderivatives_perform(prec_aux%op, der_aux, tmpx, hx)
-       SAFE_DEALLOCATE_A(tmpx)
-
-     end subroutine prec_op
-
    end subroutine test_linear_solver
 
 
@@ -389,7 +364,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib
+    type(wfs_elec_t) :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
 
@@ -402,18 +377,15 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
-    !Initialize external potential
+    ! Initialize external potential
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
 
-
-    !Initialize external potential
-    SAFE_ALLOCATE(epsib)
     call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
@@ -432,7 +404,6 @@ contains
     SAFE_DEALLOCATE_A(psi)
 
     call epsib%end()
-    SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
@@ -445,7 +416,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib, epsib2
+    type(wfs_elec_t) :: epsib, epsib2
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -453,26 +424,26 @@ contains
 
     PUSH_SUB(test_dft_u)
 
-    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+    call calc_mode_par_unset_parallelization(P_STRATEGY_STATES)
+    call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS)
+    call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true.)
 
     call messages_write('Info: Testing some DFT+U routines')
     call messages_new_line()
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
-    SAFE_ALLOCATE(epsib)
-    SAFE_ALLOCATE(epsib2)
     call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
 
-    !We set the phase of the batch if needed
-    if(.not.associated(sys%hm%hm_base%phase)) then
+    ! We set the phase of the batch if needed
+    if (.not. allocated(sys%hm%hm_base%phase)) then
       call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
     else
       call sys%st%group%psib(1, 1)%copy_to(epsib)
@@ -481,21 +452,21 @@ contains
       epsib2%has_phase = .true.
     end if
 
-    !Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%namespace, sys%gr%sb)
+    ! Initialize the orbital basis
+    call orbitalbasis_init(basis, sys%namespace, sys%space%periodic_dim)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
       SAFE_ALLOCATE(ddot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
       call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
-      call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
+      call orbitalset_update_phase(basis%orbsets(1), sys%space%dim, sys%st%d%kpt, sys%kpoints, (sys%st%d%ispin==SPIN_POLARIZED))
       SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
 
       !We set the phase of the orbitals if needed
-      if(associated(sys%hm%hm_base%phase)) then
-        call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
+      if (allocated(sys%hm%hm_base%phase)) then
+        call orbitalset_update_phase(basis%orbsets(1), sys%space%dim, sys%st%d%kpt, sys%kpoints, &
                    (sys%st%d%ispin==SPIN_POLARIZED))
       end if
     end if
@@ -527,9 +498,7 @@ contains
     SAFE_DEALLOCATE_A(zdot)
 
     call epsib%end()
-    SAFE_DEALLOCATE_P(epsib)
     call epsib2%end()
-    SAFE_DEALLOCATE_P(epsib2)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
@@ -543,7 +512,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: hpsib
+    type(wfs_elec_t) :: hpsib
     integer :: itime, terms
 
     PUSH_SUB(test_hamiltonian)
@@ -574,21 +543,20 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
-    !Initialize external potential
+    ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
-    SAFE_ALLOCATE(hpsib)
     call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
@@ -613,7 +581,6 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
 
     call hpsib%end(copy = .false.)
-    SAFE_DEALLOCATE_P(hpsib)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
@@ -638,11 +605,11 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -676,11 +643,11 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
@@ -714,17 +681,17 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
-    !Initialize external potential
+    ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call exponential_init(te, namespace)
 
@@ -763,16 +730,16 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
 
     call subspace_init(sdiag, sys%namespace, sys%st, no_sd = .false.)
 
@@ -845,11 +812,11 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_AXPY) /= 0) then
@@ -995,7 +962,7 @@ contains
           do jst = 1, nst
             write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
           end do
-          call messages_info(nst*nst)
+          call messages_info(nst)
         end do
         SAFE_DEALLOCATE_A(ddot)
       else
@@ -1005,7 +972,7 @@ contains
           do jst = 1, nst
             write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
           end do
-          call messages_info(nst*nst)
+          call messages_info(nst)
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
@@ -1028,7 +995,7 @@ contains
 
     PUSH_SUB(test_derivatives)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
@@ -1062,7 +1029,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing orthogonalization.'
@@ -1073,7 +1040,7 @@ contains
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       do itime = 1, param%repetitions
-        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%kpoints)
       end do
     end if
 
@@ -1081,7 +1048,7 @@ contains
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       do itime = 1, param%repetitions
-        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%kpoints)
       end do
     end if
 
@@ -1100,7 +1067,7 @@ contains
 
     PUSH_SUB(test_interpolation)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
@@ -1137,10 +1104,11 @@ contains
 
     PUSH_SUB(test_ion_interaction)
 
-    sys => electrons_t(namespace)
+    sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
+    call ion_interaction_test(sys%space, sys%gr%sb%latt, sys%geo%atom, sys%geo%natoms, sys%geo%catom, sys%geo%ncatoms, &
+      sys%gr%sb%lsize, namespace, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 
@@ -1321,6 +1289,58 @@ contains
 
     POP_SUB(test_dense_eigensolver)
   end subroutine test_dense_eigensolver
+
+  subroutine test_batch_set_gaussian(psib, mesh)
+    class(batch_t), intent(inout) :: psib
+    type(mesh_t),   intent(in)    :: mesh
+
+    FLOAT, allocatable :: dff(:)
+    CMPLX, allocatable :: zff(:)
+    integer :: ist, ip
+    FLOAT :: da, db, dc
+    CMPLX :: za, zb, zc
+
+    PUSH_SUB(test_batch_set_gaussian)
+
+    ! use a similar function as in the derivatives test
+    da = CNST(1.0)/mesh%sb%lsize(1)
+    db = CNST(10.0)
+    dc = CNST(100.0)
+
+    if(type_is_complex(psib%type())) then
+      ! we make things more "complex"
+      za = da + M_ZI*CNST(0.01)
+      zb = db*exp(M_ZI*CNST(0.345))
+      zc = dc - M_ZI*CNST(50.0)
+
+      SAFE_ALLOCATE(zff(mesh%np))
+      do ist = 1, psib%nst_linear
+        za = za * ist
+        zb = zb / ist
+        do ip = 1, mesh%np
+          zff(ip) = zb*exp(-za*sum(mesh%x(ip, :)**2)) + zc
+        end do
+        call batch_set_state(psib, ist, mesh%np, zff)
+      end do
+      call zmesh_batch_normalize(mesh, psib)
+      SAFE_DEALLOCATE_A(zff)
+    else
+      SAFE_ALLOCATE(dff(mesh%np))
+      do ist = 1, psib%nst_linear
+        da = da * ist
+        db = db / ist
+        do ip = 1, mesh%np
+          dff(ip) = db*exp(-da*sum(mesh%x(ip, :)**2)) + dc
+        end do
+        call batch_set_state(psib, ist, mesh%np, dff)
+      end do
+      call dmesh_batch_normalize(mesh, psib)
+      SAFE_DEALLOCATE_A(dff)
+    end if
+
+    POP_SUB(test_batch_set_gaussian)
+  end subroutine test_batch_set_gaussian
+
 end module test_oct_m
 
 !! Local Variables:

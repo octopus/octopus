@@ -25,6 +25,7 @@ module box_union_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use profiling_oct_m
+  use unit_oct_m
 
   implicit none
 
@@ -37,6 +38,8 @@ module box_union_oct_m
     private
   contains
     procedure :: contains_points => box_union_contains_points
+    procedure :: write_info => box_union_write_info
+    procedure :: short_info => box_union_short_info
     final     :: box_union_finalize
   end type box_union_t
 
@@ -101,6 +104,31 @@ contains
     end do
 
   end function box_union_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_union_write_info(this, iunit)
+    class(box_union_t), intent(in) :: this
+    integer,            intent(in) :: iunit
+
+    PUSH_SUB(box_union_write_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the union
+
+    POP_SUB(box_union_write_info)
+  end subroutine box_union_write_info
+
+  !--------------------------------------------------------------
+  character(len=BOX_INFO_LEN) function box_union_short_info(this, unit_length) result(info)
+    class(box_union_t), intent(in) :: this
+    type(unit_t),       intent(in) :: unit_length
+
+    PUSH_SUB(box_union_short_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the union
+    info = ''
+
+    POP_SUB(box_union_short_info)
+  end function box_union_short_info
 
 end module box_union_oct_m
 

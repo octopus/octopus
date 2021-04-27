@@ -23,9 +23,8 @@ sharedir = $(pkgdatadir)/testsuite/finite_systems_3d
 dist_share_DATA = \
 	01-carbon_atom.01-psf_l0.inp \
 	01-carbon_atom.02-psf_l1.inp \
-	01-carbon_atom.03-ground_state_double_grid.inp \
-	01-carbon_atom.04-static_field.inp \
-        01-carbon_atom.05-smear.inp \
+	01-carbon_atom.03-static_field.inp \
+        01-carbon_atom.04-smear.inp \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
@@ -86,23 +85,19 @@ dist_share_DATA = \
     17-scfinlcao_alt.01-gs.inp                    \
 	18-preconditioner_poisson.test                \
 	18-preconditioner_poisson.01-poisson.inp      \
-	20-eigensolver.01-lobpcg.inp \
-	20-eigensolver.02-cg.inp \
-	20-eigensolver.03-cg_new.inp \
-	20-eigensolver.04-plan.inp \
-	20-eigensolver.05-evolution.inp \
-	20-eigensolver.06-rmmdiis.inp \
-	20-eigensolver.07-psd.inp \
-	20-eigensolver.08-rmmdiis-noscalapack.inp \
+	20-eigensolver.01-cg.inp \
+	20-eigensolver.02-cg_new.inp \
+	20-eigensolver.03-plan.inp \
+	20-eigensolver.04-evolution.inp \
+	20-eigensolver.05-rmmdiis.inp \
+	20-eigensolver.06-rmmdiis-noscalapack.inp \
 	20-eigensolver.test \
-	21-lobpcg.01-spin_polarized.inp \
-	21-lobpcg.02-spinors.inp \
-	21-lobpcg.test \
 	22-preconditioner.test                       \
 	22-preconditioner.01-none.inp                \
 	22-preconditioner.02-filter.inp              \
 	22-preconditioner.03-jacobi.inp              \
 	22-preconditioner.05-multigrid.inp           \
+	22-preconditioner.06-multigrid_rmmdiis.inp   \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
 	23-go-na2.02-simplex.inp                     \
@@ -111,8 +106,6 @@ dist_share_DATA = \
         23-go-na2.05-constrains.inp                  \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
-	25-multiresolution.01-Hatom.inp \
-	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
         29-pcm_chlorine_anion.01-ground_state-n60.inp \

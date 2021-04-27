@@ -1302,8 +1302,8 @@ contains
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)         :: gr
-    type(batch_t),       intent(inout)      :: ff_rs_state_pmlb
+    type(grid_t),             intent(in)    :: gr
+    type(batch_t),            intent(inout) :: ff_rs_state_pmlb
 
     integer :: ip, ip_in, np_part, rs_sign
     CMPLX :: pml_a, pml_b, pml_g, grad
@@ -1312,7 +1312,7 @@ contains
     integer :: pml_dir, field_dir, ifield, idir
     integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
     logical :: with_medium
-    class(batch_t), pointer :: gradb(:)
+    type(batch_t), allocatable :: gradb(:)
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
 
@@ -1320,14 +1320,14 @@ contains
 
     ASSERT(hm%dim == 3 .or. hm%dim == 6)
 
-    np_part = gr%der%mesh%np_part
+    np_part = gr%mesh%np_part
     rs_sign = hm%rs_sign
 
-    allocate(gradb(1:hm%der%dim), mold=ff_rs_state_pmlb)
-    do idir = 1, hm%der%dim
+    SAFE_ALLOCATE(gradb(1:gr%der%dim))
+    do idir = 1, gr%der%dim
       call ff_rs_state_pmlb%copy_to(gradb(idir))
     end do
-    call zderivatives_batch_grad(hm%der, ff_rs_state_pmlb, gradb)
+    call zderivatives_batch_grad(gr%der, ff_rs_state_pmlb, gradb)
 
     with_medium = hm%dim == 6
 
@@ -1380,10 +1380,10 @@ contains
       end select
     end do
 
-    do idir = 1, hm%der%dim
+    do idir = 1, gr%der%dim
       call gradb(idir)%end()
     end do
-    SAFE_DEALLOCATE_P(gradb)
+    SAFE_DEALLOCATE_A(gradb)
 
     call profiling_out(prof)
 
@@ -1406,7 +1406,7 @@ contains
 
     call profiling_in(prof, 'CPML_CONV_FUNC_UPD_VIA_E_B')
 
-    np_part = gr%der%mesh%np_part
+    np_part = gr%mesh%np_part
     SAFE_ALLOCATE(tmp_e(np_part,3))
     SAFE_ALLOCATE(tmp_partial_e(np_part))
     SAFE_ALLOCATE(tmp_b(np_part,3))

@@ -48,8 +48,8 @@ program wannier90_interface
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
+  use states_elec_calc_oct_m
   use electrons_oct_m
   use space_oct_m
   use string_oct_m
@@ -90,9 +90,9 @@ program wannier90_interface
   logical, allocatable :: exclude_list(:)                          ! list of excluded bands
   integer, allocatable :: band_index(:)                            ! band index after exclusion
   logical              :: read_td_states
+  integer              :: w90_spin_channel                         !> For spin-polarized cases, the selected spin channel
 
   ! scdm variables
-  type(scdm_t)         :: scdm
   integer, allocatable :: jpvt(:)
   CMPLX, allocatable   :: uk(:,:,:)                                ! SCDM-Wannier gauge matrices U(k)
   CMPLX, allocatable   :: psi(:,:)
@@ -154,6 +154,8 @@ program wannier90_interface
   !% Parse the output of wannier90 to generate the Wannier states on the real-space grid. 
   !% The states will be written in the folder wannier. By default, the states are written as
   !% binary files, similar to the Kohn-Sham states.
+  !%
+  !% Not implemented for spinor states.
   !%End
   call parse_variable(global_namespace, 'Wannier90Mode', 0, w90_mode)
 
@@ -191,16 +193,43 @@ program wannier90_interface
   !%End
   call parse_variable(global_namespace, 'Wannier90UseTD', .false., read_td_states)
 
+  !%Variable Wannier90UseSCDM
+  !%Type logical
+  !%Default no
+  !%Section Utilities::oct-wannier90
+  !%Description
+  !% By default oct-wannier90 uses the projection method to generate the .amn file.
+  !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
+  !%End
+  call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
+  if(w90_scdm) then
+    !%Variable SCDMsigma
+    !%Type float
+    !%Default 0.2
+    !%Section Utilities::oct-wannier90  
+    !%Description
+    !% Broadening of SCDM smearing function.
+    !%End
+    call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
+  
+    !%Variable SCDMmu
+    !%Type float
+    !%Section Utilities::oct-wannier90
+    !%Description
+    !% Energy range up to which states are considered for SCDM. 
+    !%End
+    call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
+  end if
 
-  if(sys%gr%sb%kpoints%use_symmetries) then
+  if(sys%kpoints%use_symmetries) then
     message(1) = 'oct-wannier90: k-points symmetries are not allowed'
     call messages_fatal(1)
   end if
-  if(sys%gr%sb%kpoints%use_time_reversal) then
+  if(sys%kpoints%use_time_reversal) then
     message(1) = 'oct-wannier90: time-reversal symmetry is not allowed'
     call messages_fatal(1)
   end if
-  if(sys%gr%sb%kpoints%reduced%nshifts > 1) then
+  if(sys%kpoints%reduced%nshifts > 1) then
     message(1) = 'oct-wannier90: Wannier90 does not allow for multiple shifts of the k-point grid'
     call messages_fatal(1)
   end if
@@ -211,11 +240,12 @@ program wannier90_interface
   end if
 
   w90_spinors = .false.
+  w90_spin_channel = 1
 
   ! create setup files
   select case(w90_mode) 
   case(OPTION__WANNIER90MODE__W90_SETUP)
-    call wannier90_setup(sys%gr%sb, sys%geo)
+    call wannier90_setup(sys%gr%sb, sys%geo, sys%kpoints)
 
   ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
@@ -225,19 +255,20 @@ program wannier90_interface
     call read_wannier90_files()
 
    ! normal interface run
-    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, global_namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     else
       call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     end if
 
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
-      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-        call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+      if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
+        call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                                 ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -245,7 +276,7 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st)
+    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st, sys%kpoints)
   case default
     message(1) = "Wannier90Mode is set to an unsupported value."
     call messages_fatal(1)
@@ -265,9 +296,10 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup(sb, geo)
+  subroutine wannier90_setup(sb, geo, kpoints)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo
+    type(kpoints_t),   intent(in) :: kpoints
 
     character(len=80) :: filename
     integer :: w90_win, ia, axis(3), npath
@@ -285,15 +317,14 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim = 1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%latt%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a)') 'begin atoms_frac'
-    do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+    do ia = 1, sys%geo%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), sb%latt%cart_to_red(geo%atom(ia)%x(1:3))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -309,14 +340,17 @@ contains
     if(sys%st%d%ispin == SPINORS) then
        write(w90_win,'(a)') 'spinors = .true.'
     end if
+    if(sys%st%d%ispin == SPIN_POLARIZED) then
+      write(w90_win, '(a)') 'spin = up'
+    end if
 
-    !This is for convenience. This is needed for plotting the Wannier states, if requested.
+    ! This is for convenience. This is needed for plotting the Wannier states, if requested.
     write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)')  'translate_home_cell = .true.'
     write(w90_win,'(a)')  'write_xyz = .true.'
     write(w90_win,'(a)') ' '
 
-    if(sb%kpoints%reduced%npoints == 1) then
+    if(kpoints%reduced%npoints == 1) then
       write(w90_win,'(a)')  'gamma_only = .true.'
       write(w90_win,'(a)') ' '
     else
@@ -325,19 +359,19 @@ contains
         call messages_fatal(1)
       end if
 
-      !In case the user used also a k-point path, we ignore it
-      npath = kpoints_nkpt_in_path(sb%kpoints)
+      ! In case the user used also a k-point path, we ignore it
+      npath = kpoints_nkpt_in_path(kpoints)
 
-      axis(1:3) = sb%kpoints%nik_axis(1:3)
-      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
+      axis(1:3) = kpoints%nik_axis(1:3)
+      ASSERT(product(kpoints%nik_axis(1:3)) == kpoints%reduced%npoints - npath)
 
       write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
       write(w90_win,'(a)')  'begin kpoints '
-      !Put a minus sign here for the wrong convention in Octopus
+      ! Put a minus sign here for the wrong convention in Octopus
 
-      do ii = 1, sb%kpoints%reduced%npoints-npath
-        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
+      do ii = 1, kpoints%reduced%npoints-npath
+        write(w90_win,'(f13.8,f13.8,f13.8)') - kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
     end if
@@ -349,24 +383,30 @@ contains
   end subroutine wannier90_setup
 
   subroutine wannier90_output()
+    integer :: ik_real
+
     PUSH_SUB(wannier90_output)
 
     call read_wannier90_files()
 
     ! normal interface run
-    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, global_namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     else
       call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+                       sys%mc, ierr, sys%gr%mesh)
     end if
 
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
-      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-         call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+      if(sys%st%d%ispin == SPIN_POLARIZED) then
+        nik = nik / 2
+      end if
+      if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
+         call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                    ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -374,35 +414,9 @@ contains
     end if
     call restart_end(restart)
 
-    !%Variable Wannier90UseSCDM
-    !%Type logical
-    !%Default no
-    !%Section Utilities::oct-wannier90
-    !%Description
-    !% By default oct-wannier90 uses the projection method to generate the .amn file.
-    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
-    !%End
-    call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
-
     if(w90_scdm) then
-      !%Variable SCDMsigma
-      !%Type float
-      !%Section Utilities::oct-wannier90  
-      !%Description
-      !% Broadening of SCDM smearing function
-      !%End
-      call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
-
-      !%Variable SCDMmu
-      !%Type float
-      !%Section Utilities::oct-wannier90
-      !%Description
-      !% Energy range up to which states are considered for SCDM 
-      !%End
-      call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
-
       nik = w90_num_kpts
-      SAFE_ALLOCATE(jpvt(1:sys%gr%der%mesh%np_global))
+      SAFE_ALLOCATE(jpvt(1:sys%gr%mesh%np_global))
       SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
       SAFE_ALLOCATE(occ_temp(1:w90_num_bands))
 
@@ -412,7 +426,7 @@ contains
          sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
+      call zstates_elec_rrqr_decomposition(sys%st, sys%namespace, sys%gr%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands
@@ -430,14 +444,21 @@ contains
       chi(1:w90_num_bands, 1:w90_num_bands) = M_ZERO
 
       do ik = 1, nik
-        kvec(:) = sys%gr%sb%kpoints%reduced%point(:, ik)
+        kvec(:) = sys%kpoints%reduced%point(:, ik)
+
+        if(sys%st%d%ispin == SPIN_POLARIZED) then
+          ik_real = (ik-1)*2 + w90_spin_channel
+        else
+          ik_real = ik
+        end if
+  
         do ist = 1, w90_num_bands
-          call states_elec_get_state(sys%st, sys%gr%der%mesh, ist, ik, psi)
-          smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
+          call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik_real, psi)
+          smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik_real) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
           do jst = 1, w90_num_bands
              chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) &
-                 * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
+                 * exp(M_zI * dot_product(sys%gr%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
           end do
         end do
 
@@ -485,7 +506,7 @@ contains
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
-      call create_wannier90_amn(sys%gr%mesh, sys%gr%sb,sys%st)
+      call create_wannier90_amn(sys%space, sys%gr%mesh, sys%gr%sb, sys%st, sys%kpoints)
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
@@ -502,19 +523,19 @@ contains
 
   subroutine read_wannier90_files()
     integer ::  w90_nnkp, itemp, dummyint, io
-    character(len=80) :: filename, dummy, dummy1
+    character(len=80) :: filename, dummy, dummy1, dummy2, line
     logical :: exist, parse_is_ok
     FLOAT :: dummyr(7)
 
     PUSH_SUB(read_wannier90_files)
 
-    w90_num_kpts = product(sys%gr%sb%kpoints%nik_axis(1:3))
+    w90_num_kpts = product(sys%kpoints%nik_axis(1:3))
     w90_num_exclude = 0 
 
     ! open nnkp file
     filename = trim(adjustl(w90_prefix)) //'.nnkp'
 
-    message(1) = "Info: Parsing "//filename
+    message(1) = "oct-wannier90: Parsing "//filename
     call messages_info(1)
 
     inquire(file=filename,exist=exist)
@@ -691,19 +712,21 @@ contains
           scdm_proj = .true.
           read(w90_nnkp, *) w90_nproj
           w90_num_wann = w90_nproj
+
           if(.not. w90_scdm) then
-            message(1) = 'Found auto_projections block. Currently the only implemeted automatic way'
-            message(2) = 'to compute projections is the SCDM method.'
-            message(3) = 'Please set Wannier90Mode = w90_scdm in the inp file.'
+            message(1) = 'oct-wannier90: Found auto_projections block. Currently the only implemeted automatic way'
+            message(2) = 'oct-wannier90: to compute projections is the SCDM method.'
+            message(3) = 'oct-wannier90: Please set Wannier90UseSCDM = yes in the inp file.'
             call messages_fatal(3)
           end if
+
           if(w90_nproj /= w90_num_bands) then
-            message(1) = 'In auto_projections block first row needs to be equal to num_bands.'
+            message(1) = 'oct-wannier90: In auto_projections block first row needs to be equal to num_bands.'
             call messages_fatal(1)
           end if
           read(w90_nnkp, *) dummyint
           if(dummyint /= 0) then
-            message(1) = 'The second row in auto_projections has to be 0, per Wannier90 documentation.'
+            message(1) = 'oct-wannier90: The second row in auto_projections has to be 0, per Wannier90 documentation.'
             call messages_fatal(1)
           end if
         end if
@@ -712,7 +735,49 @@ contains
  
     end if
 
-    message(1) = "Info: Finished parsing "//filename
+    message(1) = "oct-wannier90: Finished parsing "//filename
+    call messages_info(1)
+
+    ! Look extra variables variable
+    ! open win file
+    filename = trim(adjustl(w90_prefix)) //'.win'
+    message(1) = "oct-wannier90: Parsing "//filename
+    call messages_info(1)
+    w90_nnkp = io_open(trim(filename), global_namespace, action='read', position='rewind')
+    do
+      read(w90_nnkp, fmt='(a)', iostat=io) line
+      if(io  == iostat_end) exit !End of file
+      if(index(line, '=') > 0) then
+        read(line, *, iostat=io) dummy, dummy2, dummy1
+      else
+        read(line, *, iostat=io) dummy, dummy1
+      end if
+
+      !Spin
+      if(dummy =='spin') then
+        if(sys%st%d%ispin /= SPIN_POLARIZED) then
+          message(1) = 'oct-wannier90: The variable spin is set for a non spin-polarized calculation.'
+          call messages_fatal(1)
+        end if
+  
+        if(dummy1 == 'up') then
+          w90_spin_channel = 1
+        else if (dummy1 == 'down') then
+          w90_spin_channel = 2
+        else
+          message(1) = 'oct-wannier90: Error parsing the variable spin.'
+          call messages_fatal(1)
+        end if
+      end if
+    end do
+    call io_close(w90_nnkp)
+
+    if(sys%st%d%ispin == SPIN_POLARIZED) then
+      write(message(1), '(a,i1)') 'oct-wannier90: Using spin channel ', w90_spin_channel
+      call messages_info(1)
+    end if
+
+    message(1) = "oct-wannier90: Finished parsing "//filename
     call messages_info(1)
 
     POP_SUB(read_wannier90_files)
@@ -720,8 +785,8 @@ contains
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn(mesh, st)
-    type(mesh_t),        intent(in) :: mesh
-    type(states_elec_t), intent(in) :: st
+    type(mesh_t),                intent(in) :: mesh
+    type(states_elec_t), target, intent(in) :: st
 
     integer ::  ist, jst, ik, ip, w90_mmn, iknn, G(3), idim, ibind
     FLOAT   ::  Gr(3)
@@ -768,11 +833,19 @@ contains
        G(1:3) = w90_nnk_list(3:5, ii)
        if(mpi_grp_is_root(mpi_world)) write(w90_mmn, '(I10,2x,I10,2x,I3,2x,I3,2x,I3)') ik, iknn, G(1:3)
 
-       Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
+       !For spin-polarized calculations, we select the right k-point
+       if(sys%st%d%ispin == SPIN_POLARIZED) then
+         ik = (ik-1)*2 + w90_spin_channel
+         iknn = (iknn-1)*2 + w90_spin_channel
+       end if
 
-       do ip = 1, mesh%np
-         phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3), Gr(1:3)))
-       end do
+       Gr(1:3) = matmul(G(1:3), sys%gr%sb%latt%klattice(1:3,1:3))
+
+       if(any(G(1:3) /= 0)) then
+         do ip = 1, mesh%np
+           phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3), Gr(1:3)))
+         end do
+       end if
 
        ! loop over bands
        do jst = 1, st%nst
@@ -812,7 +885,7 @@ contains
 
          if(mesh%parallel_in_domains) then
            call profiling_in(reduce_prof, "W90_MMN_REDUCE")
-           call comm_allreduce(mesh%mpi_grp%comm, overlap)
+           call mesh%allreduce(overlap)
            call profiling_out(reduce_prof)
          end if
  
@@ -860,8 +933,13 @@ contains
       do ik = 1, w90_num_kpts
         do ist = 1, sys%st%nst
           if(exclude_list(ist)) cycle
-          write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
-                             units_from_atomic(unit_eV, sys%st%eigenval(ist, ik))
+          if(sys%st%d%ispin /= SPIN_POLARIZED) then
+            write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
+                        units_from_atomic(unit_eV, sys%st%eigenval(ist, ik))
+          else
+            write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
+                        units_from_atomic(unit_eV, sys%st%eigenval(ist, (ik-1)*2+w90_spin_channel))
+          end if
         end do
       end do
 
@@ -917,7 +995,12 @@ contains
         ! states
         do ist = 1, st%nst
           if(exclude_list(ist)) cycle
-          call states_elec_get_state(st, mesh, ispin, ist, ik, psi)
+
+          if(sys%st%d%ispin == SPIN_POLARIZED) then
+            call states_elec_get_state(st, mesh, ispin, ist, ik, psi)
+          else
+            call states_elec_get_state(st, mesh, ispin, ist, (ik-1)*2+w90_spin_channel, psi)
+          end if
 
           ! put the density in the cube
           ! Note: At the moment this does not work for domain parallelization
@@ -948,12 +1031,14 @@ contains
 
   end subroutine write_unk
 
-  subroutine create_wannier90_amn(mesh, sb, st)
+  subroutine create_wannier90_amn(space, mesh, sb, st, kpoints)
+    type(space_t),        intent(in) :: space
     type(mesh_t),         intent(in) :: mesh
     type(simul_box_t),    intent(in) :: sb 
     type(states_elec_t),  intent(in) :: st
+    type(kpoints_t),      intent(in) :: kpoints
 
-    integer ::  ist, ik, w90_amn, idim, iw, ip
+    integer ::  ist, ik, w90_amn, idim, iw, ip, ik_real
     FLOAT   ::  center(3),  kpoint(1:MAX_DIM), threshold
     character(len=80) :: filename
     CMPLX, allocatable :: psi(:,:), phase(:), projection(:)
@@ -1017,8 +1102,8 @@ contains
         orbitals(iw)%submesh = .false.
       
         ! cartesian coordinate of orbital center
-        center(1:3) =  matmul(sb%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
-        call submesh_init(orbitals(iw)%sphere, sb, mesh, center, orbitals(iw)%radius)
+        center(1:3) = sb%latt%red_to_cart(w90_proj_centers(iw,1:3))
+        call submesh_init(orbitals(iw)%sphere, space, sb, mesh, center, orbitals(iw)%radius)
       
         ! make transpose table of submesh points for use in pwscf routine
         SAFE_ALLOCATE(rr(1:3,orbitals(iw)%sphere%np))
@@ -1049,7 +1134,7 @@ contains
         SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
         orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
       
-        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, &
+        call orbitalset_update_phase(orbitals(iw), sb%dim, st%d%kpt, kpoints, st%d%ispin == SPIN_POLARIZED, &
                                         kpt_max = w90_num_kpts)
       
         SAFE_DEALLOCATE_A(rr)
@@ -1060,16 +1145,24 @@ contains
       SAFE_ALLOCATE(projection(1:w90_nproj))
       
       do ik = 1, w90_num_kpts
-        !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
+        kpoint(1:sb%dim) = kpoints%get_point(ik)
       
         do ip = 1, mesh%np
           phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
         end do
+
+        !For spin-polarized calculations, we select the right k-point
+        if(st%d%ispin == SPIN_POLARIZED) then
+          ik_real = (ik-1)*2 + w90_spin_channel
+        else
+          ik_real = ik
+        end if
       
         do ist = 1, st%nst
           if(exclude_list(ist)) cycle
-          call states_elec_get_state(st, mesh, ist, ik, psi)
+
+          call states_elec_get_state(st, mesh, ist, ik_real, psi)
+
           do idim = 1, st%d%dim
             !The minus sign is here is for the wrong convention of Octopus
             do ip = 1, mesh%np
@@ -1084,12 +1177,12 @@ contains
             !At the moemnt the orbitals do not depend on idim
             !The idim index for eorb_mesh would be for a spin-resolved orbital like j=1/2
             projection(iw) = zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                        orbitals(iw)%eorb_mesh(1:mesh%np,1,1,ik), reduce = .false.)
+                                    orbitals(iw)%eorb_mesh(1:mesh%np,1,1,ik_real), reduce = .false.)
           end do
       
           if(mesh%parallel_in_domains) then
             call profiling_in(reduce_prof, "W90_AMN_REDUCE")
-            call comm_allreduce(mesh%mpi_grp%comm, projection)
+            call mesh%allreduce(projection)
             call profiling_out(reduce_prof)
           end if
       
@@ -1119,11 +1212,12 @@ contains
 
   end subroutine create_wannier90_amn
 
-  subroutine generate_wannier_states(mesh, sb, geo, st)
+  subroutine generate_wannier_states(mesh, sb, geo, st, kpoints)
     type(mesh_t),           intent(in) :: mesh
     type(simul_box_t),      intent(in) :: sb
     type(geometry_t),       intent(in) :: geo
     type(states_elec_t),    intent(in) :: st
+    type(kpoints_t),        intent(in) :: kpoints
 
     integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
@@ -1138,7 +1232,7 @@ contains
 
     PUSH_SUB(generate_wannier_states)
 
-    ASSERT(st%d%ispin == UNPOLARIZED)
+    ASSERT(st%d%ispin /= SPINORS)
 
     inquire(file=trim(trim(adjustl(w90_prefix))//'_centres.xyz'),exist=exist)
     if(.not. exist) then
@@ -1212,15 +1306,20 @@ contains
       zwn(:) = M_Z0
 
       do ik = 1, w90_num_kpts
-        !This will not work for spin-polarized calculations
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik, absolute_coordinates=.true.)
+        kpoint(1:sb%dim) = kpoints%get_point(ik, absolute_coordinates=.true.)
 
         do iw2 = 1, st%nst
           if(exclude_list(iw2)) cycle
-          call states_elec_get_state(st, mesh, iw2, ik, psi)
+          
+          if(st%d%ispin == SPIN_POLARIZED) then
+            call states_elec_get_state(st, mesh, iw2, ik, psi)
+          else
+            call states_elec_get_state(st, mesh, iw2, (ik-1)*2+w90_spin_channel, psi)
+          end if
+    
           !The minus sign is here is for the wrong convention of Octopus
           do ip = 1, mesh%np
-            zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
+            zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip, 1) * &
                       exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
           end do
         end do!ik   

@@ -26,6 +26,7 @@ module xc_oep_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m 
   use lalg_adv_oct_m
   use linear_response_oct_m
@@ -35,11 +36,13 @@ module xc_oep_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
   use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -105,13 +108,14 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st, mc)
+  subroutine xc_oep_init(oep, namespace, family, gr, st, mc, space)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
+    type(space_t),       intent(in)    :: space
 
     PUSH_SUB(xc_oep_init)
 
@@ -148,16 +152,21 @@ contains
 
       !%Variable EnablePhotons
       !%Type logical
-      !%Default .false.
-      !%Section Hamiltonian::XC
+      !%Default no
+      !%Section Hamiltonian
       !%Description
-      !% Activate the one-photon OEP
+      !% This variable can be used to enable photons in several types of calculations.
+      !% It can be used to activate the one-photon OEP formalism.      
+      !% In the case of CalculationMode = casida, it enables photon modes as
+      !% described in ACS Photonics 2019, 6, 11, 2757-2778.
+      !% Finally, if set to yes when solving the ferquency-dependent Sternheimer
+      !% equation, the photons are coupled to the electronic subsystem.
       !%End
       call messages_obsolete_variable(namespace, 'OEPPtX', 'EnablePhotons')
       call parse_variable(namespace, 'EnablePhotons', .false., oep%has_photons)
       if (oep%has_photons) then
         call messages_experimental("EnablePhotons = yes")
-        call photon_mode_init(oep%pt, namespace, gr%mesh, gr%sb%dim, st%qtot)
+        call photon_mode_init(oep%pt, namespace, gr%mesh, space%dim, st%qtot)
         if (oep%pt%nmodes > 1) then
           call messages_not_implemented('Photon OEP for more than one photon mode.')
         end if
@@ -242,7 +251,7 @@ contains
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc, space)
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)

@@ -22,7 +22,6 @@ program photoelectron_spectrum
   use command_line_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use kpoints_oct_m
   use io_function_oct_m
   use io_oct_m
@@ -41,6 +40,7 @@ program photoelectron_spectrum
   use string_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -61,9 +61,9 @@ program photoelectron_spectrum
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
   FLOAT                :: center(3)
-  FLOAT, pointer       :: Lg(:,:), RR(:)
+  FLOAT, allocatable   :: Lg(:,:), RR(:)
   FLOAT, allocatable   :: pmesh(:,:,:,:)   !< The final momentum-space (p) mesh 
-  integer, pointer     :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
+  integer, allocatable :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
   logical              :: need_pmesh, resolve_states
   integer              :: ii, i1,i2,i3, idxZero(1:3), st_range(2)
   type(block_t)        :: blk  
@@ -72,7 +72,8 @@ program photoelectron_spectrum
   type(geometry_t)     :: geo
   type(simul_box_t)    :: sb
   type(states_elec_t)  :: st
-  type(grid_t)         :: gr
+  type(symmetries_t)   :: symm
+  type(kpoints_t)      :: kpoints
   type(restart_t)      :: restart
   
   character(len=512)   :: filename
@@ -114,8 +115,11 @@ program photoelectron_spectrum
   call space_init(space, global_namespace)
   call geometry_init(geo, global_namespace, space)
   call simul_box_init(sb, global_namespace, geo, space)
-  gr%sb = sb
-  call states_elec_init(st, global_namespace, gr, geo)
+  call symmetries_init(symm, global_namespace, geo, space, sb%latt)
+
+  ! we need k-points for periodic systems
+  call kpoints_init(kpoints, global_namespace, symm, space%dim, space%periodic_dim, sb%latt)
+  call states_elec_init(st, global_namespace, space, geometry_val_charge(geo), kpoints)
   !*
 
   !Initialize variables
@@ -123,8 +127,8 @@ program photoelectron_spectrum
   llpp(:) = 1
 
   need_pmesh = .false. 
-  dim    = sb%dim   ! The dimensionality dim = [1,2,3]
-  pdim   = sb%periodic_dim
+  dim    = space%dim   ! The dimensionality dim = [1,2,3]
+  pdim   = space%periodic_dim
 
   call messages_print_stress(stdout,"Postprocessing")  
   
@@ -144,7 +148,7 @@ program photoelectron_spectrum
     call messages_write('Read PES_MASK info file.')
     call messages_info()
     
-    need_pmesh = simul_box_is_periodic(sb) 
+    need_pmesh = space%is_periodic() 
     
     
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
@@ -154,10 +158,10 @@ program photoelectron_spectrum
     
     option = OPTION__PES_FLUX_SHAPE__SPH
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
-    if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
+    if (space%is_periodic()) option = OPTION__PES_FLUX_SHAPE__PLN
     
     call parse_variable(global_namespace, 'PES_Flux_Shape', option, pflux%surf_shape)
-    call pes_flux_reciprocal_mesh_gen(pflux, global_namespace, sb, st, 0, post = .true.)
+    call pes_flux_reciprocal_mesh_gen(pflux, global_namespace, space, sb, st, kpoints, 0, post = .true.)
     
     llpp(1:dim) = pflux%ll(1:dim)
     need_pmesh = .true.
@@ -190,7 +194,7 @@ program photoelectron_spectrum
   what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
 
-  have_zweight_path = kpoints_have_zero_weight_path(sb%kpoints)
+  have_zweight_path = kpoints%have_zero_weight_path()
   use_zweight_path  = have_zweight_path
 
   call get_laser_polarization(pol)
@@ -198,7 +202,7 @@ program photoelectron_spectrum
   if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/) 
 
   ! more defaults
-  if(simul_box_is_periodic(sb)) then
+  if(space%is_periodic()) then
     
     if (dim == 2) then
       ! write the velocity map on plane pz=0 as it contains all the informations
@@ -327,7 +331,7 @@ program photoelectron_spectrum
   
   
   krng(1) = 1
-  krng(2) = kpoints_number(sb%kpoints)
+  krng(2) = kpoints_number(kpoints)
   
   if (have_zweight_path) then 
     
@@ -335,7 +339,7 @@ program photoelectron_spectrum
       !Use the path only when asked for ARPES on a cutting curve in reciprocal space(the path)
       use_zweight_path  = .true.
     
-      krng(1) = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1
+      krng(1) = kpoints_number(kpoints) - kpoints%nik_skip  + 1
     
       call messages_print_stress(stdout, "Kpoint selection")
       write(message(1), '(a)') 'Will use a zero-weight path in reciprocal space with the following points'
@@ -347,13 +351,13 @@ program photoelectron_spectrum
 
     else
       use_zweight_path  = .false.
-      krng(2) = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip
+      krng(2) = kpoints_number(kpoints) - kpoints%nik_skip
 
     end if
     
   end if
 
-  call write_kpoints_info(sb%kpoints, krng(1), krng(2))    
+  call write_kpoints_info(kpoints, krng(1), krng(2))    
   call messages_print_stress(stdout)
 
   
@@ -380,14 +384,14 @@ program photoelectron_spectrum
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
     SAFE_ALLOCATE(Lp(1:llpp(1), 1:llpp(2), 1:llpp(3), krng(1):krng(2), 1:3))
-    call pes_mask_pmesh(global_namespace, dim, sb%kpoints, llpp, Lg, pmesh, idxZero, krng, Lp)
+    call pes_mask_pmesh(global_namespace, dim, kpoints, llpp, Lg, pmesh, idxZero, krng, Lp)
 
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
     ! Lp is allocated inside pes_flux_pmesh to comply with the 
     ! declinations of the different surfaces
     SAFE_ALLOCATE(Ekin(1:llp(1), 1:llp(2), 1:llp(3)))
     Ekin = M_ZERO
-    call pes_flux_pmesh(pflux, global_namespace, dim, sb%kpoints, llpp, pmesh, idxZero, krng, Lp, Ekin)
+    call pes_flux_pmesh(pflux, global_namespace, dim, kpoints, llpp, pmesh, idxZero, krng, Lp, Ekin)
   end select
    
   
@@ -467,6 +471,7 @@ program photoelectron_spectrum
   call states_elec_end(st)
 
   call geometry_end(geo)
+  call kpoints_end(kpoints)
   call simul_box_end(sb)
 
   call io_end()
@@ -477,10 +482,10 @@ program photoelectron_spectrum
   
   SAFE_DEALLOCATE_A(pesP)    
   SAFE_DEALLOCATE_A(pmesh)
-  SAFE_DEALLOCATE_P(Lp)
+  SAFE_DEALLOCATE_A(Lp)
   SAFE_DEALLOCATE_A(Ekin)
   if (.not. need_pmesh .or. pes_method == OPTION__PHOTOELECTRONSPECTRUM__PES_MASK) then
-    SAFE_DEALLOCATE_P(Lg)
+    SAFE_DEALLOCATE_A(Lg)
   end if
   contains
     
@@ -732,7 +737,7 @@ program photoelectron_spectrum
 
       do ik = ikstart, ikend
         write(message(1),'(i8,1x)') ik
-        write(str_tmp,'(f12.6)') kpoints_get_weight(kpoints, ik)
+        write(str_tmp,'(f12.6)') kpoints%get_weight(ik)
         message(1) = trim(message(1)) // trim(str_tmp)//' |'
         do idir = 1, kpoints%full%dim
           write(str_tmp,'(f12.6)') kpoints%reduced%red_point(idir, ik)

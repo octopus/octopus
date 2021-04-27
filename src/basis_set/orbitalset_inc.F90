@@ -73,7 +73,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
 
   if(os%sphere%mesh%parallel_in_domains) then
     call profiling_in(prof_reduce, TOSTRING(X(ORBSET_GET_COEFF_REDUCE)))
-    call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
+    call os%sphere%mesh%allreduce(dot)
     call profiling_out(prof_reduce)
   end if
 

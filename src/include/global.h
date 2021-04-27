@@ -90,11 +90,16 @@
 
 #  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds) allocate(type::x bounds)
 
+#  define SAFE_ALLOCATE_SOURCE(x, y) \
+  allocate(x, source=y); CARDINAL \
+  CARDINAL
+
 #  define SAFE_ALLOCATE_SOURCE_A(x, y) \
   if(allocated(y)) then;   CARDINAL \
     allocate(x, source=y); CARDINAL \
   end if; \
   CARDINAL
+
 #  define SAFE_ALLOCATE_SOURCE_P(x, y) \
   if(associated(y)) then;  CARDINAL \
     allocate(x, source=y); CARDINAL \
@@ -162,6 +167,11 @@
   end if; \
   CARDINAL
 
+#  define SAFE_ALLOCATE_SOURCE(x, y) \
+  allocate( ACARDINAL x, ACARDINAL source=y, ACARDINAL stat=global_alloc_err); CARDINAL \
+  SAFE_ALLOCATE_PROFILE(x); CARDINAL \
+  CARDINAL
+
 #  define MY_DEALLOCATE(x) \
   global_sizeof = SIZEOF(x) ; \
   CARDINAL \
@@ -185,10 +195,6 @@
   CARDINAL
 
 #endif
-
-
-! This was used in the past and should not be used any more.
-#define ALLOCATE(a,b) _DEPRECATED_PLEASE_USE_SAFE_ALLOCATE_
 
 
 ! The following macros facilitate the use of real or complex variables,
@@ -229,7 +235,6 @@
 ! do not use the STRINGIFY macro
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
-#define INCR(x, y) x = (x) + (y)
 
 
 ! Whenever a procedure is not called too many times, one should start it
@@ -246,9 +251,6 @@
       call pop_sub(__FILE__+"." ACARDINAL +TOSTRING(routine)); CARDINAL \
   endif; endif; \
   CARDINAL
-
-! the leading dimension of the array
-#define LD(a) ubound(a,dim=1)
 
 !! Local Variables:
 !! mode: f90

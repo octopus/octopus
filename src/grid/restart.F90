@@ -36,7 +36,6 @@ module restart_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use unit_system_oct_m
 
   implicit none
@@ -418,7 +417,6 @@ contains
                                                           !! exactly the same or not?
 
     logical :: grid_changed, grid_reordered, restart_write, dir_exists
-    integer :: iunit
     character(len=20) :: tag
     character(len=MAX_PATH_LEN) :: basedir, dirname
 
@@ -521,21 +519,6 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', namespace, action='write', &
-            die=.true., grp=restart%mpi_grp)
-          if (mpi_grp_is_root(restart%mpi_grp)) then
-            write(iunit,'(a)') '# This file contains the necessary information to generate the'
-            write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
-            write(iunit,'(a)') '# except for the geometry of the system.'
-          end if
-          call io_close(iunit, grp=restart%mpi_grp)
-          
-          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, namespace, ierr)
-          if (ierr /= 0) then
-            message(1) = "Unable to write mesh information to '"//trim(restart%pwd)//"/mesh'."
-            call messages_fatal(1)
-          end if
-
           call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, &
             restart%namespace, ierr)
           if (ierr /= 0) then
@@ -546,12 +529,6 @@ contains
           call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh fingerprint to '"//trim(restart%pwd)//"/grid'."
-            call messages_fatal(1)
-          end if
-
-          call simul_box_dump(mesh%sb, namespace, restart%pwd, "mesh", restart%mpi_grp, ierr)
-          if (ierr /= 0) then
-            message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)
           end if
         end if

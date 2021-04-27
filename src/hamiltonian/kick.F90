@@ -81,6 +81,8 @@ module kick_oct_m
   type kick_t
     ! Components are public by default
 
+    !> Dimensions
+    integer           :: dim
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
@@ -121,21 +123,22 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, namespace, sb, nspin)
+  subroutine kick_init(kick, namespace, sb, kpoints, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
+    type(kpoints_t),   intent(in)  :: kpoints
     integer,           intent(in)  :: nspin
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir, iop, iq, iqx, iqy, iqz
     FLOAT :: norm, dot
     FLOAT :: qtemp(1:MAX_DIM)
-    integer :: dim, periodic_dim
+    integer :: periodic_dim
 
     PUSH_SUB(kick_init)
 
-    dim = sb%dim
+    kick%dim = sb%dim
     periodic_dim = sb%periodic_dim
 
     !%Variable TDDeltaKickTime
@@ -175,9 +178,10 @@ contains
     if(abs(kick%delta_strength) <= M_EPSILON) then
       kick%delta_strength_mode = 0
       kick%pol_equiv_axes = 0
-      kick%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
-      kick%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
-      kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+      kick%pol = M_ZERO
+      do idir = 1, kick%dim
+        kick%pol(idir, idir) = M_ONE
+      end do
       kick%pol_dir = 0
       kick%wprime = M_ZERO
       kick%n_multipoles = 0
@@ -309,7 +313,7 @@ contains
       call parse_variable(namespace, 'TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
-        if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error(namespace, 'TDPolarizationDirection')
+        if(kick%pol_dir < 1 .or. kick%pol_dir > kick%dim) call messages_input_error(namespace, 'TDPolarizationDirection')
       end if
 
       !%Variable TDPolarization
@@ -347,31 +351,29 @@ contains
       !%
       !%End
 
+      ! Default basis is the Cartesian unit vectors.
+      ! FIXME: Here the symmetry of the system should be analyzed, and the polarization
+      ! basis built accordingly.
       kick%pol(:, :) = M_ZERO
+      do idir = 1, kick%dim
+        kick%pol(idir, idir) = M_ONE
+      end do
       if(parse_block(namespace, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
 
-        if(n_rows < dim) call messages_input_error(namespace, 'TDPolarization', 'There should be one line per dimension')
-
+        if(n_rows < kick%dim) call messages_input_error(namespace, 'TDPolarization', 'There should be one line per dimension')
+        
         do irow = 1, n_rows
-          do idir = 1, 3
+          do idir = 1, kick%dim
             call parse_block_float(blk, irow - 1, idir - 1, kick%pol(idir, irow))
           end do
         end do
-        if(n_rows < 3) kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
-        if(n_rows < 2) kick%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
         call parse_block_end(blk)
-      else
-        ! FIXME: Here the symmetry of the system should be analyzed, and the polarization
-        ! basis built accordingly.
-        kick%pol(1:3, 1) = (/ M_ONE,  M_ZERO, M_ZERO /)
-        kick%pol(1:3, 2) = (/ M_ZERO, M_ONE,  M_ZERO /)
-        kick%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE  /)
       end if
 
       ! Normalize
-      do idir = 1, 3
-        kick%pol(1:3, idir) = kick%pol(1:3, idir) / sqrt(sum(kick%pol(1:3, idir)**2))
+      do idir = 1, kick%dim
+        kick%pol(1:kick%dim, idir) = kick%pol(1:kick%dim, idir) / sqrt(sum(kick%pol(1:kick%dim, idir)**2))
       end do
 
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
@@ -397,13 +399,14 @@ contains
       !% 3392 (2008).
       !%End
       if(parse_block(namespace, 'TDPolarizationWprime', blk)==0) then
-        do idir = 1, 3
+        do idir = 1, kick%dim
           call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
         end do
-        kick%wprime(1:3) = kick%wprime(1:3) / sqrt(sum(kick%wprime(1:3)**2))
+        kick%wprime(1:kick%dim) = kick%wprime(1:kick%dim) / sqrt(sum(kick%wprime(1:kick%dim)**2))
         call parse_block_end(blk)
       else
-        kick%wprime(1:3) = (/ M_ZERO, M_ZERO, M_ONE /)
+        kick%wprime(1:kick%dim-1) = M_ZERO
+        kick%wprime(kick%dim) = M_ONE
       end if
     end if
 
@@ -463,10 +466,10 @@ contains
 
       call parse_block_end(blk)
 
-      if(sb%kpoints%use_symmetries) then
-        do iop = 1, symmetries_number(sb%symm)
-          if(iop == symmetries_identity_index(sb%symm)) cycle
-          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
+      if(kpoints%use_symmetries) then
+        do iop = 1, symmetries_number(kpoints%symm)
+          if(iop == symmetries_identity_index(kpoints%symm)) cycle
+          if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
             message(1) = "The TDMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to TDMomemtumTransfer."
             call messages_fatal(2, namespace=namespace)
@@ -581,13 +584,13 @@ contains
             do iqz = -kick%nqmult(3), kick%nqmult(3)
               iq = iq + 1
               qtemp(1:3) = (/iqx, iqy, iqz/)
-              call kpoints_to_absolute(sb%klattice, qtemp, kick%qvector(1:3, iq), 3)
+              call kpoints_to_absolute(sb%latt%klattice, qtemp, kick%qvector(1:3, iq), 3)
 
               !Checking symmetries for all G vectors
-              if(sb%kpoints%use_symmetries) then
-                do iop = 1, symmetries_number(sb%symm)
-                  if(iop == symmetries_identity_index(sb%symm)) cycle
-                  if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
+              if(kpoints%use_symmetries) then
+                do iop = 1, symmetries_number(kpoints%symm)
+                  if(iop == symmetries_identity_index(kpoints%symm)) cycle
+                  if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
                     message(1) = "The TDMultipleMomentumTransfer breaks (at least) one " &
                                       // "of the symmetries used to reduce the k-points."
                     message(2) = "Set SymmetryBreakDir accordingly."
@@ -620,6 +623,8 @@ contains
     type(kick_t), intent(in)    :: kick_in
 
     PUSH_SUB(kick_copy)
+
+    kick_out%dim = kick_in%dim
 
     kick_out%time = kick_in%time
 
@@ -666,6 +671,7 @@ contains
     PUSH_SUB(kick_end)
 
     kick%delta_strength_mode = 0
+    kick%dim = 0
     kick%pol_equiv_axes = 0
     kick%pol = M_ZERO
     kick%pol_dir = 0
@@ -689,7 +695,7 @@ contains
     integer,           intent(in)    :: iunit
     type(namespace_t), intent(in)    :: namespace
 
-    integer :: im, ierr
+    integer :: idir, im, ierr
     character(len=100) :: line
 
     PUSH_SUB(kick_read)
@@ -698,6 +704,7 @@ contains
 
     read(iunit, '(15x,i2)')     kick%delta_strength_mode
     read(iunit, '(15x,f18.12)') kick%delta_strength
+    read(iunit, '(15x,i2)')     kick%dim
     read(iunit, '(a)') line
     if(index(line,'defined') /= 0) then
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
@@ -719,12 +726,12 @@ contains
       kick%n_multipoles = 0
       backspace(iunit)
 
-      read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
-      read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
-      read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+      do idir = 1, kick%dim
+        read(iunit, '(15x,99f18.12)') kick%pol(1:kick%dim, idir)
+      end do
       read(iunit, '(15x,i2)')      kick%pol_dir
       read(iunit, '(15x,i2)')      kick%pol_equiv_axes
-      read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+      read(iunit, '(15x,99f18.12)') kick%wprime(1:kick%dim)
     end if
     if(kick%delta_strength_mode == KICK_MAGNON_MODE) then
       read(iunit, '(15x,i3)') kick%nqvec
@@ -758,7 +765,7 @@ contains
     integer,    optional,  intent(in)    :: iunit
     type(c_ptr), optional, intent(inout) :: out
 
-    integer :: im
+    integer :: idir, im
     character(len=120) :: aux
 
     PUSH_SUB(kick_write)
@@ -766,7 +773,8 @@ contains
     if(present(iunit)) then
       write(iunit, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
       write(iunit, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-       ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
+      write(iunit, '(a15,i2)')      '# dim          ', kick%dim
+      ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
         write(iunit,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
       elseif(kick%n_multipoles > 0) then
@@ -775,12 +783,12 @@ contains
           write(iunit, '(a15,2i3,f18.12)') '# multipole    ', kick%l(im), kick%m(im), kick%weight(im)
         end do
       else
-        write(iunit, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-        write(iunit, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-        write(iunit, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+        do idir = 1, kick%dim
+          write(iunit, '(a6,i1,a8,99f18.12)') '# pol(', idir, ')       ', kick%pol(1:kick%dim, idir)
+        end do
         write(iunit, '(a15,i1)')      '# direction    ', kick%pol_dir
         write(iunit, '(a15,i1)')      '# Equiv. axes  ', kick%pol_equiv_axes
-        write(iunit, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+        write(iunit, '(a15,99f18.12)') '# wprime       ', kick%wprime(1:kick%dim)
       end if
       write(iunit, '(a15,f18.12)') "# kick time    ", kick%time
 
@@ -789,6 +797,9 @@ contains
       call write_iter_string(out, aux)
       call write_iter_nl(out)
       write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+      call write_iter_string(out, aux)
+      call write_iter_nl(out)
+      write(aux, '(a15,i2)')      '# dim          ', kick%dim
       call write_iter_string(out, aux)
       call write_iter_nl(out)
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
@@ -805,22 +816,18 @@ contains
           call write_iter_nl(out)
         end do
       else
-        write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-        call write_iter_string(out, aux)
-        call write_iter_nl(out)
-        write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-        call write_iter_string(out, aux)
-        call write_iter_nl(out)
-        write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-        call write_iter_string(out, aux)
-        call write_iter_nl(out)
+        do idir = 1, kick%dim
+          write(aux, '(a6,i1,a8,99f18.12)') '# pol(', idir, ')       ', kick%pol(1:kick%dim, idir)
+          call write_iter_string(out, aux)
+          call write_iter_nl(out)
+        end do
         write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
         call write_iter_string(out, aux)
         call write_iter_nl(out)
         write(aux, '(a15,i2)')      '# Equiv. axes  ', kick%pol_equiv_axes
         call write_iter_string(out, aux)
         call write_iter_nl(out)
-        write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+        write(aux, '(a15,99f18.12)') '# wprime       ', kick%wprime(1:kick%dim)
         call write_iter_string(out, aux)
         call write_iter_nl(out)
       end if
@@ -909,7 +916,7 @@ contains
             kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_BESSEL)
             call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
-              kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
+            kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
         end select
       end do
 
@@ -1064,7 +1071,7 @@ contains
               end do
 
             case (KICK_SPIN_MODE)
-              ispin = states_elec_dim_get_spin_index(st%d, iqn)
+              ispin = st%d%get_spin_index(iqn)
               do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
 
@@ -1144,9 +1151,9 @@ contains
 
         else ! Multi-q kick
 
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
+           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
+           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
+           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
 
            kick_function = M_ONE
            do ip = 1, mesh%np

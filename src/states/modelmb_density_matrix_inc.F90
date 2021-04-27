@@ -31,7 +31,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   R_TYPE,                intent(out) :: gamma(:, :)
 
   integer :: icoord, icoordp, icoord_diff
-  integer :: jdim, ip_global, ip, ipp_global, ix(MAX_DIM), ixp(MAX_DIM)
+  integer :: jdim, ip_global, ip, ipp, ix(MAX_DIM), ixp(MAX_DIM)
   integer, allocatable :: ix_1part(:)
   integer, allocatable :: forward_map_gamma(:)
   integer, allocatable :: icoord_map(:)
@@ -42,7 +42,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   PUSH_SUB(X(mf_calculate_gamma))
 
   SAFE_ALLOCATE(psi_p(1:mesh%np,1,1))
-  SAFE_ALLOCATE(forward_map_gamma(1:mesh%np_global))
+  SAFE_ALLOCATE(forward_map_gamma(1:mesh%np))
   SAFE_ALLOCATE(icoord_map(1:mesh%np))
 
   volume_element = M_ONE
@@ -63,12 +63,8 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
 
   ! loop over the points of psi we have locally
   do ip = 1, mesh%np
-    ! find global index
-    ip_global = ip
-    if (mesh%parallel_in_domains) ip_global = mesh%vp%local(ip + mesh%vp%xlocal - 1)
-
     ! find coordinates of present point in full MAX_DIM space
-    call index_to_coords(mesh%idx, ip_global, ix)
+    call mesh_local_index_to_coords(mesh, ip, ix)
     
     ! find index of present coordinates for particle ikeeppart
     ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
@@ -88,7 +84,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
     do ip_global = 1, mesh%np_global
 
       ! find coordinates of present point in full MAX_DIM space
-      call index_to_coords(mesh%idx, ip_global, ix)
+      call mesh_global_index_to_coords(mesh, ip_global, ix)
       
       ! prime position will be identical to ix, apart from the ikeeppart particle
       ixp = ix
@@ -109,8 +105,11 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
         
       ! find new index for general point prime
-      ipp_global = index_from_coords(mesh%idx, ixp)
-      forward_map_gamma(ipp_global) = ip_global
+      ipp = mesh_local_index_from_coords(mesh, ixp)
+      ! only save to map if we have the point locally
+      if (ipp > 0 .and. ipp <= mesh%np) then
+        forward_map_gamma(ipp) = ip_global
+      end if
     end do
 
     ! use map to recover the corresponding np points for psi
@@ -133,7 +132,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
     end do
   end do
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, gamma, &
+  if(mesh%parallel_in_domains) call mesh%allreduce(gamma, &
     dim = (/mb_1part%npt, mb_1part%npt/))
 
   SAFE_DEALLOCATE_A(forward_map_gamma)

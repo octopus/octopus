@@ -21,7 +21,6 @@
 module kb_projector_oct_m
   use atom_oct_m
   use comm_oct_m
-  use double_grid_oct_m
   use global_oct_m
   use grid_oct_m
   use mesh_oct_m
@@ -58,15 +57,15 @@ module kb_projector_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kb_projector_init(kb_p, sm, gr, a, l, lm)
+  subroutine kb_projector_init(kb_p, sm, a, l, lm)
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
-    type(grid_t),         intent(in)    :: gr
     type(atom_t), target, intent(in)    :: a
     integer,              intent(in)    :: l, lm
 
-    integer :: n_c, ic
+    integer :: n_c, ic, ip
     type(ps_t), pointer :: ps
+    FLOAT :: xx(3)
 
     PUSH_SUB(kb_projector_init)
 
@@ -87,7 +86,11 @@ contains
     kb_p%e = M_ZERO
     
     do ic = 1, n_c
-      call double_grid_apply_non_local(gr%dgrid, a%species, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
+      do ip = 1, sm%np
+        xx(1:3) = sm%x(ip, 1:3)
+        call species_real_nl_projector(a%species, xx, l, lm, ic, kb_p%p(ip, ic))
+      end do
+
       kb_p%e(ic) = ps%h(l, ic, ic)
     end do
 

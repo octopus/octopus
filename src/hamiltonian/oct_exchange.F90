@@ -46,9 +46,9 @@ module oct_exchange_oct_m
     private
     logical :: oct_exchange
     type(states_elec_t), pointer :: oct_st
-    FLOAT, pointer :: oct_fxc(:, :, :)
-    FLOAT, pointer :: oct_pot(:, :)
-    FLOAT, pointer :: oct_rho(:, :)
+    FLOAT, allocatable :: oct_fxc(:, :, :)
+    FLOAT, allocatable :: oct_pot(:, :)
+    FLOAT, allocatable :: oct_rho(:, :)
   end type oct_exchange_t
 
 contains
@@ -60,9 +60,6 @@ contains
 
     this%oct_exchange = .false.
     nullify(this%oct_st)
-    nullify(this%oct_fxc)
-    nullify(this%oct_pot)
-    nullify(this%oct_rho)
 
     POP_SUB(oct_exchange_nullify)
   end subroutine oct_exchange_nullify
@@ -174,9 +171,9 @@ contains
 
     nullify(this%oct_st)
     this%oct_exchange = .false.
-    SAFE_DEALLOCATE_P(this%oct_fxc)
-    SAFE_DEALLOCATE_P(this%oct_pot)
-    SAFE_DEALLOCATE_P(this%oct_rho)
+    SAFE_DEALLOCATE_A(this%oct_fxc)
+    SAFE_DEALLOCATE_A(this%oct_pot)
+    SAFE_DEALLOCATE_A(this%oct_rho)
 
     POP_SUB(oct_exchange_remove)
   end subroutine oct_exchange_remove

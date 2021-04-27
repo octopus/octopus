@@ -37,6 +37,7 @@ module derivatives_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use stencil_cube_oct_m
   use stencil_star_oct_m
   use stencil_starplus_oct_m
@@ -112,7 +113,7 @@ module derivatives_oct_m
     ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
-    integer               :: dim           !< dimensionality of the space (sb%dim)
+    integer               :: dim           !< dimensionality of the space (space%dim)
     integer               :: order         !< order of the discretization (value depends on stencil)
     integer               :: stencil_type  !< type of discretization
 
@@ -177,9 +178,10 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
+  subroutine derivatives_init(der, namespace, space, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(inout) :: der
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(simul_box_t),           intent(in)    :: sb
     logical,                     intent(in)    :: use_curvilinear
     integer, optional,           intent(in)    :: order
@@ -191,7 +193,7 @@ contains
     PUSH_SUB(derivatives_init)
 
     ! copy this value to my structure
-    der%dim = sb%dim
+    der%dim = space%dim
 
     !%Variable DerivativesStencil
     !%Type integer
@@ -218,7 +220,7 @@ contains
     !%End
     default_stencil = DER_STAR
     if(use_curvilinear) default_stencil = DER_STARPLUS
-    if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
+    if(sb%latt%nonorthogonal) default_stencil = DER_STARGENERAL
 
     call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
@@ -426,9 +428,10 @@ contains
   end subroutine derivatives_get_stencil_grad
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, namespace, mesh)
+  subroutine derivatives_build(der, namespace, space, mesh)
     type(derivatives_t),    intent(inout) :: der
     type(namespace_t),      intent(in)    :: namespace
+    type(space_t),          intent(in)    :: space
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -441,7 +444,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, namespace, mesh)
+    call boundaries_init(der%boundaries, namespace, space, mesh)
 
     ASSERT(allocated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
@@ -564,7 +567,7 @@ contains
     
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
-    if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
+    if(mesh%use_curvilinear) then
       do i = 1, der%dim
         call nl_operator_init(auxop, "auxop")
         call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)
@@ -690,8 +693,8 @@ contains
             x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
           end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
-          if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
-              x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
+          if (mesh%sb%latt%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
+              x(1:dim) = matmul(mesh%sb%latt%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
@@ -740,7 +743,7 @@ contains
     end do ! loop over points p
 
     do i = 1, nderiv
-      call nl_operator_update_weights(op(i))
+      call nl_operator_output_weights(op(i))
     end do
 
     SAFE_DEALLOCATE_A(mat)
@@ -778,7 +781,7 @@ contains
     PUSH_SUB(derivatives_get_lapl)
 
     call nl_operator_init(op(1), name)
-    if(this%mesh%sb%nonorthogonal) then
+    if(this%mesh%sb%latt%nonorthogonal) then
       call stencil_stargeneral_get_arms(op(1)%stencil, this%mesh%sb)
       call stencil_stargeneral_get_lapl(op(1)%stencil, this%dim, order)
     else
@@ -787,13 +790,13 @@ contains
     call nl_operator_build(this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
 
     !At the moment this code is almost copy-pasted from derivatives_build.
-    if(this%mesh%sb%nonorthogonal) then
+    if(this%mesh%sb%latt%nonorthogonal) then
       op(1)%stencil%npoly = op(1)%stencil%size &
          + order*(2*order-1)*op(1)%stencil%stargeneral%narms
     end if
     SAFE_ALLOCATE(polynomials(1:this%dim, 1:op(1)%stencil%npoly))
     SAFE_ALLOCATE(rhs(1:op(1)%stencil%size, 1:1))
-    if(this%mesh%sb%nonorthogonal) then
+    if(this%mesh%sb%latt%nonorthogonal) then
       call stencil_stargeneral_pol_lapl(op(1)%stencil, this%dim, order, polynomials)
     else
       call stencil_star_polynomials_lapl(this%dim, order, polynomials)

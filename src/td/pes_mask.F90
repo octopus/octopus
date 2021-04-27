@@ -52,6 +52,7 @@ module pes_mask_oct_m
   use qshep_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use sort_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
@@ -176,13 +177,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_mask_init(mask, namespace, mesh, sb, st, hm, max_iter,dt)
+  subroutine pes_mask_init(mask, namespace, space, mesh, sb, st, hm, max_iter,dt)
     type(pes_mask_t),         intent(out) :: mask
     type(namespace_t),        intent(in)  :: namespace
+    type(space_t),            intent(in)  :: space
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_elec_t),      intent(in)  :: st
-    type(hamiltonian_elec_t),      intent(in)  :: hm
+    type(hamiltonian_elec_t), intent(in)  :: hm
     integer,                  intent(in)  :: max_iter
     FLOAT,                    intent(in)  :: dt
     
@@ -202,7 +204,7 @@ contains
         
     mask%mesh => mesh  
     
-    if(simul_box_is_periodic(sb)) &
+    if (space%is_periodic()) &
       call messages_experimental("PES_mask with periodic dimensions")
     
     
@@ -210,7 +212,7 @@ contains
     call messages_info(1)
     
     
-    if(sb%box_shape /= SPHERE .and. .not. simul_box_is_periodic(sb)) then
+    if(sb%box_shape /= SPHERE .and. .not. space%is_periodic()) then
       message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
       message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
       call messages_warning(2, namespace=namespace)
@@ -356,11 +358,11 @@ contains
     
     if ( mask%enlarge(1) /= M_ONE ) then
 
-      mask%enlarge(sb%periodic_dim+1:sb%dim) = mask%enlarge(1)
-      mask%enlarge(1:sb%periodic_dim) = M_ONE
+      mask%enlarge(space%periodic_dim + 1:space%dim) = mask%enlarge(1)
+      mask%enlarge(1:space%periodic_dim) = M_ONE
       
-      if(sb%periodic_dim > 0) then
-        call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge(1:sb%dim))
+      if (space%is_periodic()) then
+        call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge(1:space%dim))
       else
         call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge(1))
       end if
@@ -394,11 +396,11 @@ contains
     
     if ( mask%enlarge_2p(1) /= M_ONE ) then
 
-      mask%enlarge_2p(sb%periodic_dim+1:sb%dim) = mask%enlarge_2p(1)
-      mask%enlarge_2p(1:sb%periodic_dim) = M_ONE
+      mask%enlarge_2p(space%periodic_dim + 1:space%dim) = mask%enlarge_2p(1)
+      mask%enlarge_2p(1:space%periodic_dim) = M_ONE
 
-      if(sb%periodic_dim > 0) then
-        call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1:sb%dim))
+      if (space%is_periodic()) then
+        call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1:space%dim))
       else
         call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p(1))
       end if
@@ -421,13 +423,8 @@ contains
     mask%ll = 1
     mask%spacing = -M_ONE
     
-    if(sb%mr_flag) then ! multiresolution 
-      mask%spacing(1:sb%dim) = mesh%spacing(1:sb%dim)*2**(sb%hr_area%num_radii)       
-      mask%ll(1:sb%dim) = int(M_TWO*sb%rsize/mask%spacing(1:sb%dim)) + 1
-    else 
-      mask%spacing(1:3) = mesh%spacing(1:3)
-      mask%ll(1:3) = mesh%idx%ll(1:3)    
-    end if
+    mask%spacing(1:3) = mesh%spacing(1:3)
+    mask%ll(1:3) = mesh%idx%ll(1:3)    
     
     !Enlarge the cube region
     mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge(1:sb%dim))
@@ -745,12 +742,12 @@ contains
     SAFE_ALLOCATE(mask%vec_pot(0:max_iter,1:3))
     mask%vec_pot=M_ZERO
 
-    do il = 1, hm%ep%no_lasers
-      select case(laser_kind(hm%ep%lasers(il)))
+    do il = 1, hm%ext_lasers%no_lasers
+      select case(laser_kind(hm%ext_lasers%lasers(il)))
       case(E_FIELD_VECTOR_POTENTIAL)
         do it = 1, max_iter
           field=M_ZERO
-          call laser_field(hm%ep%lasers(il), field, it*dt)
+          call laser_field(hm%ext_lasers%lasers(il), field, it*dt)
           ! We must sum with a -1 sign to account for the 
           ! electron charge.
           mask%vec_pot(it,:)= mask%vec_pot(it,:) - field(:)           
@@ -820,7 +817,7 @@ contains
     dim = mask%mesh%sb%dim
 
     do ii = 1, maxval(mask%ll(:))
-      mask%Lk(ii,1:dim)= matmul(sb%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
+      mask%Lk(ii,1:dim)= matmul(sb%latt%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
     end do
 
     POP_SUB(pes_mask_generate_Lk)
@@ -1062,9 +1059,11 @@ contains
   !!  with 
   !!
   ! ---------------------------------------------------------
-  subroutine pes_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf, ikpoint)
+  subroutine pes_mask_Volkov_time_evolution_wf(mask, space, mesh, kpoints, dt, iter, wf, ikpoint)
     type(pes_mask_t), intent(in)    :: mask
+    type(space_t),    intent(in)    :: space
     type(mesh_t),     intent(in)    :: mesh
+    type(kpoints_t),  intent(in)    :: kpoints
     FLOAT,            intent(in)    :: dt
     integer,          intent(in)    :: iter
     CMPLX,            intent(inout) :: wf(:,:,:)
@@ -1077,8 +1076,8 @@ contains
     PUSH_SUB(pes_mask_Volkov_time_evolution_wf)
 
     kpoint = M_ZERO
-    if(mesh%sb%periodic_dim > 0) then
-      kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, ikpoint)
+    if (space%is_periodic()) then
+      kpoint(1:mesh%sb%dim) = kpoints%get_point(ikpoint)
     end if
   
     do ix = 1, mask%ll(1)
@@ -1293,11 +1292,13 @@ contains
   !            Performs all the dirty work 
   !
   !---------------------------------------------------------
-  subroutine pes_mask_calc(mask, namespace, mesh, st, dt, iter)
+  subroutine pes_mask_calc(mask, namespace, space, mesh, st, kpoints, dt, iter)
     type(pes_mask_t),    intent(inout) :: mask
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
+    type(kpoints_t),     intent(in)    :: kpoints
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
@@ -1364,8 +1365,8 @@ contains
               
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
-              call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
-                                                     states_elec_dim_get_kpoint_index(st%d, ik))
+              call pes_mask_Volkov_time_evolution_wf(mask, space, mesh, kpoints, dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
+                                                     st%d%get_kpoint_index(ik))
                                                      
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                 + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)

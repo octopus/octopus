@@ -38,6 +38,7 @@ module states_elec_io_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -61,10 +62,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
+  subroutine states_elec_write_eigenvalues(iunit, nst, st, space, kpoints, error, st_start, compact)
     integer,             intent(in) :: iunit, nst
     type(states_elec_t), intent(in) :: st
-    type(simul_box_t),   intent(in) :: sb
+    type(space_t),       intent(in) :: space
+    type(kpoints_t),     intent(in) :: kpoints
     FLOAT, optional,     intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional,   intent(in) :: st_start
     logical, optional,   intent(in) :: compact
@@ -115,14 +117,14 @@ contains
       call messages_info(1, iunit)
 
       do ik = 1, st%d%nik, ns
-        if(simul_box_is_periodic(sb)) then
-          ikk = states_elec_dim_get_kpoint_index(st%d, ik)
-          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
+        if (space%is_periodic()) then
+          ikk = st%d%get_kpoint_index(ik)
+          kpoint(1:space%dim) = kpoints%get_point(ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
-          do idir = 1, sb%dim
+          do idir = 1, space%dim
             write(tmp_str(1), '(f10.6)') kpoint(idir)
             message(1) = trim(message(1))//trim(tmp_str(1))
-            if(idir < sb%dim) message(1) = trim(message(1))//','
+            if(idir < space%dim) message(1) = trim(message(1))//','
           end do
           message(1) = trim(message(1))//')'
           call messages_info(1, iunit)
@@ -186,7 +188,7 @@ contains
       
       tmp_str(1) = '#  State'
 
-      if(sb%periodic_dim > 0) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
+      if (space%is_periodic()) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
 
       if(st%d%ispin  ==  SPIN_POLARIZED) tmp_str(1) = trim(tmp_str(1))//'  Spin'
 
@@ -208,8 +210,8 @@ contains
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
-        ik = states_elec_dim_get_kpoint_index(st%d, iqn)
-        is = states_elec_dim_get_spin_index(st%d, iqn)
+        ik = st%d%get_kpoint_index(iqn)
+        is = st%d%get_spin_index(iqn)
 
         print_eigenval = iflat <= print_range
         print_eigenval = print_eigenval .or. st%d%nik*nst - iflat < print_range
@@ -239,7 +241,7 @@ contains
 
           write(tmp_str(1), '(i7)') ist
 
-          if(sb%periodic_dim > 0) then
+          if (space%is_periodic()) then
             write(tmp_str(1), '(2a,i7)') trim(tmp_str(1)), ' ', ik
           end if
 
@@ -325,7 +327,7 @@ contains
         ien = nint((flat_eigenval(iev) - emin)/de) + 1
         ASSERT(ien >= 1)
         ASSERT(ien <= ndiv)
-        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
+        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*kpoints%full%npoints
       end do
 
       !normalize
@@ -363,10 +365,10 @@ contains
   end subroutine states_elec_write_eigenvalues
 
   ! ---------------------------------------------------------
-  subroutine states_elec_write_gaps(iunit, st, sb)
+  subroutine states_elec_write_gaps(iunit, st, space)
     integer,             intent(in) :: iunit
     type(states_elec_t), intent(in) :: st
-    type(simul_box_t),   intent(in) :: sb
+    type(space_t),       intent(in) :: space
     
     integer :: ik, ist
 
@@ -376,7 +378,7 @@ contains
     PUSH_SUB(states_elec_write_gaps)
 
     if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
-     .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+     .or. .not. space%is_periodic() .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
       POP_SUB(states_elec_write_gaps)
       return
     end if
@@ -636,15 +638,17 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
-    character(len=*),         intent(in)      :: dir
-    type(namespace_t),        intent(in)      :: namespace
-    integer,                  intent(in)      :: nst
-    type(states_elec_t),      intent(in)      :: st
-    type(simul_box_t),        intent(in)      :: sb
-    type(geometry_t), target, intent(in)      :: geo
-    type(mesh_t),             intent(in)      :: mesh
-    CMPLX, pointer                            :: phase(:, :)
+  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, kpoints, &
+                                              phase, vec_pot, vec_pot_var)
+    character(len=*),             intent(in)  :: dir
+    type(namespace_t),            intent(in)  :: namespace
+    integer,                      intent(in)  :: nst
+    type(states_elec_t),          intent(in)  :: st
+    type(simul_box_t),            intent(in)  :: sb
+    type(geometry_t), target,     intent(in)  :: geo
+    type(mesh_t),                 intent(in)  :: mesh
+    type(kpoints_t),              intent(in)  :: kpoints
+    CMPLX,           allocatable, intent(in)  :: phase(:, :)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -711,7 +715,7 @@ contains
       end do
     end if
  
-    npath = kpoints_nkpt_in_path(sb%kpoints)*ns
+    npath = kpoints_nkpt_in_path(kpoints)*ns
 
 
     !We need to compute the projections of each wavefunctions on the localized basis
@@ -768,12 +772,12 @@ contains
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim, &
-                                                use_mesh =.not.associated(phase) .and. .not.os%submesh, &
+                                                use_mesh =.not.allocated(phase) .and. .not.os%submesh, &
                                                 normalize = .true.)
             end if
           end do !iorb
 
-          if(associated(phase)) then
+          if (allocated(phase)) then
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
@@ -784,7 +788,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb%dim, st%d%kpt, kpoints, (st%d%ispin==SPIN_POLARIZED), &
                               vec_pot, vec_pot_var)
           end if
 
@@ -807,11 +811,11 @@ contains
               end do
             else
               call states_elec_get_state(st, mesh, ist, ik, zpsi )
-              if(associated(phase)) then
+              if (allocated(phase)) then
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                 call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, allocated(phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -829,7 +833,7 @@ contains
        end do !norb
 
        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
+         call comm_allreduce(st%st_kpt_mpi_grp, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
        end if
      end do !ia
 
@@ -842,16 +846,14 @@ contains
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
-                                                   absolute_coordinates=.false.)
+        red_kpoint(1:sb%dim) = kpoints%get_point(st%d%get_kpoint_index(ik + is), absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         if(st%d%nik > npath) then
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is) &
-                                              -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, & 
+                              st%d%get_kpoint_index(ik + is)-st%d%get_kpoint_index(st%d%nik -npath)) 
         else
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is))
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(kpoints, &
+                                               st%d%get_kpoint_index(ik + is))
         end if
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)

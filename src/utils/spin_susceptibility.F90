@@ -33,7 +33,6 @@ program spin_susceptibility
   use profiling_oct_m
   use space_oct_m
   use spectrum_oct_m
-  use simul_box_oct_m
   use unit_oct_m
   use unit_system_oct_m
 

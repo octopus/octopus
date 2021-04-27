@@ -103,8 +103,8 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
  
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
   end if
@@ -175,7 +175,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     end do
   end do
 
-  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm, beta)
+  if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(beta)
 
   ! According to Johnson (1988), w0 is chosen as 0.01. Because we do not
   ! normalize the components, we need to choose w0 differently. Its purpose
@@ -206,7 +206,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
         work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l), reduce = .false.)
       end do
     end do
-    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  work(i))
+    if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(work(i))
   end do
 
   ! linear mixing term
@@ -271,8 +271,8 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
 
    call lalg_copy(d1, d2, d3, f(:, :, :), mf%X(df)(:, :, :, ipos))
    call lalg_copy(d1, d2, d3, mf%X(vin)(:, :, :), mf%X(dv)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), mf%X(f_old)(:, :, :), mf%X(df)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), mf%X(vin_old)(:, :, :), mf%X(dv)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, -M_ONE, mf%X(f_old)(:, :, :), mf%X(df)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, -M_ONE, mf%X(vin_old)(:, :, :), mf%X(dv)(:, :, :, ipos))
   end if
 
   ! Store residual and vin for next iteration
@@ -378,7 +378,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
       aa(jj, ii) = R_CONJ(aa(ii, jj))
     end do
   end do
-  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  aa)
+  if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(aa)
 
   aa(1:size, size + 1) = CNST(-1.0)
   aa(size + 1, 1:size) = CNST(-1.0)
@@ -433,8 +433,8 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter)
       ipos = smix%last_ipos
       call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
       call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
-      call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     end if
     
     ! Store residual and vin for next extrapolation
@@ -449,8 +449,8 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter)
     ipos = mod(smix%last_ipos, smix%ns + 1) + 1
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
-    call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(f_old)(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
 
@@ -493,7 +493,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
           a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i), reduce = .false.)
         end do
       end do
-      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  a(i, j))
+      if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(a(i, j))
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
@@ -517,7 +517,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
         end do
       end do
     end do
-    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  alpha)
+    if(this%der%mesh%parallel_in_domains) call this%der%mesh%allreduce(alpha)
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
 

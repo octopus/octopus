@@ -35,6 +35,12 @@ module space_oct_m
   type space_t
     ! Components are public by default
     integer :: dim
+    integer :: periodic_dim = 0
+
+  contains
+    procedure :: is_periodic => space_is_periodic
+    procedure :: write_info => space_write_info
+    procedure :: short_info => space_short_info
   end type space_t
 
 contains
@@ -46,7 +52,7 @@ contains
 
     integer, parameter :: default_ndim = 3
 
-    PUSH_SUB(space_init_simple)
+    PUSH_SUB(space_init)
     
     !%Variable Dimensions
     !%Type integer
@@ -60,8 +66,68 @@ contains
     call parse_variable(namespace, 'Dimensions', default_ndim, this%dim)
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error(namespace, 'Dimensions')
 
-    POP_SUB(space_init_simple)
+    !%Variable PeriodicDimensions
+    !%Type integer
+    !%Default 0
+    !%Section System
+    !%Description
+    !% Define how many directions are to be considered periodic. It has to be a number
+    !% between zero and <tt>Dimensions</tt>.
+    !%Option 0
+    !% No direction is periodic (molecule).
+    !%Option 1
+    !% The <i>x</i> direction is periodic.
+    !%Option 2
+    !% The <i>x</i> and <i>y</i> directions are periodic.
+    !%Option 3
+    !% The <i>x</i>, <i>y</i>, and <i>z</i> directions are periodic.
+    !%End
+    call parse_variable(namespace, 'PeriodicDimensions', 0, this%periodic_dim)
+
+    if ((this%periodic_dim < 0) .or. (this%periodic_dim > MAX_DIM) .or. (this%periodic_dim > this%dim)) then
+      call messages_input_error(namespace, 'PeriodicDimensions')
+    end if
+
+    POP_SUB(space_init)
   end subroutine space_init
+
+  !--------------------------------------------------------------
+  logical pure function space_is_periodic(this)
+    class(space_t), intent(in) :: this
+
+    space_is_periodic = this%periodic_dim > 0
+
+  end function space_is_periodic
+
+  !--------------------------------------------------------------
+  subroutine space_write_info(this, iunit)
+    class(space_t), intent(in) :: this
+    integer,        intent(in) :: iunit
+
+    PUSH_SUB(space_write_info)
+
+    call messages_print_stress(iunit, "Space")
+
+    write(message(1), '(a,i1,a)') 'Octopus will run in ', this%dim, ' dimension(s).'
+    write(message(2), '(a,i1,a)') 'Octopus will treat the system as periodic in ', this%periodic_dim, ' dimension(s).'
+    call messages_info(2, iunit)
+
+    call messages_print_stress(iunit)
+
+    POP_SUB(space_write_info)
+  end subroutine space_write_info
+
+  !--------------------------------------------------------------
+  character(len=40) function space_short_info(this) result(info)
+    class(space_t), intent(in) :: this
+
+    PUSH_SUB(space_short_info)
+
+    write(info, '(a,i1,a,i1)') 'Dimensions = ', this%dim, '; PeriodicDimensions = ', this%periodic_dim
+
+    POP_SUB(space_short_info)
+  end function space_short_info
+
 
 end module space_oct_m
 

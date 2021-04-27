@@ -318,7 +318,7 @@ module scalapack_oct_m
       integer,             intent(out)   :: nz
       real(8),             intent(in)    :: w
       real(8),             intent(in)    :: orfac
-      real(8),             intent(inout) :: z
+      real(8),             intent(out)   :: z
       integer,             intent(in)    :: iz
       integer,             intent(in)    :: jz
       integer,             intent(in)    :: descz
@@ -369,7 +369,7 @@ module scalapack_oct_m
       integer,             intent(out)   :: nz
       real(8),             intent(in)    :: w
       real(8),             intent(in)    :: orfac
-      complex(8),          intent(inout) :: z
+      complex(8),          intent(out)   :: z
       integer,             intent(in)    :: iz
       integer,             intent(in)    :: jz
       integer,             intent(in)    :: descz

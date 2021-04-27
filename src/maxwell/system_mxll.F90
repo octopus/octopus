@@ -32,6 +32,7 @@ module system_mxll_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use iso_c_binding
+  use lattice_vectors_oct_m
   use loct_oct_m
   use lorentz_force_oct_m
   use maxwell_boundary_op_oct_m
@@ -74,10 +75,10 @@ module system_mxll_oct_m
     MULTIGRID_MX_TO_MA_LARGE   = 2
 
   type, extends(system_t) :: system_mxll_t
-    type(states_mxll_t), pointer :: st    !< the states
+    type(states_mxll_t)          :: st    !< the states
     type(hamiltonian_mxll_t)     :: hm
     type(geometry_t)             :: geo
-    type(grid_t),        pointer :: gr    !< the mesh
+    type(grid_t)                 :: gr    !< the mesh
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
 
@@ -134,8 +135,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_mxll_init(this, namespace)
-    class(system_mxll_t), intent(inout) :: this
-    type(namespace_t),    intent(in)    :: namespace
+    class(system_mxll_t), target, intent(inout) :: this
+    type(namespace_t),            intent(in)    :: namespace
 
     type(profile_t), save :: prof
 
@@ -145,24 +146,23 @@ contains
 
     this%namespace = namespace
 
-    SAFE_ALLOCATE(this%gr)
-    SAFE_ALLOCATE(this%st)
-
     call messages_obsolete_variable(this%namespace, 'SystemName')
     call space_init(this%space, this%namespace)
+    if(this%space%periodic_dim > 0) then
+      call messages_not_implemented('Maxwell for periodic systems')
+    end if
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
 
     nullify(this%geo%space)
+    this%geo%space => this%space
     this%geo%natoms = 0
     this%geo%ncatoms = 0
     this%geo%nspecies = 0
     this%geo%only_user_def = .false.
     this%geo%kinetic_energy = M_ZERO
     call distributed_nullify(this%geo%atoms_dist, 0)
-    this%geo%reduced_coordinates = .false.
-    this%geo%periodic_dim = 0
-    this%geo%lsize = M_ZERO
+    this%geo%latt = lattice_vectors_t(this%namespace, this%space)
 
     call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
     call states_mxll_init(this%st, this%namespace, this%gr)
@@ -220,7 +220,7 @@ contains
     call multicomm_init(this%mc, this%namespace, mpi_world, calc_mode_par_parallel_mask(), &
          &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call grid_init_stage_2(this%gr, this%namespace, this%mc)
+    call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)
     call output_mxll_init(this%outp, this%namespace, this%gr%sb)
     call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
 
@@ -355,7 +355,8 @@ contains
       call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
            this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
            set_initial_state = .true.)
-      this%st%rs_state_const(:) = this%st%rs_state(index_from_coords(this%gr%mesh%idx, [0,0,0]),:)
+      ! for mesh parallelization, this needs communication!
+      this%st%rs_state_const(:) = this%st%rs_state(mesh_global_index_from_coords(this%gr%mesh, [0,0,0]),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
@@ -546,9 +547,8 @@ contains
     class(system_mxll_t),       intent(inout) :: partner
     class(interaction_t),       intent(inout) :: interaction
 
+    integer :: ip
     CMPLX :: interpolated_value(3)
-    FLOAT :: e_field(3)
-    FLOAT :: b_field(3)
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
@@ -557,16 +557,17 @@ contains
 
     select type (interaction)
     type is (lorentz_force_t)
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
-        interaction%system_pos, interpolated_value(1))
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
-        interaction%system_pos, interpolated_value(2))
-      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
-        interaction%system_pos, interpolated_value(3))
-      call get_electric_field_vector(interpolated_value, e_field)
-      call get_magnetic_field_vector(interpolated_value, 1, b_field)
-      interaction%partner_E_field = e_field
-      interaction%partner_B_field = b_field
+      do ip = 1, interaction%system_np
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
+          interaction%system_pos(:, ip), interpolated_value(1))
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
+          interaction%system_pos(:, ip), interpolated_value(2))
+        call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
+          interaction%system_pos(:, ip), interpolated_value(3))
+        call get_electric_field_vector(interpolated_value, interaction%partner_E_field(:, ip))
+        call get_magnetic_field_vector(interpolated_value, 1, interaction%partner_B_field(:, ip))
+      end do
+
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -661,15 +662,10 @@ contains
 
     call multicomm_end(this%mc)
 
-    if(associated(this%st)) then
-      call states_mxll_end(this%st)
-      SAFE_DEALLOCATE_P(this%st)
-    end if
+    call states_mxll_end(this%st)
 
     call simul_box_end(this%gr%sb)
     call grid_end(this%gr)
-
-    SAFE_DEALLOCATE_P(this%gr)
 
     call profiling_out(prof)
 

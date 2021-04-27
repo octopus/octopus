@@ -160,14 +160,14 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
+    call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
         elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
-      do is = 1, 2
+      do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
@@ -177,7 +177,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call dos_init(dos, namespace, st, gr%sb)
+    call dos_init(dos, namespace, st, hm%kpoints)
     call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, namespace)
   end if
 
@@ -199,12 +199,13 @@ end subroutine output_states
 
 
 ! ---------------------------------------------------------
-subroutine output_current_flow(outp, namespace, dir, gr, st)
+subroutine output_current_flow(outp, namespace, dir, gr, st, kpoints)
   type(output_t),       intent(in) :: outp
   type(namespace_t),    intent(in) :: namespace
   character(len=*),     intent(in) :: dir
   type(grid_t),         intent(in) :: gr
   type(states_elec_t),  intent(in) :: st
+  type(kpoints_t),      intent(in) :: kpoints
 
   integer :: iunit, ip, idir, rankmin
   FLOAT   :: flow, dmin
@@ -253,7 +254,7 @@ subroutine output_current_flow(outp, namespace, dir, gr, st)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
-    call states_elec_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
+    call states_elec_calc_quantities(gr%der, st, kpoints, .false., paramagnetic_current = j)
 
     do idir = 1, gr%sb%dim
       do ip = 1, gr%mesh%np

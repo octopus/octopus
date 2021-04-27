@@ -55,7 +55,6 @@ program oct_floquet
   integer :: ierr
 
   type(electrons_t), pointer :: sys
-  type(simul_box_t) :: sb
   type(states_elec_t) :: st
   type(grid_t)   :: gr
   CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
@@ -92,7 +91,6 @@ program oct_floquet
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   sys => electrons_t(global_namespace)
   call sys%init_parallelization(mpi_world)
-  call simul_box_init(sb, global_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
   gr = sys%gr
@@ -108,19 +106,19 @@ program oct_floquet
      call v_ks_calculate_current(sys%ks, .true.)
 
      ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
      call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
   end if
 
   call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-  if(ierr == 0) call states_elec_load(restart, global_namespace, st, gr, ierr, label = ": gs")
+  if(ierr == 0) call states_elec_load(restart, global_namespace, st, gr, sys%kpoints, ierr, label = ": gs")
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'
      call messages_fatal(1)
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, global_namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call v_ks_calc(sys%ks, global_namespace, sys%space, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
 
   call floquet_init()
@@ -133,7 +131,6 @@ program oct_floquet
   call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-  call simul_box_end(sb)
   call fft_all_end()
   SAFE_DEALLOCATE_P(sys)
   call profiling_end(global_namespace)
@@ -152,7 +149,7 @@ contains
       PUSH_SUB(floquet_init)
 
       !for now no domain distribution allowed
-      ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
+      ASSERT(gr%mesh%np == gr%mesh%np_global)
 
       ! variables documented in td/td_write.F90
       call parse_variable(global_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
@@ -194,7 +191,7 @@ contains
 
     PUSH_SUB(floquet_solve_non_interacting)
 
-    mesh = gr%der%mesh
+    mesh = gr%mesh
     nst = st%nst
     
     SAFE_ALLOCATE(hmss(1:nst,1:nst))
@@ -206,7 +203,7 @@ contains
     call states_elec_copy(hm_st, st)
 
     ! we are only interested for k-point with zero weight
-    nik=gr%sb%kpoints%nik_skip
+    nik = sys%kpoints%nik_skip
 
     ! multiphoton Floquet Hamiltonian, layout:
     !     (H_{-n,-m} ...  H_{-n,0} ...  H_{-n,m}) 
@@ -227,27 +224,27 @@ contains
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0
 
-      do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+      do ik = sys%kpoints%reduced%npoints-nik+1, sys%kpoints%reduced%npoints
         ik_count = ik_count + 1
 
         psi(1:nst, 1:st%d%dim, 1:mesh%np)= M_ZERO
         hpsi(1:nst, 1:st%d%dim, 1:mesh%np)= M_ZERO
 
-        do ist=st%st_start,st%st_end
+        do ist = st%st_start, st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
             call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
-            do idim = 1,st%d%dim
-              psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
+            do idim = 1, st%d%dim
+              psi(ist, idim, 1:mesh%np) = temp_state1(1:mesh%np, idim)
             end do
             call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
-            do idim = 1,st%d%dim
-              hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
+            do idim = 1, st%d%dim
+              hpsi(ist, idim, 1:mesh%np) = temp_state1(1:mesh%np, idim)
             end do
           end if
         end do
-        call comm_allreduce(mpi_world%comm, psi)
-        call comm_allreduce(mpi_world%comm, hpsi)
-        hmss(1:nst,1:nst) = M_ZERO
+        call comm_allreduce(mpi_world, psi)
+        call comm_allreduce(mpi_world, hpsi)
+        hmss(1:nst, 1:nst) = M_ZERO
         call zgemm( 'n',                                  &
                     'c',                                  &
                     nst,                                  &

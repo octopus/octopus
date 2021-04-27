@@ -36,23 +36,22 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
+subroutine X(oep_x) (namespace, mesh, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
   type(namespace_t),           intent(in)    :: namespace
-  type(derivatives_t),         intent(in)    :: der
+  type(mesh_t),                intent(in)    :: mesh
   type(poisson_t),             intent(in)    :: psolver
   type(states_elec_t), target, intent(in)    :: st
   integer,                     intent(in)    :: is
   integer,                     intent(in)    :: jdm
-  R_TYPE,                      intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
+  R_TYPE,                      intent(inout) :: lxc(:, st%st_start:, :) !< (1:mesh%np, :st%st_end, nspin)
   FLOAT,                       intent(inout) :: ex
   FLOAT,                       intent(in)    :: exx_coef !< amount of EXX (for hybrids)
-  R_TYPE,            optional, intent(out)   :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
+  R_TYPE,            optional, intent(out)   :: F_out(:,:,:) !< (1:mesh%np, 1:st%nst, 1:st%nst) 
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: rr, socc
-  R_TYPE, pointer     :: send_buffer(:)
-  R_TYPE, allocatable :: rho_ij(:), F_ij(:), psi(:), wf_ist(:)
+  R_TYPE, allocatable :: send_buffer(:), rho_ij(:), F_ij(:), psi(:), wf_ist(:)
 
 #if defined(HAVE_MPI)
   integer :: send_req, status(MPI_STATUS_SIZE)
@@ -60,9 +59,6 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
 
   call profiling_in(C_PROFILING_XC_EXX, TOSTRING(X(XC_EXX)))
   PUSH_SUB(X(oep_x))
-
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) &
-    call messages_not_implemented("exchange operator with k-points", namespace=namespace)
 
   socc = M_ONE / st%smear%el_per_state
   !
@@ -77,13 +73,13 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   end if 
   ! Note: we assume that st%occ is known in all nodes
 
-  SAFE_ALLOCATE(F_ij(1:der%mesh%np))
-  SAFE_ALLOCATE(rho_ij(1:der%mesh%np))
-  SAFE_ALLOCATE(send_buffer(1:der%mesh%np))
+  SAFE_ALLOCATE(F_ij(1:mesh%np))
+  SAFE_ALLOCATE(rho_ij(1:mesh%np))
+  SAFE_ALLOCATE(send_buffer(1:mesh%np))
   SAFE_ALLOCATE(recv_stack(1:st%nst+1))
   SAFE_ALLOCATE(send_stack(1:st%nst+1))
-  SAFE_ALLOCATE(psi(1:der%mesh%np))
-  SAFE_ALLOCATE(wf_ist(1:der%mesh%np))
+  SAFE_ALLOCATE(psi(1:mesh%np))
+  SAFE_ALLOCATE(wf_ist(1:mesh%np))
 
   ! This is the maximum number of blocks for each processor
   i_max = int((st%mpi_grp%size + 2)/2) - 1
@@ -134,8 +130,8 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
         ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to /= st%mpi_grp%rank)) then
-          call states_elec_get_state(st, der%mesh, jdm, send_stack(ist_s), isp, psi)
-          call MPI_Isend(psi, der%mesh%np, R_MPITYPE, &
+          call states_elec_get_state(st, mesh, jdm, send_stack(ist_s), isp, psi)
+          call MPI_Isend(psi, mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
       end if
@@ -147,11 +143,11 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
       ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
-          call states_elec_get_state(st, der%mesh, jdm, send_stack(ist_r), isp, wf_ist)
+          call states_elec_get_state(st, mesh, jdm, send_stack(ist_r), isp, wf_ist)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
-            call MPI_Recv(wf_ist, der%mesh%np, R_MPITYPE, &
+            call MPI_Recv(wf_ist, mesh%np, R_MPITYPE, &
               node_fr, recv_stack(ist_r), st%mpi_grp%comm, status, mpi_err)
           end if
 #endif
@@ -168,15 +164,15 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
       if(recv_stack(ist_r) > 0) then
         ! this is where we calculate the elements of the matrix
         ist = recv_stack(ist_r)
-        send_buffer(1:der%mesh%np) = R_TOTYPE(M_ZERO)
+        send_buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
 
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
-          call states_elec_get_state(st, der%mesh, jdm, jst, isp, psi)
-          rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np))*psi(1:der%mesh%np)
-          F_ij(1:der%mesh%np) = R_TOTYPE(M_ZERO)
+          call states_elec_get_state(st, mesh, jdm, jst, isp, psi)
+          rho_ij(1:mesh%np) = R_CONJ(wf_ist(1:mesh%np))*psi(1:mesh%np)
+          F_ij(1:mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
 
           !for rdmft we need the matrix elements and no summation
@@ -185,16 +181,16 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
             cycle
           end if
 
-          ! this quantity has to be added to lxc(1:der%mesh%np, ist)
-          call states_elec_get_state(st, der%mesh, idm, jst, isp, psi)
-          send_buffer(1:der%mesh%np) = send_buffer(1:der%mesh%np) + &
-            socc*st%occ(jst, isp)*F_ij(1:der%mesh%np)*R_CONJ(psi(1:der%mesh%np))
+          ! this quantity has to be added to lxc(1:mesh%np, ist)
+          call states_elec_get_state(st, mesh, idm, jst, isp, psi)
+          send_buffer(1:mesh%np) = send_buffer(1:mesh%np) + &
+            socc*st%occ(jst, isp)*F_ij(1:mesh%np)*R_CONJ(psi(1:mesh%np))
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
           if((ist /= jst).and..not.(st%d%ispin==SPINORS)) then
-            lxc(1:der%mesh%np, jst, is) = lxc(1:der%mesh%np, jst, is) - &
-              exx_coef * socc * st%occ(ist, isp) * R_CONJ(F_ij(1:der%mesh%np)*wf_ist(1:der%mesh%np))
+            lxc(1:mesh%np, jst, is) = lxc(1:mesh%np, jst, is) - &
+              exx_coef * socc * st%occ(ist, isp) * R_CONJ(F_ij(1:mesh%np)*wf_ist(1:mesh%np))
           end if
           ! get the contribution (ist, jst) to the exchange energy
           rr = M_ONE
@@ -202,18 +198,18 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
 
           ex = ex - exx_coef* M_HALF * rr * &
               st%occ(ist, isp) * socc*st%occ(jst, isp) * &
-              R_REAL(X(mf_dotp)(der%mesh, rho_ij(:), F_ij(:)))
+              R_REAL(X(mf_dotp)(mesh, rho_ij(:), F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
           ! either add the contribution ist
-          lxc(1:der%mesh%np, ist, is) = lxc(1:der%mesh%np, ist, is) - exx_coef * send_buffer(1:der%mesh%np)
+          lxc(1:mesh%np, ist, is) = lxc(1:mesh%np, ist, is) - exx_coef * send_buffer(1:mesh%np)
 
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
             ! or send it to the node that has wf ist
-            call MPI_Isend(send_buffer(1), der%mesh%np, R_MPITYPE, &
+            call MPI_Isend(send_buffer(1), mesh%np, R_MPITYPE, &
              node_fr, ist, st%mpi_grp%comm, send_req, mpi_err)
           end if
 #endif
@@ -226,11 +222,11 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
       ! which we sent the wavefunction ist
       if(st%parallel_in_states) then
         if((node_to >= 0) .and. (send_stack(ist_s) > 0) .and. (node_to /= st%mpi_grp%rank)) then
-          call MPI_Recv(psi(:), der%mesh%np, R_MPITYPE, &
+          call MPI_Recv(psi(:), mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
-          lxc(1:der%mesh%np, send_stack(ist_s), is) = lxc(1:der%mesh%np, send_stack(ist_s), is) - &
-            exx_coef * psi(1:der%mesh%np)
+          lxc(1:mesh%np, send_stack(ist_s), is) = lxc(1:mesh%np, send_stack(ist_s), is) - &
+            exx_coef * psi(1:mesh%np)
         end if
 
         if(send_req /= 0) call MPI_Wait(send_req, status, mpi_err)
@@ -254,7 +250,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   SAFE_DEALLOCATE_A(send_stack)
   SAFE_DEALLOCATE_A(F_ij)
   SAFE_DEALLOCATE_A(rho_ij)
-  SAFE_DEALLOCATE_P(send_buffer)
+  SAFE_DEALLOCATE_A(send_buffer)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(wf_ist)
 

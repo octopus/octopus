@@ -24,7 +24,7 @@ Precision: 3.22e-15
 match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 3.22481
 Precision: 5.23e-16
 match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; 0.523117
-Precision: 1.10e-13
+Precision: 3.e-13
 match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; 5.23777e-08
 
 

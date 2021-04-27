@@ -19,11 +19,14 @@
 #include "global.h"
 
 module box_sphere_oct_m
+  use box_oct_m
   use box_shape_oct_m
   use global_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -35,6 +38,8 @@ module box_sphere_oct_m
     FLOAT   :: radius !< the radius of the sphere
   contains
     procedure :: contains_points => box_sphere_contains_points
+    procedure :: write_info => box_sphere_write_info
+    procedure :: short_info => box_sphere_short_info
     final     :: box_sphere_finalize
   end type box_sphere_t
 
@@ -89,6 +94,34 @@ contains
     end do
 
   end function box_sphere_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_sphere_write_info(this, iunit)
+    class(box_sphere_t), intent(in) :: this
+    integer,             intent(in) :: iunit
+
+    PUSH_SUB(box_sphere_write_info)
+
+    write(message(1),'(2x,a)') 'Type = sphere'
+    write(message(2),'(2x,3a,f7.3)') 'Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
+      units_from_atomic(units_out%length, this%radius)
+    call messages_info(2, iunit)
+
+    POP_SUB(box_sphere_write_info)
+  end subroutine box_sphere_write_info
+
+  !--------------------------------------------------------------
+  character(len=BOX_INFO_LEN) function box_sphere_short_info(this, unit_length) result(info)
+    class(box_sphere_t), intent(in) :: this
+    type(unit_t),        intent(in) :: unit_length
+
+    PUSH_SUB(box_sphere_short_info)
+
+    write(info,'(a,f11.6,a,a)') 'BoxShape = sphere; Radius =', units_from_atomic(unit_length, this%radius), ' ', &
+      trim(units_abbrev(unit_length))
+
+    POP_SUB(box_sphere_short_info)
+  end function box_sphere_short_info
 
 end module box_sphere_oct_m
 

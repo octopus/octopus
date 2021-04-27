@@ -49,8 +49,8 @@ module lda_u_mixer_oct_m
     logical :: apply = .false.
     logical :: mixU = .false.
 
-    FLOAT, pointer :: dtmp_occ(:,:), tmpU(:,:)
-    CMPLX, pointer :: ztmp_occ(:,:)
+    FLOAT, allocatable :: dtmp_occ(:,:), tmpU(:,:)
+    CMPLX, allocatable :: ztmp_occ(:,:)
 
     type(mixfield_t)  :: mixfield_occ, mixfield_U
   end type lda_u_mixer_t
@@ -119,8 +119,6 @@ contains
      end if
    end if
 
-   nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
-
    if(states_are_real(st)) then
      SAFE_ALLOCATE(mixer%dtmp_occ(1:mixer%occsize, 1))
    else
@@ -156,9 +154,9 @@ contains
    if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_end)
   
-   SAFE_DEALLOCATE_P(mixer%dtmp_occ)
-   SAFE_DEALLOCATE_P(mixer%ztmp_occ)
-   SAFE_DEALLOCATE_P(mixer%tmpU)
+   SAFE_DEALLOCATE_A(mixer%dtmp_occ)
+   SAFE_DEALLOCATE_A(mixer%ztmp_occ)
+   SAFE_DEALLOCATE_A(mixer%tmpU)
 
    call mixfield_end(smix,mixer%mixfield_occ)
    if (mixer%mixU) call mixfield_end(smix, mixer%mixfield_U)

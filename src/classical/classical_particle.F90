@@ -21,6 +21,7 @@
 
 module classical_particle_oct_m
   use algorithm_oct_m
+  use classical_particles_oct_m
   use clock_oct_m
   use force_interaction_oct_m
   use global_oct_m
@@ -53,35 +54,18 @@ module classical_particle_oct_m
     classical_particle_t,    &
     classical_particle_init
 
-   type, extends(system_t) :: classical_particle_t
-    FLOAT :: mass
-    FLOAT :: pos(1:MAX_DIM)
-    FLOAT :: vel(1:MAX_DIM)
-    FLOAT :: acc(1:MAX_DIM)
-    FLOAT, allocatable :: prev_acc(:,:) !< A storage of the prior times.
-    FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT :: tot_force(1:MAX_DIM)
-    FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
-    FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
-    FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
-    FLOAT :: hamiltonian_elements(1:MAX_DIM)
-
+   type, extends(classical_particles_t) :: classical_particle_t
     type(c_ptr) :: output_handle
   contains
     procedure :: init_interaction => classical_particle_init_interaction
     procedure :: initial_conditions => classical_particle_initial_conditions
-    procedure :: do_td_operation => classical_particle_do_td
     procedure :: iteration_info => classical_particle_iteration_info
     procedure :: output_start => classical_particle_output_start
     procedure :: output_write => classical_particle_output_write
     procedure :: output_finish => classical_particle_output_finish
-    procedure :: is_tolerance_reached => classical_particle_is_tolerance_reached
     procedure :: update_quantity => classical_particle_update_quantity
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
-    procedure :: update_interactions_start => classical_particle_update_interactions_start
-    procedure :: update_interactions_finish => classical_particle_update_interactions_finish
     final :: classical_particle_finalize
   end type classical_particle_t
 
@@ -125,7 +109,11 @@ contains
 
     call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
 
-    call space_init(this%space, namespace)
+    call classical_particles_init(this, namespace, 1)
+
+    if (this%space%periodic_dim > 0) then
+      call messages_not_implemented('Classical particle for periodic systems')
+    end if
 
     !%Variable ParticleMass
     !%Type float
@@ -133,13 +121,9 @@ contains
     !%Description
     !% Mass of classical particle in Kg.
     !%End
-    call parse_variable(namespace, 'ParticleMass', M_ONE, this%mass)
-    call messages_print_var_value(stdout, 'ParticleMass', this%mass)
+    call parse_variable(namespace, 'ParticleMass', M_ONE, this%mass(1))
+    call messages_print_var_value(stdout, 'ParticleMass', this%mass(1))
 
-    this%quantities(POSITION)%required = .true.
-    this%quantities(VELOCITY)%required = .true.
-    this%quantities(POSITION)%protected = .true.
-    this%quantities(VELOCITY)%protected = .true.
     call this%supported_interactions%add(GRAVITY)
     call this%supported_interactions_as_partner%add(GRAVITY)
 
@@ -157,10 +141,9 @@ contains
 
     select type (interaction)
     type is (gravity_t)
-      call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
+      call interaction%init(this%space%dim, 1, this%quantities, this%mass, this%pos)
     class default
-      message(1) = "Trying to initialize an unsupported interaction by classical particles."
-      call messages_fatal(1)
+      call classical_particles_init_interaction(this, interaction)
     end select
 
     POP_SUB(classical_particle_init_interaction)
@@ -193,11 +176,11 @@ contains
       if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialPosition')
 
       do idir = 1, this%space%dim
-        call parse_block_float(blk, 0, idir - 1, this%pos(idir))
+        call parse_block_float(blk, 0, idir - 1, this%pos(idir, 1))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ParticleInitialPosition', this%pos(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialPosition', this%pos(1:this%space%dim, 1))
 
     !%Variable ParticleInitialVelocity
     !%Type block
@@ -210,191 +193,14 @@ contains
       n_rows = parse_block_n(blk)
       if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialVelocity')
       do idir = 1, this%space%dim
-        call parse_block_float(blk, 0, idir - 1, this%vel(idir))
+        call parse_block_float(blk, 0, idir - 1, this%vel(idir, 1))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim, 1))
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions
-
-  ! ---------------------------------------------------------
-  subroutine classical_particle_do_td(this, operation)
-    class(classical_particle_t),    intent(inout) :: this
-    class(algorithmic_operation_t), intent(in)    :: operation
-
-    integer :: ii, sdim
-    FLOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
-    FLOAT :: factor
-
-    PUSH_SUB(classical_particle_do_td)
-
-    sdim = this%space%dim
-
-    select case (operation%id)
-    case (SKIP)
-      ! Do nothing
-    case (STORE_CURRENT_STATUS)
-      this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
-      this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
-
-    case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1))
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-
-    case (VERLET_FINISH, BEEMAN_FINISH)
-      SAFE_DEALLOCATE_A(this%prev_acc)
-
-    case (VERLET_UPDATE_POS)
-      this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim)
-
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-
-    case (VERLET_COMPUTE_ACC, BEEMAN_COMPUTE_ACC)
-      do ii = size(this%prev_acc, dim=2) - 1, 1, -1
-        this%prev_acc(1:this%space%dim, ii + 1) = this%prev_acc(1:this%space%dim, ii)
-      end do
-      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-
-    case (VERLET_COMPUTE_VEL)
-      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
-        + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1) + this%acc(1:this%space%dim))
-
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-
-    case (BEEMAN_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 2))
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
-
-    case (BEEMAN_PREDICT_POS)
-      this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                                 * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
-
-      if (.not. this%prop%predictor_corrector) then
-        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      end if
-
-    case (BEEMAN_PREDICT_VEL)
-      this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
-        + M_ONE/CNST(6.0) * this%prop%dt * ( M_TWO * this%acc(1:this%space%dim) + &
-        CNST(5.0) * this%prev_acc(1:this%space%dim, 1) - this%prev_acc(1:this%space%dim, 2))
-
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-
-    case (BEEMAN_CORRECT_POS)
-      this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
-                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                                 * (this%acc(1:this%space%dim) + M_TWO * this%prev_acc(1:this%space%dim, 1))
-
-      ! We set it to the propagation time to avoid double increment
-      call this%quantities(POSITION)%clock%set_time(this%prop%clock)
-
-    case (BEEMAN_CORRECT_VEL)
-      this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%prev_acc(1:this%space%dim, 1))
-
-      ! We set it to the propagation time to avoid double increment
-      call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
-
-    case (EXPMID_START)
-      SAFE_ALLOCATE(this%prev_pos(1:sdim, 1))
-      SAFE_ALLOCATE(this%prev_vel(1:sdim, 1))
-      this%prev_pos(1:sdim, 1) = this%pos(1:sdim)
-      this%prev_vel(1:sdim, 1) = this%vel(1:sdim)
-
-    case (EXPMID_FINISH)
-      SAFE_DEALLOCATE_A(this%prev_pos)
-      SAFE_DEALLOCATE_A(this%prev_vel)
-
-    case (EXPMID_PREDICT_DT_2)
-      this%pos(1:sdim) = CNST(1.5)*this%save_pos(1:sdim) - &
-                         CNST(0.5)*this%prev_pos(1:sdim, 1)
-      this%vel(1:sdim) = CNST(1.5)*this%save_vel(1:sdim) - &
-                         CNST(0.5)*this%prev_vel(1:sdim, 1)
-      this%prev_pos(1:sdim, 1) = this%save_pos(1:sdim)
-      this%prev_vel(1:sdim, 1) = this%save_vel(1:sdim)
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-
-    case (UPDATE_HAMILTONIAN)
-      this%hamiltonian_elements(1:sdim) = this%tot_force(1:sdim) / (this%mass * this%pos(1:sdim))
-
-    case (EXPMID_PREDICT_DT)
-      SAFE_ALLOCATE(tmp_pos(1:sdim, 2))
-      SAFE_ALLOCATE(tmp_vel(1:sdim, 2))
-      ! apply exponential - at some point this could use the machinery of
-      !   exponential_apply (but this would require a lot of boilerplate code
-      !   like a Hamiltonian class etc)
-      ! save_pos/vel contain the state at t - this is the state we want to
-      !   apply the Hamiltonian to
-      tmp_pos(1:sdim, 1) = this%save_pos(1:sdim)
-      tmp_vel(1:sdim, 1) = this%save_vel(1:sdim)
-      this%pos(1:sdim) = this%save_pos(1:sdim)
-      this%vel(1:sdim) = this%save_vel(1:sdim)
-      ! compute exponential with Taylor expansion
-      factor = M_ONE
-      do ii = 1, 4
-        factor = factor * this%prop%dt / ii
-        ! apply hamiltonian
-        tmp_pos(1:sdim, 2) = tmp_vel(1:sdim, 1)
-        tmp_vel(1:sdim, 2) = this%hamiltonian_elements(1:sdim) * tmp_pos(1:sdim, 1)
-        ! swap temporary variables
-        tmp_pos(1:sdim, 1) = tmp_pos(1:sdim, 2)
-        tmp_vel(1:sdim, 1) = tmp_vel(1:sdim, 2)
-        ! accumulate components of Taylor expansion
-        this%pos(1:sdim) = this%pos(1:sdim) + factor * tmp_pos(1:sdim, 1)
-        this%vel(1:sdim) = this%vel(1:sdim) + factor * tmp_vel(1:sdim, 1)
-      end do
-      SAFE_DEALLOCATE_A(tmp_pos)
-      SAFE_DEALLOCATE_A(tmp_vel)
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-
-    case (EXPMID_CORRECT_DT_2)
-      ! only correct for dt/2 if not converged yet
-      if(.not. this%is_tolerance_reached(this%prop%scf_tol)) then
-        this%pos(1:sdim) = CNST(0.5)*(this%pos(1:sdim) + &
-                                      this%save_pos(1:sdim))
-        this%vel(1:sdim) = CNST(0.5)*(this%vel(1:sdim) + &
-                                      this%save_vel(1:sdim))
-        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      end if
-
-    case default
-      message(1) = "Unsupported TD operation."
-      call messages_fatal(1, namespace=this%namespace)
-    end select
-
-   POP_SUB(classical_particle_do_td)
-  end subroutine classical_particle_do_td
-
-  ! ---------------------------------------------------------
-  logical function classical_particle_is_tolerance_reached(this, tol) result(converged)
-    class(classical_particle_t),   intent(in)    :: this
-    FLOAT,                     intent(in)    :: tol
-
-    PUSH_SUB(classical_particle_is_tolerance_reached)
-
-    ! Here we put the criterion that acceleration change is below the tolerance
-    converged = .false.
-    if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
-      converged = .true.
-    end if
-
-    if (debug%info) then
-      write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
-        sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2))/this%mass, " and tolerance ", tol
-      call messages_info(1)
-    end if
-
-    POP_SUB(classical_particle_is_tolerance_reached)
-  end function classical_particle_is_tolerance_reached
 
   ! ---------------------------------------------------------
   subroutine classical_particle_iteration_info(this)
@@ -408,9 +214,9 @@ contains
     write(message(1),'(2X,A,1X,A)') "Classical particle:", trim(this%namespace%get())
 
     write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
-    write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
-    write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
-    write(message(4),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
+    write(message(2),fmt) "Coordinates: ", (this%pos(idir, 1), idir = 1, this%space%dim)
+    write(message(3),fmt) "Velocity:    ", (this%vel(idir, 1), idir = 1, this%space%dim)
+    write(message(4),fmt) "Force:       ", (this%tot_force(idir, 1), idir = 1, this%space%dim)
     write(message(5),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
     write(message(6),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
     call messages_info(6)
@@ -502,13 +308,13 @@ contains
     call write_iter_start(this%output_handle)
 
     ! Position
-    tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%pos(1:this%space%dim))
+    tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%pos(1:this%space%dim, 1))
     call write_iter_double(this%output_handle, tmp, this%space%dim)
     ! Velocity
-    tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim))
+    tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim, 1))
     call write_iter_double(this%output_handle, tmp, this%space%dim)
     ! Force
-    tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim))
+    tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim, 1))
     call write_iter_double(this%output_handle, tmp, this%space%dim)
 
     call write_iter_nl(this%output_handle)
@@ -527,13 +333,9 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      ! The classical particle has a mass, but it is not necessary to update it, as it does not change with time.
-      ! We still need to set its clock, so we set it to be in sync with the particle position.
-      call this%quantities(iq)%clock%set_time(this%quantities(POSITION)%clock)
     case default
-      message(1) = "Incompatible quantity."
-      call messages_fatal(1)
+      ! Other quantities should be handled by the parent class
+      call classical_particles_update_quantity(this, iq)
     end select
 
     POP_SUB(classical_particle_update_quantity)
@@ -550,13 +352,9 @@ contains
     ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      ! We still need to set its clock, so we set it to be in sync with the particle position.
-      call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
     case default
-      message(1) = "Incompatible quantity."
-      call messages_fatal(1)
+      ! Other quantities should be handled by the parent class
+      call classical_particles_update_exposed_quantity(partner, iq)
     end select
 
     POP_SUB(classical_particle_update_exposed_quantity)
@@ -571,8 +369,18 @@ contains
 
     select type (interaction)
     type is (gravity_t)
-      interaction%partner_mass = partner%mass
-      interaction%partner_pos = partner%pos
+      interaction%partner_np = 1
+
+      if (.not. allocated(interaction%partner_mass)) then
+        SAFE_ALLOCATE(interaction%partner_mass(1))
+      end if
+      interaction%partner_mass(1) = partner%mass(1)
+
+      if (.not. allocated(interaction%partner_pos)) then
+        SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
+      end if
+      interaction%partner_pos(:,1) = partner%pos(:,1)
+
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -582,45 +390,12 @@ contains
   end subroutine classical_particle_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_update_interactions_start(this)
-    class(classical_particle_t), intent(inout) :: this
-
-    PUSH_SUB(classical_particle_update_interactions_start)
-
-    ! Store previous force, as it is used as SCF criterium
-    this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
-
-    POP_SUB(classical_particle_update_interactions_start)
-  end subroutine classical_particle_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine classical_particle_update_interactions_finish(this)
-    class(classical_particle_t), intent(inout) :: this
-
-    type(interaction_iterator_t) :: iter
-
-    PUSH_SUB(classical_particle_update_interactions_finish)
-
-    ! Compute the total force acting on the classical particle
-    this%tot_force(1:this%space%dim) = M_ZERO
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      select type (interaction => iter%get_next())
-      class is (force_interaction_t)
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      end select
-    end do
-
-    POP_SUB(classical_particle_update_interactions_finish)
-  end subroutine classical_particle_update_interactions_finish
-
-  ! ---------------------------------------------------------
   subroutine classical_particle_finalize(this)
     type(classical_particle_t), intent(inout) :: this
 
     PUSH_SUB(classical_particle_finalize)
 
-    call system_end(this)
+    call classical_particles_end(this)
 
     POP_SUB(classical_particle_finalize)
   end subroutine classical_particle_finalize

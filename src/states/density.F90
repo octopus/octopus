@@ -38,7 +38,6 @@ module density_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use smear_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -138,7 +137,7 @@ contains
     PUSH_SUB(density_calc_state)
     call profiling_in(prof, "CALC_STATE_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     istin_= 0
 
@@ -333,7 +332,7 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+    ispin = this%st%d%get_spin_index(psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
     do ist = 1, psib%nst
@@ -562,16 +561,16 @@ contains
     ! reduce over states and k-points
     if((this%st%parallel_in_states .or. this%st%d%kpt%parallel) .and. optional_default(allreduce, .true.)) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
+      call comm_allreduce(this%st%st_kpt_mpi_grp, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
     end if
 
     if(this%st%symmetrize_density .and. optional_default(symmetrize, .true.)) then
       SAFE_ALLOCATE(tmpdensity(1:this%gr%fine%mesh%np))
-      call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
+      call symmetrizer_init(symmetrizer, this%gr%fine%mesh, this%gr%symm)
 
       do ispin = 1, this%st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, this%gr%fine%mesh%np, field = this%density(:, ispin), &
+        call dsymmetrizer_apply(symmetrizer, this%gr%fine%mesh, field = this%density(:, ispin), &
                                  symmfield = tmpdensity)
         this%density(1:this%gr%fine%mesh%np, ispin) = tmpdensity(1:this%gr%fine%mesh%np)
       end do
@@ -628,11 +627,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_freeze_orbitals(st, namespace, gr, mc, n, family_is_mgga)
+  subroutine states_elec_freeze_orbitals(st, namespace, gr, mc, kpoints, n, family_is_mgga)
     type(states_elec_t), intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(multicomm_t),   intent(in)    :: mc
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: n
     logical,             intent(in)    :: family_is_mgga
 
@@ -656,7 +656,7 @@ contains
 
     ASSERT(states_are_complex(st))
 
-    if(.not.associated(st%frozen_rho)) then
+    if (.not. allocated(st%frozen_rho)) then
       SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
     end if
 
@@ -697,17 +697,17 @@ contains
     call density_calc_end(dens_calc)
 
     if(family_is_mgga) then
-      if(.not.associated(st%frozen_tau)) then
+      if (.not. allocated(st%frozen_tau)) then
         SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
       end if    
-      if(.not.associated(st%frozen_gdens)) then
+      if (.not. allocated(st%frozen_gdens)) then
         SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
       end if
-      if(.not.associated(st%frozen_ldens)) then
+      if (.not. allocated(st%frozen_ldens)) then
         SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
       end if
 
-      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
+      call states_elec_calc_quantities(gr%der, st, kpoints, .true., kinetic_energy_density = st%frozen_tau, &
            density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
     end if 
 
@@ -809,11 +809,11 @@ contains
     call states_elec_distribute_nodes(st, namespace, mc)
     call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_A(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
     st%eigenval = huge(st%eigenval)
 
-    SAFE_DEALLOCATE_P(st%occ)
+    SAFE_DEALLOCATE_A(st%occ)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
 
@@ -843,7 +843,7 @@ contains
     end do
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
+      call comm_allreduce(st%st_kpt_mpi_grp, st%qtot)
     end if
 
 
@@ -870,7 +870,7 @@ contains
       end do
     end do
 
-    if(associated(st%rho_core)) then
+    if (allocated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
@@ -879,7 +879,7 @@ contains
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
-    if(associated(st%frozen_rho)) then
+    if (allocated(st%frozen_rho)) then
       do is = 1, st%d%nspin
         do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)

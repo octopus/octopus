@@ -25,7 +25,6 @@ module stress_oct_m
   use cube_function_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use double_grid_oct_m
   use epot_oct_m
   use fft_oct_m
   use fourier_space_oct_m
@@ -45,8 +44,10 @@ module stress_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
+  use splines_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
@@ -64,9 +65,9 @@ module stress_oct_m
     CMD_POISSON_SOLVE = 2
 
 
-  FLOAT,                pointer :: rho(:, :)
-  logical                       :: total_density_alloc
-  FLOAT,                pointer :: rho_total(:)
+  FLOAT, allocatable, target :: rho(:, :)
+  logical            :: total_density_alloc
+  FLOAT, pointer     :: rho_total(:)
   CMPLX, allocatable :: rho_total_fs(:,:,:)
   FLOAT, allocatable :: FourPi_G2(:,:,:), Gvec(:,:,:,:), Gvec_G(:,:,:,:)
 
@@ -92,7 +93,7 @@ contains
 
     SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
 
-    if(gr%der%mesh%sb%kpoints%use_symmetries) then
+    if(hm%kpoints%use_symmetries) then
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
     end if
 
@@ -125,7 +126,7 @@ contains
     call stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     
     ! Stress from Ewald summation
-    call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
+    call stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
     
 
     ! Stress from kinetic energy of ion
@@ -139,7 +140,7 @@ contains
     SAFE_DEALLOCATE_A(FourPi_G2)
     SAFE_DEALLOCATE_A(Gvec)
     SAFE_DEALLOCATE_A(Gvec_G)
-    SAFE_DEALLOCATE_P(rho)
+    SAFE_DEALLOCATE_A(rho)
     if (total_density_alloc) then
       SAFE_DEALLOCATE_P(rho_total)
     end if
@@ -160,7 +161,7 @@ contains
 
       nullify(rho_total)
 
-      if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
+      if (allocated(st%rho_core) .or. hm%d%spin_channels > 1) then
          total_density_alloc = .true.
          
          SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
@@ -170,7 +171,7 @@ contains
          end do
          
          ! remove non-local core corrections
-         if(associated(st%rho_core)) then
+         if (allocated(st%rho_core)) then
             do ip = 1, gr%fine%mesh%np
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
             end do
@@ -229,11 +230,10 @@ contains
          call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
          if (allocated(cube%Lrs))then
-            xx(1:3) = cube%Lrs(1,1:3)
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+            xx(1:3) = gr%sb%latt%red_to_cart(cube%Lrs(1,1:3))
          else
             xx(1:3) = -TOFLOAT(cube%rs_n_global(1:3)/2 )/TOFLOAT(cube%rs_n_global(1:3))
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+            xx(1:3) = gr%sb%latt%red_to_cart(xx(1:3))
          end if
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
@@ -351,11 +351,11 @@ contains
     stress_l(:,:) = M_ZERO    
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
     
 
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
@@ -364,7 +364,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
           
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
@@ -373,8 +373,8 @@ contains
           end do
           
           
-          do idir = 1, der%mesh%sb%dim
-             do jdir = 1, der%mesh%sb%dim
+          do idir = 1, der%dim
+             do jdir = 1, der%dim
                 
                 do idim = 1, st%d%dim
                    stress_l(idir,jdir) = stress_l(idir,jdir) + &
@@ -389,11 +389,11 @@ contains
     
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l) 
+       ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_l) 
     end if
 
-    stress_l = stress_l/der%mesh%sb%rcell_volume
+    stress_l = stress_l/der%mesh%sb%latt%rcell_volume
     stress_KE = stress_l
     stress = stress + stress_l
     
@@ -487,7 +487,7 @@ contains
        stress_l(ii,ii) = - hm%energy%exchange - hm%energy%correlation &
             + hm%energy%intnvxc
     end do
-    stress_l = stress_l/der%mesh%sb%rcell_volume
+    stress_l = stress_l/der%mesh%sb%latt%rcell_volume
     
     stress_xc(:,:) = stress_l(:,:)
     stress(:,:) = stress(:,:) + stress_l(:,:)
@@ -527,18 +527,18 @@ contains
 
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(rppsi(1:der%mesh%np, 1:der%mesh%sb%dim+1, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(rppsi(1:der%mesh%np, 1:der%dim+1, 1:st%d%dim))
     SAFE_ALLOCATE(vloc(1:gr%mesh%np))
-    SAFE_ALLOCATE(rvloc(1:gr%mesh%np, 1:der%mesh%sb%dim))
+    SAFE_ALLOCATE(rvloc(1:gr%mesh%np, 1:der%dim))
     SAFE_ALLOCATE(rho_t(1:der%mesh%np_part))
-    SAFE_ALLOCATE(grho_t(1:der%mesh%np,1:der%mesh%sb%dim))
+    SAFE_ALLOCATE(grho_t(1:der%mesh%np,1:der%dim))
 
 
 ! calculate stress from non-local pseudopotentials
     stress_t_NL = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
+       ispin = st%d%get_spin_index(ik)
        do ist = st%st_start, st%st_end
           
           call states_elec_get_state(st, der%mesh, ist, ik, psi)
@@ -547,7 +547,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           
@@ -586,12 +586,12 @@ contains
 
     
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
+      ! TODO: this could take dim = (/der%mesh%np, der%dim, st%d%nspin/)) to reduce the amount of data copied
+       call comm_allreduce(st%st_kpt_mpi_grp, stress_t_NL)
     end if
 
 
-    stress_t_NL = stress_t_NL/der%mesh%sb%rcell_volume
+    stress_t_NL = stress_t_NL/der%mesh%sb%latt%rcell_volume
 
 ! calculate stress from short-range local pseudopotentials
     stress_t_SR = M_ZERO
@@ -603,7 +603,7 @@ contains
     vloc = M_ZERO
     rvloc = M_ZERO    
     do iatom = 1, geo%natoms
-       call epot_local_pseudopotential_SR(gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
+       call epot_local_pseudopotential_SR(gr%der, hm%geo, iatom, vloc, rvloc)
     end do
 
     energy_ps_SR = dmf_dotp(gr%mesh, vloc, rho_total(:))
@@ -619,7 +619,7 @@ contains
        end do
     end do
 
-    stress_t_SR = stress_t_SR/der%mesh%sb%rcell_volume
+    stress_t_SR = stress_t_SR/der%mesh%sb%latt%rcell_volume
 
 ! calculate stress from long-range local pseudopotentials
     stress_t_LR = M_ZERO
@@ -662,7 +662,7 @@ contains
        end do
     end do
 
-    stress_t_LR = stress_t_LR/der%mesh%sb%rcell_volume
+    stress_t_LR = stress_t_LR/der%mesh%sb%latt%rcell_volume
 
     
     stress_ps = stress_t_SR + stress_t_LR + stress_t_NL
@@ -677,7 +677,7 @@ contains
 !
 !    do idir = 1,3
 !       stress_ps(idir,idir) = stress_ps(idir,idir) &
-!            + 2d0*M_PI*sigma_erf**2*charge**2 /der%mesh%sb%rcell_volume**2
+!            + 2d0*M_PI*sigma_erf**2*charge**2 /der%mesh%sb%latt%rcell_volume**2
 !    end do
     
     stress = stress + stress_ps
@@ -689,19 +689,19 @@ contains
   end subroutine stress_from_pseudo
       
   ! -------------------------------------------------------
-  subroutine epot_local_pseudopotential_SR(der, dgrid, geo, iatom, vpsl, rvpsl)
+  subroutine epot_local_pseudopotential_SR(der, geo, iatom, vpsl, rvpsl)
     type(derivatives_t),      intent(in)    :: der
-    type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(inout) :: rvpsl(:,:)
       
     integer :: ip
-    FLOAT :: radius
+    FLOAT :: radius, r
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
+    type(ps_t), pointer :: ps
     
     PUSH_SUB(epot_local_pseudopotential_sr)
     call profiling_in(prof, "EPOT_LOCAL_PSEUDOPOTENTIAL_SR")
@@ -709,13 +709,20 @@ contains
     !the localized part
       
     if(species_is_ps(geo%atom(iatom)%species)) then
-         
-       radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
-         
-       call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
+        
+       ps => species_ps(geo%atom(iatom)%species)
+
+       radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + der%mesh%spacing(1)
+
+       call submesh_init(sphere, geo%space, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
-       
-       call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
+
+       do ip = 1, sphere%np
+         r = sphere%x(ip, 0)
+         vl(ip) = spline_eval(ps%vl, r)
+       end do
+
+       nullify(ps) 
          
        ! Cannot be written (correctly) as a vector expression since for periodic systems,
        ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
@@ -750,7 +757,7 @@ contains
     gg(1:3) = gg_in(1:3)
     gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
-    gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
+    gg(1:3) = matmul(sb%latt%klattice_primitive(1:3,1:3),gg(1:3))
 ! MJV 27 jan 2015 this should not be necessary
 !    do idir = 1, 3
 !      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
@@ -760,12 +767,11 @@ contains
 
   end subroutine poisson_fft_gg_transform_l
 ! ---------------------------------------------------------
-  subroutine stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
-    type(grid_t),      target,        intent(in) :: gr !< grid
+  subroutine stress_from_Ewald_sum(gr, geo, stress, stress_Ewald)
+    type(grid_t),     target, intent(in)    :: gr !< grid
     type(geometry_t), target, intent(in)    :: geo
-    type(hamiltonian_elec_t),  intent(inout)    :: hm
-    FLOAT,                         intent(inout) :: stress(:, :)
-    FLOAT,                         intent(out) :: stress_Ewald(3, 3) ! temporal
+    FLOAT,                    intent(inout) :: stress(:, :)
+    FLOAT,                    intent(out)   :: stress_Ewald(3, 3) ! temporal
 
     FLOAT :: stress_l(3, 3)
 
@@ -785,7 +791,7 @@ contains
     PUSH_SUB(stress_from_Ewald_sum)
 
 
-    alpha = hm%ep%ion_interaction%alpha
+    alpha = geo%ion_interaction%alpha
     sb   => gr%sb
 
     rcut = CNST(6.0)/alpha
@@ -795,10 +801,10 @@ contains
        if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
        zi = species_zval(geo%atom(iatom)%species)
 
-       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
+       call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, geo%atom(iatom)%x, rcut)
       
        do icopy = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
+          xi(1:sb%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, icopy)
         
           do jatom = 1,  geo%natoms
              zj = species_zval(geo%atom(jatom)%species)
@@ -827,7 +833,7 @@ contains
     end do
 
     if(geo%atoms_dist%parallel) then
-       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, stress_l)
+       call comm_allreduce(geo%atoms_dist%mpi_grp, stress_l)
     end if
 
 ! And the long-range part, using an Ewald sum
@@ -842,7 +848,7 @@ contains
 ! get a converged value for the cutoff in g
     rcut = huge(rcut)
     do idim = 1, sb%dim
-      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim)**2))
+      rcut = min(rcut, sum(sb%latt%klattice(1:sb%dim, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -857,7 +863,8 @@ contains
           
              if(ss == 0 .or. ss > isph**2) cycle
 
-             gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+             gg(1:sb%dim) = ix*sb%latt%klattice(1:sb%dim, 1) + iy*sb%latt%klattice(1:sb%dim, 2)&
+                          + iz*sb%latt%klattice(1:sb%dim, 3)
              gg2 = sum(gg(1:sb%dim)**2)
 
           ! g=0 must be removed from the sum
@@ -867,7 +874,7 @@ contains
              
              if(gx < CNST(-36.0)) cycle
 
-             factor = M_TWO*M_PI*exp(gx)/(sb%rcell_volume*gg2)
+             factor = M_TWO*M_PI*exp(gx)/(sb%latt%rcell_volume*gg2)
 
              if(factor < epsilon(factor)) cycle
 
@@ -896,7 +903,7 @@ contains
     end do
 
 
-    factor = M_HALF*M_PI*charge**2/(sb%rcell_volume*alpha**2)
+    factor = M_HALF*M_PI*charge**2/(sb%latt%rcell_volume*alpha**2)
     stress_l(1, 1) = stress_l(1, 1) - factor
     stress_l(2, 2) = stress_l(2, 2) - factor
     stress_l(3, 3) = stress_l(3, 3) - factor
@@ -906,10 +913,10 @@ contains
     sigma_erf = CNST(0.625)
     do idir = 1,3
        stress_l(idir,idir) = stress_l(idir,idir) &
-            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%rcell_volume
+            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%latt%rcell_volume
     end do
 
-    stress_l = stress_l/sb%rcell_volume
+    stress_l = stress_l/sb%latt%rcell_volume
 
     stress_Ewald = stress_l
     stress = stress + stress_l

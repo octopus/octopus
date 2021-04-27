@@ -40,7 +40,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   SAFE_ALLOCATE(uvpsi(1:dim, 1:kb_p%n_c))
   call X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, uvpsi)
+  if(mesh%parallel_in_domains) call mesh%allreduce(uvpsi)
 
   call X(kb_project_ket)(kb_p, dim, uvpsi, ppsi)
   SAFE_DEALLOCATE_A(uvpsi)

@@ -34,13 +34,16 @@ dist_pdpwstd_DATA =                \
 	Ca.upf                      \
 	Cd.upf                      \
 	Cl.upf                      \
+	Co.upf                      \
 	Cr.upf                      \
+	Cs.upf                      \
 	C.upf                       \
 	Cu.upf                      \
 	D.upf                       \
 	Fe.upf                      \
 	F.upf                       \
 	Ga.upf                      \
+	Ge.upf                      \
 	He.upf                      \
 	Hf.upf                      \
 	Hg.upf                      \
@@ -52,12 +55,15 @@ dist_pdpwstd_DATA =                \
 	K.upf                       \
 	Li.upf                      \
 	Mg.upf                      \
+	Mn.upf                      \
 	Mo.upf                      \
 	Na.upf                      \
 	Nb.upf                      \
 	Ne.upf                      \
+	Ni.upf                      \
 	N.upf                       \
 	Os.upf                      \
+	O.upf                       \
 	Pb.upf                      \
 	Pd.upf                      \
 	Po.upf                      \

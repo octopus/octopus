@@ -35,6 +35,7 @@ module species_pot_oct_m
   use ps_oct_m
   use root_solver_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use splines_oct_m
   use submesh_oct_m
@@ -66,8 +67,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_atom_density(mesh, namespace, sb, atom, spin_channels, rho)
+  subroutine species_atom_density(mesh, space, namespace, sb, atom, spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
+    type(space_t),        intent(in)    :: space
     type(namespace_t),    intent(in)    :: namespace
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
@@ -112,12 +114,12 @@ contains
           call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
        end if
 
-      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
+      call periodic_copy_init(pp, space, sb%latt, sb%lsize, spread(M_ZERO, dim=1, ncopies = sb%dim), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
 
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
-        yy(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+        yy(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
@@ -160,7 +162,7 @@ contains
 
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
         in_points = in_points_red
       end if
 #endif
@@ -198,7 +200,7 @@ contains
 
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
         in_points = in_points_red
       end if
 #endif
@@ -240,10 +242,10 @@ contains
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
         
-        call periodic_copy_init(pp, sb, atom%x, rmax)
+        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, rmax)
 
         do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -262,10 +264,11 @@ contains
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
-        call periodic_copy_init(pp, sb, atom%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, &
+                         range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
       
         do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -379,8 +382,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_atom_density_derivative(mesh, sb, atom, namespace, spin_channels, drho)
+  subroutine species_atom_density_derivative(mesh, space, sb, atom, namespace, spin_channels, drho)
     type(mesh_t),         intent(in)    :: mesh
+    type(space_t),        intent(in)    :: space
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
@@ -413,10 +417,10 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        call periodic_copy_init(pp, sb, atom%x, range = range)
+        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, range = range)
 
         do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
           call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
   
@@ -473,8 +477,9 @@ contains
 
   ! ---------------------------------------------------------
   ! Gradient of the atomic density, if available
-  subroutine species_atom_density_grad(mesh, sb, atom, namespace, spin_channels, drho)
+  subroutine species_atom_density_grad(mesh, space, sb, atom, namespace, spin_channels, drho)
     type(mesh_t),         intent(in)    :: mesh
+    type(space_t),        intent(in)    :: space
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
@@ -507,10 +512,10 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        call periodic_copy_init(pp, sb, atom%x, range = range)
+        call periodic_copy_init(pp, space, sb%latt, sb%lsize, atom%x, range = range)
 
         do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          pos(1:sb%dim) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
@@ -546,8 +551,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_long_range_density(species, namespace, pos, mesh, rho)
+  subroutine species_get_long_range_density(species,space, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
+    type(space_t),              intent(in)  :: space
     type(namespace_t),          intent(in)  :: namespace
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
@@ -582,7 +588,7 @@ contains
     case(SPECIES_PSEUDO, SPECIES_PSPIO)
       ps => species_ps(species)
 
-      call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
+      call submesh_init(sphere, space, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
 
       do ip = 1, sphere%np
@@ -652,7 +658,7 @@ contains
     case(SPECIES_FULL_GAUSSIAN)
 
       ! periodic copies are not considered in this routine
-      if(simul_box_is_periodic(mesh%sb)) then
+      if (space%is_periodic()) then
         call messages_experimental("species_full_gaussian for periodic systems")
       end if
 
@@ -712,12 +718,12 @@ contains
         call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
        
-      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
+      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
-        yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        yy(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
@@ -787,8 +793,9 @@ contains
   end subroutine func
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc(species, pos, mesh, rho_core, accumulate)
+  subroutine species_get_nlcc(species, space, pos, mesh, rho_core, accumulate)
     type(species_t), target, intent(in)    :: species
+    type(space_t),           intent(in)    :: space
     FLOAT,                   intent(in)    :: pos(MAX_DIM)
     type(mesh_t),            intent(in)    :: mesh
     FLOAT,                   intent(inout) :: rho_core(:)
@@ -805,9 +812,10 @@ contains
     if(species_is_ps(species)) then
       ps => species_ps(species)
       if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
-      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
+      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, pos, &
+                     range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
-        center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        center(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
         do ip = 1, mesh%np
           rr = sqrt(sum((mesh%x(ip, 1:mesh%sb%dim) - center(1:mesh%sb%dim))**2))
           if(rr < spline_range_max(ps%core)) then
@@ -824,8 +832,9 @@ contains
   end subroutine species_get_nlcc
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc_grad(species, pos, mesh, rho_core_grad)
+  subroutine species_get_nlcc_grad(species, space, pos, mesh, rho_core_grad)
     type(species_t), target, intent(in)  :: species
+    type(space_t),           intent(in)  :: space
     FLOAT,                   intent(in)  :: pos(MAX_DIM)
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
@@ -842,9 +851,10 @@ contains
       ps => species_ps(species)
       rho_core_grad = M_ZERO
       if(ps_has_nlcc(ps)) then
-        call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, pos, &
+                 range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
         do icell = 1, periodic_copy_num(pp)
-          center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          center(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
             rr = max(rr, R_SMALL)
@@ -869,7 +879,7 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
 
-    integer :: ip, jp, idir, dim, idx(MAX_DIM)
+    integer :: ip, idir, dim, idx(MAX_DIM)
     FLOAT   :: r, chi(MAX_DIM)
 
     PUSH_SUB(getrho)
@@ -877,12 +887,7 @@ contains
     dim = mesh_p%sb%dim
     rho_p = M_ZERO
     do ip = 1, mesh_p%np
-
-      jp = ip
-      if(mesh_p%parallel_in_domains) &
-        jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
-
-      call index_to_coords(mesh_p%idx, jp, idx)
+      call mesh_local_index_to_coords(mesh_p, ip, idx)
       chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
@@ -906,8 +911,9 @@ contains
 
   ! ---------------------------------------------------------
   !> used when the density is not available, or otherwise the Poisson eqn would be used instead
-  subroutine species_get_local(species, mesh, namespace, x_atom, vl)
+  subroutine species_get_local(species, space, mesh, namespace, x_atom, vl)
     type(species_t), target, intent(in)  :: species
+    type(space_t),           intent(in)  :: space
     type(mesh_t),            intent(in)  :: mesh
     type(namespace_t),       intent(in)  :: namespace
     FLOAT,                   intent(in)  :: x_atom(:)
@@ -934,10 +940,10 @@ contains
 
         !Assuming that we want to take the contribution from all replica that contributes up to 0.001
         ! to the center of the cell, we arrive to a range of 1000 a.u.. 
-        call periodic_copy_init(pp, mesh%sb, x_atom, range = species_zval(species) / threshold)
+        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, x_atom, range = species_zval(species) / threshold)
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
-          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per)
             r2 = r*r
@@ -948,10 +954,11 @@ contains
 
       case(SPECIES_USDEF)
         !TODO: we should control the value of 10 by a variable. 
-        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+        call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, x_atom, &
+                                  range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
-          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
 
@@ -970,7 +977,7 @@ contains
 
       case(SPECIES_FROM_FILE)
 
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
         if(err /= 0) then
@@ -981,7 +988,7 @@ contains
 
       case(SPECIES_JELLIUM)
 
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
         a2 = species_z(species)/species_jradius(species)
@@ -1017,7 +1024,7 @@ contains
 
       case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
-        ASSERT(mesh%sb%periodic_dim == 0)
+        ASSERT(.not. space%is_periodic())
 
         ps => species_ps(species)
 

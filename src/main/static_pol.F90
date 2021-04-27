@@ -38,7 +38,7 @@ module static_pol_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -87,7 +87,8 @@ contains
     FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
     FLOAT, allocatable :: elf(:,:), lr_elf(:,:), elfd(:,:), lr_elfd(:,:)
     FLOAT, allocatable :: lr_rho(:,:), lr_rho2(:,:), gs_rho(:,:), tmp_rho(:,:)
-    FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
+    FLOAT :: center_dipole(1:sys%space%dim), diag_dipole(1:sys%space%dim), ionic_dipole(1:sys%space%dim), &
+      print_dipole(1:sys%space%dim)
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
     logical :: diagonal_done, center_written, fromScratch_local, field_written
@@ -102,20 +103,20 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
+    if (sys%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
 
     call init_()
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
     end if
     call restart_end(gs_restart)
 
-    if(simul_box_is_periodic(sys%gr%sb)) then
+    if(sys%space%is_periodic()) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
       call messages_fatal(1)
     end if
@@ -123,10 +124,10 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
-    SAFE_ALLOCATE(dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:2))
+    SAFE_ALLOCATE(dipole(1:sys%space%dim, 1:sys%space%dim, 1:2))
     dipole = M_ZERO
 
     i_start = 1
@@ -151,16 +152,16 @@ contains
         read(iunit, fmt=*, iostat = ios) e_field_saved
         field_written = (ios  ==  0)
 
-        read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, sys%gr%sb%dim)
+        read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, sys%space%dim)
         center_written = (ios  ==  0)
 
         do ii = 1, 3
-          read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, sys%gr%sb%dim), isign = 1, 2)
+          read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, sys%space%dim), isign = 1, 2)
           if(ios /= 0) exit
           i_start = i_start + 1
         end do
 
-        read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%gr%sb%dim)
+        read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%space%dim)
         diagonal_done = (ios  ==  0)
 
         call restart_close(restart_load, iunit)
@@ -216,8 +217,8 @@ contains
     gs_rho = M_ZERO
 
     call output_init_()
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
-    call born_charges_init(Born_charges, sys%namespace, sys%geo, sys%st, sys%gr%sb%dim)
+    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
+    call born_charges_init(Born_charges, sys%namespace, sys%geo, sys%st, sys%space%dim)
 
     ! now calculate the dipole without field
 
@@ -227,7 +228,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call messages_info(2)
-    call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+    call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
       gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
@@ -237,14 +238,14 @@ contains
     end do
 
     ! calculate dipole
-    do jj = 1, sys%gr%sb%dim
+    do jj = 1, sys%space%dim
        center_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
     end do
 
     ! Writes the dipole to file
     if(.not. center_written) then 
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%sb%dim)
+      write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%space%dim)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of center dipole."
@@ -254,12 +255,12 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      ionic_dipole = geometry_dipole(sys%geo)
-      print_dipole(1:sys%gr%sb%dim) = center_dipole(1:sys%gr%sb%dim) + ionic_dipole(1:sys%gr%sb%dim)
-      call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
+      ionic_dipole(1:sys%space%dim) = geometry_dipole(sys%geo)
+      print_dipole(1:sys%space%dim) = center_dipole(1:sys%space%dim) + ionic_dipole(1:sys%space%dim)
+      call output_dipole(stdout, print_dipole, sys%space%dim)
     end if
 
-    do ii = i_start, sys%gr%sb%dim
+    do ii = i_start, sys%space%dim
       do isign = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
@@ -283,8 +284,8 @@ contains
 
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
-          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
+          call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
         end if
@@ -292,14 +293,14 @@ contains
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-            call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+            call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           else
-            call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
+            call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
           end if
         end if
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+        call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
           gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
@@ -308,20 +309,20 @@ contains
         end do
 
         ! calculate dipole
-        do jj = 1, sys%gr%sb%dim
+        do jj = 1, sys%space%dim
           dipole(ii, jj, isign) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
         end do
 
         if(mpi_grp_is_root(mpi_world)) then
-          print_dipole(1:sys%gr%sb%dim) = dipole(ii, 1:sys%gr%sb%dim, isign) + ionic_dipole(1:sys%gr%sb%dim)
-          call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
+          print_dipole(1:sys%space%dim) = dipole(ii, 1:sys%space%dim, isign) + ionic_dipole(1:sys%space%dim)
+          call output_dipole(stdout, print_dipole, sys%space%dim)
         end if
 
         call output_cycle_()
 
         if(write_restart_densities) then
           call restart_open_dir(restart_dump, trim(dir_name), ierr)
-          if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, ierr)
+          if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, sys%kpoints, ierr)
           call restart_close_dir(restart_dump)
           if(ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
@@ -332,7 +333,7 @@ contains
 
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), '(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%sb%dim), isign = 1, 2)
+      write(line(1), '(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%space%dim), isign = 1, 2)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of dipole."
@@ -364,8 +365,8 @@ contains
 
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-        call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
+        call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
       end if
@@ -373,14 +374,14 @@ contains
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+          call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         else
-          call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
+          call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
         end if
       end if
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
+      call scf_run(scfv, sys%namespace, sys%space, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
         gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO
@@ -389,18 +390,18 @@ contains
       end do
   
       ! calculate dipole
-      do jj = 1, sys%gr%sb%dim
+      do jj = 1, sys%space%dim
         diag_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        print_dipole(1:sys%gr%sb%dim) = diag_dipole(1:sys%gr%sb%dim) + ionic_dipole(1:sys%gr%sb%dim)
-        call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
+        print_dipole(1:sys%space%dim) = diag_dipole(1:sys%space%dim) + ionic_dipole(1:sys%space%dim)
+        call output_dipole(stdout, print_dipole, sys%space%dim)
       end if
   
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%sb%dim)
+      write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%space%dim)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of dipole."
@@ -410,7 +411,7 @@ contains
 
       if(write_restart_densities) then
         call restart_open_dir(restart_dump, "field_yz+", ierr)
-        if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, ierr)
+        if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, sys%kpoints, ierr)
         call restart_close_dir(restart_dump)
         if(ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
@@ -559,10 +560,10 @@ contains
         do iatom = 1, sys%geo%natoms
           if(isign == 1) then
           ! temporary assignment for use in next cycle when isign == 2
-            Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom) = sys%geo%atom(iatom)%f(1:sys%gr%sb%dim)
+            Born_charges%charge(ii, 1:sys%space%dim, iatom) = sys%geo%atom(iatom)%f(1:sys%space%dim)
           else
-            Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom) = &
-              (sys%geo%atom(iatom)%f(1:sys%gr%sb%dim) - Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom)) &
+            Born_charges%charge(ii, 1:sys%space%dim, iatom) = &
+              (sys%geo%atom(iatom)%f(1:sys%space%dim) - Born_charges%charge(ii, 1:sys%space%dim, iatom)) &
               / (M_TWO*e_field)
             Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%geo%atom(iatom)%species)
             ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,
@@ -595,14 +596,14 @@ contains
           !write
           do is = 1, sys%st%d%nspin
             if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
-              fn_unit = units_out%length**(1-sys%gr%sb%dim) / units_out%energy
+              fn_unit = units_out%length**(1-sys%space%dim) / units_out%energy
               write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                 sys%namespace, sys%gr%mesh, lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
               ! save the trouble of writing many copies of each density, since ii,jj = jj,ii
-              fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
-              do jj = ii, sys%gr%sb%dim
+              fn_unit = units_out%length**(2-sys%space%dim) / units_out%energy**2
+              do jj = ii, sys%space%dim
                 write(fname, '(a,i1,4a)') 'fd2_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
@@ -610,13 +611,13 @@ contains
             end if
 
             if(bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-              do jj = ii, sys%gr%sb%dim
-                fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy
+              do jj = ii, sys%space%dim
+                fn_unit = units_out%length**(2-sys%space%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
                   sys%namespace, sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
-                fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
+                fn_unit = units_out%length**(3-sys%space%dim) / units_out%energy**2
                 write(fname, '(a,i1,6a)') 'beta_density-sp', is, '-', index2axis(ii), &
                   '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
@@ -632,9 +633,9 @@ contains
       if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
          
         if(isign == 1) then 
-          call elf_calc(sys%st, sys%gr, elf, elfd)
+          call elf_calc(sys%st, sys%gr, sys%kpoints, elf, elfd)
         else
-          call elf_calc(sys%st, sys%gr, lr_elf, lr_elfd)
+          call elf_calc(sys%st, sys%gr, sys%kpoints, lr_elf, lr_elfd)
           
           !numerical derivative
           lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
@@ -679,14 +680,14 @@ contains
   
         do is = 1, sys%st%d%nspin
           if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
-            fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
+            fn_unit = units_out%length**(2-sys%space%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           end if
   
           if(bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-            fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
+            fn_unit = units_out%length**(3-sys%space%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%namespace, sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
@@ -698,17 +699,17 @@ contains
         iunit = io_open(EM_RESP_FD_DIR//'alpha', sys%namespace, action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
-        alpha(1:sys%gr%sb%dim, 1:sys%gr%sb%dim) = (dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1) - &
-             dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 2)) / (M_TWO * e_field)
+        alpha(1:sys%space%dim, 1:sys%space%dim) = (dipole(1:sys%space%dim, 1:sys%space%dim, 1) - &
+             dipole(1:sys%space%dim, 1:sys%space%dim, 2)) / (M_TWO * e_field)
 
         beta = M_ZERO
 
-        do idir = 1, sys%gr%sb%dim
-          beta(1:sys%gr%sb%dim, idir, idir) = &
-            -(dipole(idir, 1:sys%gr%sb%dim, 1) + dipole(idir, 1:sys%gr%sb%dim, 2) - &
-            M_TWO * center_dipole(1:sys%gr%sb%dim)) / e_field**2
-          beta(idir, 1:sys%gr%sb%dim, idir) = beta(1:sys%gr%sb%dim, idir, idir) 
-          beta(idir, idir, 1:sys%gr%sb%dim) = beta(1:sys%gr%sb%dim, idir, idir)
+        do idir = 1, sys%space%dim
+          beta(1:sys%space%dim, idir, idir) = &
+            -(dipole(idir, 1:sys%space%dim, 1) + dipole(idir, 1:sys%space%dim, 2) - &
+            M_TWO * center_dipole(1:sys%space%dim)) / e_field**2
+          beta(idir, 1:sys%space%dim, idir) = beta(1:sys%space%dim, idir, idir) 
+          beta(idir, idir, 1:sys%space%dim) = beta(1:sys%space%dim, idir, idir)
         end do
 
         if(calc_diagonal) then
@@ -723,14 +724,14 @@ contains
         beta(1, 3, 2) = beta(1, 2, 3)
         beta(2, 1, 3) = beta(1, 2, 3)
 
-        call output_tensor(iunit, alpha, sys%gr%sb%dim, units_out%polarizability)
+        call output_tensor(iunit, alpha, sys%space%dim, units_out%polarizability)
         call io_close(iunit)
         
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
         call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR, sys%namespace)
 
         if(calc_Born) then
-          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%sb%dim, &
+          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%space%dim, &
             EM_RESP_FD_DIR, states_are_real(sys%st))
         end if
       end if

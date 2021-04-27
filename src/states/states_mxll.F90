@@ -97,11 +97,11 @@ module states_mxll_oct_m
     CMPLX, allocatable           :: rs_current_density_restart_t1(:,:)
     CMPLX, allocatable           :: rs_current_density_restart_t2(:,:)
 
-    FLOAT, pointer               :: ep(:)
-    FLOAT, pointer               :: mu(:)
+    FLOAT, allocatable           :: ep(:)
+    FLOAT, allocatable           :: mu(:)
 
-    integer, pointer             :: rs_state_fft_map(:,:,:)
-    integer, pointer             :: rs_state_fft_map_inv(:,:)
+    integer, allocatable         :: rs_state_fft_map(:,:,:)
+    integer, allocatable         :: rs_state_fft_map_inv(:,:)
 
     FLOAT                        :: energy_rate
     FLOAT                        :: delta_energy
@@ -138,13 +138,13 @@ module states_mxll_oct_m
     logical, allocatable         :: boundary_points_mask(:)
 
     integer                      :: surface_points_number(MAX_DIM)
-    integer, pointer             :: surface_points_map(:,:,:)
+    integer, allocatable         :: surface_points_map(:,:,:)
     FLOAT                        :: surface_element(MAX_DIM)
 
     integer                      :: surface_grid_rows_number(MAX_DIM)
-    integer, pointer             :: surface_grid_points_number(:,:,:)
-    integer, pointer             :: surface_grid_points_map(:,:,:,:,:)
-    integer, pointer             :: surface_grid_center(:,:,:,:)
+    integer, allocatable         :: surface_grid_points_number(:,:,:)
+    integer, allocatable         :: surface_grid_points_map(:,:,:,:,:)
+    integer, allocatable         :: surface_grid_center(:,:,:,:)
     FLOAT                        :: surface_grid_element(MAX_DIM)
 
     type(mesh_plane_t)           :: surface(2,MAX_DIM)
@@ -155,11 +155,11 @@ module states_mxll_oct_m
     CMPLX, allocatable           :: selected_points_rs_state_trans(:,:)
     FLOAT                        :: rs_state_trans_var
 
-    FLOAT, pointer               :: grid_rho(:,:)
-    CMPLX, pointer               :: kappa_psi(:,:)
+    FLOAT, allocatable           :: grid_rho(:,:)
+    CMPLX, allocatable           :: kappa_psi(:,:)
 
-    character(len=1024), pointer :: user_def_e_field(:)
-    character(len=1024), pointer :: user_def_b_field(:)
+    character(len=1024), allocatable :: user_def_e_field(:)
+    character(len=1024), allocatable :: user_def_b_field(:)
 
     integer                      :: energy_incident_waves_calc_iter
     logical                      :: energy_incident_waves_calc
@@ -187,7 +187,7 @@ module states_mxll_oct_m
     logical                     :: scalapack_compatible
     integer                     :: lnst
     integer                     :: st_start, st_end
-    integer, pointer            :: node(:)
+    integer, allocatable        :: node(:)
 
   end type states_mxll_t
 
@@ -202,7 +202,6 @@ contains
     call distributed_nullify(st%dist)
     st%wfs_type = TYPE_CMPLX
     st%parallel_in_states = .false.
-    nullify(st%node)
 
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
@@ -382,23 +381,23 @@ contains
     SAFE_DEALLOCATE_A(st%rs_state_long)
     SAFE_DEALLOCATE_A(st%rs_current_density_restart_t1)
     SAFE_DEALLOCATE_A(st%rs_current_density_restart_t2)
-    SAFE_DEALLOCATE_P(st%user_def_e_field)
-    SAFE_DEALLOCATE_P(st%user_def_b_field)
+    SAFE_DEALLOCATE_A(st%user_def_e_field)
+    SAFE_DEALLOCATE_A(st%user_def_b_field)
 
     SAFE_DEALLOCATE_A(st%rs_state_const)
     SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
     SAFE_DEALLOCATE_A(st%rs_state_const_amp)
     SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
 
-    SAFE_DEALLOCATE_P(st%surface_grid_center)
-    SAFE_DEALLOCATE_P(st%surface_grid_points_number)
-    SAFE_DEALLOCATE_P(st%surface_grid_points_map)
+    SAFE_DEALLOCATE_A(st%surface_grid_center)
+    SAFE_DEALLOCATE_A(st%surface_grid_points_number)
+    SAFE_DEALLOCATE_A(st%surface_grid_points_map)
     SAFE_DEALLOCATE_A(st%inner_points_map)
     SAFE_DEALLOCATE_A(st%boundary_points_map)
     SAFE_DEALLOCATE_A(st%inner_points_mask)
     SAFE_DEALLOCATE_A(st%boundary_points_mask)
-    SAFE_DEALLOCATE_P(st%ep)
-    SAFE_DEALLOCATE_P(st%mu)
+    SAFE_DEALLOCATE_A(st%ep)
+    SAFE_DEALLOCATE_A(st%mu)
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
@@ -410,7 +409,7 @@ contains
     SAFE_DEALLOCATE_A(st%external_current_td_phase)
 
     call distributed_end(st%dist)
-    SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_A(st%node)
 
     call profiling_out(prof)
 
@@ -732,7 +731,7 @@ contains
     type(states_mxll_t), intent(in)      :: st
     type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, pos_index_local, pos_index_global, rankmin
+    integer :: ip, pos_index, rankmin
     FLOAT   :: dmin
     CMPLX   :: ztmp(mesh%sb%dim)
     CMPLX, allocatable :: ztmp_global(:)
@@ -742,15 +741,12 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip = 1, st%selected_points_number
-      call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
-!      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
+      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
+      ztmp(:) = rs_state(pos_index, :)
       if (mesh%parallel_in_domains) then
-        ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
         call MPI_Bcast(ztmp, st%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
 #endif
-      else
-        ztmp(:) = rs_state(pos_index_global, :)
       end if
       rs_state_point(:, ip) = ztmp(:)
     end do
@@ -820,7 +816,7 @@ contains
       end do
       mean_value(1:3) = mean_value(1:3) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(1:3))
+        call gr%mesh%allreduce(mean_value(1:3))
       end if
     end if
 
@@ -854,7 +850,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
+        call gr%mesh%allreduce(mean_value(:))
       end if
     end if
 

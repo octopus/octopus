@@ -33,6 +33,7 @@ module berry_oct_m
   use parser_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use v_ks_oct_m
@@ -81,9 +82,10 @@ contains
   end subroutine berry_init
 
   ! ---------------------------------------------------------
-  subroutine berry_perform_internal_scf(this, namespace, eigens, gr, st, hm, iter, ks, geo)
+  subroutine berry_perform_internal_scf(this, namespace, space, eigens, gr, st, hm, iter, ks, geo)
     type(berry_t),            intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(eigensolver_t),      intent(inout) :: eigens
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -99,35 +101,35 @@ contains
 
     PUSH_SUB(berry_perform_internal_scf)
 
-    ASSERT(associated(hm%vberry))
+    ASSERT(allocated(hm%vberry))
 
     if(st%parallel_in_states) then
       call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
     end if
 
-    call calc_dipole(dipole, gr, st, geo)
+    call calc_dipole(dipole, space, gr, st, geo)
 
     do iberry = 1, this%max_iter_berry
       eigens%converged = 0
       call eigensolver_run(eigens, namespace, gr, st, hm, iter)
 
       !Calculation of the Berry potential
-      call berry_potential(st, namespace, ks%gr%mesh, hm%ep%E_field, hm%vberry)
+      call berry_potential(st, namespace, space, ks%gr%mesh, hm%ep%E_field, hm%vberry)
 
       !Calculation of the corresponding energy 
-      hm%energy%berry = berry_energy_correction(st, gr%mesh, &
-         hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+      hm%energy%berry = berry_energy_correction(st, space, gr%mesh, &
+         hm%ep%E_field(1:space%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
   
       !We recompute the KS potential
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_current=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=.false.)
 
       dipole_prev = dipole
-      call calc_dipole(dipole, gr, st, geo)
+      call calc_dipole(dipole, space, gr, st, geo)
       write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
       call messages_info(1)
   
       berry_conv = .true.
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, space%periodic_dim
         if(abs(dipole_prev(idir)) > CNST(1e-10)) then
           berry_conv = berry_conv .and. (abs(dipole(idir) - dipole_prev(idir)) < tol &
             .or.(abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < tol))
@@ -145,18 +147,21 @@ contains
   ! ---------------------------------------------------------
   !TODO: This should be a method of the electronic system directly
   ! that can be exposed
-  subroutine calc_dipole(dipole, gr, st, geo)
+  subroutine calc_dipole(dipole, space, gr, st, geo)
     FLOAT,                 intent(out)   :: dipole(:)
+    type(space_t),         intent(in)    :: space
     type(grid_t),          intent(in)    :: gr
     type(states_elec_t),   intent(in)    :: st
     type(geometry_t),      intent(in)    :: geo
 
     integer :: ispin, idir
-    FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+    FLOAT :: e_dip(space%dim + 1, st%d%nspin), n_dip(space%dim), nquantumpol
 
     PUSH_SUB(calc_dipole)
 
-    dipole(1:MAX_DIM) = M_ZERO
+    ASSERT(.not. gr%sb%latt%nonorthogonal)
+
+    dipole(1:space%dim) = M_ZERO
 
     do ispin = 1, st%d%nspin
       call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
@@ -164,14 +169,14 @@ contains
 
     n_dip = geometry_dipole(geo)
 
-    do idir = 1, gr%sb%dim
+    do idir = 1, space%dim
       ! in periodic directions use single-point Berry`s phase calculation
-      if(idir  <=  gr%sb%periodic_dim) then
+      if(idir  <=  space%periodic_dim) then
         dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
         ! use quantum of polarization to reduce to smallest possible magnitude
-        nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-        dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
+        nquantumpol = nint(dipole(idir)/norm2(gr%sb%latt%rlattice(:, idir)))
+        dipole(idir) = dipole(idir) - nquantumpol * norm2(gr%sb%latt%rlattice(:, idir))
        ! in aperiodic directions use normal dipole formula
 
       else
@@ -215,7 +220,7 @@ contains
       dipole = dipole + aimag(log(det))
     end do
 
-    dipole = -(mesh%sb%lsize(dir) / M_PI) * dipole
+    dipole = -(norm2(mesh%sb%latt%rlattice(:,dir)) / (M_TWO*M_PI)) * dipole
 
     POP_SUB(berry_dipole)
   end function berry_dipole
@@ -284,6 +289,7 @@ contains
     PUSH_SUB(berry_phase_matrix)
 
     ASSERT(.not. st%parallel_in_states)
+    ASSERT(.not. mesh%sb%latt%nonorthogonal)
 
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
@@ -294,8 +300,7 @@ contains
     do idir = 1, mesh%sb%dim
       if(gvector(idir) == 0) cycle
       do ip = 1, mesh%np
-        phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_PI/mesh%sb%lsize(idir))*mesh%x(ip, idir))
-        ! factor of two removed from exp since actual lattice vector is 2*lsize
+        phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_TWO*M_PI/norm2(mesh%sb%latt%rlattice(:,idir)))*mesh%x(ip, idir))
       end do
     end do
 
@@ -331,9 +336,10 @@ contains
   !! \f[
   !! E * (e L / 2 \pi) Im e^{i 2 \pi r / L} / z  
   !! \f]
-  subroutine berry_potential(st, namespace, mesh, E_field, pot)
+  subroutine berry_potential(st, namespace, space, mesh, E_field, pot)
     type(states_elec_t), intent(in)  :: st
     type(namespace_t),   intent(in)  :: namespace
+    type(space_t),       intent(in)  :: space
     type(mesh_t),        intent(in)  :: mesh
     FLOAT,               intent(in)  :: E_field(:) !< (mesh%sb%dim)
     FLOAT,               intent(out) :: pot(:,:)   !< (mesh%np, st%d%nspin)
@@ -343,7 +349,7 @@ contains
 
     PUSH_SUB(berry_potential)
 
-    if(mesh%sb%nonorthogonal) then
+    if(mesh%sb%latt%nonorthogonal) then
       call messages_not_implemented("Berry phase for non-orthogonal cells.")
     end if
   
@@ -354,12 +360,12 @@ contains
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ispin = 1, st%d%nspin
-      do idir = 1, mesh%sb%periodic_dim
+      do idir = 1, space%periodic_dim
         if(abs(E_field(idir)) > M_EPSILON) then
           ! calculate the ip-independent part first
           det = berry_phase_det(st, mesh, idir, ispin)
           if(abs(det) > M_EPSILON) then
-            factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) / det
+            factor = E_field(idir) * (norm2(mesh%sb%latt%rlattice(:,idir)) / (M_TWO*M_PI)) / det
           else
             ! If det = 0, mu = -infinity, so this condition should never be reached
             ! if things are working properly.
@@ -367,7 +373,7 @@ contains
             call messages_fatal(1, namespace=namespace)
           end if
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
-            aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
+            aimag(factor * exp(M_TWO * M_PI * M_zI * mesh%x(1:mesh%np, idir) / norm2(mesh%sb%latt%rlattice(:,idir))))
         end if
       end do
     end do
@@ -377,10 +383,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function berry_energy_correction(st, mesh, E_field, vberry) result(delta)
+  FLOAT function berry_energy_correction(st, space, mesh, E_field, vberry) result(delta)
     type(states_elec_t), intent(in) :: st
+    type(space_t),       intent(in) :: space
     type(mesh_t),        intent(in) :: mesh
-    FLOAT,               intent(in) :: E_field(:)  !< (mesh%sb%periodic_dim)
+    FLOAT,               intent(in) :: E_field(:)  !< (space%periodic_dim)
     FLOAT,               intent(in) :: vberry(:,:) !< (mesh%np, st%d%nspin)
 
     integer :: ispin, idir
@@ -394,7 +401,7 @@ contains
     end do
 
     ! the real energy contribution is -mu.E
-    do idir = 1, mesh%sb%periodic_dim
+    do idir = 1, space%periodic_dim
       delta = delta - berry_dipole(st, mesh, idir) * E_field(idir)
     end do
 

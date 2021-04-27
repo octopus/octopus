@@ -24,7 +24,6 @@ module physics_op_oct_m
   use mesh_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   
   implicit none
 

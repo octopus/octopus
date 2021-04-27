@@ -61,6 +61,9 @@ dist_share_DATA =                                                       \
 	09-illegal_system_names.04-white_space.inp                      \
         10-dftbplus_verlet.test                                         \
 	10-dftbplus_verlet.01-water.inp                                 \
+	12-electronic_subsystem_propagators.test                        \
+	12-electronic_subsystem_propagators.01-gs.inp                   \
+	12-electronic_subsystem_propagators.02-expmid.inp               \
 	H-H.skf                                                         \
 	H-O.skf                                                         \
 	O-H.skf                                                         \

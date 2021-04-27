@@ -61,9 +61,12 @@
   !> 
   subroutine target_end_tdlocal(tg)
     type(target_t),   intent(inout) :: tg
+
     PUSH_SUB(target_end_tdlocal)
-    SAFE_DEALLOCATE_P(tg%rho)
-    SAFE_DEALLOCATE_P(tg%td_fitness)
+
+    SAFE_DEALLOCATE_A(tg%rho)
+    SAFE_DEALLOCATE_A(tg%td_fitness)
+
     POP_SUB(target_end_tdlocal)
   end subroutine target_end_tdlocal
 

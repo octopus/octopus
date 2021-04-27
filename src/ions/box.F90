@@ -30,6 +30,8 @@ module box_oct_m
     box_list_t,    &
     box_iterator_t
 
+  integer, parameter, public :: BOX_INFO_LEN=200
+
   !> The purpose of a box is to tell if something is inside or outside of it.
   !! To do that it provides a function that tells if a given list of points are
   !! inside or outside the box. Furthermore, a box might be turned inside out,
@@ -40,7 +42,9 @@ module box_oct_m
     integer, public :: dim                    !< dimensions of the space the box lives in
     logical :: inside_out = .false.           !< if the box is inside out or not
   contains
-    procedure(box_contains_points), deferred :: contains_points
+    procedure(box_contains_points),  deferred :: contains_points
+    procedure(box_write_info),       deferred :: write_info
+    procedure(box_short_info),       deferred :: short_info
     procedure, non_overridable :: contains_point => box_contains_point
     procedure, non_overridable :: is_inside_out => box_is_inside_out
     procedure, non_overridable :: turn_inside_out => box_turn_inside_out
@@ -60,6 +64,23 @@ module box_oct_m
                                           !! checking.
       logical :: contained(1:nn)
     end function box_contains_points
+
+    !> Write the complete information about the box to a file.
+    subroutine box_write_info(this, iunit)
+      import :: box_t
+      class(box_t), intent(in) :: this
+      integer,      intent(in) :: iunit
+    end subroutine box_write_info
+
+    !> Return a string containing a short description of the box.
+    function box_short_info(this, unit_length)
+      use unit_oct_m
+      import :: box_t
+      import :: BOX_INFO_LEN
+      class(box_t), intent(in) :: this
+      type(unit_t), intent(in) :: unit_length
+      character(len=BOX_INFO_LEN) :: box_short_info
+    end function box_short_info
   end interface
 
   !> These classes extends the list and list iterator to create a box list.

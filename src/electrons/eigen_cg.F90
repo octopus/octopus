@@ -23,7 +23,6 @@ module eigen_cg_oct_m
   use batch_ops_oct_m
   use comm_oct_m
   use global_oct_m
-  use grid_oct_m
   use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -48,8 +47,8 @@ module eigen_cg_oct_m
   public ::                 &
     deigensolver_cg2,       &
     zeigensolver_cg2,       &
-    deigensolver_cg2_new,   &
-    zeigensolver_cg2_new
+    deigensolver_cg_jiang,   &
+    zeigensolver_cg_jiang
 
 contains
 

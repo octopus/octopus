@@ -79,7 +79,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) then
+    if (sys%kpoints%use_symmetries) then
       call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
     end if
 
@@ -88,7 +88,7 @@ contains
 
     !abbreviations
     np      = sys%gr%mesh%np
-    ndim    = sys%gr%sb%dim
+    ndim    = sys%space%dim
     nspin   = sys%st%d%nspin
 
     ! read target density
@@ -160,12 +160,12 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks)
+    call output_all(sys%outp, sys%namespace, sys%space, STATIC_DIR, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
     call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
-    call states_elec_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call states_elec_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, sys%kpoints, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
       call messages_warning(1)
@@ -239,7 +239,7 @@ contains
         rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii), reduce = .false.)
       end do
       if(sys%gr%mesh%parallel_in_domains) then
-        call comm_allreduce(sys%gr%mesh%mpi_grp%comm, rr)
+        call sys%gr%mesh%allreduce(rr)
       end if
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)

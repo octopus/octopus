@@ -26,7 +26,6 @@ ConvRelDens = 1e-9
 
 LCAODimension = 18
 LCAOMaximumOrbitalRadius = 50
-LCAOStart = lcao_full
 
 EigenSolver = cg_new
 EigenSolverTolerance = 1e-6

@@ -39,6 +39,7 @@ module linear_solver_oct_m
   use preconditioners_oct_m
   use smear_oct_m
   use solvers_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use wfs_elec_oct_m
 
@@ -72,7 +73,7 @@ module linear_solver_oct_m
     type(namespace_t),        pointer :: namespace
     type(linear_solver_t),    pointer :: ls
     type(hamiltonian_elec_t), pointer :: hm
-    type(grid_t),             pointer :: gr
+    type(mesh_t),             pointer :: mesh
     type(states_elec_t),      pointer :: st
     integer                           :: ist
     integer                           :: ik
@@ -85,12 +86,13 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc, space)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     type(multicomm_t),      intent(in)    :: mc
+    type(space_t),          intent(in)    :: space
 
     integer :: fsolver
     integer :: defsolver
@@ -159,7 +161,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, namespace, gr, mc)
+    call preconditioner_init(this%pre, namespace, gr, mc, space)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -212,7 +214,7 @@ contains
       call messages_experimental("Multigrid linear solver")
 
       SAFE_ALLOCATE(this%mgrid)
-      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+      call multigrid_init(this%mgrid, namespace, space, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
     end if
 
     if (this%solver == OPTION__LINEARSOLVER__QMR_DOTP) then
@@ -220,7 +222,6 @@ contains
     end if
 
     POP_SUB(linear_solver_init)
-
   end subroutine linear_solver_init
 
   ! ---------------------------------------------------------

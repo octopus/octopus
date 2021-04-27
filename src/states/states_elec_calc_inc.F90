@@ -241,9 +241,7 @@ contains
 
           ! renormalize
           cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
-          do idim = 1, st%d%dim
-            call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-          end do
+          call lalg_scal(mesh%np, st%d%dim, M_ONE/sqrt(cc), psii)
           call states_elec_set_state(st, mesh, ist, ik, psii)
         end if
 
@@ -261,7 +259,7 @@ contains
           call states_elec_get_state(st, mesh, jst, ik, psij)
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
         end do
-        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = nst)
+        if(mesh%parallel_in_domains) call mesh%allreduce(aa, dim = nst)
  
         ! subtract the projections
         do jst = ist + 1, nst
@@ -283,7 +281,7 @@ contains
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
         end do
 
-        if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+        if(mesh%parallel_in_domains .and. ist > 1) call mesh%allreduce(aa, dim = ist - 1)
         ! then subtract the projections
         do jst = 1, ist - 1
           call states_elec_get_state(st, mesh, jst, ik, psij)
@@ -311,7 +309,7 @@ contains
             call states_elec_get_state(st, mesh, jst, ik, psij)
             aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
           end do
-          if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+          if(mesh%parallel_in_domains .and. ist > 1) call mesh%allreduce(aa, dim = ist - 1)
 
           ! subtract the projections
           do jst = 1, ist - 1
@@ -330,9 +328,7 @@ contains
         ! renormalize
         cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
-        do idim = 1, st%d%dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-        end do
+        call lalg_scal(mesh%np, st%d%dim, M_ONE/sqrt(cc), psii)
 
         call states_elec_set_state(st, mesh, ist, ik, psii)
       end if
@@ -468,18 +464,18 @@ end subroutine X(states_elec_trsm)
 ! ---------------------------------------------------------
 subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, &
   against_all)
-  type(states_elec_t), intent(in)    :: st
-  type(mesh_t),        intent(in)    :: mesh
-  integer,             intent(in)    :: nst
-  integer,             intent(in)    :: iqn
-  R_TYPE,              intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
-  logical, optional,   intent(in)    :: normalize
-  logical, optional,   intent(inout) :: mask(:)      !< mask(nst)
-  R_TYPE,  optional,   intent(out)   :: overlap(:) 
-  FLOAT,   optional,   intent(out)   :: norm
-  FLOAT,   optional,   intent(in)    :: theta_fi
-  R_TYPE,  optional,   intent(in)    :: beta_ij(:)   !< beta_ij(nst)
-  logical, optional,   intent(in)    :: against_all
+  type(states_elec_t), target, intent(in)    :: st
+  type(mesh_t),                intent(in)    :: mesh
+  integer,                     intent(in)    :: nst
+  integer,                     intent(in)    :: iqn
+  R_TYPE,                      intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
+  logical,           optional, intent(in)    :: normalize
+  logical,           optional, intent(inout) :: mask(:)      !< mask(nst)
+  R_TYPE,            optional, intent(out)   :: overlap(:) 
+  FLOAT,             optional, intent(out)   :: norm
+  FLOAT,             optional, intent(in)    :: theta_fi
+  R_TYPE,            optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical,           optional, intent(in)    :: against_all
 
   integer :: ist, idim, length_ss, ibind
   FLOAT   :: nrm2
@@ -542,7 +538,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
+    call mesh%allreduce(ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
@@ -693,7 +689,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
+    call mesh%allreduce(ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
@@ -887,7 +883,7 @@ subroutine X(states_elec_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, TOSTRING(X(GRAM_SCHMIDT_REDUCE)))
-      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+      call mesh%allreduce(ss, dim = nst)
       call profiling_out(reduce_prof)
     end if
 
@@ -1010,10 +1006,11 @@ end function X(states_elec_residue)
 !! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
 !!
 ! ---------------------------------------------------------
-subroutine X(states_elec_calc_momentum)(st, der, momentum)
-  type(states_elec_t),      intent(in)  :: st
-  type(derivatives_t), intent(in)  :: der
-  FLOAT,               intent(out) :: momentum(:,:,:)
+subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
+  type(states_elec_t),  intent(in)  :: st
+  type(derivatives_t),  intent(in)  :: der
+  type(kpoints_t),      intent(in)  :: kpoints
+  FLOAT,                intent(out) :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
@@ -1029,7 +1026,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
   PUSH_SUB(X(states_elec_calc_momentum))
 
   SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -1037,10 +1034,10 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       call states_elec_get_state(st, der%mesh, ist, ik, psi)
 
       do idim = 1, st%d%dim
-        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
+        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%dim))
       end do
 
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
@@ -1058,7 +1055,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
       do idir = 1, der%mesh%sb%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
@@ -1071,7 +1068,7 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       SAFE_ALLOCATE(lmomentum(1:st%lnst))
       SAFE_ALLOCATE(gmomentum(1:st%nst))
 
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)
@@ -1168,10 +1165,10 @@ subroutine X(states_elec_angular_momentum)(st, gr, ll, l2)
 
   if(gr%mesh%parallel_in_domains) then
 #if !defined(R_TREAL)
-    call comm_allreduce(gr%mesh%mpi_grp%comm,  ll)
+    call gr%mesh%allreduce(ll)
 #endif
     if(present(l2)) then
-      call comm_allreduce(gr%mesh%mpi_grp%comm,  l2)
+      call gr%mesh%allreduce(l2)
     end if
   end if
 
@@ -1244,7 +1241,7 @@ subroutine X(states_elec_matrix)(st1, st2, mesh, aa)
       end do
       SAFE_DEALLOCATE_A(phi2)
 
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:,:,ik))
+      if(mesh%parallel_in_domains) call mesh%allreduce(aa(:,:,ik))
 
       ! Each process holds some lines of the matrix. So it is broadcasted (All processes
       ! should get the whole matrix)
@@ -1272,14 +1269,14 @@ subroutine X(states_elec_matrix)(st1, st2, mesh, aa)
         end do
       end do
    
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
+      if(mesh%parallel_in_domains) call mesh%allreduce(aa(:, :, ik))
 
     end if
 
   end do
 
   if(st1%d%kpt%parallel) then
-    call comm_allreduce(st1%d%kpt%mpi_grp%comm, aa)
+    call comm_allreduce(st1%d%kpt%mpi_grp, aa)
   end if
 
 
@@ -1291,17 +1288,17 @@ end subroutine X(states_elec_matrix)
 
 ! -----------------------------------------------------------
 
-subroutine X(states_elec_calc_orth_test)(st, namespace, mesh, sb)
+subroutine X(states_elec_calc_orth_test)(st, namespace, mesh, kpoints)
   type(states_elec_t),    intent(inout) :: st
   type(namespace_t),      intent(in)    :: namespace
   type(mesh_t),           intent(in)    :: mesh
-  type(simul_box_t),      intent(in)    :: sb
+  type(kpoints_t),        intent(in)    :: kpoints
   
   PUSH_SUB(X(states_elec_calc_orth_test))
 
   call states_elec_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
 
-  call states_elec_generate_random(st, mesh, sb)
+  call states_elec_generate_random(st, mesh, kpoints)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''
@@ -1366,18 +1363,18 @@ contains
               st%mpi_grp%comm, req(nreq + 1), mpi_err)
             call MPI_Irecv(psi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(jst), jst, &
               st%mpi_grp%comm, req(nreq + 2), mpi_err)
-            INCR(nreq, 2)
+            nreq = nreq + 2
           end if
 
           ! if I have the wave function, I send it (note: a node could be sending to itself, this is by design)
           if(st%node(ist)  == st%mpi_grp%rank) then
-            INCR(nreq, 1)
+            nreq = nreq + 1
             call states_elec_get_state(st, mesh, ist, 1, spsi1)
             call MPI_Isend(spsi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, ist, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
           
           if(st%node(jst) == st%mpi_grp%rank) then
-            INCR(nreq, 1)
+            nreq = nreq + 1
             call states_elec_get_state(st, mesh, jst, 1, spsi2)
             call MPI_Isend(spsi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, jst, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
@@ -1596,7 +1593,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
 
     SAFE_DEALLOCATE_A(psi)
 
@@ -1662,7 +1659,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 #endif
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
 
     call accel_release_buffer(overlap_buffer)
 
@@ -1680,7 +1677,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
       end do
     end do
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
+    if(mesh%parallel_in_domains) call mesh%allreduce(overlap, dim = (/st%nst, st%nst/))
   end if
 
   ! Debug output
@@ -1773,7 +1770,7 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
   
   call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
   
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_nst_, st%nst/))
+  if(mesh%parallel_in_domains) call mesh%allreduce(proj, dim = (/gs_nst_, st%nst/))
   
   call profiling_out(prof)
   POP_SUB(X(states_elec_calc_projections))
@@ -1840,21 +1837,23 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
+subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolver, st_min, st_max, iindex, &
                                          jindex, kindex, lindex, twoint, phase, singularity, exc_k)
-  type(states_elec_t), intent(inout)           :: st
-  type(namespace_t),   intent(in)              :: namespace
-  type(grid_t),        intent(in)              :: gr
-  type(poisson_t),     intent(inout)           :: psolver
-  integer,             intent(in)              :: st_min, st_max
-  integer,             intent(out)             :: iindex(:,:)
-  integer,             intent(out)             :: jindex(:,:)
-  integer,             intent(out)             :: kindex(:,:)
-  integer,             intent(out)             :: lindex(:,:)
-  R_TYPE,              intent(out)             :: twoint(:)  !
-  CMPLX,     optional, intent(in)              :: phase(:,st%d%kpt%start:)
-  type(singularity_t), optional,intent(in)  :: singularity
-  logical, optional, intent(in)             :: exc_k
+  type(states_elec_t), target,   intent(inout) :: st
+  type(namespace_t),             intent(in)    :: namespace
+  type(space_t),                 intent(in)    :: space
+  type(grid_t),                  intent(in)    :: gr
+  type(kpoints_t),               intent(in)    :: kpoints
+  type(poisson_t),               intent(inout) :: psolver
+  integer,                       intent(in)    :: st_min, st_max
+  integer,                       intent(out)   :: iindex(:,:)
+  integer,                       intent(out)   :: jindex(:,:)
+  integer,                       intent(out)   :: kindex(:,:)
+  integer,                       intent(out)   :: lindex(:,:)
+  R_TYPE,                        intent(out)   :: twoint(:)  !
+  CMPLX,               optional, intent(in)    :: phase(:,st%d%kpt%start:)
+  type(singularity_t), optional, intent(in)    :: singularity
+  logical,             optional, intent(in)    :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
@@ -1885,7 +1884,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   ASSERT(present(phase))
 #endif
 
-  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
+  npath = kpoints_nkpt_in_path(kpoints)
 
   if(st%are_packed()) call st%unpack()
 
@@ -1901,13 +1900,13 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   if(present(singularity)) then
     call fourier_space_op_nullify(coulb)
     qq = M_ZERO
-    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO)
+    call poisson_build_kernel(psolver, namespace, space, coulb, qq, M_ZERO)
   end if
 
   do ist_global = 1, nst_tot
     ist = mod(ist_global - 1, nst) + 1
     ikpt = (ist_global - ist) / nst + 1
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
+    ikpoint = st%d%get_kpoint_index(ikpt)
 
     wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
     ASSERT(wfs%status() /= BATCH_DEVICE_PACKED)
@@ -1921,17 +1920,17 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
     do jst_global = 1, nst_tot
       jst = mod(jst_global - 1, nst) + 1
       jkpt = (jst_global - jst) / nst + 1
-      jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
+      jkpoint = st%d%get_kpoint_index(jkpt)
 
       if(exc_k_ .and. ist /= jst) cycle
 
       if(present(singularity)) then
-        qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
-                         - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
+        qq(1:gr%der%dim) = kpoints%get_point(ikpoint, absolute_coordinates=.false.) &
+                         - kpoints%get_point(jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &
-                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+        call poisson_build_kernel(psolver, namespace, space, coulb, qq, M_ZERO, &
+                  -(kpoints%full%npoints-npath)*gr%sb%latt%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
 #ifndef R_TCOMPLEX
@@ -2032,7 +2031,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   end do
 
   if(gr%mesh%parallel_in_domains) then
-    call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+    call gr%mesh%allreduce(twoint)
   end if
 
   if(present(singularity)) then
@@ -2047,6 +2046,249 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   POP_SUB(X(states_elec_me_two_body))
 end subroutine X(states_elec_me_two_body)
+
+
+!> Perform RRQR on the transpose states stored in the states object
+!! and return the pivot vector 
+!! This is not an all-purpose routine for RRQR, but only operates on the
+!! specific set stored in st
+subroutine X(states_elec_rrqr_decomposition)(st, namespace, mesh, nst, root, ik, jpvt)
+  type(states_elec_t), intent(in)  :: st
+  type(namespace_t),   intent(in)  :: namespace
+  type(mesh_t),        intent(in)  :: mesh
+  integer,             intent(in)  :: nst
+  logical,             intent(in)  :: root !< this is needed for serial
+  integer,             intent(in)  :: ik ! perform SCDM with this k-point
+  integer,             intent(out) :: jpvt(:)
+
+  integer :: total_np, nref, info, wsize
+  R_TYPE, allocatable :: tau(:), work(:)
+  R_TYPE :: tmp
+#ifndef R_TREAL
+  FLOAT, allocatable :: rwork(:)
+#endif
+  R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
+  R_TYPE, allocatable :: KSt(:,:)
+  R_TYPE, allocatable :: psi(:, :)
+  integer :: ii,ist,  count, lnst
+  logical :: do_serial
+  integer :: psi_block(2), blacs_info
+  integer, allocatable :: ipiv(:)
+#ifdef HAVE_SCALAPACK
+  integer :: psi_desc(BLACS_DLEN)
+#ifndef R_TREAL
+  integer :: rwsize
+  FLOAT :: tmp2
+#endif
+#endif
+  integer :: sender
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(states_elec_rrqr_decomposition))
+  call profiling_in(prof, TOSTRING(X(RRQR)))
+
+  ASSERT(.not. mesh%use_curvilinear)
+  ASSERT(nst == st%nst)
+
+  lnst = st%lnst
+
+  ! decide whether we can use ScaLAPACK
+  do_serial = .false.
+  if(mesh%parallel_in_domains .or. st%parallel_in_states) then
+#ifndef HAVE_SCALAPACK
+     message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
+     call messages_warning(1, namespace=namespace)
+     do_serial = .true.
+#else
+     if(.not.st%scalapack_compatible) then
+        message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
+        call messages_warning(1, namespace=namespace)
+        do_serial = .true.
+     end if
+#endif
+  else
+     do_serial = .true.
+  endif
+
+  if(.not.do_serial) then
+    
+    call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
+    
+    ! allocate local part of transpose state matrix
+    SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    
+    ! copy states into the transpose matrix
+    count = 0
+    do ist = st%st_start,st%st_end
+      count = count + 1
+
+      call states_elec_get_state(st, mesh, ist, ik, psi)
+      
+      ! We need to set to zero some extra parts of the array
+      if(st%d%dim == 1) then
+        psi(mesh%np + 1:psi_block(1), 1:st%d%dim) = M_ZERO
+      else
+        psi(mesh%np + 1:mesh%np_part, 1:st%d%dim) = M_ZERO
+      end if
+
+      KSt(count, 1:total_np) = psi(1:total_np, 1)
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+     
+    ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+    ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+#ifdef HAVE_SCALAPACK
+    call descinit(psi_desc(1), nst, total_np, psi_block(2), psi_block(1), 0, 0, &
+      st%dom_st_proc_grid%context, lnst, blacs_info)
+#endif
+     
+    if(blacs_info /= 0) then
+       write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
+       call messages_fatal(1, namespace=namespace)
+    end if
+    
+    nref = min(nst, total_np)
+    SAFE_ALLOCATE(tau(1:nref))
+    tau = M_ZERO
+
+    ! calculate the QR decomposition
+    SAFE_ALLOCATE(ipiv(1:total_np))
+    ipiv(1:total_np) = 0
+
+    ! Note: lapack routine has different number of arguments depending on type
+#ifdef HAVE_SCALAPACK
+#ifndef R_TREAL
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info) 
+#else 
+    call pdgeqpf( nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, blacs_info)
+#endif
+#endif
+    
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
+      call messages_fatal(1, namespace=namespace)
+    end if
+     
+    wsize = nint(R_REAL(tmp))
+    SAFE_ALLOCATE(work(1:wsize))
+#ifdef HAVE_SCALAPACK
+#ifndef R_TREAL
+    rwsize = max(1,nint(R_REAL(tmp2)))
+    SAFE_ALLOCATE(rwork(1:rwsize))
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize, rwork(1), rwsize, blacs_info)
+    SAFE_DEALLOCATE_A(rwork)
+#else
+    call pdgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize,  blacs_info)
+#endif
+#endif
+
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
+      call messages_fatal(1, namespace=namespace)
+    end if
+    SAFE_DEALLOCATE_A(work)
+     
+     ! copy the first nst global elements of ipiv into jpvt
+     ! bcast is at the end of the routine
+!     if(mpi_world%rank==0)  then
+!        do ist =1,nst
+!           write(123,*) ipiv(ist)
+!        end do
+!     end if
+    jpvt(1:nst) =  ipiv(1:nst)
+     
+  else
+    ! first gather states into one array on the root process
+    ! build transpose of KS set on which RRQR is performed
+    if(root) then
+       SAFE_ALLOCATE(KSt(1:nst,1:mesh%np_global))
+    end if
+    
+    ! gather states in case of domain parallelization
+    if (mesh%parallel_in_domains.or.st%parallel_in_states) then
+      SAFE_ALLOCATE(temp_state(1:mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(state_global(1:mesh%np_global))
+      
+      count = 0
+      do ii = 1, nst
+        !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
+        state_global(1:mesh%np_global) = M_ZERO
+        sender = 0
+        if(state_is_local(st,ii)) then
+          call states_elec_get_state(st, mesh, ii, ik, temp_state)
+          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np, 1), state_global)
+          if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
+        end if
+        call comm_allreduce(mpi_world,sender)
+#ifdef HAVE_MPI
+        call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
+#endif
+        ! keep full Kohn-Sham matrix only on root
+        if (root)  KSt(ii,1:mesh%np_global)  = st%occ(ii, 1)*state_global(1:mesh%np_global)
+      end do
+      SAFE_DEALLOCATE_A(state_global)
+      SAFE_DEALLOCATE_A(temp_state)
+    else
+      ! serial
+      SAFE_ALLOCATE(temp_state(1:mesh%np, st%d%dim))
+      do ii = 1, nst
+        ! this call is necessary becasue we want to have only np not np_part
+        call states_elec_get_state(st, mesh, ii, ik, temp_state)
+        KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
+      end do
+      SAFE_DEALLOCATE_A(temp_state)
+    end if
+
+    ! now perform serial RRQR
+    ! dummy call to obtain dimension of work
+    ! Note: the lapack routine has different number of arguments depending on type
+    if(root) then
+      SAFE_ALLOCATE(work(1:1))
+      SAFE_ALLOCATE(tau(1:nst))
+#ifdef R_TREAL
+      call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+#else
+      SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+      call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+#endif
+      if (info /= 0) then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1, namespace=namespace)
+      end if
+
+      wsize = int(work(1))
+      SAFE_DEALLOCATE_A(work)
+      SAFE_ALLOCATE(work(1:wsize))
+
+      jpvt(:) = 0
+      tau(:) = 0.
+      ! actual call
+#ifdef R_TREAL
+         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
+#else
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+#endif
+      if (info /= 0)then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1, namespace=namespace)
+      end if
+      SAFE_DEALLOCATE_A(work)
+    endif
+
+    SAFE_DEALLOCATE_A(temp_state)
+    SAFE_DEALLOCATE_A(state_global)
+    
+   endif
+
+#ifdef HAVE_MPI
+    call MPI_Bcast(JPVT,nst, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+#endif
+
+   call profiling_out(prof)
+   POP_SUB(X(states_elec_rrqr_decomposition))
+end subroutine X(states_elec_rrqr_decomposition)
 
 
 !! Local Variables:

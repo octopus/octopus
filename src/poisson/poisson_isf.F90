@@ -226,6 +226,9 @@ contains
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
+#if defined(HAVE_MPI)
+    integer(8) :: number_points
+#endif
     
     PUSH_SUB(poisson_isf_solve)
 
@@ -280,6 +283,13 @@ contains
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
 #if defined(HAVE_MPI)
+        ! make sure we do not run into integer overflow here
+        number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+        number_points = number_points * cube%rs_n_global(3)
+        if (number_points >= HUGE(0)) then
+          message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+          call messages_fatal(1)
+        end if
         call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
 #endif
@@ -420,7 +430,7 @@ contains
 
     !Recollect the result
     !We have to multiply by a factor
-    factor = hgrid**3/(n1*n2*n3)
+    factor = hgrid**3/(real(n1*n2,8)*real(n3,8))
 
     ! Calling this routine gives only the Hartree potential
     call zarray_out(n01, n02, n03, nd1h, nd2, nd3, rhopot, zarray(1, 1, inzee), factor)
@@ -1674,7 +1684,7 @@ contains
     PUSH_SUB(pconvxc_off)
 
     !factor to be used to keep unitarity
-    scal=hgrid**3/real(n1*n2*n3,8)
+    scal=hgrid**3/(real(n1*n2,8)*real(n3,8))
 
     SAFE_ALLOCATE(zf(1:md1, 1:md3, 1:md2/nproc))
     SAFE_ALLOCATE(gather_arr(0:nproc-1, 1:2))

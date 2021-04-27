@@ -198,9 +198,9 @@ contains
     if(mesh%sb%box_shape == PARALLELEPIPED) then
       call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
         this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
-        mesh%sb%rlattice(3, 3), mesh%sb%rlattice(2, 3), mesh%sb%rlattice(1, 3), &
-        mesh%sb%rlattice(3, 2), mesh%sb%rlattice(2, 2), mesh%sb%rlattice(1, 2), &
-        mesh%sb%rlattice(3, 1), mesh%sb%rlattice(2, 1), mesh%sb%rlattice(1, 1))
+        mesh%sb%latt%rlattice(3, 3), mesh%sb%latt%rlattice(2, 3), mesh%sb%latt%rlattice(1, 3), &
+        mesh%sb%latt%rlattice(3, 2), mesh%sb%latt%rlattice(2, 2), mesh%sb%latt%rlattice(1, 2), &
+        mesh%sb%latt%rlattice(3, 1), mesh%sb%latt%rlattice(2, 1), mesh%sb%latt%rlattice(1, 1))
     else
       call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
         this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &

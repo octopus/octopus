@@ -13,8 +13,8 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 123
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  16
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 0.40970595
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -1.61084420
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 2.02054938
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.45704568
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -4.55104824
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.35943900
@@ -46,8 +46,8 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 123
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  16
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 0.40971713
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -1.61084420
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; 2.02054932
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.45704568
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -4.55104824
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.35943900

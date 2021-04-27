@@ -56,7 +56,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dd)
+    call mesh%allreduce(dd)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
   
@@ -73,7 +73,6 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   FLOAT, optional, intent(out)   :: norm
 
   FLOAT   :: norm_
-  integer :: idim
 
   PUSH_SUB(X(mf_normalize))
 
@@ -83,9 +82,7 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
     call messages_fatal(1)
   end if
 
-  do idim = 1, dim
-    call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
-  end do
+  call lalg_scal(mesh%np, dim, R_TOTYPE(M_ONE / norm_), psi)
 
   if(present(norm)) then
     norm = norm_
@@ -213,7 +210,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call mesh%allreduce(dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -245,7 +242,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
-    call comm_allreduce(mesh%vp%comm, dotp)
+    call mesh%allreduce(dotp)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
@@ -280,7 +277,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     nrm2 = nrm2**2
-    call comm_allreduce(mesh%vp%comm, nrm2)
+    call mesh%allreduce(nrm2)
     nrm2 = sqrt(nrm2)
     call profiling_out(X(PROFILING_MF_REDUCE))
   end if
@@ -456,7 +453,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   R_TYPE,             intent(out) :: f_in_plane(plane%nu:plane%mu, plane%nv:plane%mv)
 
   integer :: iu, iv, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(3)
   type(qshep_t) :: interp
   FLOAT, allocatable :: xglobal(:, :)
@@ -471,7 +468,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif
@@ -505,7 +502,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   R_TYPE,             intent(out) :: f_in_line(line%nu:line%mu)
 
   integer :: iu, ip
-  R_DOUBLE, allocatable :: f_global(:)
+  R_TYPE, allocatable :: f_global(:)
   FLOAT :: pp(2)
   type(qshep_t) :: interp
   FLOAT , allocatable :: xglobal(:, :)
@@ -520,7 +517,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
+  call vec_allgather(mesh%vp, f_global, ff)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif
@@ -678,18 +675,14 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2, mask = mask)
   
-  if(lmax > 0) then
-    do idim = 1, 3
-      if (idim <= mesh%sb%dim) then
-        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-        multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
-      else
-        multipole(idim+1) = M_ZERO
-      end if
+  if (lmax > 0) then
+    do idim = 1, mesh%sb%dim
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+      multipole(1 + idim) = X(mf_integrate)(mesh, ff2, mask = mask)
     end do
   end if
   
-  if(lmax>1) then
+  if (lmax > 1) then
     if (mesh%sb%dim /= 3) then
       message(1) = "multipoles for l > 1 are only available in 3D."
       call messages_fatal(1)

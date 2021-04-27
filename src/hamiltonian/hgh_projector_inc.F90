@@ -48,7 +48,7 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, ll, lmax, dim, psi, ppsi, reltype)
     call X(hgh_project_bra)(mesh, sm, hgh_p(mm), dim, reltype, psi, uvpsi(1:dim, 1:3, mm))
   end do
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, uvpsi)
+  if(mesh%parallel_in_domains) call mesh%allreduce(uvpsi)
 
   call X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   

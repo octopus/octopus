@@ -215,7 +215,7 @@ contains
     !% This preconditioner is disabled for systems with dimension other than 3.
     !%End
     call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
-    if (der%mesh%sb%dim /= 3) smix%precondition = .false.
+    if (der%dim /= 3) smix%precondition = .false.
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
@@ -327,10 +327,10 @@ contains
       !
 
       ASSERT(.not. der%mesh%use_curvilinear)
-      ASSERT(der%mesh%sb%dim == 3)
+      ASSERT(der%dim == 3)
       
       call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
-      call stencil_cube_get_lapl(smix%preconditioner%stencil, der%mesh%sb%dim, 1)
+      call stencil_cube_get_lapl(smix%preconditioner%stencil, der%dim, 1)
       call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
       
       ns = smix%preconditioner%stencil%size
@@ -344,7 +344,7 @@ contains
       do ip = 1, maxp
 
         do is = 1, ns
-          select case(sum(abs(smix%preconditioner%stencil%points(1:der%mesh%sb%dim, is))))
+          select case(sum(abs(smix%preconditioner%stencil%points(1:der%dim, is))))
           case(0)
             smix%preconditioner%w(is, ip) = CNST(1.0) + weight/CNST(8.0)
           case(1)
@@ -360,7 +360,7 @@ contains
         end do
       end do
       
-      call nl_operator_update_weights(smix%preconditioner)
+      call nl_operator_output_weights(smix%preconditioner)
 
     end subroutine init_preconditioner
 

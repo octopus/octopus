@@ -1,4 +1,5 @@
 !! Copyright (C) 2013 M. Oliveira
+!! Copyright (C) 2021 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -54,11 +55,10 @@ module partition_oct_m
   !! only stores a portion of the full array. Because each process needs to know in a 
   !! straighforward way (i.e. without having to perform any kind of communication or 
   !! lengthy operations) which process stores the partition corresponding to any giving
-  !! point, the distribution of the points is done in the following way:
-  !! 
-  !!  i) the first mod(partition%np_global, partition%npart) processes store partition%nppp+1 
-  !!     points, with partition%nppp = partition%np_global/partition%npart
-  !!  ii) the remaining processes store partition%nppp points
+  !! point, the distribution of the points is done using a block data decomposition:
+  !! - partition i: starts at floor((i-1) * np_global/npart) + 1
+  !! - partition i: ends at   floor( i * np_global/npart)
+  !! - element j stored on partition: floor(npart*(j+1)/np_global) + 1
   !!
   !! Note 1: this module can be a bit confusing as they are in fact two partitions. One is the
   !! partition of some array (in the case of Octopus, this is typically the mesh functions),
@@ -74,11 +74,11 @@ module partition_oct_m
     type(mpi_grp_t) :: mpi_grp   !< The mpi group use for distributing the partition data.
     integer ::         np_global !< The total number of points in the partition.
     integer ::         npart     !< The number of partitions.
-    integer ::         remainder !< The remainder of the division of np_global by npart
-    integer ::         nppp      !< Number of points per process. The first partition%remainder processes
-                                 !! have nppp+1 points, while the other ones have nppp points
+    integer, allocatable :: np_local_vec(:)  !< The number of points for each partition
+    integer, allocatable :: istart_vec(:)    !< The position of the first point for each partition
 
     !> The following components are process-dependent:
+    integer :: partno            !< local partition number (i.e. rank + 1)
     integer :: np_local          !< The number of points of the partition stored in this process.
     integer :: istart            !< The position of the first point stored in this process.
     integer, allocatable :: part(:)  !< The local portion of the partition.
@@ -92,8 +92,9 @@ contains
   subroutine partition_init(partition, np_global, mpi_grp)
     type(partition_t), intent(out) :: partition
     integer,           intent(in)  :: np_global
-
     type(mpi_grp_t),   intent(in)  :: mpi_grp
+
+    integer :: iend, ipart
 
     PUSH_SUB(partition_init)
 
@@ -101,17 +102,19 @@ contains
     partition%mpi_grp = mpi_grp
     partition%np_global = np_global
     partition%npart = mpi_grp%size
-    partition%remainder = mod(partition%np_global, partition%npart)
-    partition%nppp = partition%np_global/partition%npart   
+    partition%partno = mpi_grp%rank + 1
 
-    !Processor dependent
-    if (mpi_grp%rank + 1 <= partition%remainder) then
-      partition%np_local = partition%nppp + 1
-      partition%istart = (partition%nppp + 1)*mpi_grp%rank + 1
-    else
-      partition%np_local = partition%nppp
-      partition%istart = partition%nppp*mpi_grp%rank + partition%remainder + 1
-    end if
+    SAFE_ALLOCATE(partition%np_local_vec(1:partition%npart))
+    SAFE_ALLOCATE(partition%istart_vec(1:partition%npart))
+
+    ! use block data decomposition
+    do ipart = 1, partition%npart
+      partition%istart_vec(ipart) = floor((ipart-1) * TOFLOAT(np_global)/partition%npart) + 1
+      iend  = floor(ipart * TOFLOAT(np_global)/partition%npart)
+      partition%np_local_vec(ipart) = iend - partition%istart_vec(ipart) + 1
+    end do
+    partition%istart = partition%istart_vec(partition%partno)
+    partition%np_local = partition%np_local_vec(partition%partno)
 
     !Allocate memory for the partition
     SAFE_ALLOCATE(partition%part(1:partition%np_local))
@@ -152,10 +155,7 @@ contains
     integer,           intent(out) :: ierr
 
     integer :: err
-#ifdef HAVE_MPI2
-    integer :: ipart
-    integer, allocatable :: scounts(:), sdispls(:)
-#else
+#ifndef HAVE_MPI2
     integer, allocatable :: part_global(:)    
 #endif
     character(len=MAX_PATH_LEN) :: full_filename
@@ -166,17 +166,6 @@ contains
     full_filename = trim(dir)//'/'//trim(filename)
 
 #ifdef HAVE_MPI2
-    ! Calculate displacements for writing
-    SAFE_ALLOCATE(scounts(1:partition%npart))
-    SAFE_ALLOCATE(sdispls(1:partition%npart))
-    
-    scounts(1:partition%remainder) = partition%nppp + 1
-    scounts(partition%remainder + 1:partition%npart) = partition%nppp
-    sdispls(1) = 0
-    do ipart = 2, partition%npart
-      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
-    end do
-    
     ! Write the header (root only) and wait
     if (mpi_grp_is_root(partition%mpi_grp)) then
       call iwrite_header(full_filename, partition%np_global, err)
@@ -192,15 +181,13 @@ contains
       ! Only one rank per partition group should write the partition restart information
       ! Otherwise, more than once is trying to be written data
       if (mod(mpi_world%rank, mpi_world%size/partition%mpi_grp%size) == 0) then
-        call io_binary_write_parallel(full_filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+        call io_binary_write_parallel(full_filename, partition%mpi_grp%comm, partition%istart, &
              partition%np_local, partition%part, err)
         call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
         if (err /= 0) ierr = ierr + 2
       end if
     end if
 
-    SAFE_DEALLOCATE_A(scounts)
-    SAFE_DEALLOCATE_A(sdispls)
 #else
     !Get the global partition in the root node
     if (partition%mpi_grp%rank == 0) then
@@ -235,7 +222,7 @@ contains
     character(len=*),  intent(in)    :: filename
     integer,           intent(out)   :: ierr
 
-    integer :: ipart, err, np, file_size
+    integer :: err, np, file_size
     integer, allocatable :: scounts(:), sdispls(:)
 #ifndef HAVE_MPI2
     integer, allocatable :: part_global(:)
@@ -279,18 +266,14 @@ contains
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(sdispls(1:partition%npart))
 
-    scounts(1:partition%remainder) = partition%nppp + 1
-    scounts(partition%remainder + 1:partition%npart) = partition%nppp
-    sdispls(1) = 0
-    do ipart = 2, partition%npart
-      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
-    end do
+    scounts = partition%np_local_vec
+    sdispls = partition%istart_vec - 1
 
     ASSERT(sum(scounts(:)) == partition%np_global)
 
 #ifdef HAVE_MPI2
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
-    call io_binary_read_parallel(full_filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
+    call io_binary_read_parallel(full_filename, partition%mpi_grp%comm, partition%istart, &
          partition%np_local, partition%part, err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     if (err /= 0) ierr = ierr + 4
@@ -334,8 +317,6 @@ contains
       write(message(2),*) 'filename = ', full_filename
       write(message(3),*) 'scounts = ', scounts(:)
       write(message(4),*) 'sdispls = ', sdispls(:)
-      write(message(5),*) 'partition%remainder = ', partition%remainder
-      write(message(6),*) 'partition%np_local = ', partition%np_local
       call messages_fatal(6)
     endif
 
@@ -367,7 +348,6 @@ contains
     integer,           intent(out) :: part_global(:)
     integer, optional, intent(in)  :: root
 
-    integer :: ipart
     integer, allocatable :: rdispls(:), rcounts(:)
 
     PUSH_SUB(partition_get_global)
@@ -375,12 +355,8 @@ contains
     SAFE_ALLOCATE(rdispls(1:partition%npart))
     SAFE_ALLOCATE(rcounts(1:partition%npart))
 
-    rcounts(1:partition%remainder) = partition%nppp + 1
-    rcounts(partition%remainder + 1:partition%npart) = partition%nppp
-    rdispls(1) = 0
-    do ipart = 2, partition%npart
-      rdispls(ipart) = rdispls(ipart-1) + rcounts(ipart-1)
-    end do
+    rcounts = partition%np_local_vec
+    rdispls = partition%istart_vec - 1
 
     ASSERT(all(partition%part(1:partition%np_local) > 0))
 
@@ -427,7 +403,7 @@ contains
     integer,           intent(in)  :: points(:)
     integer,           intent(out) :: partno(:)
 
-    integer :: ip, nproc, rnp, zero_part
+    integer :: ip, nproc, rnp
     integer, allocatable :: sbuffer(:), rbuffer(:)
     integer, allocatable :: scounts(:), rcounts(:)
     integer, allocatable :: sdispls(:), rdispls(:)
@@ -442,19 +418,10 @@ contains
 
     ! How many points will we have to send/receive from each process?
     scounts = 0
-    zero_part = 1
     do ip = 1, np
-      !Who knows where points(ip) is stored?
-      if (points(ip) == 0) then
-        nproc = zero_part
-        zero_part = mod(zero_part, partition%npart) + 1
-      else if (points(ip) <= partition%remainder*(partition%nppp + 1)) then
-        nproc = (points(ip)-1)/(partition%nppp + 1) + 1
-      else
-        nproc = (points(ip) - 1 - (partition%nppp + 1)*partition%remainder)/partition%nppp + partition%remainder + 1
-      end if
-
-      !We increase the respective counter
+      ! Who knows where points(ip) is stored?
+      nproc = partition_get_number(partition, points(ip))
+      ! We increase the respective counter
       scounts(nproc) = scounts(nproc) + 1
     end do
 
@@ -485,24 +452,16 @@ contains
     SAFE_ALLOCATE(ipos(1:partition%npart))
     SAFE_ALLOCATE(order(1:np))
     ipos = 0
-    zero_part = 1
     do ip = 1, np
-      !Who knows where points(ip) is stored?
-      if (points(ip) == 0) then
-        nproc = zero_part
-        zero_part = mod(zero_part, partition%npart) + 1
-      else if (points(ip) <= partition%remainder*(partition%nppp + 1)) then
-        nproc = (points(ip)-1)/(partition%nppp + 1) + 1
-      else
-        nproc = (points(ip) - 1 - (partition%nppp + 1)*partition%remainder)/partition%nppp + partition%remainder + 1
-      end if
+      ! Who knows where points(ip) is stored?
+      nproc = partition_get_number(partition, points(ip))
 
       !We increase the respective counter
       ipos(nproc) = ipos(nproc) + 1
 
       !Put the point in the correct place
       order(ip) = sdispls(nproc) + ipos(nproc)
-      sbuffer(sdispls(nproc) + ipos(nproc)) = points(ip) ! global index of the point
+      sbuffer(order(ip)) = points(ip) ! global index of the point
     end do
     SAFE_DEALLOCATE_A(ipos)
 
@@ -594,6 +553,20 @@ contains
     integer,           intent(in) :: local_point
     part = partition%part(local_point)
   end function partition_get_part
+
+  !---------------------------------------------------------
+  !> Returns the partition number for a given global index
+  !> If the index is zero, return local partition
+  pure integer function partition_get_number(partition, global_point) result(part)
+    type(partition_t), intent(in) :: partition
+    integer,           intent(in) :: global_point
+
+    if (global_point == 0) then
+      part = partition%partno
+    else
+      part = floor((partition%npart*TOFLOAT(global_point) - 1)/TOFLOAT(partition%np_global)) + 1
+    end if
+  end function partition_get_number
   
   !---------------------------------------------------------
   !> Calculates the local vector of all partitions in parallel.
@@ -614,13 +587,7 @@ contains
     SAFE_ALLOCATE(rcounts(1:partition%npart))
     
     ! Calculate the starting point of the running process
-    scounts(1:partition%remainder) = partition%nppp + 1
-    scounts(partition%remainder + 1:partition%npart) = partition%nppp
-    sdispls(1) = 0
-    do ipart = 2, partition%npart
-      sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
-    end do
-    istart = sdispls(partition%mpi_grp%rank + 1)
+    istart = partition%istart - 1
     
     scounts = 0
     ! Count and store the local points for each partition

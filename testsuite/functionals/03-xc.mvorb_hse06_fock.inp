@@ -2,7 +2,9 @@ CalculationMode = gs
 
 PeriodicDimensions = 3
 ExperimentalFeatures = yes
-LSize = 5
+%LatticeParameters
+ 10 | 10 | 10
+%
 
 %Coordinates
  'H' |  0.717157 | 0 | 0

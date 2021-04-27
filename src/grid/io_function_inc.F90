@@ -66,15 +66,15 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
 
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
-    call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
+    call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_BCAST)
 #if defined(HAVE_MPI)
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
-    call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
+    call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call vec_scatter(mesh%vp, mesh%vp%root, ff, ff_global)
+      call vec_scatter(mesh%vp, 0, ff, ff_global)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
@@ -111,7 +111,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   type(cube_function_t) :: re, im
 #endif
 #endif
-  R_TYPE, pointer :: read_ff(:)
+  R_TYPE, allocatable :: read_ff(:)
 
   call profiling_in(read_prof, TOSTRING(X(DISK_READ)))
   PUSH_SUB(X(io_function_input_global))
@@ -172,7 +172,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
           end do
         end if
 
-        SAFE_DEALLOCATE_P(read_ff)
+        SAFE_DEALLOCATE_A(read_ff)
       end if
 
     else
@@ -286,7 +286,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
     
-    SAFE_DEALLOCATE_P(read_ff)
+    SAFE_DEALLOCATE_A(read_ff)
   case default
     ierr = 1
   end select
@@ -481,9 +481,9 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   root_ = optional_default(root, 0)
 
   if(mesh%parallel_in_domains) then
-    comm = mesh%vp%comm
+    comm = mesh%mpi_grp%comm
 
-    i_am_root = (mesh%vp%rank == root_)
+    i_am_root = (mesh%mpi_grp%rank == root_)
 
     if (.not. is_global_) then
       if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
@@ -595,14 +595,14 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, ff, vector_dim, &
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoints, ff, vector_dim, &
     unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
-  type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
+  type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,           target,   intent(in)  :: ff(:, :)
   integer,                    intent(in)  :: vector_dim
   type(unit_t),               intent(in)  :: unit
@@ -617,6 +617,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root
   integer :: root_, comm
+  type(mpi_grp_t) :: grp_
 
   PUSH_SUB(X(io_function_output_vector_BZ))
 
@@ -629,31 +630,30 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   ierr = 0
   ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
 
-  i_am_root = .true.
-#ifdef HAVE_MPI
-  comm = MPI_COMM_NULL
-#endif
   root_ = optional_default(root, 0)
+  if(present(grp)) then
+    call mpi_grp_copy(grp_, grp)
+  else
+#ifdef HAVE_MPI
+    comm = MPI_COMM_NULL
+#else
+    comm = -1
+#endif
+    call mpi_grp_init(grp_, comm)
+  end if
+
+  i_am_root = grp%rank == root_
 
   if(kpt%parallel) then
-    comm = grp%comm
-
-    i_am_root = (grp%rank == root_)
-
-    SAFE_ALLOCATE(ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim))
-    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
+    SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:vector_dim))
+    ff_global(1:kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
  
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
-    call comm_allreduce(comm, ff_global)
+    call comm_allreduce(grp_, ff_global)
   else
     ff_global => ff
-  end if
-
-  if(present(grp)) then
-    i_am_root = i_am_root .and. (grp%rank == root_)
-    comm = grp%comm
   end if
 
   if(i_am_root) then
@@ -668,7 +668,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, &
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, kpoints, &
           ff_global(:, ivd), unit, ierr)
       end do
     end if
@@ -676,9 +676,9 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   end if
 
 #ifdef HAVE_MPI
-  if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
+  if(grp_%comm /= MPI_COMM_NULL .and. grp_%comm /= 0 ) then
     ! I have to broadcast the error code
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
   end if
 #endif
   
@@ -729,8 +729,8 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   comm = MPI_COMM_NULL
   root_ = optional_default(root, 0)
   if(mesh%parallel_in_domains) then
-    comm = mesh%vp%comm
-    i_am_root = (mesh%vp%rank == root_)
+    comm = mesh%mpi_grp%comm
+    i_am_root = (mesh%mpi_grp%rank == root_)
     if (.not. is_global_) then
       if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
         call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
@@ -902,7 +902,7 @@ contains
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do ip = 1, np_max
-      call index_to_coords(mesh%idx, ip, ixvect)
+      call mesh_global_index_to_coords(mesh, ip, ixvect)
 
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
         xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -945,9 +945,9 @@ contains
 ! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
         ixvect_test = 1
         ixvect_test(jdim) = ix
-        ip = index_from_coords(mesh%idx, ixvect_test)
+        ip = mesh_global_index_from_coords(mesh, ixvect_test)
         if(ip /= 0) then 
-          call index_to_coords(mesh%idx, ip, ixvect_test)
+          call mesh_global_index_to_coords(mesh, ip, ixvect_test)
           if(ixvect_test(jdim) == 0) exit
         end if
       end do
@@ -963,7 +963,7 @@ contains
 
         ixvect(d2) = iy
         ixvect(d3) = iz
-        ip = index_from_coords(mesh%idx, ixvect)
+        ip = mesh_global_index_from_coords(mesh, ixvect)
 
         if(ip <= np_max .and. ip > 0) then
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -1005,7 +1005,7 @@ contains
        
           ixvect(d1) = ix
           ixvect(d2) = iy
-          ip = index_from_coords(mesh%idx, ixvect)
+          ip = mesh_global_index_from_coords(mesh, ixvect)
          
           if(ip <= np_max .and. ip > 0) then
             xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
@@ -1081,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
+          ip = mesh_global_index_from_coords(mesh, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
+          ip = mesh_global_index_from_coords(mesh, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
+          ip = mesh_global_index_from_coords(mesh, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)
@@ -1162,7 +1162,7 @@ contains
   !> Writes real and imaginary parts
   subroutine out_dx()
     integer :: ix, iy, iz, idir
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     character(len=40) :: nitems
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1176,10 +1176,10 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
-
-    do idir = mesh%sb%periodic_dim+1, 3
+    do idir = 1, mesh%sb%periodic_dim
+      offset(idir) = units_from_atomic(units_out%length, -M_HALF*sum(mesh%sb%latt%rlattice(idir,1:mesh%sb%periodic_dim)))
+    end do
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
     end do
 
@@ -1192,11 +1192,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%rs_n_global(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
+                                           mesh%spacing(1)*mesh%sb%latt%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
+                                           mesh%spacing(2)*mesh%sb%latt%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+                                           mesh%spacing(3)*mesh%sb%latt%rlattice_primitive(idir, 3)), idir = 1, 3)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%rs_n_global(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -1231,7 +1231,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=8) :: fmt
@@ -1247,10 +1247,10 @@ contains
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
-
-    do idir = mesh%sb%periodic_dim+1, 3
+    do idir = 1, mesh%sb%periodic_dim
+      offset(idir) = -M_HALF*sum(mesh%sb%latt%rlattice(idir, 1:mesh%sb%periodic_dim))
+    end do
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
@@ -1265,7 +1265,7 @@ contains
     ! this is only for Gaussian input files, not for output files.
     do idir = 1, 3
       write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), &
-        (mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir), idir2 = 1, 3)
+        (mesh%spacing(idir)*mesh%sb%latt%rlattice_primitive(idir2, idir), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
       write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, (geo%atom(iatom)%x(idir), idir = 1, 3)
@@ -1305,7 +1305,7 @@ contains
     logical, intent(in) :: write_real
 
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
-    FLOAT :: lattice_vectors(3,3)
+    FLOAT :: lattice_vectors(3,mesh%sb%dim)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
@@ -1343,9 +1343,10 @@ contains
     if(mesh%sb%dim == 2) my_n(3) = 1
 
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
-    do idir = 1, 3
-      do idir2 = 1, 3
-        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
+    lattice_vectors = M_ZERO
+    do idir = 1, mesh%sb%dim
+      do idir2 = 1, mesh%sb%dim
+        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
       end do
     end do
     
@@ -1467,7 +1468,7 @@ contains
     filename = trim(dir)//'/'//trim(fname)//".vtk"
    
 
-    if(mesh%sb%nonorthogonal) then
+    if(mesh%sb%latt%nonorthogonal) then
       ! non-orthogonal grid
       SAFE_ALLOCATE(points(cube%rs_n_global(1),cube%rs_n_global(2),cube%rs_n_global(3),3))
       
@@ -1475,7 +1476,7 @@ contains
         do i2 =1 , cube%rs_n_global(2)
           do i3 =1 , cube%rs_n_global(3)
             pnt(1:3) =(/cube%Lrs(i1, 1),cube%Lrs(i2, 2),cube%Lrs(i3, 3)/)
-            points(i1,i2,i3, 1:3) = matmul(mesh%sb%rlattice_primitive(1:3,1:3), pnt(1:3))
+            points(i1,i2,i3, 1:3) = matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), pnt(1:3))
           end do
         end do
       end do
@@ -1497,11 +1498,11 @@ end subroutine X(io_function_output_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff, unit, ierr)
+subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, kpoints, ff, unit, ierr)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(namespace_t),          intent(in)  :: namespace
-  type(mesh_t),               intent(in)  :: mesh
+  type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
@@ -1521,9 +1522,9 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   mfmtheader = '(a,a10,5a23)'
 
   ASSERT(how > 0)
-  ASSERT(ubound(ff, dim = 1) >= mesh%sb%kpoints%reduced%npoints)
+  ASSERT(ubound(ff, dim = 1) >= kpoints%reduced%npoints)
 
-  np_max = mesh%sb%kpoints%reduced%npoints
+  np_max = kpoints%reduced%npoints
 
   if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
   if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
@@ -1564,11 +1565,11 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
     write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
 
     kk(1:MAX_DIM) = M_ZERO
-    dim = mesh%sb%kpoints%reduced%dim
+    dim = kpoints%reduced%dim
 
-    do ik = 1, mesh%sb%kpoints%reduced%npoints
+    do ik = 1, kpoints%reduced%npoints
       kk(1:dim) = units_from_atomic(units_out%length**(-1), &
-                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
+                         kpoints%reduced%point1BZ(1:dim,ik))
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &

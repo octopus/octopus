@@ -121,6 +121,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
 
 #ifdef HAVE_MPI
   integer :: ix, iy, iz, index, order_(1:3)
+  integer(8) :: number_points
   R_TYPE, allocatable :: cf_tmp(:)
   type(profile_t), save :: prof_allgather
 #endif
@@ -133,6 +134,13 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &
     (cube_getFFTLibrary(cube) == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
     
+    ! make sure we do not run into integer overflow here
+    number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+    number_points = number_points * cube%rs_n_global(3)
+    if (number_points >= HUGE(0)) then
+      message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+      call messages_fatal(1)
+    end if
     SAFE_ALLOCATE(cf_tmp(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
     call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
     ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
@@ -163,6 +171,13 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
     order_ = (/1,2,3/)
     if(present(order)) order_ = order
   
+    ! make sure we do not run into integer overflow here
+    number_points = cube%fs_n_global(1) * cube%fs_n_global(2)
+    number_points = number_points * cube%fs_n_global(3)
+    if (number_points >= HUGE(0)) then
+      message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+      call messages_fatal(1)
+    end if
     SAFE_ALLOCATE(cf_tmp(1:cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3)))
     call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
     ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
@@ -308,9 +323,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   integer :: ip, ix, iy, iz
   integer :: im, ii, nn
-#ifdef HAVE_MPI
-  integer :: first, last
-#endif
   logical :: local_
   R_TYPE, pointer :: gmf(:)
   integer                    :: bsize
@@ -381,10 +393,8 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   if(local_) then
 #ifdef HAVE_MPI
-    first = mesh%vp%xlocal
-    last = mesh%vp%np_local   
-    do ii = 1, last
-      mf(ii) = gmf(mesh%vp%local(ii+first-1))
+    do ip = 1, mesh%np
+      mf(ip) = gmf(mesh_local2global(mesh, ip))
     end do
 #endif
     SAFE_DEALLOCATE_P(gmf)

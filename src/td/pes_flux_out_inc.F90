@@ -19,16 +19,16 @@
 
 ! Wrapper function
 subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
-  type(pes_flux_t),  intent(in)    :: this
-  type(namespace_t), intent(in)    :: namespace
-  integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)            
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out)   :: idxZero(:)                
-  integer,           intent(in)    :: krng(:)             
-  integer,  pointer, intent(inout) :: Lp(:,:,:,:,:) 
-  FLOAT,  optional,  intent(out)   :: Ekin(:,:,:)  
+  type(pes_flux_t),     intent(in)    :: this
+  type(namespace_t),    intent(in)    :: namespace
+  integer,              intent(in)    :: dim
+  type(kpoints_t),      intent(inout) :: kpoints 
+  integer,              intent(in)    :: ll(:)            
+  FLOAT,                intent(out)   :: pmesh(:,:,:,:)    
+  integer,              intent(out)   :: idxZero(:)                
+  integer,              intent(in)    :: krng(:)             
+  integer, allocatable, intent(inout) :: Lp(:,:,:,:,:) 
+  FLOAT,   optional,    intent(out)   :: Ekin(:,:,:)  
   
 
   PUSH_SUB(pes_flux_pmesh)
@@ -40,7 +40,7 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krn
     call pes_flux_pmesh_sph(this, dim, pmesh, idxZero, krng, Lp)
   
   case (PES_CARTESIAN)
-    if (kpoints_have_zero_weight_path(kpoints)) then
+    if (kpoints%have_zero_weight_path()) then
       call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     else
       call pes_flux_pmesh_cub(this, dim, pmesh, idxZero, krng, Lp, Ekin)
@@ -59,14 +59,14 @@ end subroutine pes_flux_pmesh
 
 ! Wrapper function
 subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin)
-  type(pes_flux_t),    intent(in) :: this
-  type(restart_t),     intent(in) :: restart
-  type(states_elec_t), intent(in) :: st
-  integer,             intent(in) :: ll(:)
-  FLOAT, target,       intent(out) :: pesP(:,:,:,:)
-  integer,             intent(in)  :: krng(:) 
-  integer,  pointer,   intent(in)  :: Lp(:,:,:,:,:)  
-  integer, optional,   intent(in)  :: istin 
+  type(pes_flux_t),     intent(in) :: this
+  type(restart_t),      intent(in) :: restart
+  type(states_elec_t),  intent(in) :: st
+  integer,              intent(in) :: ll(:)
+  FLOAT,   target,      intent(out) :: pesP(:,:,:,:)
+  integer,              intent(in)  :: krng(:) 
+  integer, allocatable, intent(in)  :: Lp(:,:,:,:,:)  
+  integer, optional,    intent(in)  :: istin 
 
   PUSH_SUB(pes_flux_map_from_states)
 
@@ -144,22 +144,22 @@ end function flatten_indices
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
 subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
-  type(pes_flux_t),  intent(in)    :: this
-  type(namespace_t), intent(in)    :: namespace
-  integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
+  type(pes_flux_t),     intent(in)    :: this
+  type(namespace_t),    intent(in)    :: namespace
+  integer,              intent(in)    :: dim
+  type(kpoints_t),      intent(inout) :: kpoints 
+  integer,              intent(in)    :: ll(:)          !< ll(1:dim): the dimensions of the gpoint-mesh
+  FLOAT,                intent(out)   :: pmesh(:,:,:,:) !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
-  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
+  integer,              intent(out) :: idxZero(:)       !< The triplet identifying the zero of the coordinates           
 
-  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path 
+  integer,              intent(in)  :: krng(:)          !< The range identifying the zero-weight path 
                                                         !< mask-mesh with kpoints. 
-  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       !< Allocated inside this subroutine
+  integer, allocatable, intent(out) :: Lp(:,:,:,:,:)    !< Allocated inside this subroutine
                                                         !< maps a mask-mesh triplet of indices together with a kpoint 
                                                         !< index into a triplet on the combined momentum space mesh.
 
-  FLOAT,  optional,  intent(out) :: Ekin(:,:,:)         !< The total kinetic energy associated with the momentum p
+  FLOAT,   optional,    intent(out) :: Ekin(:,:,:)      !< The total kinetic energy associated with the momentum p
                                                         !< this is needed when using a kpoint path 
    
 
@@ -198,7 +198,7 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   nk(kpth_dir) = nkpt
   do ik = 1 , nkpt
     Lkpt(krng(1)+ik-1,kpth_dir) = ik
-    kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+    kpt(1:dim) = kpoints%get_point(krng(1) + ik -1) 
   end do
         
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)), 1:3))
@@ -336,7 +336,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -442,19 +442,19 @@ end subroutine pes_flux_map_from_state_1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine pes_flux_pmesh_cub(this, dim, pmesh, idxZero, krng, Lp, Ekin)
-  type(pes_flux_t),  intent(in)    :: this
-  integer,           intent(in)    :: dim
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
+  type(pes_flux_t),     intent(in)  :: this
+  integer,              intent(in)  :: dim
+  FLOAT,                intent(out) :: pmesh(:,:,:,:)   !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
-  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
+  integer,              intent(out) :: idxZero(:)       !< The triplet identifying the zero of the coordinates           
 
-  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path 
+  integer,              intent(in)  :: krng(:)          !< The range identifying the zero-weight path 
                                                         !< mask-mesh with kpoints. 
-  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       !< Allocated inside this subroutine
+  integer, allocatable, intent(out) :: Lp(:,:,:,:,:)    !< Allocated inside this subroutine
                                                         !< maps a mask-mesh triplet of indices together with a kpoint 
                                                         !< index into a triplet on the combined momentum space mesh.
 
-  FLOAT,  optional,  intent(out) :: Ekin(:,:,:)         !< The total kinetic energy associated with the momentum p
+  FLOAT,   optional,    intent(out) :: Ekin(:,:,:)      !< The total kinetic energy associated with the momentum p
   
   
   
@@ -502,12 +502,12 @@ end subroutine pes_flux_pmesh_cub
 
 
 subroutine pes_flux_pmesh_sph(this, dim, pmesh, idxZero, krng, Lp)
-  type(pes_flux_t),  intent(in)    :: this
-  integer,           intent(in)    :: dim
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out)   :: idxZero(:)             
-  integer,           intent(in)    :: krng(:)                                                                     
-  integer, pointer,  intent(out)   :: Lp(:,:,:,:,:)       
+  type(pes_flux_t),     intent(in)    :: this
+  integer,              intent(in)    :: dim
+  FLOAT,                intent(out)   :: pmesh(:,:,:,:)    
+  integer,              intent(out)   :: idxZero(:)             
+  integer,              intent(in)    :: krng(:)                                                                     
+  integer, allocatable, intent(out)   :: Lp(:,:,:,:,:)       
                                                        
                                                         
 
@@ -612,7 +612,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, 
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -1001,7 +1001,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
   end do
   
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
+    call comm_allreduce(st%st_kpt_mpi_grp, spctrout)
   end if
   
   
@@ -1175,13 +1175,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     ! total spectrum = sum over all states
     if(this%surf_shape == PES_SPHERICAL) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
+      call comm_allreduce(st%st_kpt_mpi_grp, spctrout_sph)
     else
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
+      call comm_allreduce(st%st_kpt_mpi_grp, spctrout_cub)
     end if
 
     ! orbital spectra
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
+    call comm_allreduce(st%st_kpt_mpi_grp, spctrsum)
   end if
 
 
@@ -1458,7 +1458,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   integer            :: err
   integer            :: root(1:P_STRATEGY_MAX)
   character(len=128) :: filename
-  CMPLX, pointer     :: psi1(:), psi2(:,:)
+  CMPLX, allocatable :: psi1(:), psi2(:,:)
   
   
   PUSH_SUB(pes_flux_dump)
@@ -1483,13 +1483,13 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
             psi2(:, :) = this%spctramp_sph(ist, idim, ik, :, :)
             call zrestart_write_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err, root = root)
-            SAFE_DEALLOCATE_P(psi2)
+            SAFE_DEALLOCATE_A(psi2)
             
           else
             SAFE_ALLOCATE(psi1(1:this%nkpnts))
             psi1(:) = this%spctramp_cub(ist, idim, ik, :)
             call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
-            SAFE_DEALLOCATE_P(psi1)
+            SAFE_DEALLOCATE_A(psi1)
 
           end if
         else 
@@ -1513,7 +1513,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         SAFE_ALLOCATE(psi1(this%nkpnts))
         psi1(:)=this%conjgphase_prev(:,ik)
         call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
-        SAFE_DEALLOCATE_P(psi1)
+        SAFE_DEALLOCATE_A(psi1)
       else
         err = 0
       end if
@@ -1555,7 +1555,7 @@ subroutine pes_flux_load(restart, this, st, ierr)
   integer            :: ist, ik, idim, itot
   integer            :: err
   character(len=128) :: filename
-  CMPLX, pointer    :: psi1(:), psi2(:,:)
+  CMPLX, allocatable :: psi1(:), psi2(:,:)
 
   PUSH_SUB(pes_flux_load)
 
@@ -1583,13 +1583,13 @@ subroutine pes_flux_load(restart, this, st, ierr)
             SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
             call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
             this%spctramp_sph(ist, idim, ik, :, :) = psi2(:, :)
-            SAFE_DEALLOCATE_P(psi2)
+            SAFE_DEALLOCATE_A(psi2)
           
           else
             SAFE_ALLOCATE(psi1(1:this%nkpnts))
             call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
             this%spctramp_cub(ist, idim, ik, :) =  psi1(:)
-            SAFE_DEALLOCATE_P(psi1)
+            SAFE_DEALLOCATE_A(psi1)
 
           end if
         else
@@ -1611,7 +1611,7 @@ subroutine pes_flux_load(restart, this, st, ierr)
         SAFE_ALLOCATE(psi1(this%nkpnts))
         call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
         this%conjgphase_prev(:,ik)=psi1(:)
-        SAFE_DEALLOCATE_P(psi1)
+        SAFE_DEALLOCATE_A(psi1)
       else
         err = 0
       end if

@@ -192,7 +192,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   call op(x, ax)
   ! r <- b - ax, rr <- r
   call lalg_copy(np, b, r)
-  call lalg_axpy(np, -R_TOTYPE(M_ONE), ax, r)
+  call lalg_axpy(np, -M_ONE, ax, r)
   call lalg_copy(np, r, rr)
 
   ! Initial search direction.
@@ -213,9 +213,9 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     call lalg_axpy(np, alpha, p, x)           ! x  <- x + alpha*p
     beta = R_REAL(dotp(rr, r))/gamma
     call lalg_scal(np, beta, p)               ! p  <- r + beta*p
-    call lalg_axpy(np, R_TOTYPE(M_ONE), r, p)
+    call lalg_axpy(np, M_ONE, r, p)
     call lalg_scal(np, beta, pp)              ! pp <- rr + beta*pp
-    call lalg_axpy(np, R_TOTYPE(M_ONE), rr, pp)
+    call lalg_axpy(np, M_ONE, rr, pp)
     iter = iter + 1
   end do
   if(present(residue)) residue = sqrt(abs(err))
@@ -230,101 +230,6 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 
   POP_SUB(X(bi_conjugate_gradients))
 end subroutine X(bi_conjugate_gradients)
-
-  ! ---------------------------------------------------------
-  subroutine X(qmr_sym_spec_dotu)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
-    integer, target, intent(in)    :: np    !< number of points
-    R_TYPE,          intent(inout) :: x(:)  !< initial guess and result
-    R_TYPE,          intent(in)    :: b(:)  !< the right side
-    interface
-      subroutine op(x, y)                   !< the matrix A as operator, y <- Ax
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine op
-    end interface
-    interface
-      subroutine prec(x, y)                 !< preconditioner
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine prec
-    end interface
-    integer,           intent(inout) :: iter         !< (in) number of max iterations, (out) used iterations
-    FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
-    logical, optional, intent(in)    :: showprogress !< show progress bar
-    logical, optional, intent(out)   :: converged    !< is the algorithm converged
-
-    PUSH_SUB(X(qmr_sym_spec_dotu))
-
-    np_p => np
-    call X(qmr_sym_gen_dotu)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
-      residue, threshold, showprogress, converged)
-
-    POP_SUB(X(qmr_sym_spec_dotu))
-  end subroutine X(qmr_sym_spec_dotu)
-
-  ! ---------------------------------------------------------
-  subroutine X(qmr_spec_dotu)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
-    integer, target, intent(in)    :: np     !< number of points
-    R_TYPE,          intent(inout) :: x(:)   !< initial guess and the result
-    R_TYPE,          intent(in)    :: b(:)   !< the right side
-    interface
-      subroutine op(x, y)                    !< the matrix A as operator y <- A*x
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine op
-    end interface
-    interface
-      subroutine opt(x, y)                   !< the transposed matrix A as operator y <- A^T*x
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine opt
-    end interface
-    interface
-      subroutine prec(x, y)                  !< the preconditioner
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine prec
-    end interface
-    interface
-      subroutine prect(x, y)                 !< the transposed preconditioner
-        implicit none
-        R_TYPE, intent(in)  :: x(:)
-        R_TYPE, intent(out) :: y(:)
-      end subroutine prect
-    end interface
-    integer,           intent(inout) :: iter         !< (in) number of max iterations, (out) used iterations
-    FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
-    logical, optional, intent(in)    :: showprogress !< show progress bar
-    logical, optional, intent(out)   :: converged    !< is the algorithm converged
-
-    PUSH_SUB(X(qmr_spec_dotu))
-
-    np_p => np
-    call X(qmr_gen_dotu)(np, x, b, op, opt, X(dotu_qmr), X(nrm2_qmr), &
-      prec, prect, iter, residue, threshold, showprogress, converged)
-
-    POP_SUB(X(qmr_spec_dotu))
-  end subroutine X(qmr_spec_dotu)
-
-
-  ! ---------------------------------------------------------
-  FLOAT function X(nrm2_qmr)(x)
-    R_TYPE, intent(in) :: x(:)
-
-    PUSH_SUB(X(nrm2_qmr))
-
-    X(nrm2_qmr) = lalg_nrm2(np_p, x(:))
-
-    POP_SUB(X(nrm2_qmr))
-  end function X(nrm2_qmr)
-
 
   ! ---------------------------------------------------------
   !> for complex symmetric matrices
@@ -410,7 +315,7 @@ end subroutine X(bi_conjugate_gradients)
     res      = rho
 
     ! If rho is basically zero we are already done.
-    if(abs(rho) > M_EPSILON) then
+    if(abs(rho) > M_TINY) then
       call prec(v, z)
 
       xsi = nrm2(z)
@@ -428,7 +333,7 @@ end subroutine X(bi_conjugate_gradients)
 
       do while(iter < max_iter)
         iter = iter + 1
-        if((abs(rho) < M_EPSILON) .or. (abs(xsi) < M_EPSILON)) then
+        if(abs(rho) < M_TINY .or. abs(xsi) < M_TINY) then
           err = 1
           exit
         end if
@@ -441,7 +346,7 @@ end subroutine X(bi_conjugate_gradients)
 
         delta = dotu(v, z)
 
-        if(abs(delta) < M_EPSILON) then
+        if(abs(delta) < M_TINY) then
           err = 2
           exit
         end if
@@ -460,7 +365,7 @@ end subroutine X(bi_conjugate_gradients)
 
         epsilon = dotu(q, p)
 
-        if(abs(epsilon) < M_EPSILON) then
+        if(abs(epsilon) < M_TINY) then
           err = 3
           exit
         end if
@@ -484,7 +389,7 @@ end subroutine X(bi_conjugate_gradients)
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
 
-        if(abs(gamma) < M_EPSILON) then
+        if(abs(gamma) < M_TINY) then
           err = 4
           exit
         end if
@@ -520,7 +425,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         ! avoid divide by zero
-        if(abs(norm_b) < M_EPSILON) then
+        if(abs(norm_b) < M_TINY) then
           res = M_HUGE
         else
           res = nrm2(r)/norm_b

@@ -78,8 +78,8 @@ contains
     !% modelmb particles scheme.
     !%
     !% <tt>%DensitytoCalc
-    !% <br>&nbsp;&nbsp; proton   | 1 | 10
-    !% <br>&nbsp;&nbsp; electron | 2 | 15
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | 10
+    !% <br>&nbsp;&nbsp; "electron" | 2 | 15
     !% <br>%</tt>
     !%
     !% would ask octopus to calculate the density matrix corresponding to the 1st
@@ -89,8 +89,8 @@ contains
     !% 10 natural orbitals for the first and 15 for the second.
     !%
     !% <tt>%DensitytoCalc
-    !% <br>&nbsp;&nbsp; proton   | 1 | -1
-    !% <br>&nbsp;&nbsp; electron | 2 | -1
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | -1
+    !% <br>&nbsp;&nbsp; "electron" | 2 | -1
     !% <br>%</tt>
     !%
     !% would ask octopus to print out just the densities for particles 1 and 2

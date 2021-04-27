@@ -38,7 +38,7 @@ module preconditioners_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use stencil_star_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m
 
@@ -74,16 +74,19 @@ module preconditioners_oct_m
     integer             :: npre, npost, nmiddle
 
     type(multigrid_t) :: mgrid  ! multigrid object
+
+    type(derivatives_t), pointer :: der => null()
   end type preconditioner_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, namespace, gr, mc)
+  subroutine preconditioner_init(this, namespace, gr, mc, space)
     type(preconditioner_t), target, intent(out)    :: this
     type(namespace_t),              intent(in)     :: namespace
-    type(grid_t),                   intent(in)     :: gr
+    type(grid_t), target,           intent(in)     :: gr
     type(multicomm_t),              intent(in)     :: mc
+    type(space_t),                  intent(in)     :: space
 
     FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
@@ -95,6 +98,8 @@ contains
 
     SAFE_ALLOCATE(this%op_array(1))
     this%op => this%op_array(1)
+
+    this%der => gr%der
 
     !%Variable Preconditioner
     !%Type integer
@@ -153,7 +158,7 @@ contains
       !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
-      if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
+      if(space%is_periodic()) default_alpha = CNST(0.6)
 
       call parse_variable(namespace, 'PreconditionerFilterFactor', default_alpha, alpha)
 
@@ -175,10 +180,10 @@ contains
       !We change the weights to be the one of the kinetic energy operator
       this%op%w = -M_HALF * this%op%w
       
-      SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
+      SAFE_ALLOCATE(this%diag_lapl(1:this%op%np))
       call dnl_operator_operate_diag(this%op, this%diag_lapl)
 
-      do ip = 1,maxp
+      do ip = 1, maxp
 
         if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
@@ -197,14 +202,17 @@ contains
             this%op%w(is, ip) = this%op%w(is, ip) + M_TWO
           end if
           this%op%w(is, ip) = this%op%w(is, ip) * omega / this%diag_lapl(ip)
-          ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+         
+          if(gr%mesh%use_curvilinear) then
+            ip2 = ip + this%op%ri(is, this%op%rimap(ip))
+            this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+          end if
         end do
       end do
 
       SAFE_DEALLOCATE_A(this%diag_lapl)
 
-      call nl_operator_update_weights(this%op)
+      call nl_operator_output_weights(this%op)
 
     case(PRE_JACOBI, PRE_MULTIGRID)
       SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
@@ -240,7 +248,7 @@ contains
       !%End
       call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
 
-      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+      call multigrid_init(this%mgrid, namespace, space, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     POP_SUB(preconditioner_init)
@@ -253,6 +261,8 @@ contains
 
     PUSH_SUB(preconditioner_null)
     this%which = PRE_NONE
+
+    nullify(this%der)
 
     POP_SUB(preconditioner_null)
   end subroutine preconditioner_null

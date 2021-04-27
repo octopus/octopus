@@ -43,6 +43,7 @@ module states_elec_calc_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use namespace_oct_m
+  use par_vec_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m
@@ -50,6 +51,7 @@ module states_elec_calc_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
   use singularity_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -88,7 +90,9 @@ module states_elec_calc_oct_m
     dstates_elec_me_one_body,            &
     zstates_elec_me_one_body,            &
     dstates_elec_me_two_body,            &
-    zstates_elec_me_two_body
+    zstates_elec_me_two_body,            &
+    dstates_elec_rrqr_decomposition,     &
+    zstates_elec_rrqr_decomposition
 
   interface states_elec_rotate
     module procedure dstates_elec_rotate, zstates_elec_rotate
@@ -120,15 +124,16 @@ contains
 
   ! -----------------------------------------------------------------------------
 
-  subroutine states_elec_calc_momentum(st, der, momentum)
+  subroutine states_elec_calc_momentum(st, der, kpoints, momentum)
     type(states_elec_t), intent(in)  :: st
     type(derivatives_t), intent(in)  :: der
+    type(kpoints_t),     intent(in)  :: kpoints
     FLOAT,               intent(out) :: momentum(:,:,:)
 
     if (states_are_real(st)) then
-      call dstates_elec_calc_momentum(st, der, momentum)
+      call dstates_elec_calc_momentum(st, der, kpoints, momentum)
     else
-      call zstates_elec_calc_momentum(st, der, momentum)
+      call zstates_elec_calc_momentum(st, der, kpoints, momentum)
     end if
   end subroutine states_elec_calc_momentum
 

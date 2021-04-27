@@ -35,7 +35,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   logical              :: include_diag
 
-  FLOAT                :: xg(this%der%mesh%sb%dim)
+  FLOAT                :: xg(this%der%dim)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
 
@@ -49,9 +49,9 @@ subroutine poisson_solve_direct(this, pot, rho)
   yy  = M_ZERO
 
   if (.not. this%is_dressed) then
-    dim_ele = this%der%mesh%sb%dim
+    dim_ele = this%der%dim
   else
-    dim_ele = this%der%mesh%sb%dim - 1
+    dim_ele = this%der%dim - 1
   end if
 
   if (this%poisson_soft_coulomb_param**2 > M_ZERO) then
@@ -94,7 +94,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     do ip = 1, this%der%mesh%np_global
       ip_v(ip) = ip
     end do
-    call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
+    call partition_get_partition_number(this%der%mesh%partition, this%der%mesh%np_global, ip_v, part_v)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
@@ -102,7 +102,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       xx(1:dim_ele) = xg(1:dim_ele)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
+          if (mesh_global2local(this%der%mesh, ip) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/dim_ele)
           else
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -111,7 +111,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         end do
       else
         do jp = 1, this%der%mesh%np
-          if (vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
+          if (mesh_global2local(this%der%mesh, ip) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor 
           else
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -122,12 +122,10 @@ subroutine poisson_solve_direct(this, pot, rho)
       tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
     end do
 
-    call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+    call this%der%mesh%allreduce(tmp)
 
-    do ip = 1, this%der%mesh%np_global
-      if (part_v(ip) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
-      end if
+    do jp = 1, this%der%mesh%np
+      pot(jp) = tmp(mesh_local2global(this%der%mesh, jp))
     end do
 
     SAFE_DEALLOCATE_A(pvec)

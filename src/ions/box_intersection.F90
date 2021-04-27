@@ -25,6 +25,7 @@ module box_intersection_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use profiling_oct_m
+  use unit_oct_m
 
   implicit none
 
@@ -37,6 +38,8 @@ module box_intersection_oct_m
     private
   contains
     procedure :: contains_points => box_intersection_contains_points
+    procedure :: write_info => box_intersection_write_info
+    procedure :: short_info => box_intersection_short_info
     final     :: box_intersection_finalize
   end type box_intersection_t
 
@@ -101,6 +104,31 @@ contains
     end do
 
   end function box_intersection_contains_points
+
+  !--------------------------------------------------------------
+  subroutine box_intersection_write_info(this, iunit)
+    class(box_intersection_t), intent(in) :: this
+    integer,                   intent(in) :: iunit
+
+    PUSH_SUB(box_intersection_write_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the intersection
+
+    POP_SUB(box_intersection_write_info)
+  end subroutine box_intersection_write_info
+
+  !--------------------------------------------------------------
+  character(len=BOX_INFO_LEN) function box_intersection_short_info(this, unit_length) result(info)
+    class(box_intersection_t), intent(in) :: this
+    type(unit_t),              intent(in) :: unit_length
+
+    PUSH_SUB(box_intersection_short_info)
+
+    ! Todo: need to decide how best to display the information of the boxes that make the intersection
+    info = ''
+
+    POP_SUB(box_intersection_short_info)
+  end function box_intersection_short_info
 
 end module box_intersection_oct_m
 

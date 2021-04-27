@@ -61,7 +61,7 @@ module nl_operator_oct_m
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
     nl_operator_get_index,      &
-    nl_operator_update_weights, &
+    nl_operator_output_weights, &
     nl_operator_np_zero_bc,         &
     nl_operator_compact_boundaries
 
@@ -232,8 +232,6 @@ contains
       !% The standard implementation ported to OpenCL.
       !%Option map 2
       !% A different version, more suitable for GPUs.
-      !%Option nomap 3
-      !% (Experimental) This version does not use a map.
       !%End
       call parse_variable(namespace, 'OperateAccel',  OP_MAP, function_opencl)
 
@@ -347,9 +345,9 @@ contains
     integer,              intent(in)    :: np       !< Number of (local) points.
     logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
 
-    integer :: ii, jj, p1(MAX_DIM), time, current, size
-    integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
-    integer :: nn, ip, idx(MAX_DIM)
+    integer :: ii, jj, p1(MAX_DIM), time, current
+    integer, allocatable :: st1(:), st2(:), st1r(:)
+    integer :: nn
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
@@ -397,30 +395,12 @@ contains
       st2 = 0
       do ii = 1, np
         p1 = 0
-        if(mesh%parallel_in_domains) then
-          ! When running in parallel, get global number of
-          ! point ii.
-          call index_to_coords(mesh%idx, &
-            mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
-        else
-          call index_to_coords(mesh%idx, ii, p1)
-        end if
+        call mesh_local_index_to_coords(mesh, ii, p1)
 
         do jj = 1, op%stencil%size
-          ! Get global index of p1 plus current stencil point.
-          if(mesh%sb%mr_flag) then
-            st1(jj) = index_from_coords(mesh%idx, &
-                 p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
-          else
-            st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
-          end if
-          
-          if(mesh%parallel_in_domains) then
-            ! When running parallel, translate this global
-            ! number back to a local number.
-            st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
-          end if
-          
+          ! Get local index of p1 plus current stencil point.
+          st1(jj) = mesh_local_index_from_coords(mesh, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
+
           ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
@@ -578,8 +558,6 @@ contains
         call accel_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
       case(OP_MAP)
         call accel_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
-      case(OP_NOMAP)
-        call accel_kernel_build(op%kernel, 'operate.cl', 'operate_nomap', flags)
       end select
 
       call accel_create_buffer(op%buff_ri, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
@@ -632,49 +610,6 @@ contains
           SAFE_DEALLOCATE_A(all_points)
   
         end if
-                
-      case(OP_NOMAP)
-
-        ASSERT(op%mesh%sb%dim == 3)
-        ASSERT(.not. op%mesh%parallel_in_domains)
-
-        call accel_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
-        call accel_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
-        
-        SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:op%stencil%size + 1))
-
-        stencil(1:op%mesh%sb%dim, 1:op%stencil%size) = op%stencil%points(1:op%mesh%sb%dim, 1:op%stencil%size)
-
-        stencil(1, op%stencil%size + 1) = 1
-        stencil(2, op%stencil%size + 1) = mesh%idx%nr(2, 1) - mesh%idx%nr(1, 1) + 1
-        stencil(3, op%stencil%size + 1) = stencil(2, op%stencil%size + 1)*(mesh%idx%nr(2, 2) - mesh%idx%nr(1, 2) + 1)
-
-        call accel_create_buffer(op%buff_stencil, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%sb%dim*(op%stencil%size + 1))
-        call accel_write_buffer(op%buff_stencil, op%mesh%sb%dim*(op%stencil%size + 1), stencil)
-        
-        SAFE_DEALLOCATE_A(stencil)
-
-        size = product(mesh%idx%nr(2, 1:op%mesh%sb%dim) - mesh%idx%nr(1, 1:op%mesh%sb%dim) + 1)
-
-        call accel_create_buffer(op%buff_xyz_to_ip, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, size)
-        call accel_write_buffer(op%buff_xyz_to_ip, size, op%mesh%idx%lxyz_inv - 1)
-
-        SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
-
-        do ip = 1, mesh%np_part
-          call index_to_coords(op%mesh%idx, ip, idx)
-          do jj = 1, op%mesh%sb%dim
-            stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
-          end do
-        end do
-
-        ASSERT(minval(stencil) == 0)
-
-        call accel_create_buffer(op%buff_ip_to_xyz, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%np_part*op%mesh%sb%dim)
-        call accel_write_buffer(op%buff_ip_to_xyz, op%mesh%np_part*op%mesh%sb%dim, stencil)
-
-        SAFE_DEALLOCATE_A(stencil)
-
       end select
     end if
 
@@ -683,12 +618,12 @@ contains
   end subroutine nl_operator_build
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_update_weights(this)
+  subroutine nl_operator_output_weights(this)
     type(nl_operator_t), intent(inout)  :: this
 
     integer :: istencil, idir
 
-    PUSH_SUB(nl_operator_update_weights)
+    PUSH_SUB(nl_operator_output_weights)
 
     if(debug%info) then
 
@@ -706,9 +641,9 @@ contains
       
     end if
 
-    POP_SUB(nl_operator_update_weights)
+    POP_SUB(nl_operator_output_weights)
 
-  end subroutine nl_operator_update_weights
+  end subroutine nl_operator_output_weights
 
   ! ---------------------------------------------------------
   !> opt has to be initialised and built.
@@ -761,8 +696,8 @@ contains
 
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local
-        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+      do ip = 1, mesh%np
+        opt%w(:, ip) = opgt%w(:, mesh_local2global(mesh, ip))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -826,8 +761,8 @@ contains
 
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local
-        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+      do ip = 1, mesh%np
+        opt%w(:, ip) = opgt%w(:, mesh_local2global(mesh, ip))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)

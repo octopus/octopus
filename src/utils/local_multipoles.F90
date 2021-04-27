@@ -45,10 +45,10 @@ program oct_local_multipoles
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use simul_box_oct_m
   use space_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use simul_box_oct_m
   use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -304,7 +304,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, global_namespace, sys%gr%sb, sys%st%d%ispin)
+    call kick_init(kick, global_namespace, sys%gr%sb, sys%kpoints, sys%st%d%ispin)
     do id = 1, nd
       call local_write_init(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, 0, dt)
     end do
@@ -372,7 +372,7 @@ contains
       end if
 
       do id = 1, nd
-        call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_mask, &
+        call local_write_iter(loc_domains(id)%writ, global_namespace, sys%space, loc_domains(id)%lab, loc_domains(id)%ions_mask, &
           loc_domains(id)%mesh_mask, sys%gr%mesh, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
@@ -504,11 +504,6 @@ contains
 
     select case (domain%dshape)
     case (MINIMUM)
-      if (geo%reduced_coordinates) then
-        message(1) = "The 'minimum' box shape cannot be used if atomic positions"
-        message(2) = "are given as reduced coordinates."
-        call messages_fatal(2)
-      end if
       call parse_block_float(blk, row, 2, radius, unit = units_inp%length)
       if (radius < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_string(blk, row, 3, domain%clist)
@@ -789,7 +784,7 @@ contains
     ! Add long range density from atoms
     SAFE_ALLOCATE(ffs(1:mesh%np))
     do ia = 1, geo%natoms
-      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, mesh, ffs)
+      call species_get_long_range_density(geo%atom(ia)%species, geo%space, namespace, geo%atom(ia)%x, mesh, ffs)
       do is = 1, ubound(ff2, dim=2)
         ff2(1:mesh%np, is) = ff2(1:mesh%np, is) - ffs(1:mesh%np)
       end do
@@ -925,7 +920,7 @@ contains
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, mask_tmp, geo%natoms)
+      call mesh%allreduce(mask_tmp, geo%natoms)
     end if                               
     ions_mask = mask_tmp == 1
 

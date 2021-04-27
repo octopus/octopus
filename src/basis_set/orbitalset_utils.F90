@@ -117,15 +117,15 @@ contains
 
     this%nneighbors = 0
     if(this%iatom /= -1)then
-      xat(1:sb%dim) = geo%atom(this%iatom)%x(1:sb%dim)
+      xat(1:geo%space%dim) = geo%atom(this%iatom)%x(1:geo%space%dim)
 
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos
 
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)
+        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
         do inn = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, sb, inn)
-          rr = sqrt( sum( (xi(1:sb%dim) - xat(1:sb%dim))**2 ) )
+          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
+          rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
 
           !This atom is too far
           if( rr >rcut + TOL_INTERSITE ) cycle
@@ -139,8 +139,8 @@ contains
 
       !The first three values are the position of the periodic copies
       !and the zero value one is used to store the actual value of V_ij
-      SAFE_ALLOCATE(this%V_ij(1:this%nneighbors, 0:sb%dim+1))
-      this%V_ij(1:this%nneighbors, 0:sb%dim+1) = M_ZERO
+      SAFE_ALLOCATE(this%V_ij(1:this%nneighbors, 0:geo%space%dim+1))
+      this%V_ij(1:this%nneighbors, 0:geo%space%dim+1) = M_ZERO
       SAFE_ALLOCATE(this%map_os(1:this%nneighbors))
       this%map_os(1:this%nneighbors) = 0
       if(has_phase) then
@@ -149,18 +149,18 @@ contains
  
       this%nneighbors = 0
       do ios = 1, nos
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)
+        call periodic_copy_init(pc, geo%space, sb%latt, sb%lsize, os(ios)%sphere%center(1:geo%space%dim), rcut)
         do inn = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, sb, inn)
-          rr = sqrt( sum( (xi(1:sb%dim) - xat(1:sb%dim))**2 ) )
+          xi(1:geo%space%dim) = periodic_copy_position(pc, geo%space, sb%latt, sb%lsize, inn)
+          rr = sqrt( sum( (xi(1:geo%space%dim) - xat(1:geo%space%dim))**2 ) )
 
           if( rr > rcut + TOL_INTERSITE ) cycle
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
 
           this%nneighbors = this%nneighbors +1
 
-          this%V_ij(this%nneighbors, 1:sb%dim) = xi(1:sb%dim) -os(ios)%sphere%center(1:sb%dim)
-          this%V_ij(this%nneighbors, sb%dim+1) = rr
+          this%V_ij(this%nneighbors, 1:geo%space%dim) = xi(1:geo%space%dim) -os(ios)%sphere%center(1:geo%space%dim)
+          this%V_ij(this%nneighbors, geo%space%dim+1) = rr
           
           this%map_os(this%nneighbors) = ios
         end do
@@ -189,10 +189,10 @@ contains
 
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
-                       shift = this%V_ij(inn, 1:sb%dim))
+                       shift = this%V_ij(inn, 1:geo%space%dim))
 
         write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', &
-                             this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
+                             this%V_ij(inn, geo%space%dim+1), ' Bohr and has ', sm%np, ' grid points.'
         call messages_info(1)
 
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))
@@ -204,7 +204,7 @@ contains
                           1, orb(1:sm%np, ist,1))
         end do
          
-        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
+        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:geo%space%dim)+os(ios)%sphere%center(1:geo%space%dim))
 
         do ist = 1, os(ios)%norbs
           call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
@@ -218,13 +218,13 @@ contains
 
         select case (sm_poisson)
         case(SM_POISSON_DIRECT)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_DIRECT_SUM)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_DIRECT_SUM)
         case(SM_POISSON_ISF)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_ISF)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_ISF)
         case(SM_POISSON_PSOLVER)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_PSOLVER)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_PSOLVER)
         case(SM_POISSON_FFT)
-          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_FFT)
+          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_FFT)
         end select
  
         np_sphere = sm%np
@@ -268,12 +268,12 @@ contains
       end do !inn
 
       if(der%mesh%parallel_in_domains) then
-        call comm_allreduce(der%mesh%mpi_grp%comm, this%coulomb_IIJJ)
+        call der%mesh%allreduce(this%coulomb_IIJJ)
       end if
  
 
       if(dist%parallel) then
-        call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)
+        call comm_allreduce(dist%mpi_grp, this%coulomb_IIJJ)
       end if
       
       #ifdef HAVE_MPI

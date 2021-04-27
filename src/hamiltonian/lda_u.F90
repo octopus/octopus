@@ -31,6 +31,7 @@ module lda_u_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_base_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use loewdin_oct_m
@@ -47,6 +48,7 @@ module lda_u_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -94,20 +96,20 @@ module lda_u_oct_m
 
   type lda_u_t
     private
-    integer,        public   :: level
-    FLOAT, pointer, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
-    FLOAT, pointer           :: dV(:,:,:,:) !> Potentials for the standard scheme
+    integer,            public   :: level
+    FLOAT, allocatable, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
+    FLOAT, allocatable           :: dV(:,:,:,:) !> Potentials for the standard scheme
 
-    CMPLX, pointer, public   :: zn(:,:,:,:)
-    CMPLX, pointer           :: zV(:,:,:,:)
-    FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
-    CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
+    CMPLX, allocatable, public   :: zn(:,:,:,:)
+    CMPLX, allocatable           :: zV(:,:,:,:)
+    FLOAT, allocatable, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
+    CMPLX, allocatable, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
 
-    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
+    FLOAT, allocatable           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
 
-    FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+    FLOAT, allocatable           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional)
-    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
+    CMPLX, allocatable           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors)
 
     type(orbitalbasis_t),        public :: basis        !> The full basis of localized orbitals
@@ -124,7 +126,7 @@ module lda_u_oct_m
     logical                      :: skipSOrbitals      !> Not using s orbitals
     logical                      :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical                      :: freeze_u           !> U is not recomputed during TD evolution
-    logical, public              :: intersite          !> intersite V are computed or not
+    logical,              public :: intersite          !> intersite V are computed or not
     FLOAT                        :: intersite_radius   !> Maximal distance for considering neighboring atoms
     logical,              public :: basisfromstates    !> We can construct the localized basis from user-defined states
     FLOAT                        :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
@@ -136,8 +138,8 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
 
     integer, public     :: maxneighbors
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
+    FLOAT, allocatable  :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
+    CMPLX, allocatable  :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -176,22 +178,7 @@ contains
     this%double_couting = DFT_U_FLL
     this%sm_poisson = SM_POISSON_DIRECT
 
-    nullify(this%dn)
-    nullify(this%zn)
-    nullify(this%dn_alt)
-    nullify(this%zn_alt)
-    nullify(this%dV)
-    nullify(this%zV)
-    nullify(this%coulomb)
-    nullify(this%zcoulomb)
-    nullify(this%renorm_occ)
     nullify(this%orbsets)
-    nullify(this%dn_ij)
-    nullify(this%zn_ij)
-    nullify(this%dn_alt_ij)
-    nullify(this%zn_alt_ij)
-    nullify(this%dn_alt_ii)
-    nullify(this%zn_alt_ii)
 
     call distributed_nullify(this%orbs_dist, 0)
 
@@ -202,14 +189,16 @@ contains
   end subroutine lda_u_nullify
 
   ! ---------------------------------------------------------
-  subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
+  subroutine lda_u_init(this, namespace, space, level, gr, geo, st, psolver, kpoints)
     type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
+    type(space_t),             intent(in)    :: space
     integer,                   intent(in)    :: level
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
+    type(kpoints_t),           intent(in)    :: kpoints
 
     logical :: complex_coulomb_integrals
     integer :: ios, is
@@ -288,7 +277,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%sb%nonorthogonal) then
+      if(gr%sb%latt%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -300,7 +289,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%sb%nonorthogonal) then
+      if(gr%sb%latt%nonorthogonal) then
         call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -377,7 +366,7 @@ contains
 
         !This is a non local operator. To make this working, one probably needs to apply the
         ! symmetries to the generalized occupation matrices
-        if(gr%sb%kpoints%use_symmetries) then
+        if(kpoints%use_symmetries) then
           call messages_not_implemented("Intersite interaction with kpoint symmetries", namespace=namespace)
         end if
 
@@ -400,7 +389,7 @@ contains
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace, gr%sb)
+      call orbitalbasis_init(this%basis, namespace, space%periodic_dim)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -443,14 +432,14 @@ contains
         if(.not. complex_coulomb_integrals) then
           write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
           if (states_are_real(st)) then
-            call dcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+            call dcompute_coulomb_integrals(this, namespace, space, gr%mesh, gr%der, psolver)
           else
-            call zcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+            call zcompute_coulomb_integrals(this, namespace, space, gr%mesh, gr%der, psolver)
           end if
         else
           ASSERT(.not.states_are_real(st))
           write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-          call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace)
+          call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace, space)
         end if
       end if
 
@@ -520,21 +509,21 @@ contains
 
     this%level = DFT_U_NONE
 
-    SAFE_DEALLOCATE_P(this%dn)
-    SAFE_DEALLOCATE_P(this%zn)
-    SAFE_DEALLOCATE_P(this%dn_alt)
-    SAFE_DEALLOCATE_P(this%zn_alt)
-    SAFE_DEALLOCATE_P(this%dV)
-    SAFE_DEALLOCATE_P(this%zV)
-    SAFE_DEALLOCATE_P(this%coulomb)
-    SAFE_DEALLOCATE_P(this%zcoulomb)
-    SAFE_DEALLOCATE_P(this%renorm_occ)
-    SAFE_DEALLOCATE_P(this%dn_ij)
-    SAFE_DEALLOCATE_P(this%zn_ij)
-    SAFE_DEALLOCATE_P(this%dn_alt_ij)
-    SAFE_DEALLOCATE_P(this%zn_alt_ij)
-    SAFE_DEALLOCATE_P(this%dn_alt_ii)
-    SAFE_DEALLOCATE_P(this%zn_alt_ii)
+    SAFE_DEALLOCATE_A(this%dn)
+    SAFE_DEALLOCATE_A(this%zn)
+    SAFE_DEALLOCATE_A(this%dn_alt)
+    SAFE_DEALLOCATE_A(this%zn_alt)
+    SAFE_DEALLOCATE_A(this%dV)
+    SAFE_DEALLOCATE_A(this%zV)
+    SAFE_DEALLOCATE_A(this%coulomb)
+    SAFE_DEALLOCATE_A(this%zcoulomb)
+    SAFE_DEALLOCATE_A(this%renorm_occ)
+    SAFE_DEALLOCATE_A(this%dn_ij)
+    SAFE_DEALLOCATE_A(this%zn_ij)
+    SAFE_DEALLOCATE_A(this%dn_alt_ij)
+    SAFE_DEALLOCATE_A(this%zn_alt_ij)
+    SAFE_DEALLOCATE_A(this%dn_alt_ii)
+    SAFE_DEALLOCATE_A(this%zn_alt_ii)
     SAFE_DEALLOCATE_A(this%basisstates)
 
     nullify(this%orbsets)
@@ -552,13 +541,14 @@ contains
   end subroutine lda_u_end
 
   ! When moving the ions, the basis must be reconstructed
-  subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, has_phase)
+  subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, kpoints, has_phase)
     type(lda_u_t),     target, intent(inout) :: this
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),  target, intent(in)    :: geo
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(namespace_t),         intent(in)    :: namespace
+    type(kpoints_t),           intent(in)    :: kpoints
     logical,                   intent(in)    :: has_phase
 
     integer :: ios, maxorbs, nspin
@@ -596,23 +586,23 @@ contains
       nspin = this%nspins
 
       if(states_are_real(st)) then
-        SAFE_DEALLOCATE_P(this%dn_ij)
+        SAFE_DEALLOCATE_A(this%dn_ij)
         SAFE_ALLOCATE(this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-        SAFE_DEALLOCATE_P(this%dn_alt_ij)
+        SAFE_DEALLOCATE_A(this%dn_alt_ij)
         SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-        SAFE_DEALLOCATE_P(this%dn_alt_ii)
+        SAFE_DEALLOCATE_A(this%dn_alt_ii)
         SAFE_ALLOCATE(this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
       else
-        SAFE_DEALLOCATE_P(this%zn_ij)
+        SAFE_DEALLOCATE_A(this%zn_ij)
         SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-        SAFE_DEALLOCATE_P(this%zn_alt_ij)
+        SAFE_DEALLOCATE_A(this%zn_alt_ij)
         SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-        SAFE_DEALLOCATE_P(this%zn_alt_ii)
+        SAFE_DEALLOCATE_A(this%zn_alt_ii)
         SAFE_ALLOCATE(this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
       end if
@@ -621,7 +611,7 @@ contains
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%sb, st%d, gr%der%boundaries, namespace)
+      call lda_u_build_phase_correction(this, gr%sb%dim, st%d, gr%der%boundaries, namespace, kpoints)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then
@@ -650,7 +640,7 @@ contains
     if (states_are_real(st)) then
       call dupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
     else
-      if(associated(hm_base%phase)) then
+      if (allocated(hm_base%phase)) then
         call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u, hm_base%phase)
       else
         call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
@@ -662,12 +652,13 @@ contains
 
 
   !> Build the phase correction to the global phase for all orbitals
-  subroutine lda_u_build_phase_correction(this, sb, std, boundaries, namespace, vec_pot, vec_pot_var)
+  subroutine lda_u_build_phase_correction(this, dim, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
     type(lda_u_t),                 intent(inout) :: this
-    type(simul_box_t),             intent(in)    :: sb
+    integer,                       intent(in)    :: dim
     type(states_elec_dim_t),       intent(in)    :: std
     type(boundaries_t),            intent(in)    :: boundaries
     type(namespace_t),             intent(in)    :: namespace
+    type(kpoints_t),               intent(in)    :: kpoints
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -683,7 +674,7 @@ contains
     PUSH_SUB(lda_u_build_phase_correction)
 
     do ios = 1, this%norbsets
-      call orbitalset_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
+      call orbitalset_update_phase(this%orbsets(ios), dim, std%kpt, kpoints, (std%ispin==SPIN_POLARIZED), &
         vec_pot, vec_pot_var)
     end do
 
@@ -698,9 +689,10 @@ contains
   end subroutine lda_u_build_phase_correction
 
   ! ---------------------------------------------------------
-  subroutine lda_u_periodic_coulomb_integrals(this, namespace, st, der, mc, has_phase)
+  subroutine lda_u_periodic_coulomb_integrals(this, namespace, space, st, der, mc, has_phase)
     type(lda_u_t),                 intent(inout) :: this
     type(namespace_t),             intent(in)    :: namespace
+    type(space_t)    ,             intent(in)    :: space
     type(states_elec_t),           intent(in)    :: st
     type(derivatives_t),           intent(in)    :: der
     type(multicomm_t),             intent(in)    :: mc
@@ -715,9 +707,9 @@ contains
     PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
     if(states_are_real(st)) then
-      call dcompute_periodic_coulomb_integrals(this, namespace, der, mc)
+      call dcompute_periodic_coulomb_integrals(this, namespace, space, der, mc)
     else
-      call zcompute_periodic_coulomb_integrals(this, namespace, der, mc)
+      call zcompute_periodic_coulomb_integrals(this, namespace, space, der, mc)
     end if
 
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials

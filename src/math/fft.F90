@@ -335,6 +335,7 @@ contains
     integer :: n_1, n_2, n_3, nn_temp(3)
     integer :: library_
     type(mpi_grp_t) :: mpi_grp_
+    integer(8) :: number_points
 
 #ifdef HAVE_CLFFT
     real(8) :: scale
@@ -782,16 +783,19 @@ contains
     ! Write information
     if (.not. (library_ == FFTLIB_NFFT .or. library_ == FFTLIB_PNFFT)) then
       call messages_write('Info: FFT grid dimensions       =')
+      number_points = 1
       do idir = 1, dim
         call messages_write(fft_array(jj)%rs_n_global(idir))
         if(idir < dim) call messages_write(" x ")
+        ! do the multiplication in a integer(8) to avoid overflow for large grids
+        number_points = number_points * fft_array(jj)%rs_n_global(idir)
       end do
       call messages_new_line()
 
       call messages_write('      Total grid size           =')
-      call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
+      call messages_write(number_points)
       call messages_write(' (')
-      call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
+      call messages_write(number_points*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
       call messages_write(' )')
       if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
         call messages_new_line()
@@ -1084,8 +1088,9 @@ contains
     select case (fft_array(fft%slot)%library)
     case(FFTLIB_ACCEL)
 #ifdef HAVE_CUDA
-      scaling_factor = &
-        M_ONE/(fft_array(fft%slot)%rs_n_global(1)*fft_array(fft%slot)%rs_n_global(2)*fft_array(fft%slot)%rs_n_global(3))
+      scaling_factor = M_ONE/TOFLOAT(fft_array(fft%slot)%rs_n_global(1))
+      scaling_factor = scaling_factor/TOFLOAT(fft_array(fft%slot)%rs_n_global(2))
+      scaling_factor = scaling_factor/TOFLOAT(fft_array(fft%slot)%rs_n_global(3))
 #endif
     end select
   

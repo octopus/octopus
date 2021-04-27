@@ -24,6 +24,7 @@ module magnetic_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
+  use kpoints_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -48,7 +49,9 @@ module magnetic_oct_m
     magnetic_local_moments,    &
     calc_physical_current,     &
     magnetic_induced,          &
-    magnetic_total_magnetization
+    magnetic_total_magnetization, &
+    write_total_xc_torque     ,&
+    calc_xc_torque
 
 contains
 
@@ -98,7 +101,7 @@ contains
     mm(3) = dmf_integrate(mesh, md(:, 3), reduce = .false.)
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, mm)
+      call mesh%allreduce(mm)
     end if
 
     SAFE_DEALLOCATE_A(md)
@@ -179,7 +182,7 @@ contains
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
-      call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
+      call submesh_init(sphere, geo%space, mesh%sb, mesh, geo%atom(ia)%x, rr)
 
       if(boundaries%spiral) then 
         SAFE_ALLOCATE(phase_spiral(1:sphere%np))
@@ -217,7 +220,7 @@ contains
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, lmm)
+      call mesh%allreduce(lmm)
     end if 
     
     SAFE_DEALLOCATE_A(md)
@@ -273,15 +276,16 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: We should remove this routine and use st%current. NTD
-  subroutine calc_physical_current(der, st, jj)
+  subroutine calc_physical_current(der, st, kpoints, jj)
     type(derivatives_t),  intent(in)    :: der
     type(states_elec_t),  intent(inout) :: st
+    type(kpoints_t),      intent(in)    :: kpoints
     FLOAT,                intent(out)   :: jj(:,:,:)
 
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
-    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, kpoints, .false., paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -294,14 +298,15 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, psolver, kpoints, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_elec_t),  intent(inout) :: st
     type(poisson_t),      intent(in)    :: psolver
-    FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
+    type(kpoints_t),      intent(in)    :: kpoints
+    FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
-    !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
-    !< if der%mesh%sb%dim=2, b_ind(der%mesh%np_part, 1)
+    !< if der%dim=3, b_ind(der%mesh%np_part, der%dim)
+    !< if der%dim=2, b_ind(der%mesh%np_part, 1)
 
     integer :: idir
     FLOAT, allocatable :: jj(:, :, :)
@@ -317,30 +322,89 @@ contains
       return
     end if
 
-    SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%dim, 1:st%d%nspin))
+    call states_elec_calc_quantities(der, st, kpoints, .false., paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then
-      do idir = 1, der%mesh%sb%dim
+      do idir = 1, der%dim
         jj(:, idir, 1) = jj(:, idir, 1) + jj(:, idir, 2)
       end do 
     end if
 
     a_ind = M_ZERO
-    do idir = 1, der%mesh%sb%dim
+    do idir = 1, der%dim
       call dpoisson_solve(psolver, a_ind(:, idir), jj(:, idir, 1))
     end do
     ! This minus sign is introduced here because the current that has been used
     ! before is the "number-current density", and not the "charge-current density",
     ! and therefore there is a minus sign missing (electrons are negative charges...)
-    a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) = - a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) / P_C
+    a_ind(1:der%mesh%np, 1:der%dim) = - a_ind(1:der%mesh%np, 1:der%dim) / P_C
 
     call dderivatives_curl(der, a_ind, b_ind)
 
     SAFE_DEALLOCATE_A(jj)
     POP_SUB(magnetic_induced)
   end subroutine magnetic_induced
+
+  subroutine write_total_xc_torque(iunit, mesh, vxc, st)
+    integer,                  intent(in) :: iunit
+    type(mesh_t),             intent(in) :: mesh
+    FLOAT,                    intent(in) :: vxc(:,:)
+    type(states_elec_t),      intent(in) :: st
+
+    FLOAT, allocatable :: torque(:,:)
+    FLOAT :: tt(3)
+
+    PUSH_SUB(write_total_xc_torque)
+
+    SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
+
+    call calc_xc_torque(mesh, vxc, st, torque)
+
+    tt(1) = dmf_integrate(mesh, torque(:,1))
+    tt(2) = dmf_integrate(mesh, torque(:,2))
+    tt(3) = dmf_integrate(mesh, torque(:,3))
+   
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit, '(a)') 'Total xc torque:'
+      write(iunit, '(1x,3(a,es10.3,3x))') 'Tx = ', tt(1),'Ty = ', tt(2),'Tz = ', tt(3)
+    end if
+
+    SAFE_DEALLOCATE_A(torque)
+
+    POP_SUB(write_total_xc_torque)
+  end subroutine write_total_xc_torque
+
+  ! ---------------------------------------------------------
+  subroutine calc_xc_torque(mesh, vxc, st, torque)
+    type(mesh_t),             intent(in) :: mesh
+    FLOAT,                    intent(in) :: vxc(:,:)
+    type(states_elec_t),      intent(in) :: st
+    FLOAT,                 intent(inout) :: torque(:,:)
+
+    FLOAT :: mag(3), Bxc(3)
+    integer :: ip
+
+    PUSH_SUB(calc_xc_torque)
+
+    ASSERT(st%d%ispin == SPINORS)
+
+    do ip = 1, mesh%np
+      mag(1) =  M_TWO * st%rho(ip, 3)
+      mag(2) = -M_TWO * st%rho(ip, 4)
+      mag(3) = st%rho(ip, 1) - st%rho(ip, 2)
+      Bxc(1) = -M_TWO * vxc(ip, 3)
+      Bxc(2) =  M_TWO * vxc(ip, 4)
+      Bxc(3) = -(vxc(ip, 1) - vxc(ip, 2))
+      torque(ip, 1) = mag(2) * Bxc(3) - mag(3) * Bxc(2)
+      torque(ip, 2) = mag(3) * Bxc(1) - mag(1) * Bxc(3)
+      torque(ip, 3) = mag(1) * Bxc(2) - mag(2) * Bxc(1)
+    end do
+
+    POP_SUB(calc_xc_torque)
+  end subroutine calc_xc_torque
+
 
 
 end module magnetic_oct_m

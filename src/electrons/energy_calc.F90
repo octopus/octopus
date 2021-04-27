@@ -38,6 +38,7 @@ module energy_calc_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use unit_oct_m
@@ -59,8 +60,9 @@ contains
   !> This subroutine calculates the total energy of the system. Basically, it
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
-  subroutine energy_calc_total(namespace, hm, gr, st, iunit, full)
+  subroutine energy_calc_total(namespace, space, hm, gr, st, iunit, full)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -138,10 +140,10 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
+      hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb%latt%rcell_volume)
     end if
 
-    if(associated(hm%vberry)) then
+    if (allocated(hm%vberry)) then
       hm%energy%total = hm%energy%total + hm%energy%berry
     else
       hm%energy%berry = M_ZERO
@@ -187,7 +189,7 @@ contains
         write(message(4), '(6x,a, f18.8)')'Int[n*v_E]  = ', units_from_atomic(units_out%energy, hm%energy%intnvstatic)
         call messages_info(4, iunit)
       end if
-      if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
+      if (allocated(hm%vberry) .and. space%is_periodic()) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  

@@ -165,7 +165,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     do ist  = st%st_start, st%st_end
 
       call states_elec_get_state(st, mesh, ist, ik, psi)
@@ -197,7 +197,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! reduce
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     do isigma = 1, nsigma
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, lr(isigma)%X(dl_rho))
+      call comm_allreduce(st%st_kpt_mpi_grp, lr(isigma)%X(dl_rho))
     end do
   end if
 
@@ -213,7 +213,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     end do
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ispin = st%d%get_spin_index(ik)
       do ist  = st%st_start, st%st_end
         xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
         weight = st%d%kweights(ik)*smear_delta_function(st%smear, xx)*st%smear%el_per_state
@@ -268,30 +268,18 @@ subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
   type(lr_t),          intent(inout) :: plus
   type(lr_t),          intent(inout) :: minus
 
-  integer :: ik, idim, ist
-  R_TYPE, allocatable :: tmp(:)
+  integer :: ik, ist
 
   PUSH_SUB(X(lr_swap_sigma))
 
-  SAFE_ALLOCATE(tmp(1:mesh%np))
-
-  do ik = 1, st%d%nspin
-    call lalg_copy(mesh%np, plus%X(dl_rho)(:, ik), tmp(:))
-    call lalg_copy(mesh%np, minus%X(dl_rho)(:, ik), plus%X(dl_rho)(:, ik))
-    call lalg_copy(mesh%np, tmp(:), minus%X(dl_rho)(:, ik))
-  end do
+  call lalg_swap(mesh%np, st%d%nspin, plus%X(dl_rho), minus%X(dl_rho))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = 1, st%nst
-      do idim = 1, st%d%dim
-        call lalg_copy(mesh%np_part, plus%X(dl_psi)(:, idim, ist, ik), tmp(:))
-        call lalg_copy(mesh%np_part, minus%X(dl_psi)(:, idim, ist, ik), plus%X(dl_psi)(:, idim, ist, ik))
-        call lalg_copy(mesh%np_part, tmp(:), minus%X(dl_psi)(:, idim, ist, ik))
-      end do
+      call lalg_swap(mesh%np, st%d%dim, plus%X(dl_psi)(:, :, ist, ik), minus%X(dl_psi)(:, :, ist, ik))
     end do
   end do
 
-  SAFE_DEALLOCATE_A(tmp)
   POP_SUB(X(lr_swap_sigma))
 
 end subroutine X(lr_swap_sigma)

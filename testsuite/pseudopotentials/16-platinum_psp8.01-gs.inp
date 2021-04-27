@@ -20,7 +20,6 @@ ExtraStates = 7
 Smearing = 0.1*eV
 SmearingFunction = fermi_dirac
 
-EigenSolver = rmmdiis
 
-ConvRelDens = 1e-07
+ConvEigenError = yes
 StatesPack = yes

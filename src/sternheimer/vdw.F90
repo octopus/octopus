@@ -34,7 +34,7 @@ module vdw_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
@@ -94,15 +94,15 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if(simul_box_is_periodic(sys%gr%sb)) then
+    if(sys%space%is_periodic()) then
       call messages_not_implemented('Van der Waals calculation for periodic system')
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
+    if (sys%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, wfs_are_cplx = .true.)
+    call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='write')
@@ -136,14 +136,14 @@ contains
       write(iunit, '(1x)')
 
       write(iunit, '(3a,es20.12)') "C_3  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%sb%dim)), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**sys%gr%sb%dim, c3)
+        trim(units_abbrev(units_out%energy * units_out%length**sys%space%dim)), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**sys%space%dim, c3)
       write(iunit, '(3a,es20.12)') "C_6  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%sb%dim), c6)
+        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%space%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(2*sys%space%dim), c6)
       write(iunit, '(3a,es20.12)') "C_AT [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%sb%dim), cat)
+        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%space%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(3*sys%space%dim), cat)
 
       call io_close(iunit)
     end if
@@ -176,8 +176,8 @@ contains
 
       select case(equiv_axes)
       case(3);      ndir = 1
-      case(2);      ndir = min(2, sys%gr%sb%dim)
-      case default; ndir = min(3, sys%gr%sb%dim)
+      case(2);      ndir = min(2, sys%space%dim)
+      case default; ndir = min(3, sys%space%dim)
       end select
 
       POP_SUB(vdw_run_legacy.input)
@@ -237,7 +237,7 @@ contains
       ! we always need complex response
       call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = .true.)
+        call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -247,7 +247,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
@@ -261,7 +261,8 @@ contains
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+              ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
@@ -316,21 +317,22 @@ contains
         call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
-        call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
-             restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr(dir, :), &
+          1, omega, perturbation, restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
+      call zcalc_polarizability_finite(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, lr(:,:), 1, perturbation, &
+        alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir
         get_pol = get_pol + TOFLOAT(alpha(dir, dir))
       end do
-      do dir = ndir+1, sys%gr%sb%dim
+      do dir = ndir+1, sys%space%dim
         get_pol = get_pol + TOFLOAT(alpha(ndir, ndir))
       end do
 
-      get_pol = get_pol / TOFLOAT(sys%gr%sb%dim)
+      get_pol = get_pol / TOFLOAT(sys%space%dim)
 
       call pert_end(perturbation)
       POP_SUB(vdw_run_legacy.get_pol)

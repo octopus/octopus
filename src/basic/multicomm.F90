@@ -534,7 +534,7 @@ contains
         real_group_sizes(kk) = mc%group_sizes(kk)
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
-        if(kk == slave_level) INCR(real_group_sizes(kk), -num_slaves)
+        if(kk == slave_level) real_group_sizes(kk) = real_group_sizes(kk) - num_slaves
         write(message(ii),'(3a,i6,a,i12,a)') 'Info: Number of nodes in ', &
           par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
@@ -674,7 +674,7 @@ contains
         end if
 
         if(mc%node_type == P_MASTER) then
-          INCR(mc%group_sizes(slave_level), -num_slaves)
+          mc%group_sizes(slave_level) = mc%group_sizes(slave_level) - num_slaves
         else
           mc%group_sizes(slave_level) = num_slaves
         end if
@@ -975,7 +975,7 @@ contains
 
     if (scalapack_compat_) then
       nbl = nobjs/nprocs
-      if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
+      if (mod(nobjs, nprocs) /= 0) nbl = nbl + 1
       
       istart(1) = 1
       do rank = 1, nprocs

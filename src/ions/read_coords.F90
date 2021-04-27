@@ -71,9 +71,7 @@ module read_coords_oct_m
     integer :: n                !< number of atoms in file
     type(read_coords_atom), allocatable :: atom(:)
 
-    !> variables for passing info from XSF input to simul_box_init
-    integer :: periodic_dim
-    FLOAT :: lsize(MAX_DIM)
+    FLOAT, allocatable :: latvec(:,:)
   end type read_coords_info
 
 
@@ -89,9 +87,6 @@ contains
     gf%flags     = 0
     gf%n         = 0
 
-    gf%periodic_dim = -1
-    gf%lsize(:) = -M_ONE
-
     POP_SUB(read_coords_init)
   end subroutine read_coords_init
 
@@ -104,6 +99,7 @@ contains
 
     SAFE_DEALLOCATE_A(gf%atom)
     call read_coords_init(gf)
+    SAFE_DEALLOCATE_A(gf%latvec)
 
     POP_SUB(read_coords_end)
   end subroutine read_coords_end
@@ -116,11 +112,10 @@ contains
     type(space_t),          intent(in)    :: space
     type(namespace_t),      intent(in)    :: namespace
 
-    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
+    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use, periodic_dim
     type(block_t) :: blk
     character(len=256) :: str
     logical :: done
-    FLOAT :: latvec(MAX_DIM, MAX_DIM)
 
     PUSH_SUB(read_coords_read)
 
@@ -240,9 +235,9 @@ contains
     !%Description
     !% Another option besides PDB and XYZ coordinates formats is XSF, as <a href=http://www.xcrysden.org/doc/XSF.html>defined</a>
     !% by the XCrySDen visualization program. Specify the filename with this variable.
-    !% <tt>PeriodicDimensions</tt> will be set based on the first line
-    !% (<tt>CRYSTAL</tt>, <tt>SLAB</tt>, <tt>POLYMER</tt>, or <tt>MOLECULE</tt>),
-    !% and <tt>Lsize</tt> will be set based on the lattice vectors, for compatible values of <tt>BoxShape</tt>.
+    !% The lattice vectors will also be read from this file and the value of
+    !% <tt>PeriodicDimensions</tt> needs to be compatible with the first line
+    !% (<tt>CRYSTAL</tt>, <tt>SLAB</tt>, <tt>POLYMER</tt>, or <tt>MOLECULE</tt>).
     !% The file should not contain <tt>ATOMS</tt>, <tt>CONVVEC</tt>, or <tt>PRIMCOORD</tt>.
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
@@ -290,19 +285,23 @@ contains
       ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'
       select case(trim(str))
       case('CRYSTAL')
-        gf%periodic_dim = 3
+        periodic_dim = 3
       case('SLAB')
-        gf%periodic_dim = 2
+        periodic_dim = 2
       case('POLYMER')
-        gf%periodic_dim = 1
+        periodic_dim = 1
       case('MOLECULE')
-        gf%periodic_dim = 0
+        periodic_dim = 0
       case('ATOMS')
         call messages_not_implemented("Input from XSF file beginning with ATOMS", namespace=namespace)
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
         call messages_fatal(1, namespace=namespace)
       end select
+      if (periodic_dim /= space%periodic_dim) then
+        message(1) = "Periodicity in XSF input is incompatible with the value of PeriodicDimensions."
+        call messages_fatal(1, namespace=namespace)
+      end if
 
       do istep = 1, step_to_use - 1
         read(iunit, *) ! PRIMVEC
@@ -329,20 +328,12 @@ contains
         end if
       end if
 
-      latvec(:,:) = M_ZERO
+      SAFE_ALLOCATE(gf%latvec(1:space%dim, 1:space%dim))
+      gf%latvec = M_ZERO
       do jdir = 1, space%dim
-        read(iunit, *) latvec(1:space%dim, jdir)
-        gf%lsize(jdir) = M_HALF * units_to_atomic(units_inp%length, latvec(jdir, jdir))
-        latvec(jdir, jdir) = M_ZERO
+        read(iunit, *) gf%latvec(1:space%dim, jdir)
       end do
-      if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
-        message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
-        call messages_fatal(1, namespace=namespace)
-      end if
-      if(any(gf%lsize(1:space%dim) < M_EPSILON)) then
-        message(1) = "XSF file must have positive lattice vectors."
-        call messages_fatal(1, namespace=namespace)
-      end if
+      gf%latvec = units_to_atomic(units_inp%length, gf%latvec)
 
       read(iunit, '(a256)') str
       if(str(1:9) /= 'PRIMCOORD') then

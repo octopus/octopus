@@ -146,7 +146,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, reduce)
 
       call profiling_in(prof_gemmcl, TOSTRING(X(DOTP_BATCH_CL_GEMM)))
       
-      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
+      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_C, &
         M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
         A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
         B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
@@ -234,7 +234,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, reduce)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, TOSTRING(X(DOTP_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dd)
+    call mesh%allreduce(dd)
     call profiling_out(profcomm)
   end if
 
@@ -356,7 +356,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, TOSTRING(X(BATCH_SELF_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dd)
+    call mesh%allreduce(dd)
     call profiling_out(profcomm)
   end if
 
@@ -493,7 +493,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, TOSTRING(X(DOTPV_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
+    call mesh%allreduce(dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
   
@@ -636,7 +636,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, TOSTRING(X(DOTPV_MF_BATCH_REDUCE)))
-    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
+    call mesh%allreduce(dot, dim = nst_)
     call profiling_out(profcomm)
   end if
   
@@ -666,6 +666,7 @@ subroutine X(mesh_batch_codensity)(mesh, aa, psi, rho)
 
   select case(aa%status())
   case(BATCH_PACKED)
+    !$omp parallel do private(size, ii, ip, idim)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       do  ii = 1, aa%nst
@@ -681,6 +682,7 @@ subroutine X(mesh_batch_codensity)(mesh, aa, psi, rho)
     end do
 
   case(BATCH_NOT_PACKED)
+    !$omp parallel do private(size, ii, ip, idim)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       do  ii = 1, aa%nst
@@ -713,10 +715,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   logical :: packed_on_entry
 
 #ifdef HAVE_MPI
-  integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
+  integer :: ip, npart, ipart, ist, pos, nstl
   integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:), &
-       points_inner(:), points_bndry(:), partno_inner(:), partno_bndry(:)
+       points(:), partno(:)
   integer, allocatable :: send_count_nstl(:), recv_count_nstl(:), send_disp_nstl(:), recv_disp_nstl(:)
+  integer, allocatable :: send_indices(:), recv_indices(:)
   R_TYPE, allocatable  :: send_buffer(:, :), recv_buffer(:, :)
 #endif
 
@@ -724,7 +727,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(aa%type() == R_TYPE_VAL)
-  packed_on_entry = aa%status() == BATCH_NOT_PACKED
+  packed_on_entry = aa%status() == BATCH_DEVICE_PACKED
   if (packed_on_entry) then
     call aa%do_unpack(force=.true.)
   end if
@@ -746,52 +749,26 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
     SAFE_ALLOCATE(recv_disp_nstl(1:npart))
     SAFE_ALLOCATE(send_buffer(1:nstl, mesh%np))
     SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
+    SAFE_ALLOCATE(send_indices(mesh%np))
+    SAFE_ALLOCATE(recv_indices(mesh%np))
 
     if(present(forward_map)) then
 
       SAFE_ALLOCATE(send_disp(1:npart))
       SAFE_ALLOCATE(recv_disp(1:npart))
-      SAFE_ALLOCATE(points_inner(1:mesh%np))
-      SAFE_ALLOCATE(points_bndry(1:mesh%np))
-      ASSERT(ubound(forward_map, dim = 1) == mesh%np_global)
+      SAFE_ALLOCATE(points(1:mesh%np))
+      ASSERT(ubound(forward_map, dim = 1) == mesh%np)
 
+      ! get their destination
+      SAFE_ALLOCATE(partno(1:mesh%np))
+      call partition_get_partition_number(mesh%partition, mesh%np, &
+           forward_map, partno)
+
+      ! compute the send counts
       send_count = 0
-      np_inner   = 0
-      np_bndry   = 0
-      np_points  = 0
       do ip = 1, mesh%np
-        ! Get the temporally global point
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        ! Store the global point
-        ! Global index can be either in the mesh or in the boundary.
-        ! Different treatment is needed for each case.
-        if (ipg > mesh%np_global) then
-          np_bndry = np_bndry + 1
-          points_bndry(np_bndry) = forward_map(ipg) - mesh%np_global
-        else
-          np_inner = np_inner + 1
-          points_inner(np_inner) = forward_map(ipg)
-        end if
-        np_points = np_points + 1
-      end do
-
-      SAFE_ALLOCATE(partno_inner(1:np_points))
-      SAFE_ALLOCATE(partno_bndry(1:np_points))
-      call partition_get_partition_number(mesh%inner_partition, np_inner, &
-           points_inner, partno_inner)
-      call partition_get_partition_number(mesh%bndry_partition, np_bndry, &
-           points_bndry, partno_bndry)
-      SAFE_DEALLOCATE_A(points_inner)
-      SAFE_DEALLOCATE_A(points_bndry)
-      do ip = 1, np_inner
-        ! the destination
-        ipart = partno_inner(ip)
-        INCR(send_count(ipart), 1)
-      end do
-      do ip = 1, np_bndry
-        ! the destination
-        ipart = partno_bndry(ip)
-        INCR(send_count(ipart), 1)
+        ipart = partno(ip)
+        send_count(ipart) = send_count(ipart) + 1
       end do
       ASSERT(sum(send_count) == mesh%np)
 
@@ -803,6 +780,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALL)
       ASSERT(sum(recv_count) == mesh%np)
 
+      ! compute displacements
       send_disp(1) = 0
       recv_disp(1) = 0
       do ipart = 2, npart
@@ -815,29 +793,24 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       ! Pack for sending
       send_count = 0
-      ! First inner points
-      do ip = 1, np_inner
-        !the destination
-        ipart = partno_inner(ip)
-        INCR(send_count(ipart), 1)
+      do ip = 1, mesh%np
+        ipart = partno(ip)
+        send_count(ipart) = send_count(ipart) + 1
         pos = send_disp(ipart) + send_count(ipart)
-        do ist = 1, nstl
-          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
-        end do
-      end do
-      ! Then boundary points
-      do ip = 1, np_bndry
-        !the destination
-        ipart = partno_bndry(ip)
-        INCR(send_count(ipart), 1)
-        pos = send_disp(ipart) + send_count(ipart)
-        do ist = 1, nstl
-          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
-        end do
+        select case(aa%status())
+        case(BATCH_NOT_PACKED)
+          do ist = 1, nstl
+            send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+          end do
+        case(BATCH_PACKED)
+          do ist = 1, nstl
+            send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
+          end do
+        end select
+        send_indices(pos) = forward_map(ip)
       end do
 
-      SAFE_DEALLOCATE_A(partno_bndry)
-      SAFE_DEALLOCATE_A(partno_inner)
+      SAFE_DEALLOCATE_A(partno)
 
       send_count_nstl = send_count * nstl
       send_disp_nstl = send_disp * nstl
@@ -848,22 +821,31 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 
-      recv_count = 0
-      do ipg = 1, mesh%np_global
-        if(mesh%vp%part_vec(forward_map(ipg)) == mesh%vp%partno) then
-          ip = vec_global2local(mesh%vp, forward_map(ipg), mesh%vp%partno)
-          ASSERT(ip /= 0)
-          ipart = mesh%vp%part_vec(ipg)
-          INCR(recv_count(ipart), 1)
-          pos = recv_disp(ipart) + recv_count(ipart)
+      call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
+      call MPI_Alltoallv(send_indices(1), send_count, send_disp, MPI_INTEGER, &
+        recv_indices(1), recv_count, recv_disp, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
+
+      ! unpack received data
+      do pos = 1, mesh%np
+        ip = mesh_global2local(mesh, recv_indices(pos))
+        ASSERT(ip /= 0)
+        select case(aa%status())
+        case(BATCH_NOT_PACKED)
           do ist = 1, nstl
             aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
           end do
-        end if
+        case(BATCH_PACKED)
+          do ist = 1, nstl
+            aa%X(ff_pack)(ist, ip) = recv_buffer(ist, pos)
+          end do
+        end select
       end do
 
       SAFE_DEALLOCATE_A(send_disp)
       SAFE_DEALLOCATE_A(recv_disp)
+      SAFE_DEALLOCATE_A(send_indices)
+      SAFE_DEALLOCATE_A(recv_indices)
 
     else ! backward map
 
@@ -877,14 +859,17 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(mesh%vp%recv_disp(npart) + recv_count(npart) == mesh%np)
 
       ! Pack for sending
-      send_count = 0  
       do ip = 1, mesh%np
-        ipart = mesh%vp%part_local(ip)
-        INCR(send_count(ipart), 1)
-        pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        do ist = 1, nstl
-          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
-        end do
+        select case(aa%status())
+        case(BATCH_NOT_PACKED)
+          do ist = 1, nstl
+            send_buffer(ist, mesh%vp%sendmap(ip)) = aa%X(ff_linear)(ip, ist)
+          end do
+        case(BATCH_PACKED)
+          do ist = 1, nstl
+            send_buffer(ist, mesh%vp%sendmap(ip)) = aa%X(ff_pack)(ist, ip)
+          end do
+        end select
       end do
 
       send_count_nstl = send_count * nstl
@@ -897,15 +882,17 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALLV)
 
       ! Unpack on receiving
-      recv_count = 0
       do ip = 1, mesh%np
-        ! get the destination
-        ipart = mesh%vp%part_local_rev(ip)
-        INCR(recv_count(ipart), 1)
-        pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
-        do ist = 1, nstl
-          aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
-        end do
+        select case(aa%status())
+        case(BATCH_NOT_PACKED)
+          do ist = 1, nstl
+            aa%X(ff_linear)(ip, ist) = recv_buffer(ist, mesh%vp%recvmap(ip))
+          end do
+        case(BATCH_PACKED)
+          do ist = 1, nstl
+            aa%X(ff_pack)(ist, ip) = recv_buffer(ist, mesh%vp%recvmap(ip))
+          end do
+        end select
       end do
 
     end if
@@ -1166,7 +1153,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, TOSTRING(X(BATCH_GRAM_SCHMIDT_REDUCE)))
-      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
+      call mesh%allreduce(ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if
    
@@ -1218,6 +1205,29 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   call profiling_out(prof)
 end subroutine X(mesh_batch_orthogonalization)
 
+! ---------------------------------------------------------
+!> Normalize a batch
+subroutine X(mesh_batch_normalize)(mesh, psib, norm)
+  type(mesh_t),      intent(in)    :: mesh
+  class(batch_t),    intent(inout) :: psib
+  FLOAT, optional,   intent(out)   :: norm(:)
+
+  FLOAT, allocatable :: nrm2(:)
+
+  PUSH_SUB(X(mesh_batch_normalize))
+
+  SAFE_ALLOCATE(nrm2(1:psib%nst))
+
+  call mesh_batch_nrm2(mesh, psib, nrm2)
+  if(present(norm)) then
+    norm(1:psib%nst) = nrm2(1:psib%nst)
+  end if
+  call batch_scal(mesh%np, R_TOTYPE(M_ONE/nrm2(1:psib%nst)), psib, a_full=.false.)
+
+  SAFE_DEALLOCATE_A(nrm2)
+
+  POP_SUB(X(mesh_batch_normalize))
+end subroutine X(mesh_batch_normalize)
 
 !! Local Variables:
 !! mode: f90

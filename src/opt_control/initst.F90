@@ -63,7 +63,7 @@ contains
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
                          no_states, istype, freeze_orbitals
     type(block_t)     :: blk
-    FLOAT             :: xx(1:sys%gr%sb%dim), rr, psi_re, psi_im
+    FLOAT             :: xx(1:sys%space%dim), rr, psi_re, psi_im
     type(restart_t) :: restart
     CMPLX, allocatable :: zpsi(:, :)
 
@@ -101,7 +101,7 @@ contains
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
       call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_elec_load(restart, sys%namespace, psi, sys%gr, ierr)
+      if(ierr == 0) call states_elec_load(restart, sys%namespace, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
         call messages_fatal(1)
@@ -143,7 +143,7 @@ contains
         call messages_fatal(1)
       end if
       
-      call states_elec_transform(psi, sys%namespace, restart, sys%gr, prefix = "OCTInitial")
+      call states_elec_transform(psi, sys%namespace, restart, sys%gr, sys%kpoints, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 
@@ -193,7 +193,7 @@ contains
                   
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
-                    sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
+                    sys%space%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
                   zpsi(ip, id) = TOCMPLX(psi_re, psi_im)
                 end do
@@ -226,26 +226,28 @@ contains
     call parse_variable(sys%namespace, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, sys%kpoints, &
+                   freeze_orbitals, family_is_mgga(sys%ks%xc_family))
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
-      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, sys%kpoints, &
+                   psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
       call density_calc(psi, sys%gr, psi%rho)
     else
       ! Normal run.
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

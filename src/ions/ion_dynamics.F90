@@ -441,6 +441,11 @@ contains
     call parse_variable(namespace, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
+    if (this%move_ions .and. geo%space%periodic_dim == 1) then
+      call messages_input_error(namespace, 'MoveIons', &
+        'Moving ions for a 1D periodic system is not allowed, as forces are incorrect.')
+    end if
+
     if(ion_dynamics_ions_move(this)) then 
       SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
     end if
@@ -560,7 +565,8 @@ contains
 
     end if
 
-    call simul_box_atoms_in_box(sb, geo, namespace, .false.)
+    ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
+    call geometry_fold_atoms_into_cell(geo)
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate

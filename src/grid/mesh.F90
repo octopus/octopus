@@ -20,6 +20,7 @@
 
 module mesh_oct_m
   use basis_set_abst_oct_m
+  use comm_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -36,6 +37,7 @@ module mesh_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use species_oct_m
@@ -49,8 +51,6 @@ module mesh_oct_m
     mesh_t,                        &
     mesh_plane_t,                  &
     mesh_line_t,                   &
-    mesh_dump,                     &
-    mesh_load,                     &
     mesh_check_dump_compatibility, &
     mesh_end,                      &
     mesh_double_box,               &
@@ -59,7 +59,6 @@ module mesh_oct_m
     mesh_gcutoff,                  &
     mesh_write_info,               &
     mesh_nearest_point,            &
-    mesh_nearest_point_infos,      &
     mesh_periodic_point,           &
     mesh_global_memory,            &
     mesh_local_memory,             &
@@ -67,7 +66,13 @@ module mesh_oct_m
     mesh_write_fingerprint,        &
     mesh_read_fingerprint,         &
     mesh_compact_boundaries,       &
-    mesh_check_symmetries
+    mesh_check_symmetries,         &
+    mesh_global_index_to_coords,   &
+    mesh_global_index_from_coords, &
+    mesh_local_index_to_coords,    &
+    mesh_local_index_from_coords,  &
+    mesh_local2global,             &
+    mesh_global2local
 
   !> Describes mesh distribution to nodes.
   !!
@@ -98,11 +103,9 @@ module mesh_oct_m
     logical         :: parallel_in_domains 
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
-    type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
-    type(partition_t) :: bndry_partition   !< describes how the boundary points are assigned to the domains
+    type(partition_t) :: partition         !< describes how the inner points are assigned to the domains
 
     FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
-    integer, allocatable :: resolution(:, :, :)
     FLOAT                :: volume_element    !< The global volume element.
     FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
@@ -111,12 +114,23 @@ module mesh_oct_m
 
     logical :: masked_periodic_boundaries
     character(len=256) :: periodic_boundary_mask
+
   contains
-    procedure :: load => mesh_load
-    procedure :: dump => mesh_dump
     procedure :: end => mesh_end
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
+    procedure :: dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    procedure :: dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    procedure :: dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    procedure :: dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    procedure :: dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    procedure :: dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
+    generic :: allreduce => dmesh_allreduce_0, zmesh_allreduce_0, imesh_allreduce_0
+    generic :: allreduce => dmesh_allreduce_1, zmesh_allreduce_1, imesh_allreduce_1
+    generic :: allreduce => dmesh_allreduce_2, zmesh_allreduce_2, imesh_allreduce_2
+    generic :: allreduce => dmesh_allreduce_3, zmesh_allreduce_3, imesh_allreduce_3
+    generic :: allreduce => dmesh_allreduce_4, zmesh_allreduce_4, imesh_allreduce_4
+    generic :: allreduce => dmesh_allreduce_5, zmesh_allreduce_5, imesh_allreduce_5
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -147,8 +161,6 @@ module mesh_oct_m
     integer :: nu, mu
   end type mesh_line_t
   
-  character(len=17), parameter :: dump_tag = '*** mesh_dump ***'
-  
 contains
 
   subroutine mesh_init(this)
@@ -163,8 +175,8 @@ contains
 
 ! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(sb, mesh, alpha, db)
-    type(simul_box_t), intent(in)  :: sb
+  subroutine mesh_double_box(space, mesh, alpha, db)
+    type(space_t),     intent(in)  :: space
     type(mesh_t),      intent(in)  :: mesh
     FLOAT,             intent(in)  :: alpha !< enlargement factor for double box
     integer,           intent(out) :: db(MAX_DIM)
@@ -176,10 +188,10 @@ contains
     db = 1
     
     ! double mesh with 2n points
-    do idir = 1, sb%periodic_dim
+    do idir = 1, space%periodic_dim
       db(idir) = mesh%idx%ll(idir)
     end do
-    do idir = sb%periodic_dim + 1, sb%dim
+    do idir = space%periodic_dim + 1, space%dim
       db(idir) = nint(alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
@@ -393,55 +405,6 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_nearest_point_infos(mesh, pos, dmin_global, rankmin, imin_local, imin_global)
-    type(mesh_t), intent(in)    :: mesh
-    FLOAT,        intent(in)    :: pos(:)
-    FLOAT,        intent(out)   :: dmin_global
-    integer,      intent(out)   :: rankmin
-    integer,      intent(out)   :: imin_local
-    integer,      intent(out)   :: imin_global
-
-    integer              :: ip, ip_global, idim, ipart, idx(1:MAX_DIM)
-    FLOAT                :: dd, xx(3)
-
-    dmin_global = M_HUGE
-    if (mesh%parallel_in_domains) then
-      do ipart=1, mesh%vp%npart
-        do ip = 1, mesh%vp%np_local_vec(ipart)
-          ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
-          call index_to_coords(mesh%idx, ip_global, idx)
-          do idim = 1, mesh%sb%dim
-            xx(idim) = idx(idim) * mesh%spacing(idim)
-          end do
-          dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
-          if (dd < dmin_global) then
-            imin_local  = ip
-            rankmin     = ipart-1
-            imin_global = ip_global
-            dmin_global = dd
-          end if
-        end do
-      end do
-    else
-      do ip = 1, mesh%np
-        call index_to_coords(mesh%idx, ip, idx)
-        do idim = 1, mesh%sb%dim
-          xx(idim) = idx(idim) * mesh%spacing(idim)
-        end do
-        dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
-        if (dd < dmin_global) then
-          imin_local  = ip
-          rankmin     = 0
-          imin_global = ip
-          dmin_global = dd
-        end if
-      end do
-    end if
- 
-  end subroutine mesh_nearest_point_infos
-
- 
-  ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the
   !! grid mesh, in terms of the maximum G vector. For a cubic regular
   !! grid, it is M_PI/spacing.
@@ -454,97 +417,6 @@ contains
 
     POP_SUB(mesh_gcutoff)
   end function mesh_gcutoff
-  
-  
-  ! -------------------------------------------------------------- 
-  subroutine mesh_dump(this, dir, filename, mpi_grp, namespace, ierr)
-    class(mesh_t),    intent(in)  :: this
-    character(len=*), intent(in)  :: dir
-    character(len=*), intent(in)  :: filename
-    type(mpi_grp_t),  intent(in)  :: mpi_grp
-    type(namespace_t), intent(in)  :: namespace
-    integer,          intent(out) :: ierr
-    
-    integer :: iunit, err
-
-    PUSH_SUB(mesh_dump)
-
-    ierr = 0
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
-      position="append", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file:"
-      message(2) = io_workpath(trim(dir)//"/"//trim(filename), namespace)
-      call messages_warning(2)
-    else
-      if (mpi_grp_is_root(mpi_grp)) then
-        write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,1i10)')  'np_global=          ', this%np_global
-        write(iunit, '(a20,1i10)')  'np_part_global=     ', this%np_part_global
-      end if
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    call index_dump(this%idx, dir, filename, mpi_grp, namespace, err)
-    if (err /= 0) ierr = ierr + 2
-
-    POP_SUB(mesh_dump)
-  end subroutine mesh_dump
-  
-  
-  ! -------------------------------------------------------------- 
-  !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(this, dir, filename, mpi_grp, namespace, ierr)
-    class(mesh_t),     intent(inout) :: this
-    character(len=*),  intent(in)    :: dir
-    character(len=*),  intent(in)    :: filename
-    type(mpi_grp_t),   intent(in)    :: mpi_grp
-    type(namespace_t), intent(in)    :: namespace
-    integer,           intent(out)   :: ierr
-
-    integer :: iunit, err
-    character(len=20)  :: str
-    character(len=100) :: lines(4)
-
-    PUSH_SUB(mesh_load)
-
-    ASSERT(this%sb%dim > 0 .and. this%sb%dim <= MAX_DIM)
-
-    ierr = 0
-
-    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
-      status="old", die=.false., grp=mpi_grp)
-    if (iunit <= 0) then
-      ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
-    else
-      ! Find the dump tag.
-      call iopar_find_line(mpi_grp, iunit, dump_tag, err)
-      if (err /= 0) ierr = ierr + 2
-
-      if (ierr == 0) then
-        call iopar_read(mpi_grp, iunit, lines, 2, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-        else
-          read(lines(3), '(a20,1i10)') str, this%np_global
-          read(lines(4), '(a20,1i10)') str, this%np_part_global
-          this%parallel_in_domains = .false.
-        end if
-      end if
-
-      call io_close(iunit, grp=mpi_grp)
-    end if
-
-    call index_load(this%idx, dir, filename, mpi_grp, namespace, err)
-    if (err /= 0) ierr = ierr + 8
-
-    POP_SUB(mesh_load)
-  end subroutine mesh_load
-
 
   ! --------------------------------------------------------------
   subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, namespace, ierr)
@@ -723,7 +595,7 @@ contains
               map(ip) = 0
               grid_reordered = .false.
             else
-              map(ip) = index_from_coords(mesh%idx, [xx(1), xx(2), xx(3)])
+              map(ip) = mesh_global_index_from_coords(mesh, [xx(1), xx(2), xx(3)])
               if(map(ip) > mesh%np_global) map(ip) = 0
             end if
           end do
@@ -747,7 +619,6 @@ contains
 
     if(this%idx%is_hypercube) call hypercube_end(this%idx%hypercube)
 
-    SAFE_DEALLOCATE_A(this%resolution)
     SAFE_DEALLOCATE_A(this%idx%lxyz)
     SAFE_DEALLOCATE_A(this%idx%lxyz_inv)
     SAFE_DEALLOCATE_A(this%x)
@@ -755,15 +626,9 @@ contains
 
     if(this%parallel_in_domains) then
       call vec_end(this%vp)
-      ! this is true if MeshUseTopology = false
-#if defined(HAVE_MPI)
-      if(this%mpi_grp%comm /= this%vp%comm) &
-        call MPI_Comm_free(this%vp%comm, mpi_err)
-#endif
-      call partition_end(this%inner_partition)
-      call partition_end(this%bndry_partition)
+      call partition_end(this%partition)
     end if
-    
+
     POP_SUB(mesh_end)
   end subroutine mesh_end
 
@@ -774,30 +639,32 @@ contains
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
   ! ---------------------------------------------------------  
-  integer function mesh_periodic_point(mesh, ip_global, ip_local) result(ipp)
-    type(mesh_t), intent(in)    :: mesh
-    integer,      intent(in)    :: ip_global, ip_local
+  integer function mesh_periodic_point(mesh, space, ip) result(ipg)
+    type(mesh_t),  intent(in)    :: mesh
+    type(space_t), intent(in)    :: space
+    integer,       intent(in)    :: ip     !< local point for which periodic copy is searched
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
     
     ! no push_sub, called too frequently
 
-    ix = mesh%idx%lxyz(ip_global, :)
+    call mesh_local_index_to_coords(mesh, ip, ix)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
-    do idim = 1, mesh%sb%periodic_dim
+    do idim = 1, space%periodic_dim
       if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + mesh%idx%ll(idim)
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = index_from_coords(mesh%idx, [ix(1), ix(2), ix(3)])
+    ipg = mesh_global_index_from_coords(mesh, ix)
+    ASSERT(ipg > 0)
 
     if(mesh%masked_periodic_boundaries) then
-      call mesh_r(mesh, ip_local, rr, coords = xx)
-      call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
-      if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
+      call mesh_r(mesh, ip, rr, coords = xx)
+      call parse_expression(ufn_re, ufn_im, space%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
+      if(int(ufn_re) == 0) ipg = mesh_local2global(mesh, ip) ! Nothing will be done
     end if 
     
   end function mesh_periodic_point
@@ -811,10 +678,6 @@ contains
     
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    ! resolution
-    if(mesh%sb%mr_flag) then
-      memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    end if
     ! lxyz
     memory = memory + SIZEOF_UNSIGNED_INT * TOFLOAT(mesh%np_part_global) * MAX_DIM
 
@@ -849,7 +712,7 @@ contains
     if (present(force)) force_ = force
       
     if(mesh%parallel_in_domains .or. force_) then
-      call index_to_coords(mesh%idx, ip, ix)
+      call mesh_global_index_to_coords(mesh, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
@@ -867,17 +730,18 @@ contains
     
     cb = .not. mesh%use_curvilinear .and. &
          .not. mesh%parallel_in_domains .and.  &
-         simul_box_has_zero_bc(mesh%sb)
+         mesh%sb%periodic_dim == 0
 
   end function mesh_compact_boundaries
 
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_symmetries(mesh, sb)
-    type(mesh_t),       intent(in) :: mesh
-    type(simul_box_t),  intent(in) :: sb
+  subroutine mesh_check_symmetries(mesh, symm, periodic_dim)
+    type(mesh_t),        intent(in) :: mesh
+    type(symmetries_t),  intent(in) :: symm
+    integer,             intent(in) :: periodic_dim
 
-    integer :: iop, ip, idim, nops
+    integer :: iop, ip, idim, nops, ix(1:3)
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     !If all the axis have the same spacing and the same length
@@ -899,18 +763,14 @@ contains
     lsize(1:3) = TOFLOAT(mesh%idx%ll(1:3))
     offset(1:3) = TOFLOAT(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
-    nops = symmetries_number(sb%symm)
+    nops = symmetries_number(symm)
 
     do ip = 1, mesh%np
       !We use floating point coordinates to check if the symmetric point 
       !belong to the grid.
       !If yes, it should have integer reduced coordinates 
-      if(mesh%parallel_in_domains) then
-        ! convert to global point
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
-      else
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
-      end if
+      call mesh_local_index_to_coords(mesh, ip, ix)
+      destpoint(1:3) = TOFLOAT(ix(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
@@ -925,7 +785,7 @@ contains
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         do idim = 1, 3
@@ -936,7 +796,7 @@ contains
         srcpoint = srcpoint + TOFLOAT(int(lsize)/2)
 
         ! apply periodic boundary conditions in periodic directions 
-        do idim = 1, sb%periodic_dim
+        do idim = 1, periodic_dim
           if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
             srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
           end if
@@ -956,6 +816,94 @@ contains
 
     POP_SUB(mesh_check_symmetries)
   end subroutine
+
+  !> This function returns the true _global_ index of the point for a given
+  !! vector of integer coordinates.
+  integer function mesh_global_index_from_coords(mesh, ix) result(index)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ix(:)
+
+    index = index_from_coords(mesh%idx, ix)
+  end function mesh_global_index_from_coords
+
+  !> Given a _global_ point index, this function returns the set of
+  !! integer coordinates of the point.
+  pure subroutine mesh_global_index_to_coords(mesh, ipg, ix)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ipg
+    integer,       intent(out)   :: ix(:)
+
+    call index_to_coords(mesh%idx, ipg, ix)
+  end subroutine mesh_global_index_to_coords
+
+  !> This function returns the _local_ index of the point for a given
+  !! vector of integer coordinates.
+  integer function mesh_local_index_from_coords(mesh, ix) result(ip)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ix(:)
+
+    integer :: ipg
+
+    ipg = index_from_coords(mesh%idx, ix)
+    ip = mesh_global2local(mesh, ipg)
+  end function mesh_local_index_from_coords
+
+  !> Given a _local_ point index, this function returns the set of
+  !! integer coordinates of the point.
+  subroutine mesh_local_index_to_coords(mesh, ip, ix)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ip
+    integer,       intent(out)   :: ix(:)
+
+    integer :: ipg
+
+    ipg = mesh_local2global(mesh, ip)
+    call index_to_coords(mesh%idx, ipg, ix)
+  end subroutine mesh_local_index_to_coords
+
+  !> This function returns the global mesh index for a given local index
+  integer function mesh_local2global(mesh, ip) result(ipg)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ip
+
+    if (.not. mesh%parallel_in_domains) then
+      ipg = ip
+    else
+      if (ip <= mesh%np) then
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
+      else if (ip <= mesh%np + mesh%vp%np_ghost) then
+        ipg = mesh%vp%ghost(ip - mesh%np)
+      else if (ip <= mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry) then
+        ipg = mesh%vp%bndry(ip - mesh%np - mesh%vp%np_ghost)
+      else
+        ipg = 0
+      end if
+    end if
+  end function mesh_local2global
+
+  !> This function returns the local mesh index for a given global index
+  integer function mesh_global2local(mesh, ipg) result(ip)
+    type(mesh_t),  intent(in)    :: mesh
+    integer,       intent(in)    :: ipg
+
+    if (.not. mesh%parallel_in_domains) then
+      ip = ipg
+    else
+      ip = vec_global2local(mesh%vp, ipg)
+    end if
+  end function mesh_global2local
+
+#include "undef.F90"
+#include "real.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
+#include "mesh_inc.F90"
 
 end module mesh_oct_m
 

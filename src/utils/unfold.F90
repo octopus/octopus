@@ -1,4 +1,4 @@
-!!  Copyright (C) 20182019 M. S. Mrudul, N. Tancogne-Dejean
+!!  Copyright (C) 2018-2019 M. S. Mrudul, N. Tancogne-Dejean
 !!  
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -42,6 +42,7 @@ program oct_unfold
   use io_oct_m
   use io_binary_oct_m
   use io_function_oct_m
+  use lattice_vectors_oct_m
   use loct_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -70,15 +71,13 @@ program oct_unfold
   implicit none
 
   type(electrons_t), pointer :: sys
-  type(simul_box_t)     :: sb
-  integer               :: ik, idim, nkpoints
+  integer               :: ik, nkpoints
   type(restart_t)       :: restart
   type(cube_t)          :: zcube
   type(cube_function_t) :: cf
 
-  integer       :: ierr, run_mode, file_gvec, jdim
-  FLOAT         :: lparams(MAX_DIM), rlattice_pc(MAX_DIM, MAX_DIM), klattice_pc(MAX_DIM, MAX_DIM)
-  FLOAT         :: volume_element_pc
+  type(lattice_vectors_t) :: pc
+  integer       :: ierr, run_mode, file_gvec
   type(block_t) :: blk
   integer       :: nhighsympoints, nsegments
   integer       :: icol, idir, ncols
@@ -110,9 +109,8 @@ program oct_unfold
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   sys => electrons_t(global_namespace)
   call sys%init_parallelization(mpi_world)
-  call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
-  if(sb%periodic_dim == 0) then
+  if(sys%space%periodic_dim == 0) then
     message(1) = "oct-unfold can only be used for periodic ystems."
     call messages_fatal(1)
   end if
@@ -146,54 +144,21 @@ program oct_unfold
 
   !%Variable UnfoldLatticeParameters
   !%Type block
-  !%Default 1 | 1 | 1
   !%Section Utilities::oct-unfold
   !%Description
-  !% The lattice parameters of the primitive cell, on which unfolding is performed. 
+  !% The lattice parameters of the primitive cell, on which unfolding is performed.
+  !% See the LatticeParameters variable for a more detailed description.
   !%End
-  lparams(:) = M_ONE
-  if(parse_block(global_namespace, 'UnfoldLatticeParameters', blk) == 0) then
-    do idim = 1, sb%dim
-      call parse_block_float(blk, 0, idim-1, lparams(idim))
-    end do
-  else
-    message(1) = "UnfoldLatticeParameters is not specified"
-    call messages_fatal(1)
-  end if
 
   !%Variable UnfoldLatticeVectors
   !%Type block
   !%Default simple cubic
   !%Section Utilities::oct-unfold
   !%Description
-  !% Lattice vectors of the primitive cell on which the unfolding is performed. 
+  !% Lattice vectors of the primitive cell on which the unfolding is performed.
+  !% See the LatticeVectors variable for a more detailed description.
   !%End
-  rlattice_pc = M_ZERO
-  do idim = 1, sb%dim
-    rlattice_pc(idim, idim) = M_ONE
-  end do
-
-  if(parse_block(global_namespace, 'UnfoldLatticeVectors', blk) == 0) then
-    do idim = 1, sb%dim
-      do jdim = 1, sb%dim
-        call parse_block_float(blk, idim-1,  jdim-1, rlattice_pc(jdim, idim))
-      enddo
-    end do
-    call parse_block_end(blk)
-  else
-    message(1) = "UnfoldLatticeVectors is not specified"
-    call messages_fatal(1)
-  end if
-
-  do idim = 1, sb%dim
-    do jdim = 1, sb%dim
-      rlattice_pc(jdim, idim) = rlattice_pc(jdim, idim) * lparams(idim)
-    end do
-  end do
-
-  call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim, global_namespace)
-  klattice_pc = klattice_pc * M_TWO * M_PI
-
+  pc = lattice_vectors_t(global_namespace, sys%space, variable_prefix='Unfold')
 
   !%Variable UnfoldKPointsPath
   !%Type block
@@ -222,25 +187,25 @@ program oct_unfold
   !Total number of points in the segment
   nkpoints = sum(resolution) + 1
 
-  SAFE_ALLOCATE(highsympoints(1:sb%dim, 1:nhighsympoints))
+  SAFE_ALLOCATE(highsympoints(1:sys%space%dim, 1:nhighsympoints))
   do ik = 1, nhighsympoints
     !Sanity check
     ncols = parse_block_cols(blk, ik)
-    if(ncols /= sb%dim) then
-      write(message(1),'(a,i3,a,i3)') 'UnfoldPointsPath row ', ik, ' has ', ncols, ' columns but must have ', sb%dim
+    if(ncols /= sys%space%dim) then
+      write(message(1),'(a,i3,a,i3)') 'UnfoldPointsPath row ', ik, ' has ', ncols, ' columns but must have ', sys%space%dim
       call messages_fatal(1)
     end if
 
-    do idir = 1, sb%dim
+    do idir = 1, sys%space%dim
         call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
     end do
   end do
 
-  call kpoints_grid_init(sb%dim, path_kpoints_grid, nkpoints, 1)
+  call kpoints_grid_init(sys%space%dim, path_kpoints_grid, nkpoints, 1)
   ! For the output of band-structures
   SAFE_ALLOCATE(coord_along_path(1:nkpoints))
 
-  call kpoints_path_generate(sb%dim, klattice_pc, nkpoints, nsegments, resolution, &
+  call kpoints_path_generate(sys%space%dim, pc%klattice, nkpoints, nsegments, resolution, &
            highsympoints, path_kpoints_grid%point, coord_along_path)
 
   SAFE_DEALLOCATE_A(resolution)
@@ -248,11 +213,11 @@ program oct_unfold
 
   !We convert the k-point to the reduced coordinate of the supercell
   do ik = 1, path_kpoints_grid%npoints
-    call kpoints_to_reduced(sb%rlattice, path_kpoints_grid%point(:, ik), &
-                                path_kpoints_grid%red_point(:, ik), sb%dim)
+    call kpoints_to_reduced(sys%gr%sb%latt%rlattice, path_kpoints_grid%point(:, ik), &
+                                path_kpoints_grid%red_point(:, ik), sys%space%dim)
   end do
 
-  call kpoints_fold_to_1BZ(path_kpoints_grid, klattice_pc)
+  call kpoints_fold_to_1BZ(path_kpoints_grid, pc%klattice)
 
   if(run_mode == OPTION__UNFOLDMODE__UNFOLD_SETUP) then
 
@@ -273,20 +238,21 @@ program oct_unfold
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, global_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, label = ": unfold")
+    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+                            ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
     end if
     call restart_end(restart)  
 
-    call cube_init(zcube, sys%gr%mesh%idx%ll, sb, global_namespace, &
+    call cube_init(zcube, sys%gr%mesh%idx%ll, sys%gr%sb, global_namespace, &
       fft_type = FFT_COMPLEX, dont_optimize = .true.)
     call cube_function_null(cf)
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
 
-    call wfs_extract_spec_fn(sys%st, sys%gr, zcube, cf)
+    call wfs_extract_spec_fn(sys%space, sys%st, sys%gr, zcube, cf)
 
     call cube_function_free_fs(zcube, cf)
     call zcube_function_free_rs(zcube, cf)
@@ -301,7 +267,6 @@ program oct_unfold
 
   call kpoints_grid_end(path_kpoints_grid)
 
-  call simul_box_end(sb)
   call fft_all_end()
   SAFE_DEALLOCATE_P(sys)
   call profiling_end(global_namespace)
@@ -330,7 +295,7 @@ contains
 
       !We convert the k-point to the reduce coordinate of the supercell
       do ik = 1, path_kpoints_grid%npoints
-        gvec(1:sb%dim) = nint(path_kpoints_grid%red_point(:, ik) + M_HALF * CNST(1e-7))
+        gvec(1:sys%space%dim) = nint(path_kpoints_grid%red_point(:, ik) + M_HALF * CNST(1e-7))
         write(file_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)')  &
                  ' 1. | ', path_kpoints_grid%red_point(1, ik) - gvec(1), &
                     ' | ', path_kpoints_grid%red_point(2, ik) - gvec(2), &
@@ -346,7 +311,8 @@ contains
   end subroutine unfold_setup
 
   !--------------------------------------------------------------------
-  subroutine wfs_extract_spec_fn(st, gr, zcube, cf)
+  subroutine wfs_extract_spec_fn(space, st, gr, zcube, cf)
+    type(space_t),         intent(in)    :: space
     type(states_elec_t),   intent(in)    :: st
     type(grid_t),          intent(in)    :: gr
     type(cube_t),          intent(inout) :: zcube
@@ -413,15 +379,15 @@ contains
       eigs(ie) = eigmin - nextend * de + (ie - 1) * de
     end do        
 
-    SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
+    SAFE_ALLOCATE(gvec_abs(1:sys%space%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
     file_gvec = io_open('./unfold_gvec.dat', global_namespace, action='read')
     read(file_gvec,*)
     read(file_gvec,*)
     do ik = 1, st%d%nik
       read(file_gvec,*) vec_sc(1:3)
-      call kpoints_to_absolute(sb%klattice, vec_sc(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim, ik), &
-                 sb%periodic_dim)
+      call kpoints_to_absolute(sys%gr%sb%latt%klattice, vec_sc(1:sys%space%periodic_dim), &
+                 gvec_abs(1:sys%space%periodic_dim, ik), sys%space%periodic_dim)
     end do 
     call io_close(file_gvec)
 
@@ -433,9 +399,9 @@ contains
     SAFE_ALLOCATE(pkm(st%d%kpt%start:st%d%kpt%end, 1:st%nst))
     pkm(:, :) = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      iq = states_elec_dim_get_kpoint_index(st%d, ik) 
+      iq = st%d%get_kpoint_index(ik) 
 
-      call fourier_shell_init(shell, zcube, gr%mesh, kk = sb%kpoints%reduced%red_point(:, iq))  
+      call fourier_shell_init(shell, space, zcube, gr%mesh, kk = sys%kpoints%reduced%red_point(:, iq))  
 
       gmin = minval(shell%red_gvec(:,:))
       gmax = maxval(shell%red_gvec(:,:))
@@ -443,14 +409,14 @@ contains
       SAFE_ALLOCATE(g_select(1:shell%ngvectors))
       g_select(:) = .false.
 
-      select case(sb%periodic_dim)
+      select case(sys%space%periodic_dim)
       case(3)
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, TOFLOAT(shell%red_gvec(1:3,ig)), vec_sc(1:3), 3)
+          call kpoints_to_absolute(sys%gr%sb%latt%klattice, TOFLOAT(shell%red_gvec(1:3,ig)),vec_sc(1:3), 3)
           do ix = gmin, gmax
             do iy = gmin, gmax
               do iz = gmin, gmax
-                vec_pc(1:3) = ix * klattice_pc(1:3,1) + iy * klattice_pc(1:3,2) + iz * klattice_pc(1:3,3)
+                vec_pc(1:3) = ix * pc%klattice(1:3,1) + iy * pc%klattice(1:3,2) + iz * pc%klattice(1:3,3)
                 if(abs(vec_sc(1) - vec_pc(1) - gvec_abs(1, ik)) < tol &
                   .and. abs(vec_sc(2) - vec_pc(2)-gvec_abs(2, ik)) < tol &
                   .and. abs(vec_sc(3) - vec_pc(3)-gvec_abs(3, ik)) < tol) then
@@ -464,10 +430,10 @@ contains
       case(2)
 
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, TOFLOAT(shell%red_gvec(1:2,ig)), vec_sc(1:2), 2)
+          call kpoints_to_absolute(sys%gr%sb%latt%klattice, TOFLOAT(shell%red_gvec(1:2,ig)), vec_sc(1:2), 2)
           do ix = gmin, gmax
             do iy = gmin, gmax
-              vec_pc(1:2) = ix * klattice_pc(1:2,1) + iy * klattice_pc(1:2,2)
+              vec_pc(1:2) = ix * pc%klattice(1:2,1) + iy * pc%klattice(1:2,2)
               if(abs(vec_sc(1) - vec_pc(1) - gvec_abs(1, ik)) < tol &
                   .and. abs(vec_sc(2) - vec_pc(2) - gvec_abs(2, ik)) < tol) then
                   g_select(ig) = .true.
@@ -550,7 +516,7 @@ contains
     end do !ik
 
     if(st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, ake)
+      call comm_allreduce(st%st_kpt_mpi_grp, ake)
     end if
 
     if(mpi_grp_is_root(mpi_world)) then

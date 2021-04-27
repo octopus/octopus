@@ -99,7 +99,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
       
   zero_thr = M_EPSILON    
       
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
+  if ( kpoints%have_zero_weight_path()) then 
     ! supporting paths only along the kx and ky directions in 
     ! reciprocal space
     kpth_dir = -1 
@@ -111,7 +111,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
     nk(kpth_dir) = nkpt
     do ik = 1 , nkpt
       Lkpt(krng(1)+ik-1,kpth_dir) = ik
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+      kpt(1:dim) = kpoints%get_point(krng(1) + ik -1) 
     end do
         
   else  
@@ -134,7 +134,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   if (debug%info) then
     print *,"reordered"
     do ik = krng(1),krng(2)
-      kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.)
+      kpt(1:dim) = kpoints%get_point(ik, absolute_coordinates = .false.)
       print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),"] -- kpt= ",kpt(1)
     end do
 
@@ -187,7 +187,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   ! The lower left corner correspond to the minimum value of p and the lowest 
   ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
   do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
+    kpt(1:dim) = kpoints%get_point(ik) 
     do j1 = 1, ll(1) 
       do j2 = 1, ll(2) 
         do j3 = 1, ll(3) 
@@ -239,7 +239,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
 !         print *,ip1, "Pmesh", pmesh(ip1, 1, 1, 1)
 !       end do
 
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
+  if (kpoints%have_zero_weight_path()) then 
   ! With a path we just need to get the correct the zero index on the in-plane direction  
   ! perpendicular to the path since is along this direction that we are going 
   ! to slice with pes_mask_output_full_mapM_cut. Since on this direction we only 
@@ -331,7 +331,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
   
   pesK = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     
     do ist = istart, iend
 
@@ -555,8 +555,9 @@ end subroutine pes_mask_output_states
 !!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
 !!\f]
 ! ---------------------------------------------------------
-subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
+subroutine pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
   type(pes_mask_t),    intent(in)  :: mask
+  type(space_t),       intent(in)  :: space
   type(states_elec_t), intent(in)  :: st
   integer,             intent(in)  :: ik  
   FLOAT, target,       intent(out) :: pesK(:,:,:)
@@ -598,11 +599,11 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
 
 
 !   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-!     call comm_allreduce(st%st_kpt_mpi_grp%comm, pesKloc)
+!     call comm_allreduce(st%st_kpt_mpi_grp, pesKloc)
 !   end if
 
   if(st%parallel_in_states) then
-    call comm_allreduce(st%mpi_grp%comm, pesKloc)
+    call comm_allreduce(st%mpi_grp, pesKloc)
   end if
 
   
@@ -645,7 +646,7 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
   ! since along the periodi dimensions the discrete Fourier transform is 
   ! exact we need to renormalize only along the non periodic ones
   scale = M_ONE
-  do idim= mask%mesh%sb%periodic_dim + 1, mask%mesh%sb%dim
+  do idim = space%periodic_dim + 1, space%dim
     scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
   end do
   pesK = pesK *scale 
@@ -661,14 +662,14 @@ end subroutine pes_mask_fullmap
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
-  type(namespace_t), intent(in)    :: namespace
-  FLOAT,             intent(in)    :: pesK(:,:,:)
-  FLOAT,             intent(in)    :: Lk(:,:)
-  integer,           intent(in)    :: ll(:)
-  integer,           intent(in)    :: dim
-  FLOAT, pointer,    intent(inout) :: cube_f(:)
-  type(qshep_t),     intent(out)   :: interp
-  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)  
+  type(namespace_t),  intent(in)    :: namespace
+  FLOAT,              intent(in)    :: pesK(:,:,:)
+  FLOAT,              intent(in)    :: Lk(:,:)
+  integer,            intent(in)    :: ll(:)
+  integer,            intent(in)    :: dim
+  FLOAT, allocatable, intent(out)   :: cube_f(:)
+  type(qshep_t),      intent(out)   :: interp
+  FLOAT, optional,    intent(in)    :: pmesh(:,:,:,:)
   
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
@@ -762,14 +763,14 @@ end subroutine pes_mask_interpolator_init
 !>  Destroy the interpolation objects
 ! ---------------------------------------------------------
 subroutine pes_mask_interpolator_end(cube_f, interp)
-  FLOAT, pointer, intent(inout) :: cube_f(:)
-  type(qshep_t),  intent(inout) :: interp
+  FLOAT, allocatable, intent(inout) :: cube_f(:)
+  type(qshep_t),      intent(inout) :: interp
 
   PUSH_SUB(pes_mask_interpolator_end)
   
   call qshep_end(interp)
   
-  SAFE_DEALLOCATE_P(cube_f)
+  SAFE_DEALLOCATE_A(cube_f)
   
   POP_SUB(pes_mask_interpolator_end)
 end subroutine pes_mask_interpolator_end
@@ -924,7 +925,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
 ! progress
   integer              :: idone, ntodo
 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
@@ -1174,7 +1175,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
@@ -1295,7 +1296,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dphi, theta, phi, Ex, Ey, EE, phiBounds(2)
@@ -1426,7 +1427,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi, EE
@@ -1698,7 +1699,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
   FLOAT, allocatable :: npoints(:), pes(:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, pointer :: cube_f(:)
+  FLOAT, allocatable :: cube_f(:)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi,EE
@@ -1873,12 +1874,13 @@ end subroutine pes_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
+subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo, iter)
   type(pes_mask_t),    intent(inout)    :: mask
   type(mesh_t),        intent(in)       :: mesh
   type(states_elec_t), intent(in)       :: st
   type(output_t),      intent(in)       :: outp
   type(namespace_t),   intent(in)       :: namespace
+  type(space_t),       intent(in)       :: space
   character(len=*),    intent(in)       :: file
   type(grid_t),        intent(in)       :: gr
   type(geometry_t),    intent(in)       :: geo
@@ -1906,7 +1908,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
     call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   end if
   
-  if (simul_box_is_periodic(mesh%sb)) then
+  if (space%is_periodic()) then
     ! For periodic systems the results must be obtained using
     ! the oct-photoelectron-spectrum routine
     call profiling_out(prof)
@@ -1960,9 +1962,9 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   do ik = st%d%kpt%start, st%d%kpt%end
 
     if(mask%add_psia) then 
-      call pes_mask_fullmap(mask, st, ik, pesK, wfAk)
+      call pes_mask_fullmap(mask, space, st, ik, pesK, wfAk)
     else 
-      call pes_mask_fullmap(mask, st, ik, pesK)
+      call pes_mask_fullmap(mask, space, st, ik, pesK)
     end if
     
     ! only the root node of the domain and state parallelization group writes the output
@@ -2006,14 +2008,14 @@ end subroutine pes_mask_output
 !> Read pes info.
 ! ---------------------------------------------------------
 subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
-  character(len=*),  intent(in)  :: dir
-  type(namespace_t), intent(in)  :: namespace
-  integer,           intent(out) :: dim  
-  FLOAT,             intent(out) :: Emax
-  FLOAT,             intent(out) :: Estep
-  integer,           intent(out) :: ll(:)
-  FLOAT, pointer,    intent(out) :: Lk(:,:)
-  FLOAT, pointer,    intent(out) :: RR(:)
+  character(len=*),   intent(in)  :: dir
+  type(namespace_t),  intent(in)  :: namespace
+  integer,            intent(out) :: dim  
+  FLOAT,              intent(out) :: Emax
+  FLOAT,              intent(out) :: Estep
+  integer,            intent(out) :: ll(:)
+  FLOAT, allocatable, intent(out) :: Lk(:,:)
+  FLOAT, allocatable, intent(out) :: RR(:)
 
 
   character(len=256) :: filename, dummy

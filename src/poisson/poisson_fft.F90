@@ -35,6 +35,7 @@ module poisson_fft_oct_m
   use poisson_cutoff_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use splines_oct_m
   use submesh_oct_m
   use unit_oct_m
@@ -67,9 +68,10 @@ module poisson_fft_oct_m
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, fullcube)
+  subroutine poisson_fft_init(this, namespace, space, mesh, cube, kernel, soft_coulb_param, fullcube)
     type(poisson_fft_t), intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
@@ -85,14 +87,15 @@ contains
     this%coulb%singularity = M_ZERO
     this%coulb%mu = M_ZERO
 
-    call poisson_fft_get_kernel(namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
+    call poisson_fft_get_kernel(namespace, space, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
 
     POP_SUB(poisson_fft_init)
   end subroutine poisson_fft_init
 
-  subroutine poisson_fft_get_kernel(namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
+  subroutine poisson_fft_get_kernel(namespace, space, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
+    type(space_t),            intent(in)    :: space
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
     integer,                  intent(in)    :: kernel
@@ -160,7 +163,7 @@ contains
         call poisson_fft_build_3d_2d(namespace, mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_NOCUT)
-        call poisson_fft_build_3d_3d(mesh, cube, coulb)
+        call poisson_fft_build_3d_3d(space, mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_HOCKNEY)
         call poisson_fft_build_3d_3d_hockney(mesh, cube, coulb, fullcube)
@@ -212,14 +215,15 @@ contains
 
     gg(1:3) = gg_in(1:3)
     gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
-    gg(1:3) = matmul(sb%klattice(1:3,1:3), gg(1:3))
+    gg(1:3) = matmul(sb%latt%klattice(1:3,1:3), gg(1:3))
 
     modg2 = sum(gg(1:3)**2)
 
   end subroutine poisson_fft_gg_transform
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_3d(mesh, cube, coulb)
+  subroutine poisson_fft_build_3d_3d(space, mesh, cube, coulb)
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -240,7 +244,7 @@ contains
       ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
     end if
 
-    ekin_cutoff = fourier_shell_cutoff(cube, mesh, apply_full_space)
+    ekin_cutoff = fourier_shell_cutoff(space, cube, mesh, apply_full_space)
 
     if(coulb%mu > M_EPSILON) then
       inv_four_mu2 = M_ONE/((M_TWO*coulb%mu)**2)
@@ -631,7 +635,7 @@ contains
       do ix = 1, 3  
         temp(1:3) = M_ZERO
         temp(ix) = db(ix)*mesh%spacing(ix)/M_TWO
-        temp(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),temp(1:3)) 
+        temp(1:3) = matmul(mesh%sb%latt%klattice_primitive(1:3,1:3),temp(1:3)) 
         default_r_c = maxval(temp(1:3))
      end do
      call get_cutoff(namespace, default_r_c, r_c)
@@ -871,7 +875,7 @@ contains
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, cube%fs_n_global(1)
       ixx = pad_feq(ix, cube%rs_n_global(1), .true.)
-      g = (ixx + coulb%qq(1))*M_PI/mesh%sb%lsize(1)
+      g = (ixx + coulb%qq(1))*M_TWO*M_PI/abs(mesh%sb%latt%rlattice(1,1))
       if(abs(g) > CNST(1e-6)) then
         fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*abs(g))
       end if

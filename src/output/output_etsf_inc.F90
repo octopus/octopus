@@ -28,12 +28,14 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, dir, st, gr, geo)
+subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
+  type(space_t),          intent(in) :: space
   character(len=*),       intent(in) :: dir
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
+  type(kpoints_t),        intent(in) :: kpoints
   type(geometry_t),       intent(in) :: geo
 
   type(cube_t) :: dcube, zcube
@@ -69,12 +71,12 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
+      call output_etsf_geometry_dims(geo, gr%symm, geometry_dims, geometry_flags)
 
       call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", &
         geometry_dims, geometry_flags, ncid, namespace)
 
-      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -85,7 +87,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, density_dims, density_flags)
     call output_etsf_density_dims(st, dcube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, &
@@ -94,7 +96,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
     call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -113,8 +115,8 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
 
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
-    call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, wfs_dims, wfs_flags)
+    call output_etsf_kpoints_dims(kpoints, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
     call output_etsf_wfs_rsp_dims(st, dcube, wfs_dims, wfs_flags)
 
@@ -123,8 +125,8 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
-      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
     end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
@@ -139,17 +141,19 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   ! wave-functions in fourier space
   if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
-    if(st%parallel_in_states) &
+    if (st%parallel_in_states) then
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)
-    if(st%d%kpt%parallel) &
+    end if
+    if (st%d%kpt%parallel) then
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k", namespace=namespace)
+    end if
 
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
-    call fourier_shell_init(shell, zcube, gr%mesh)
+    call fourier_shell_init(shell, space, zcube, gr%mesh)
 
-    call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
-    call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
+    call output_etsf_geometry_dims(geo, gr%symm, pw_dims, pw_flags)
+    call output_etsf_kpoints_dims(kpoints, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
     call output_etsf_basisdata_dims(pw_flags)
     call output_etsf_wfs_pw_dims(shell, pw_dims, pw_flags)
@@ -159,8 +163,8 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
-      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, gr%symm, ncid, namespace)
+      call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid, namespace)
@@ -232,9 +236,9 @@ end subroutine output_etsf_error
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_dims(geo, sb, dims, flags)
+subroutine output_etsf_geometry_dims(geo, symm, dims, flags)
   type(geometry_t),        intent(in)    :: geo
-  type(simul_box_t),       intent(in)    :: sb
+  type(symmetries_t),      intent(in)    :: symm
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   
@@ -242,7 +246,7 @@ subroutine output_etsf_geometry_dims(geo, sb, dims, flags)
 
   flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - etsf_geometry_pseudo_types
 
-  dims%number_of_symmetry_operations = symmetries_number(sb%symm)
+  dims%number_of_symmetry_operations = symmetries_number(symm)
   dims%number_of_atom_species = geo%nspecies
   dims%number_of_atoms = geo%natoms
 
@@ -251,9 +255,10 @@ end subroutine output_etsf_geometry_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_write(geo, sb, ncid, namespace)
+subroutine output_etsf_geometry_write(geo, sb, symm, ncid, namespace)
   type(geometry_t),       intent(in)    :: geo
   type(simul_box_t),      intent(in)    :: sb
+  type(symmetries_t),     intent(in)    :: symm
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
 
@@ -267,19 +272,19 @@ subroutine output_etsf_geometry_write(geo, sb, ncid, namespace)
 
   ! Primitive vectors
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-  do idir = 1, sb%dim
-    geometry%primitive_vectors(1:3, idir) = sb%rlattice(1:3, idir)
+  do idir = 1, geo%space%dim
+    geometry%primitive_vectors(1:3, idir) = sb%latt%rlattice(1:3, idir)
   end do
 
   ! The symmetries
   SAFE_ALLOCATE(geometry%space_group)
-  geometry%space_group = symmetries_space_group_number(sb%symm)
-  SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:symmetries_number(sb%symm)))
-  SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:symmetries_number(sb%symm)))
+  geometry%space_group = symmetries_space_group_number(symm)
+  SAFE_ALLOCATE(geometry%reduced_symmetry_matrices(1:3, 1:3, 1:symmetries_number(symm)))
+  SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:symmetries_number(symm)))
 
-  do isymm = 1, symmetries_number(sb%symm)
-    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix_red(sb%symm%ops(isymm))
-    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector_red(sb%symm%ops(isymm))
+  do isymm = 1, symmetries_number(symm)
+    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix_red(symm%ops(isymm))
+    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector_red(symm%ops(isymm))
   end do
 
   ! The species
@@ -311,7 +316,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid, namespace)
   SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:geo%natoms))
 
   offset = M_ZERO
-  offset(1:geo%space%dim) = -matmul(sb%rlattice_primitive(1:geo%space%dim, 1:geo%space%dim), sb%lsize(1:geo%space%dim))
+  offset(1:geo%space%dim) = -M_HALF*sum(sb%latt%rlattice, dim=2)
 
   do i = 1, geo%natoms
     ! this is only valid if the primitive vectors are along the x, y, and z directions.
@@ -339,8 +344,8 @@ end subroutine output_etsf_geometry_write
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_kpoints_dims(sb, dims, flags)
-  type(simul_box_t),       intent(in)    :: sb
+subroutine output_etsf_kpoints_dims(kpoints, dims, flags)
+  type(kpoints_t),         intent(in)    :: kpoints
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   
@@ -348,42 +353,43 @@ subroutine output_etsf_kpoints_dims(sb, dims, flags)
 
   flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
 
-  dims%number_of_kpoints = sb%kpoints%reduced%npoints
+  dims%number_of_kpoints = kpoints%reduced%npoints
 
   POP_SUB(output_etsf_kpoints_dims)
 end subroutine output_etsf_kpoints_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_kpoints_write(sb, ncid, namespace)
-  type(simul_box_t),      intent(in)    :: sb
+subroutine output_etsf_kpoints_write(kpoints, dim, ncid, namespace)
+  type(kpoints_t),        intent(in)    :: kpoints
+  integer,                intent(in)    :: dim
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
   
-  type(etsf_kpoints), target :: kpoints
+  type(etsf_kpoints), target :: etsf_kpts
   integer  :: nkpoints, ikpoint
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
 
   PUSH_SUB(output_etsf_kpoints_write)
 
-  nkpoints = sb%kpoints%reduced%npoints
+  nkpoints = kpoints%reduced%npoints
   
   !Create the kpoints container
-  SAFE_ALLOCATE(kpoints%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
-  SAFE_ALLOCATE(kpoints%kpoint_weights(1:nkpoints))
+  SAFE_ALLOCATE(etsf_kpts%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
+  SAFE_ALLOCATE(etsf_kpts%kpoint_weights(1:nkpoints))
   
   do ikpoint = 1, nkpoints
-    kpoints%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
-    kpoints%reduced_coordinates_of_kpoints(1:sb%dim, ikpoint) = sb%kpoints%reduced%red_point(1:sb%dim, ikpoint)
-    kpoints%kpoint_weights(ikpoint) = kpoints_get_weight(sb%kpoints, ikpoint)
+    etsf_kpts%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
+    etsf_kpts%reduced_coordinates_of_kpoints(1:dim, ikpoint) = kpoints%reduced%red_point(1:dim, ikpoint)
+    etsf_kpts%kpoint_weights(ikpoint) = kpoints%get_weight(ikpoint)
   end do
   
-  call etsf_io_kpoints_put(ncid, kpoints, lstat, error_data = error_data)
+  call etsf_io_kpoints_put(ncid, etsf_kpts, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data, namespace)
 
-  SAFE_DEALLOCATE_P(kpoints%reduced_coordinates_of_kpoints)
-  SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
+  SAFE_DEALLOCATE_P(etsf_kpts%reduced_coordinates_of_kpoints)
+  SAFE_DEALLOCATE_P(etsf_kpts%kpoint_weights)
 
   POP_SUB(output_etsf_kpoints_write)
 end subroutine output_etsf_kpoints_write
@@ -747,8 +753,8 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid, namespace)
   SAFE_ALLOCATE(zpsi(1:mesh%np))
 
   do iq = 1, st%d%nik
-    ispin = states_elec_dim_get_spin_index(st%d, iq)
-    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
+    ispin = st%d%get_spin_index(iq)
+    ikpoint = st%d%get_kpoint_index(iq)
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 

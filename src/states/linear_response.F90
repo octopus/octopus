@@ -67,19 +67,19 @@ module linear_response_oct_m
     logical, private :: is_allocated, is_allocated_rho
      
     !> the real quantities
-    FLOAT, pointer :: ddl_rho(:,:)     !< response of the density
-    FLOAT, pointer :: ddl_psi(:,:,:,:) !< linear change of the real KS orbitals
+    FLOAT, allocatable :: ddl_rho(:,:)     !< response of the density
+    FLOAT, allocatable :: ddl_psi(:,:,:,:) !< linear change of the real KS orbitals
     
     !> and the complex version
-    CMPLX, pointer :: zdl_rho(:,:)     !< response of the density
-    CMPLX, pointer :: zdl_psi(:,:,:,:) !< linear change of the complex KS orbitals
+    CMPLX, allocatable :: zdl_rho(:,:)     !< response of the density
+    CMPLX, allocatable :: zdl_psi(:,:,:,:) !< linear change of the complex KS orbitals
 
     !> other observables
-    CMPLX, pointer :: dl_j(:,:,:)     !< response of the current
-    FLOAT, pointer :: ddl_de(:,:)     !< unnormalized ELF
-    FLOAT, pointer :: ddl_elf(:,:)    !< normalized ELF
-    CMPLX, pointer :: zdl_de(:,:)     !< unnormalized ELF
-    CMPLX, pointer :: zdl_elf(:,:)    !< normalized ELF
+    CMPLX, allocatable :: dl_j(:,:,:)     !< response of the current
+    FLOAT, allocatable :: ddl_de(:,:)     !< unnormalized ELF
+    FLOAT, allocatable :: ddl_elf(:,:)    !< normalized ELF
+    CMPLX, allocatable :: zdl_de(:,:)     !< unnormalized ELF
+    CMPLX, allocatable :: zdl_elf(:,:)    !< normalized ELF
     
   end type lr_t
 
@@ -90,10 +90,6 @@ contains
     type(lr_t), intent(out) :: lr
 
     PUSH_SUB(lr_init)
-
-    nullify(lr%ddl_rho, lr%ddl_psi)
-    nullify(lr%zdl_rho, lr%zdl_psi)
-    nullify(lr%dl_j, lr%ddl_de, lr%zdl_de, lr%ddl_elf, lr%zdl_elf)
 
     lr%is_allocated = .false.
 
@@ -161,20 +157,19 @@ contains
 
     PUSH_SUB(lr_dealloc)
 
-    SAFE_DEALLOCATE_P(lr%ddl_psi)
-    SAFE_DEALLOCATE_P(lr%zdl_psi)
+    SAFE_DEALLOCATE_A(lr%ddl_psi)
+    SAFE_DEALLOCATE_A(lr%zdl_psi)
 
-    SAFE_DEALLOCATE_P(lr%ddl_rho)
-    SAFE_DEALLOCATE_P(lr%zdl_rho)
+    SAFE_DEALLOCATE_A(lr%ddl_rho)
+    SAFE_DEALLOCATE_A(lr%zdl_rho)
 
-    SAFE_DEALLOCATE_P(lr%dl_j)
-    SAFE_DEALLOCATE_P(lr%ddl_de)
-    SAFE_DEALLOCATE_P(lr%ddl_elf)
-    SAFE_DEALLOCATE_P(lr%zdl_de)
-    SAFE_DEALLOCATE_P(lr%zdl_elf)
+    SAFE_DEALLOCATE_A(lr%dl_j)
+    SAFE_DEALLOCATE_A(lr%ddl_de)
+    SAFE_DEALLOCATE_A(lr%ddl_elf)
+    SAFE_DEALLOCATE_A(lr%zdl_de)
+    SAFE_DEALLOCATE_A(lr%zdl_elf)
 
     POP_SUB(lr_dealloc)
-
   end subroutine lr_dealloc
 
 
@@ -185,18 +180,16 @@ contains
     type(lr_t),          intent(in) :: src
     type(lr_t),       intent(inout) :: dest
 
-    integer :: ik, idim, ist
+    integer :: ik, ist
 
     PUSH_SUB(lr_copy)
 
     if(src%is_allocated_rho .and. dest%is_allocated_rho) then
-      do ik = 1, st%d%nspin
-        if(states_are_complex(st)) then
-          call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
-        else
-          call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
-        end if
-      end do
+      if(states_are_complex(st)) then
+        call lalg_copy(mesh%np, st%d%nspin, src%zdl_rho, dest%zdl_rho)
+      else
+        call lalg_copy(mesh%np, st%d%nspin, src%ddl_rho, dest%ddl_rho)
+      end if
     else
       if(dest%is_allocated_rho) then
         if(states_are_complex(st)) then
@@ -209,13 +202,11 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        do idim = 1, st%d%dim
-          if(states_are_complex(st)) then
-            call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
-          else 
-            call lalg_copy(mesh%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
-          end if
-        end do
+        if(states_are_complex(st)) then
+          call lalg_copy(mesh%np_part, st%d%dim, src%zdl_psi(:, :, ist, ik), dest%zdl_psi(:, :, ist, ik))
+        else 
+          call lalg_copy(mesh%np_part, st%d%dim, src%ddl_psi(:, :, ist, ik), dest%ddl_psi(:, :, ist, ik))
+        end if
       end do
     end do
 

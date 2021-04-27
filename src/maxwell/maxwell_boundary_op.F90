@@ -237,7 +237,7 @@ contains
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
-        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%nonorthogonal) then
+        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%latt%nonorthogonal) then
           message(1) = "Maxwell propagation does not work for non-orthogonal cells in periodic systems"
           call messages_fatal(1, namespace=namespace)
         end if
@@ -1970,14 +1970,14 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(-bounds(1,1)/mesh%spacing(1))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 1, idx1, idx2, nn(1, 1, idx1, idx2)) = ip_global
           nn(2, 1, idx1, idx2) = nn(2, 1, idx1, idx2) + 1
           rr(1) = bounds(1,1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(bounds(1,1)/mesh%spacing(1))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 1, idx1, idx2, nn(2, 1, idx1, idx2)) = ip_global
         end if
       end do
@@ -2002,14 +2002,14 @@ contains
           rr(2) = -bounds(1, 2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(-bounds(1,2)/mesh%spacing(2))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 2, idx1, idx2, nn(1, 2, idx1, idx2)) = ip_global
           nn(2, 2, idx1, idx2) = nn(2, 2, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = bounds(1,2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(bounds(1,2)/mesh%spacing(2))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 2, idx1, idx2, nn(2, 2, idx1, idx2)) = ip_global
         end if
       end do
@@ -2034,14 +2034,14 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = -bounds(1,3)
           iiz = int(-bounds(1,3)/mesh%spacing(3))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 3, idx1, idx2, nn(1, 3, idx1, idx2)) = ip_global
           nn(2, 3, idx1, idx2) = nn(2, 3, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = bounds(1,3)
           iiz = int(bounds(1,3)/mesh%spacing(3))
-          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
+          ip_global = mesh_global_index_from_coords(mesh, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 3, idx1, idx2, nn(2, 3, idx1, idx2)) = ip_global
         end if
       end do

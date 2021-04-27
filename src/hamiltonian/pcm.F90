@@ -1593,7 +1593,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
+            pt = mesh_global_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
 
             if (pt <= 0 .or. pt > mesh%np_part_global) then 
               in_mesh = .false.
@@ -1676,7 +1676,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt(ipt) = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
+            pt(ipt) = mesh_local_index_from_coords(mesh, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
           end do
         end do
       end do
@@ -1690,10 +1690,9 @@ contains
       do ipt = 1, npt
         
         ! Check the point is inside the mesh skip otherwise
-        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
+        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part) then
           
           if (mesh%parallel_in_domains) then
-            pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
             boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
             inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
 
@@ -1715,7 +1714,7 @@ contains
       end do
 
       ! reduce the local density scattered among nodes
-      call comm_allreduce(mesh%mpi_grp%comm, lrho, npt)
+      call mesh%allreduce(lrho, npt)
       
       ! normalize the integral to the tessera point charge q_pcm(ia)
       norm = sum(lrho(1:npt)) * mesh%volume_element

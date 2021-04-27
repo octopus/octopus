@@ -19,12 +19,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, namespace, tg, td, restart)
+  subroutine target_init_gstransformation(gr, namespace, tg, td, restart, kpoints)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(inout) :: restart
+    type(kpoints_t),   intent(in)    :: kpoints
 
     PUSH_SUB(target_init_gstransformation)
 
@@ -46,7 +47,7 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call states_elec_transform(tg%st, namespace, restart, gr, prefix = "OCTTarget")
+    call states_elec_transform(tg%st, namespace, restart, gr, kpoints, prefix = "OCTTarget")
 
     if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'

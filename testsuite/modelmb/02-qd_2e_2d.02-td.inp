@@ -1,0 +1,61 @@
+DebugTrapSignals = no
+NDimModelMB = 2
+NParticleModelMB = 2
+NTypeParticleModelMB = 1
+
+ExperimentalFeatures = yes
+
+CalculationMode = td
+TheoryLevel = independent_particles
+Dimensions = 4
+FromScratch = yes
+
+ExtraStates = 0
+
+BoxShape = Hypercube
+acell = 8
+%Lsize 
+ acell | acell | acell | acell
+%
+Spacing = 1.0
+
+omega = 0.25
+b = 0.1
+
+%Species
+'qd' | species_user_defined | potential_formula | "0.5*omega^2*(x^2 + y^2 + z^2 + w^2) + 1/sqrt((x-z)^2 + (y-w)^2 + b)" | valence | 4
+%
+
+%Coordinates
+ 'qd' | 0.0 | 0.0 | 0.0 | 0.0
+%
+
+%DescribeParticlesModelMB
+ "electron"  | 1 | 1.    | 1. | fermion
+ "electron"  | 1 | 1.    | 1. | fermion
+%
+
+%DensitytoCalc
+"electron"      | 1 | -1
+%
+
+Output = mmb_den + mmb_wfs + density
+OutputFormat = plane_z + axis_x
+
+TDTimeStep = 0.05
+TDMaxSteps = 100
+
+TDDeltaStrength = 0.1
+
+TDPolarizationDirection = 1
+
+%TDPolarization
+ 1/sqrt(2) | 1/sqrt(2) | 1/sqrt(2) | 1/sqrt(2)
+ 0         | 1         | 0         | 0
+ 0         | 0         | 1         | 0
+ 0         | 0         | 0         | 1
+%
+
+
+StatesPack = yes
+ParStates = no

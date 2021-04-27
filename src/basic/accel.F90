@@ -183,7 +183,7 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: zpack
   type(accel_kernel_t), public, target, save :: dunpack
   type(accel_kernel_t), public, target, save :: zunpack
-  type(accel_kernel_t), public, target, save :: kernel_subarray_gather
+  type(accel_kernel_t), public, target, save :: kernel_ghost_reorder
   type(accel_kernel_t), public, target, save :: kernel_density_real
   type(accel_kernel_t), public, target, save :: kernel_density_complex
   type(accel_kernel_t), public, target, save :: kernel_density_spinors
@@ -605,7 +605,7 @@ contains
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
     call accel_kernel_start_call(zunpack, 'pack.cl', "zunpack")
     call accel_kernel_start_call(kernel_copy, 'copy.cl', "copy")
-    call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
+    call accel_kernel_start_call(kernel_ghost_reorder, 'ghost.cl', "ghost_reorder")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
     call accel_kernel_start_call(kernel_density_spinors, 'density.cl', "density_spinors")
@@ -1030,8 +1030,8 @@ contains
 #endif
       end if
       
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
+      buffer_alloc_count = buffer_alloc_count + 1
+      allocated_mem = allocated_mem + fsize
 
     end if
       
@@ -1067,8 +1067,8 @@ contains
 #endif
       end if
       
-      INCR(buffer_alloc_count, -1)
-      INCR(allocated_mem, fsize)
+      buffer_alloc_count = buffer_alloc_count - 1
+      allocated_mem = allocated_mem + fsize
 
     end if
     

@@ -58,10 +58,10 @@ module td_oct_m
   use propagator_elec_oct_m
   use propagator_base_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scf_oct_m
   use scissor_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
@@ -82,34 +82,38 @@ module td_oct_m
     td_run,               &
     td_run_init,          &
     td_init,              &
-    td_end
+    td_init_run,          &
+    td_end,               &
+    td_end_run,           &
+    td_write_iter,        &
+    td_check_point
 
   !> Parameters.
-  integer, parameter :: &
+  integer, parameter, public :: &
     EHRENFEST = 1,   &
     BO        = 2
 
   type td_t
     private
     type(propagator_base_t), public :: tr             !< contains the details of the time-evolution
-    type(scf_t)                     :: scf
+    type(scf_t),             public :: scf
     type(ion_dynamics_t),    public :: ions
     FLOAT,                   public :: dt             !< time step
     integer,                 public :: max_iter       !< maximum number of iterations to perform
     integer,                 public :: iter           !< the actual iteration
     logical                         :: recalculate_gs !< Recalculate ground-state along the evolution.
 
-    type(pes_t)                     :: pesv
+    type(pes_t),             public :: pesv
 
     FLOAT,                   public :: mu
-    integer                         :: dynamics
-    integer                         :: energy_update_iter
+    integer,                 public :: dynamics
+    integer,                 public :: energy_update_iter
     FLOAT                           :: scissor
 
     logical                         :: freeze_occ
     logical                         :: freeze_u
 
-    type(td_write_t)                :: write_handler
+    type(td_write_t), public        :: write_handler
     type(restart_t)                 :: restart_load
     type(restart_t)                 :: restart_dump
   end type td_t
@@ -128,9 +132,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine td_init(td, namespace, gr, geo, st, ks, hm, outp)
+  subroutine td_init(td, namespace, space, gr, geo, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(in)    :: st
@@ -145,12 +150,12 @@ contains
 
     if (hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
 
-    if (gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
+    if (hm%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
 
     call ion_dynamics_init(td%ions, namespace, geo)
 
     if (ion_dynamics_ions_move(td%ions)) then
-      if (gr%sb%kpoints%use_symmetries) then
+      if (hm%kpoints%use_symmetries) then
         message(1) = "KPoints symmetries cannot be used with moving ions."
         message(2) = "Please set KPointsSymmetries = no."
         call messages_fatal(2, namespace=namespace)
@@ -282,7 +287,7 @@ contains
     td%dt = td%dt/td%mu
 
     ! now the photoelectron stuff
-    call pes_init(td%pesv, namespace, gr%mesh, gr%sb, st, outp%restart_write_interval, hm, td%max_iter, td%dt)
+    call pes_init(td%pesv, namespace, space, gr%mesh, gr%sb, st, outp%restart_write_interval, hm, td%max_iter, td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -341,9 +346,9 @@ contains
     call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
       family_is_mgga_with_exc(ks%xc))
 
-    if (hm%ep%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
+    if (hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=namespace)
-      call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
+      call laser_write_info(hm%ext_lasers%lasers, stdout, td%dt, td%max_iter)
       call messages_print_stress(stdout, namespace=namespace)
     end if
 
@@ -375,24 +380,7 @@ contains
   end subroutine td_init
 
   ! ---------------------------------------------------------
-  
-  subroutine td_end(td)
-    type(td_t), intent(inout) :: td
-
-    PUSH_SUB(td_end)
-
-    call pes_end(td%pesv)
-    call propagator_elec_end(td%tr)  ! clean the evolution method
-    call ion_dynamics_end(td%ions)
-
-    if(td%dynamics == BO) call scf_end(td%scf)
-
-    POP_SUB(td_end)
-  end subroutine td_end
-
-  ! ---------------------------------------------------------
-  
-  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+  subroutine td_init_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(inout) :: mc
@@ -402,18 +390,12 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(inout) :: outp
+    type(space_t),            intent(in)    :: space
     logical,                  intent(inout) :: fromScratch
 
-    logical                      :: stopping
-#ifdef HAVE_MPI
-    logical                      :: stopping_tmp
-#endif
-    integer                      :: iter, ierr, scsteps
-    FLOAT                        :: etime
-    type(profile_t),        save :: prof
+    integer :: ierr
 
-    PUSH_SUB(td_run)
-
+    PUSH_SUB(td_init_run)
     ! Allocate wavefunctions during time-propagation
     if (td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
@@ -421,20 +403,14 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
+        call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
       end if
     else
       call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks)
-    end if
-
-    if (hm%scdm_EXX) then
-      call scdm_init(hm%scdm, namespace, st, gr%der, hm%psolver%cube, operate_on_scdm = .true.)
-      ! make sure scdm is constructed as soon as it is needed
-      scdm_is_local = .false.
+      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks, space)
     end if
 
     if (gauge_field_is_applied(hm%ep%gfield)) then
@@ -442,11 +418,11 @@ contains
       call v_ks_calculate_current(ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
+      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 
-    call td_init_wfs(td, namespace, mc, gr, geo, st, ks, hm, fromScratch)
+    call td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, fromScratch)
 
     if (td%iter >= td%max_iter) then
       call states_elec_deallocate_wfns(st)
@@ -471,14 +447,14 @@ contains
       end if
     end if
 
-    call td_write_init(td%write_handler, namespace, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
+    call td_write_init(td%write_handler, namespace, space, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, namespace, st, gr, hm%d, td%scissor, mc)
+      call scissor_init(hm%scissor, namespace, space, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
-    if (td%iter == 0) call td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
+    if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
 
     if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
@@ -500,18 +476,72 @@ contains
 
     if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%pack()
 
+    POP_SUB(td_init_run)
+  end subroutine td_init_run
+
+  ! ---------------------------------------------------------
+  subroutine td_end(td)
+    type(td_t),               intent(inout) :: td
+
+    PUSH_SUB(td_end)
+
+    call pes_end(td%pesv)
+    call propagator_elec_end(td%tr)  ! clean the evolution method
+    call ion_dynamics_end(td%ions)
+
+    if(td%dynamics == BO) call scf_end(td%scf)
+
+    POP_SUB(td_end)
+  end subroutine td_end
+
+  ! ---------------------------------------------------------
+  subroutine td_end_run(td, st, hm)
+    type(td_t),               intent(inout) :: td
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+
+    PUSH_SUB(td_end_run)
+
+    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
+
+    call restart_end(td%restart_dump)
+    call td_write_end(td%write_handler)
+
+    ! free memory
+    call states_elec_deallocate_wfns(st)
+    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
+
+    POP_SUB(td_end_run)
+  end subroutine td_end_run
+
+  ! ---------------------------------------------------------
+  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+    type(td_t),               intent(inout) :: td
+    type(namespace_t),        intent(in)    :: namespace
+    type(multicomm_t),        intent(inout) :: mc
+    type(grid_t),             intent(inout) :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(output_t),           intent(inout) :: outp
+    type(space_t),            intent(in)    :: space
+    logical,                  intent(inout) :: fromScratch
+
+    logical                      :: stopping
+    integer                      :: iter, scsteps
+    FLOAT                        :: etime
+    type(profile_t),        save :: prof
+
+    PUSH_SUB(td_run)
+
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm()
-
-#ifdef HAVE_MPI
-      call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
-      stopping = stopping_tmp
-#endif      
+      stopping = clean_stop(mc%master_comm) .or. walltimer_alarm(mc%master_comm)
 
       call profiling_in(prof, "TIME_STEP")
 
@@ -529,17 +559,14 @@ contains
         end if
       end if
 
-      ! in case use scdm localized states for exact exchange and request a new localization
-      if (hm%scdm_EXX) scdm_is_local = .false.
-
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_elec_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
+        call propagator_elec_dt(ks, namespace, space, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
           geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
           move_ions = ion_dynamics_ions_move(td%ions) )
       case(BO)
-        call propagator_elec_dt_bo(td%scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
+        call propagator_elec_dt_bo(td%scf, namespace, space, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Apply mask absorbing boundaries
@@ -547,13 +574,13 @@ contains
 
       !Photoelectron stuff
       if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
-        call pes_calc(td%pesv, namespace, gr%mesh, st, td%dt, iter, gr, hm, stopping)
+        call pes_calc(td%pesv, namespace, space, gr%mesh, st, td%dt, iter, gr, hm, stopping)
       end if
 
-      call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
+      call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
       ! write down data
-      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, fromScratch)
+      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, fromScratch)
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly(namespace)
@@ -562,15 +589,6 @@ contains
       if (stopping) exit
 
     end do propagation
-
-    if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
-
-    call restart_end(td%restart_dump)
-    call td_write_end(td%write_handler)
-
-    ! free memory
-    call states_elec_deallocate_wfns(st)
-    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
 
     POP_SUB(td_run)
   end subroutine td_run
@@ -589,7 +607,7 @@ contains
   end subroutine td_print_header
 
   ! ---------------------------------------------------------
-  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, from_scratch)
+  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, from_scratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -599,6 +617,7 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
+    type(space_t),            intent(in)    :: space
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: scsteps
     FLOAT,                    intent(inout) :: etime
@@ -620,7 +639,7 @@ contains
       if (st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
       end if
-      call td_write_output(namespace, gr, st, hm, ks, outp, geo, iter, td%dt)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, iter, td%dt)
     end if
 
     if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -632,13 +651,13 @@ contains
         call messages_warning(1, namespace=namespace)
       end if
 
-      call pes_output(td%pesv, namespace, gr%mesh, st, iter, outp, td%dt, gr, geo)
+      call pes_output(td%pesv, namespace, space, gr%mesh, st, iter, outp, td%dt, gr, geo)
 
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
         call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
         from_scratch = .false.
         call states_elec_deallocate_wfns(st)
-        call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, from_scratch)
+        call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, space, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
         call td_load(td%restart_load, namespace, gr, st, hm, td, ierr)
         if (ierr /= 0) then
@@ -646,7 +665,7 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
         call forces_calculate(gr, namespace, geo, hm, st, ks, t = iter*td%dt, dt = td%dt)
         call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=namespace)
         call td_print_header(namespace)
@@ -657,16 +676,17 @@ contains
   end subroutine td_check_point
 
   ! ---------------------------------------------------------
-  subroutine td_init_wfs(td, namespace, mc, gr, geo, st, ks, hm, from_scratch)
-    type(td_t),               intent(inout) :: td
-    type(namespace_t),        intent(in)    :: namespace
-    type(multicomm_t),        intent(in)    :: mc
-    type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(in)    :: geo
-    type(states_elec_t),      intent(inout) :: st
-    type(v_ks_t),             intent(inout) :: ks
-    type(hamiltonian_elec_t), intent(inout) :: hm
-    logical,                  intent(inout) :: from_scratch
+  subroutine td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, from_scratch)
+    type(td_t),                  intent(inout) :: td
+    type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
+    type(multicomm_t),           intent(in)    :: mc
+    type(grid_t),                intent(inout) :: gr
+    type(geometry_t),            intent(in)    :: geo
+    type(states_elec_t), target, intent(inout) :: st
+    type(v_ks_t),                intent(inout) :: ks
+    type(hamiltonian_elec_t),    intent(inout) :: hm
+    logical,                     intent(inout) :: from_scratch
 
     integer :: ierr, freeze_orbitals
     FLOAT :: x
@@ -727,7 +747,7 @@ contains
     if (td%iter >= td%max_iter) then
       message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
       call messages_info(1)
-      POP_SUB(td_run.init_wfs)
+      POP_SUB(td_init_wfs)
       return
     end if
 
@@ -735,7 +755,7 @@ contains
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
 
       if(.not. st%only_userdef_istates) then
-        if (ierr == 0) call states_elec_load(restart, namespace, st, gr, ierr, label = ": gs")
+        if (ierr == 0) call states_elec_load(restart, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
         if (ierr /= 0) then
           message(1) = 'Unable to read ground-state wavefunctions.'
           call messages_fatal(1, namespace=namespace)
@@ -749,7 +769,7 @@ contains
         call states_elec_read_user_def_orbitals(gr%mesh, namespace, st)
       end if
 
-      call states_elec_transform(st, namespace, restart, gr)
+      call states_elec_transform(st, namespace, restart, gr, hm%kpoints)
       call restart_end(restart)
     end if
 
@@ -772,7 +792,8 @@ contains
     if (freeze_orbitals > 0) then
       if (from_scratch) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-        call states_elec_freeze_orbitals(st, namespace, gr, mc, freeze_orbitals, family_is_mgga(ks%xc_family))
+        call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, &
+                   freeze_orbitals, family_is_mgga(ks%xc_family))
       else
         call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         if (ierr == 0) &
@@ -789,15 +810,15 @@ contains
       call messages_info(1)
       call states_elec_freeze_adjust_qtot(st)
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
     else if (freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
       if (from_scratch) then
-        call states_elec_freeze_orbitals(st, namespace, gr, mc, st%nst-1, family_is_mgga(ks%xc_family))
+        call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, st%nst-1, family_is_mgga(ks%xc_family))
       else
         call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no", namespace=namespace)
       end if
@@ -806,7 +827,7 @@ contains
     else
       ! Normal run.
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
     end if
 
     !%Variable TDFreezeHXC
@@ -821,12 +842,26 @@ contains
     if (freeze_hxc) then
       write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
       call messages_info(1)
+
+      if (.not. from_scratch) then
+
+        call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
+        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
+        call states_elec_transform(st, namespace, restart_frozen, gr, hm%kpoints)
+        call restart_end(restart_frozen)
+
+        call density_calc(st, gr, st%rho)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+
+        call restart_init(restart_frozen, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, iter=td%iter, label = ": td")
+        call restart_end(restart_frozen)
+        call propagator_elec_run_zero_iter(hm, gr, td%tr)
+
+      end if
+
       call v_ks_freeze_hxc(ks)
 
-      !In this case we should reload GS wavefunctions
-      if (.not. from_scratch) then
-        call messages_not_implemented("TDFreezeHXC with FromScratch=no", namespace=namespace)
-      end if
     end if
 
     x = minval(st%eigenval(st%st_start, :))
@@ -838,7 +873,7 @@ contains
     call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
-    call energy_calc_total(namespace, hm, gr, st)
+    call energy_calc_total(namespace, space, hm, gr, st)
 
     !%Variable TDFreezeDFTUOccupations
     !%Type logical
@@ -892,9 +927,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
+  subroutine td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -904,7 +940,7 @@ contains
 
     PUSH_SUB(td_run_zero_iter)
 
-    call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
+    call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
     ! I apply the delta electric field *after* td_write_iter, otherwise the
     ! dipole matrix elements in write_proj are wrong
@@ -924,7 +960,7 @@ contains
     call propagator_elec_run_zero_iter(hm, gr, td%tr)
     if (outp%output_interval > 0) then
       call td_write_data(td%write_handler)
-      call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, 0)
     end if
 
     POP_SUB(td_run_zero_iter)
@@ -1006,7 +1042,7 @@ contains
     end if
 
     ! first write resume file
-    call states_elec_dump(restart, st, gr, err, iter=iter)
+    call states_elec_dump(restart, st, gr, hm%kpoints, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
 
     call states_elec_dump_rho(restart, st, gr, ierr, iter=iter)
@@ -1033,7 +1069,7 @@ contains
       if(err /= 0) ierr = ierr + 8
     end if
 
-    if(associated(st%frozen_rho)) then
+    if (allocated(st%frozen_rho)) then
       call states_elec_dump_frozen(restart, st, gr, ierr)
     end if
 
@@ -1072,7 +1108,7 @@ contains
     end if
 
     ! Read states
-    call states_elec_load(restart, namespace, st, gr, err, iter=td%iter, label = ": td")
+    call states_elec_load(restart, namespace, st, gr, hm%kpoints, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if

@@ -303,11 +303,12 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_clone_to(this, dest, pack, copy_data)
+  subroutine batch_clone_to(this, dest, pack, copy_data, new_np)
     class(batch_t),              intent(in)    :: this
     class(batch_t), allocatable, intent(out)   :: dest
     logical,        optional,    intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,        optional,    intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
+    integer,        optional,    intent(in)    :: new_np
 
     PUSH_SUB(batch_clone_to)
 
@@ -318,7 +319,7 @@ contains
       call messages_fatal(1)
     end if
 
-    call this%copy_to(dest, pack, copy_data)
+    call this%copy_to(dest, pack, copy_data, new_np)
 
     POP_SUB(batch_clone_to)
   end subroutine batch_clone_to
@@ -352,21 +353,25 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy_to(this, dest, pack, copy_data)
+  subroutine batch_copy_to(this, dest, pack, copy_data, new_np)
     class(batch_t),          intent(in)    :: this
     class(batch_t),          intent(out)   :: dest
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
+    integer,       optional, intent(in)    :: new_np !< If present, this replaces this%np in the initialization
 
     logical :: host_packed
+    integer :: np_
 
     PUSH_SUB(batch_copy_to)
 
+    np_ = optional_default(new_np, this%np)
+
     host_packed = this%host_buffer_count > 0
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
+      call dbatch_init(dest, this%dim, 1, this%nst, np_, packed=host_packed)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
+      call zbatch_init(dest, this%dim, 1, this%nst, np_, packed=host_packed)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -377,7 +382,10 @@ contains
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
 
-    if(optional_default(copy_data, .false.)) call this%copy_data_to(this%np, dest)
+    if(optional_default(copy_data, .false.)) then
+      ASSERT(np_ == this%np)
+      call this%copy_data_to(min(this%np, np_), dest)
+    end if
 
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to
@@ -500,9 +508,9 @@ contains
 
     select case(target)
     case(BATCH_DEVICE_PACKED)
-      INCR(this%device_buffer_count, 1)
+      this%device_buffer_count = this%device_buffer_count + 1
     case(BATCH_PACKED)
-      INCR(this%host_buffer_count, 1)
+      this%host_buffer_count = this%host_buffer_count + 1
     end select
 
     call profiling_out(prof)
@@ -560,7 +568,7 @@ contains
           this%status_of = target
           this%host_buffer_count = 1
         end if
-        INCR(this%host_buffer_count, -1)
+        this%host_buffer_count = this%host_buffer_count - 1
       case(BATCH_DEVICE_PACKED)
         if(this%device_buffer_count == 1 .or. force_) then
           if(copy_) then
@@ -581,7 +589,7 @@ contains
           this%status_of = target
           this%device_buffer_count = 1
         end if
-        INCR(this%device_buffer_count, -1)
+        this%device_buffer_count = this%device_buffer_count - 1
       end select
     end if
 
@@ -615,7 +623,7 @@ contains
 
     PUSH_SUB(batch_write_unpacked_to_device)
 
-    call profiling_in(prof, "BATCH_PACK_COPY_CL")
+    call profiling_in(prof, "BATCH_WRITE_UNPACKED_ACCEL")
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -693,7 +701,7 @@ contains
     type(profile_t), save :: prof, prof_unpack
 
     PUSH_SUB(batch_read_device_to_unpacked)
-    call profiling_in(prof, "BATCH_UNPACK_COPY_CL")
+    call profiling_in(prof, "BATCH_READ_UNPACKED_ACCEL")
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -764,7 +772,7 @@ contains
 
     PUSH_SUB(batch_write_packed_to_device)
 
-    call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
+    call profiling_in(prof_pack, "BATCH_WRITE_PACKED_ACCEL")
     if(this%type() == TYPE_FLOAT) then
       call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
@@ -784,7 +792,7 @@ contains
 
     PUSH_SUB(batch_read_device_to_packed)
 
-    call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
+    call profiling_in(prof_unpack, "BATCH_READ_PACKED_ACCEL")
     if(this%type() == TYPE_FLOAT) then
       call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else

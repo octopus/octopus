@@ -22,11 +22,11 @@
 !!  1 in 4D). Also calculate different densities on request.
 module modelmb_particles_oct_m
   use global_oct_m
-  use grid_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -104,10 +104,10 @@ contains
   !>==============================================================
   !!  initialization function for modelmb particles information
   !!==============================================================
-  subroutine modelmb_particles_init(this, namespace, gr)
+  subroutine modelmb_particles_init(this, namespace, space)
     type(modelmb_particle_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(in)    :: gr
+    type(space_t),            intent(in)    :: space
     
     integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
     type(block_t) :: blk
@@ -160,7 +160,7 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
     
-    if (this%ndim*this%nparticle /= gr%sb%dim) then
+    if (this%ndim*this%nparticle /= space%dim) then
       message(1) = ' Number of modelmb particles * dimension of modelmb space must be = Ndim'
       call messages_fatal(1, namespace=namespace)
     end if
@@ -174,9 +174,9 @@ contains
     !% Characterization of different modelmb particles in gr%sb%dim dimensional space.
     !%
     !% <tt>%DescribeParticlesModelmb
-    !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
-    !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion
-    !% <br>&nbsp;&nbsp; electron | 2 | 1.    | 1. | fermion
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | 1800. | 1. | fermion
+    !% <br>&nbsp;&nbsp; "proton"   | 1 | 1800. | 1. | fermion
+    !% <br>&nbsp;&nbsp; "electron" | 2 | 1.    | 1. | fermion
     !% <br>%</tt>
     !%
     !% would tell <tt>Octopus</tt> that there are presently 3 particles, called proton, proton,

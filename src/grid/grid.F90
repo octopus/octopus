@@ -19,10 +19,10 @@
 #include "global.h"
 
 module grid_oct_m
+  use box_image_oct_m
   use cube_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
-  use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use mesh_oct_m
@@ -39,6 +39,7 @@ module grid_oct_m
   use simul_box_oct_m
   use stencil_oct_m
   use stencil_cube_oct_m
+  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -59,9 +60,10 @@ module grid_oct_m
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
-    type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
+
+    type(symmetries_t)          :: symm
   end type grid_t
 
 
@@ -84,6 +86,9 @@ contains
     PUSH_SUB(grid_init_stage_1)
 
     call simul_box_init(gr%sb, namespace, geo, space)
+
+    call symmetries_init(gr%symm, namespace, geo, space, gr%sb%latt)
+
 
     !%Variable UseFineMesh
     !%Type logical
@@ -146,16 +151,17 @@ contains
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
-#if defined(HAVE_GDLIB)
-    if(gr%sb%box_shape == BOX_IMAGE) then 
-      do idir = 1, space%dim
-        ! default grid_spacing is determined from lsize and the size of the image
-        if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(gr%sb%image_size(idir))
-        end if
-      end do
+    if (associated(gr%sb%box)) then
+      select type (box => gr%sb%box)
+      type is (box_image_t)
+        do idir = 1, space%dim
+          ! default grid_spacing is determined from the pixel size such that one grid point = one pixel.
+          if(grid_spacing(idir) < M_ZERO) then
+            grid_spacing(idir) = box%pixel_size(idir)
+          end if
+        end do
+      end select
     end if
-#endif
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
@@ -196,45 +202,41 @@ contains
 
     ! initialize derivatives
     call derivatives_nullify(gr%der)
-    call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, space%dim, order = 2)
     call stencil_union(space%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-
-    call double_grid_init(gr%dgrid, namespace, gr%sb)
-
     enlarge = 0
     enlarge(1:space%dim) = 2
-    enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
-    call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil)
+    call mesh_init_stage_1(gr%mesh, namespace, space, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_2(gr%mesh, space, gr%sb, gr%cv, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
-
   end subroutine grid_init_stage_1
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, namespace, mc)
+  subroutine grid_init_stage_2(gr, namespace, space, mc)
     type(grid_t), target, intent(inout) :: gr
     type(namespace_t),    intent(in)    :: namespace
+    type(space_t),        intent(in)    :: space
     type(multicomm_t),    intent(in)    :: mc
 
     PUSH_SUB(grid_init_stage_2)
 
-    call mesh_init_stage_3(gr%mesh, namespace, gr%stencil, mc)
+    call mesh_init_stage_3(gr%mesh, namespace, space, gr%stencil, mc)
 
     call nl_operator_global_init(namespace)
     if(gr%have_fine_mesh) then
       message(1) = "Info: coarse mesh"
       call messages_info(1)
     end if
-    call derivatives_build(gr%der, namespace, gr%mesh)
+    call derivatives_build(gr%der, namespace, space, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -263,18 +265,18 @@ contains
         SAFE_ALLOCATE(gr%fine%mesh)
         SAFE_ALLOCATE(gr%fine%der)
 
-        call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+        call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
         call derivatives_nullify(gr%fine%der)
-        call derivatives_init(gr%fine%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+        call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
-        call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+        call mesh_init_stage_3(gr%fine%mesh, namespace, space, gr%stencil, mc)
 
         call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
 
         message(1) = "Info: fine mesh"
         call messages_info(1)
-        call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
+        call derivatives_build(gr%fine%der, namespace, space, gr%fine%mesh)
 
         gr%fine%der%coarser => gr%der
         gr%der%finer =>  gr%fine%der
@@ -307,11 +309,11 @@ contains
       SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
     end if
 
-    call double_grid_end(gr%dgrid)
-
     call derivatives_end(gr%der)
     call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
+
+    call symmetries_end(gr%symm)
 
     call stencil_end(gr%stencil)
 
@@ -333,7 +335,10 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, iunit)
+
+    message(1) = 'Simulation Box:'
+    call messages_info(1, iunit)
+    call gr%sb%write_info(iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"

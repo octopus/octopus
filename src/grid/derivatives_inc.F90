@@ -169,16 +169,17 @@ end subroutine X(derivatives_perform)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
+subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc, factor)
   type(derivatives_t),       intent(in)    :: der
   R_TYPE,                    intent(inout) :: ff(:)     !< (der%mesh%np_part)
   R_TYPE,                    intent(out)   :: op_ff(:)  !< (der%mesh%np)
   logical, optional,         intent(in)    :: ghost_update
   logical, optional,         intent(in)    :: set_bc
+  FLOAT,   optional,         intent(in)    :: factor
 
   PUSH_SUB(X(derivatives_lapl))
 
-  call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
+  call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc, factor)
 
   POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
@@ -188,7 +189,7 @@ end subroutine X(derivatives_lapl)
 subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: ff(:)        !< ff(der%mesh%np_part)
-  R_TYPE,              intent(out)   :: op_ff(:, :)  !< op_ff(der%mesh%np, der%mesh%sb%dim)
+  R_TYPE,              intent(out)   :: op_ff(:, :)  !< op_ff(der%mesh%np, der%dim)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -212,9 +213,9 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     do ip = 1, der%mesh%np
-      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
+      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
     end do
   end if
 
@@ -226,7 +227,7 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,  target,     intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%mesh%sb%dim)
+  R_TYPE,  target,     intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%dim)
   R_TYPE,              intent(out)   :: op_ff(:)  !< op_ff(der%mesh%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
@@ -242,10 +243,10 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
   ! div_xyw (F)= div_uvw (BF), where B
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
     do ip = 1, der%mesh%np_part
-      ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
+      ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
     end do
   else
     ff_uvw => ff
@@ -264,7 +265,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
-  if(simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal ) then
     SAFE_DEALLOCATE_P(ff_uvw)
   else
     nullify(ff_uvw)
@@ -298,7 +299,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
 
-  ASSERT(.not.der%mesh%sb%nonorthogonal)
+  ASSERT(.not.der%mesh%sb%latt%nonorthogonal)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
@@ -669,16 +670,16 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
   set_bc_ = optional_default(set_bc, .true.)
   ghost_update_ = optional_default(ghost_update, .true.)
 
-  ASSERT(size(opffb) == der%mesh%sb%dim)
+  ASSERT(size(opffb) == der%dim)
 
-  do idir = 1, der%mesh%sb%dim
+  do idir = 1, der%dim
     call X(derivatives_batch_perform)(der%grad(idir), der, ffb, opffb(idir), &
       ghost_update=ghost_update_, set_bc=set_bc_)
     set_bc_       = .false. ! there is no need to update again
     ghost_update_ = .false. ! the boundary or ghost points
   end do
 
-  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%latt%nonorthogonal) then
     call X(batch_vector_uvw_to_xyz)(der, opffb)
   end if
 
@@ -720,7 +721,7 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_linear)(ip, ist)
+              der%mesh%sb%latt%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_linear)(ip, ist)
           end do
         end do
         do idim1 = 1, der%dim
@@ -737,7 +738,7 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
+              der%mesh%sb%latt%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
           end do
         end do
         do idim1 = 1, der%dim
@@ -761,7 +762,7 @@ contains
     PUSH_SUB(uvw_to_xyz_opencl)
 
     call accel_create_buffer(matrix_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, der%dim**2)
-    call accel_write_buffer(matrix_buffer, der%dim**2, der%mesh%sb%klattice_primitive)
+    call accel_write_buffer(matrix_buffer, der%dim**2, der%mesh%sb%latt%klattice_primitive)
 
     call accel_set_kernel_arg(kernel_uvw_xyz, 0, der%mesh%np)
     call accel_set_kernel_arg(kernel_uvw_xyz, 1, matrix_buffer)

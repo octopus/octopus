@@ -30,6 +30,7 @@ module phonons_lr_oct_m
   use io_function_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use math_oct_m
@@ -43,8 +44,8 @@ module phonons_lr_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -122,7 +123,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if(simul_box_is_periodic(gr%sb)) then
+    if(sys%space%is_periodic()) then
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     end if
 
@@ -166,11 +167,11 @@ contains
     call messages_obsolete_variable(sys%namespace, 'UseRestartDontSolve')
 
     natoms = geo%natoms
-    ndim = gr%sb%dim
+    ndim = sys%space%dim
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, st, gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, st, gr, sys%kpoints)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -178,7 +179,7 @@ contains
     end if
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
-    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
+    if (sys%space%is_periodic() .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
@@ -189,14 +190,15 @@ contains
         call messages_fatal(2)
       end if
 
-      do idir = 1, gr%sb%periodic_dim
+      do idir = 1, sys%space%periodic_dim
         call lr_init(kdotp_lr(idir))
         call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
 
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+                               ierr, lr=kdotp_lr(idir))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -211,9 +213,10 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
-    call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
-    call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
+        wfs_are_cplx = states_are_complex(st))
+    call vibrations_init(vib, geo, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 
@@ -270,7 +273,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, st, gr, ierr, lr = lr(1))
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, st, gr, sys%kpoints, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_warning(1)
@@ -282,17 +285,19 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(states_are_real(st)) then
-        call dsternheimer_solve(sh, sys, lr, 1, M_ZERO, ionic_pert, &
-          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, &
+          M_ZERO, ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        call zsternheimer_solve(sh, sys, lr, 1, M_z0, ionic_pert, &
-          restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, M_z0, &
+          ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
+        call dforces_derivative(gr, sys%namespace, sys%space, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
+          sys%hm%lda_u_level)
       else
-        call zforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
+        call zforces_derivative(gr, sys%namespace, sys%space, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
+          sys%hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes
@@ -311,9 +316,9 @@ contains
       
       if(do_infrared) then
         if(states_are_real(st)) then
-          call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call dphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         else
-          call zphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call zphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         end if
       end if
 
@@ -347,7 +352,7 @@ contains
     call axsf_mode_output(vib, geo, gr%mesh, sys%namespace)
 
     if(do_infrared) then
-      if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
+      if(sys%space%is_periodic() .and. .not. smear_is_semiconducting(st%smear)) then
         message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
         call messages_info(1)
       else
@@ -363,9 +368,9 @@ contains
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
       if(states_are_real(st)) then
-        call dphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
+        call dphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, sys%kpoints, vib, restart_load, restart_dump)
       else
-        call zphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
+        call zphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, sys%kpoints, vib, restart_load, restart_dump)
       end if
     end if
 
@@ -376,8 +381,8 @@ contains
     call vibrations_end(vib)
     call sternheimer_end(sh)
     call states_elec_deallocate_wfns(st)
-    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
-      do idir = 1, gr%sb%periodic_dim
+    if (sys%space%is_periodic() .and. do_infrared) then
+      do idir = 1, sys%space%periodic_dim
         call lr_dealloc(kdotp_lr(idir))
       end do
     end if
@@ -548,7 +553,7 @@ contains
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
-    SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(forces(1:geo%natoms, 1:geo%space%dim))
     do imat = 1, this%num_modes
       do jmat = 1, this%num_modes
         iatom = vibrations_get_atom(this, jmat)

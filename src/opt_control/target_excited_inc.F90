@@ -19,12 +19,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_excited(gr, namespace, tg, td, restart)
+  subroutine target_init_excited(gr, namespace, tg, td, restart, kpoints)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(in)    :: restart
+    type(kpoints_t),   intent(in)    :: kpoints
 
     integer :: ierr, nik, dim
 
@@ -44,21 +45,21 @@
     tg%st%st_start = 1
     tg%st%st_end   = tg%st%nst
 
-    SAFE_DEALLOCATE_P(tg%st%occ)
-    SAFE_DEALLOCATE_P(tg%st%eigenval)
-    SAFE_DEALLOCATE_P(tg%st%node)
+    SAFE_DEALLOCATE_A(tg%st%occ)
+    SAFE_DEALLOCATE_A(tg%st%eigenval)
+    SAFE_DEALLOCATE_A(tg%st%node)
 
     SAFE_ALLOCATE(     tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
     SAFE_ALLOCATE(tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
     SAFE_ALLOCATE(    tg%st%node(1:tg%st%nst))
     if(tg%st%d%ispin == SPINORS) then
-      SAFE_DEALLOCATE_P(tg%st%spin)
+      SAFE_DEALLOCATE_A(tg%st%spin)
       SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
     end if
     call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
 
-    call states_elec_load(restart, namespace, tg%st, gr, ierr)
+    call states_elec_load(restart, namespace, tg%st, gr, kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)

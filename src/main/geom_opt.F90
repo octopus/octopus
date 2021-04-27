@@ -122,11 +122,18 @@ contains
 
     PUSH_SUB(geom_opt_run_legacy)
 
+    if (sys%space%periodic_dim == 1 .or. sys%space%periodic_dim == 2) then
+      message(1) = "Geometry optimization not allowed for systems periodic in 1D or 2D, "
+      message(2) = "as in those cases the total energy is not correct."
+      call messages_fatal(2, namespace=sys%namespace)
+    end if
+
+
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
-    if (sys%gr%sb%kpoints%use_symmetries) then
+    if (sys%kpoints%use_symmetries) then
       call messages_experimental("KPoints symmetries with CalculationMode = go")
     end if
 
@@ -135,7 +142,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
+      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."
@@ -144,15 +151,15 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
 
     if(fromScratch) then
-      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     end if
 
     !Initial point
@@ -213,9 +220,11 @@ contains
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
+    ! Because g_opt has the "save" atribute, we need to explicitly empty the criteria list here, or there will be a memory leak.
+    call g_opt%scfv%criterion_list%empty()
     call end_()
-    POP_SUB(geom_opt_run_legacy)
 
+    POP_SUB(geom_opt_run_legacy)
   contains
 
     ! ---------------------------------------------------------
@@ -231,7 +240,7 @@ contains
 
       PUSH_SUB(geom_opt_run_legacy.init_)
 
-      if (sys%gr%sb%periodic_dim > 0) then
+      if (sys%space%periodic_dim > 0) then
         call messages_experimental('Geometry optimization for periodic systems')
 
         message(1) = "Optimization of cell parameters during geometry optimization"
@@ -247,7 +256,7 @@ contains
       g_opt%st     => sys%st
       g_opt%hm     => sys%hm
       g_opt%syst   => sys
-      g_opt%dim    =  sys%gr%sb%dim
+      g_opt%dim    =  sys%space%dim
 
       g_opt%size = g_opt%dim*g_opt%geo%natoms
 
@@ -607,8 +616,21 @@ contains
       call geometry_translate(g_opt%geo, geometry_center(g_opt%geo))
     end if
 
-    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
-      warn_if_not = .false., die_if_not = .true.)
+    ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
+    call geometry_fold_atoms_into_cell(g_opt%geo)
+
+    ! Some atoms might have moved outside the simulation box. We stop if this happens.
+    do iatom = 1, g_opt%geo%natoms
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%geo%atom(iatom)%x)) then
+        if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because contains_point is too strict with atoms close to
+          ! the upper boundary to the cell.
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " has moved outside the box during the geometry optimization."
+          call messages_fatal(1, namespace=g_opt%syst%namespace)
+        end if
+      end if
+    end do
 
     call geometry_write_xyz(g_opt%geo, './work-geom', g_opt%syst%namespace, append = .true.)
 
@@ -616,12 +638,12 @@ contains
 
     call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%syst%namespace, g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
+    call energy_calc_total(g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &
-      g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
+    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
+      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
     if(getgrad  ==  1) call to_grad(g_opt, df)
@@ -690,8 +712,7 @@ contains
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
-          g_opt%syst%namespace)
+        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%namespace)
       else
         call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
           g_opt%syst%namespace, write_forces = .true.)

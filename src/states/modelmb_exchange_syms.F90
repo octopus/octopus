@@ -23,6 +23,7 @@ module modelmb_exchange_syms_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
+  use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -58,6 +59,10 @@ subroutine modelmb_sym_all_states (gr, st)
   type(grid_t),           intent(in)    :: gr
 
   PUSH_SUB(modelmb_sym_all_states)
+
+  if (st%parallel_in_states) then
+    call messages_not_implemented("Model MB parallel in states")
+  end if
 
   if (states_are_complex(st)) then
     call zmodelmb_sym_all_states (gr, st)

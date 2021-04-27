@@ -26,6 +26,7 @@ module fourier_shell_oct_m
   use messages_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use sort_oct_m
   
   implicit none
@@ -47,7 +48,8 @@ module fourier_shell_oct_m
 
 contains
 
-  FLOAT function fourier_shell_cutoff(cube, mesh, is_wfn)
+  FLOAT function fourier_shell_cutoff(space, cube, mesh, is_wfn)
+    type(space_t),   intent(in)    :: space
     type(cube_t),    intent(in)  :: cube
     type(mesh_t),    intent(in)  :: mesh
     logical,         intent(in)  :: is_wfn
@@ -68,12 +70,12 @@ contains
     fourier_shell_cutoff = M_HUGE
     do ii = 1, 3
       gg(1:3) = M_ZERO
-      if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
+      if(is_wfn .and. space%is_periodic()) then
         gg(ii) = aint(ng(ii)/2-1)
       else
         gg(ii) = aint(ng(ii)/2)
       end if
-      gg(1:3) = matmul(mesh%sb%klattice(1:3,1:3),gg(1:3))
+      gg(1:3) = matmul(mesh%sb%latt%klattice(1:3,1:3),gg(1:3))
       fourier_shell_cutoff = min(fourier_shell_cutoff, sum(gg(1:3)**2))
     end do
     fourier_shell_cutoff = fourier_shell_cutoff/M_TWO
@@ -81,8 +83,9 @@ contains
     POP_SUB(fourier_shell_cutoff)
   end function fourier_shell_cutoff
 
-  subroutine fourier_shell_init(this, cube, mesh, kk)
+  subroutine fourier_shell_init(this, space, cube, mesh, kk)
     type(fourier_shell_t), intent(inout) :: this
+    type(space_t),         intent(in)    :: space
     type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
     FLOAT, optional,       intent(in)    :: kk(:) !< (3)
@@ -91,12 +94,20 @@ contains
     FLOAT :: dg(1:3), gvec(1:3)
     FLOAT, allocatable :: modg2(:)
     integer, allocatable :: map(:), ucoords(:, :), ured_gvec(:, :)
+    integer(8) :: number_points
 
     PUSH_SUB(fourier_shell_init)
 
-    this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk))
+    this%ekin_cutoff = fourier_shell_cutoff(space, cube, mesh, present(kk))
     dg(1:3) = M_TWO*M_PI/(cube%rs_n_global(1:3)*mesh%spacing(1:3))
 
+    ! make sure we do not run into integer overflow here
+    number_points = cube%rs_n_global(1) * cube%rs_n_global(2)
+    number_points = number_points * cube%rs_n_global(3)
+    if (number_points >= HUGE(0)) then
+      message(1) = "Error: too many points for the normal cube. Please try to use a distributed FFT."
+      call messages_fatal(1)
+    end if
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ured_gvec(1:3, 1:product(cube%rs_n_global(1:3))))
@@ -122,7 +133,7 @@ contains
           end if
 
           if(sum(gvec(1:3)**2)/M_TWO <= this%ekin_cutoff + CNST(1e-10)) then
-            INCR(ig, 1)
+            ig = ig + 1
             ucoords(1:3, ig) = (/ ix, iy, iz /)
             ured_gvec(1:3, ig) = ixx(1:3)
             modg2(ig) = sum(gvec(1:3)**2)

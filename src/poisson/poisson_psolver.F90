@@ -34,6 +34,7 @@ module poisson_psolver_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
   use submesh_oct_m
 
   !! Support for PSolver from BigDFT
@@ -110,9 +111,10 @@ module poisson_psolver_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_psolver_init(this, namespace, mesh, cube, mu, qq, force_isolated)
+  subroutine poisson_psolver_init(this, namespace, space, mesh, cube, mu, qq, force_isolated)
     type(poisson_psolver_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
+    type(space_t),           intent(in)    :: space
     type(mesh_t),            intent(inout) :: mesh
     type(cube_t),            intent(inout) :: cube
     FLOAT,                   intent(in)    :: mu
@@ -142,7 +144,7 @@ contains
     if(optional_default(force_isolated, .false.)) then
       this%geocode = "F"
     else
-      select case(mesh%sb%periodic_dim)
+      select case(space%periodic_dim)
       case(0)
         ! Free BC
         this%geocode = "F"
@@ -207,9 +209,9 @@ contains
 #ifdef HAVE_PSOLVER
     call dict_set(this%inputs//'setup'//'verbose', debug%info)
 
-    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
-    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
-    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+    alpha = mesh%sb%latt%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%latt%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%latt%gamma*M_PI/(CNST(180.0))
 
     ! Previously, pkernel_init set the communicator used within PSolver to comm_world.
     ! This can be overwritten by passing an optional argument of type(mpi_environment)
@@ -225,7 +227,7 @@ contains
     call pkernel_set(this%kernel, verbose=debug%info)
 
     !G=0 component
-    modq2 = sum(qq(1:mesh%sb%periodic_dim)**2)
+    modq2 = sum(qq(1:space%periodic_dim)**2)
     if (modq2 > M_EPSILON) then
       this%offset = M_ONE/modq2
     else
@@ -289,9 +291,9 @@ contains
 #endif
 
     !We might change the cell angles
-    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
-    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
-    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+    alpha = mesh%sb%latt%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%latt%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%latt%gamma*M_PI/(CNST(180.0))
 
 #ifdef HAVE_PSOLVER
     call dict_set(this%inputs//'kernel'//'screening',mu)
@@ -307,7 +309,7 @@ contains
     do idim = 1, mesh%sb%periodic_dim
       qq(idim) = qq_in(idim) - anint(qq_in(idim) + M_HALF*CNST(1e-8))
     end do
-    call kpoints_to_absolute(mesh%sb%klattice, qq, qq_abs, mesh%sb%periodic_dim)
+    call kpoints_to_absolute(mesh%sb%latt%klattice, qq, qq_abs, mesh%sb%periodic_dim)
     modq2 = sum(qq_abs(1:mesh%sb%periodic_dim)**2)
     if (modq2 > M_EPSILON) then
       this%offset = M_ONE/modq2

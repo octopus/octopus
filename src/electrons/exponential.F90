@@ -254,8 +254,7 @@ contains
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    phase_correction = .false.
-    if(associated(hm%hm_base%phase)) phase_correction = .true.
+    phase_correction = allocated(hm%hm_base%phase)
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
@@ -324,7 +323,7 @@ contains
     subroutine taylor_series()
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
-      integer :: i, idim
+      integer :: i
       logical :: zfact_is_real
 
       PUSH_SUB(exponential_apply.taylor_series)
@@ -335,9 +334,7 @@ contains
       zfact = M_z1
       zfact_is_real = abs(timestep-real(timestep)) < M_EPSILON
 
-      do idim = 1, hm%d%dim
-        call lalg_copy(mesh%np, zpsi(:, idim), zpsi1(:, idim))
-      end do
+      call lalg_copy(mesh%np, hm%d%dim, zpsi, zpsi1)
 
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
@@ -346,19 +343,13 @@ contains
         call operate(zpsi1, hzpsi1)
 
         if(zfact_is_real) then
-          do idim = 1, hm%d%dim
-            call lalg_axpy(mesh%np, TOFLOAT(zfact), hzpsi1(:, idim), zpsi(:, idim))
-          end do
+          call lalg_axpy(mesh%np, hm%d%dim, TOFLOAT(zfact), hzpsi1, zpsi)
         else
-          do idim = 1, hm%d%dim
-            call lalg_axpy(mesh%np, zfact, hzpsi1(:, idim), zpsi(:, idim))
-          end do
+          call lalg_axpy(mesh%np, hm%d%dim, zfact, hzpsi1, zpsi)
         end if
 
         if(i /= te%exp_order) then
-          do idim = 1, hm%d%dim
-            call lalg_copy(mesh%np, hzpsi1(:, idim), zpsi1(:, idim))
-          end do
+          call lalg_copy(mesh%np, hm%d%dim, hzpsi1, zpsi1)
         end if
 
       end do
@@ -392,7 +383,7 @@ contains
     !!  ChebySum := 0.5*(u0 - u2);
     !! \endverbatim
     subroutine cheby()
-      integer :: j, idim
+      integer :: j
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 
@@ -406,27 +397,20 @@ contains
       SAFE_ALLOCATE(zpsi1(1:mesh%np_part, 1:hm%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order - 1, 0, -1
-        do idim = 1, hm%d%dim
-          call lalg_copy(mesh%np, zpsi1(1:np, idim, 1), zpsi1(1:np, idim, 2))
-          call lalg_copy(mesh%np, zpsi1(1:np, idim, 0), zpsi1(1:np, idim, 1))
-        end do
+        call lalg_copy(mesh%np, hm%d%dim, zpsi1(:, :, 1), zpsi1(:, :, 2))
+        call lalg_copy(mesh%np, hm%d%dim, zpsi1(:, :, 0), zpsi1(:, :, 1))
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
-        do idim = 1, hm%d%dim
-          call lalg_axpy(np, -hm%spectral_middle_point, zpsi1(1:np, idim, 1), &
-            zpsi1(1:np, idim, 0))
-          call lalg_scal(np, M_TWO/hm%spectral_half_span, zpsi1(1:np, idim, 0))
-          call lalg_axpy(np, zfact, zpsi(:, idim), zpsi1(1:np, idim, 0))
-          call lalg_axpy(mesh%np, -M_ONE, zpsi1(1:np, idim, 2),  zpsi1(1:np, idim, 0))
-        end do
+        call lalg_axpy(np, hm%d%dim, -hm%spectral_middle_point, zpsi1(:, :, 1), zpsi1(:, :, 0))
+        call lalg_scal(np, hm%d%dim,  M_TWO/hm%spectral_half_span, zpsi1(:, :, 0))
+        call lalg_axpy(np, hm%d%dim, zfact, zpsi, zpsi1(:, :, 0))
+        call lalg_axpy(mesh%np, hm%d%dim, -M_ONE, zpsi1(:, :, 2),  zpsi1(:, :, 0))
       end do
 
       zpsi(1:np, 1:hm%d%dim) = M_HALF*(zpsi1(1:np, 1:hm%d%dim, 0) - zpsi1(1:np, 1:hm%d%dim, 2))
-      do idim = 1, hm%d%dim
-        call lalg_scal(np, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(1:np, idim))
-      end do
+      call lalg_scal(np, hm%d%dim, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi)
       SAFE_DEALLOCATE_A(zpsi1)
 
       if(present(order)) order = te%exp_order
@@ -468,9 +452,7 @@ contains
         do iter = 1, te%exp_order
 
           !copy v(:, :, n) to an array of size 1:mesh%np_part
-          do idim = 1, hm%d%dim
-            call lalg_copy(mesh%np, v(:, idim, iter), zpsi(:, idim))
-          end do
+          call lalg_copy(mesh%np, hm%d%dim, v(:, :, iter), zpsi)
 
           !to apply the Hamiltonian
           call operate(zpsi, v(:, :,  iter + 1))
@@ -493,9 +475,7 @@ contains
           if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
           !We normalize only if the norm is non-zero
           ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0
-          do idim = 1, hm%d%dim
-            call lalg_scal(mesh%np, M_ONE / hamilt(iter + 1, iter), v(:, idim, iter+1))
-          end do
+          call lalg_scal(mesh%np, hm%d%dim, M_ONE / hamilt(iter + 1, iter), v(:, :, iter+1))
            
           if(iter > 3 .and. res < tol) exit
         end do
@@ -527,9 +507,7 @@ contains
           ! This is the Lanczos loop...
           do iter = 1, te%exp_order
             !copy v(:, :, n) to an array of size 1:mesh%np_part
-            do idim = 1, hm%d%dim
-              call lalg_copy(mesh%np, v(:, idim, iter), psi(:, idim))
-            end do
+            call lalg_copy(mesh%np, hm%d%dim, v(:, :, iter), psi)
 
             !to apply the Hamiltonian
             call operate(psi, v(:, :, iter + 1))

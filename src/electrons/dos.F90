@@ -63,11 +63,11 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, namespace, st, sb)
+  subroutine dos_init(this, namespace, st, kpoints)
     type(dos_t),         intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(in)    :: st
-    type(simul_box_t),   intent(in)    :: sb
+    type(kpoints_t),     intent(in)    :: kpoints
 
     FLOAT :: evalmin, evalmax, eextend
     integer :: npath
@@ -76,7 +76,7 @@ contains
 
     !The range of the dos is only calculated for physical points,
     !without the one from a k-point path
-    npath = kpoints_nkpt_in_path(sb%kpoints)
+    npath = kpoints_nkpt_in_path(kpoints)
     if(st%d%nik > npath) then
       evalmin = minval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
       evalmax = maxval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
@@ -335,12 +335,12 @@ contains
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                       os, work, os%radius, os%ndim, &
-                                      use_mesh=.not.associated(hm%hm_base%phase) .and. .not. os%submesh, &
+                                      use_mesh=.not.allocated(hm%hm_base%phase) .and. .not. os%submesh, &
                                       normalize = normalize)
             end if
           end do
 
-          if(associated(hm%hm_base%phase)) then
+          if (allocated(hm%hm_base%phase)) then
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
@@ -351,7 +351,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb%dim, st%d%kpt, hm%kpoints, (st%d%ispin==SPIN_POLARIZED), &
                                             vec_pot = hm%hm_base%uniform_vector_potential, &
                                             vec_pot_var = hm%hm_base%vector_potential)
           end if
@@ -393,7 +393,7 @@ contains
                 end do
               else
                 call states_elec_get_state(st, mesh, ist, ik, zpsi )
-                if(associated(hm%hm_base%phase)) then
+                if (allocated(hm%hm_base%phase)) then
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                   do idim = 1, st%d%dim
                     !$omp parallel do
@@ -403,7 +403,7 @@ contains
                     !$omp end parallel do
                    end do
                 end if
-                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
+                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, allocated(hm%hm_base%phase), &
                                   zdot(1:st%d%dim,1:os%norbs))
 
                 do iorb = 1, os%norbs
@@ -416,7 +416,7 @@ contains
           end do
 
           if(st%parallel_in_states .or. st%d%kpt%parallel) then
-            call comm_allreduce(st%st_kpt_mpi_grp%comm, weight)
+            call comm_allreduce(st%st_kpt_mpi_grp, weight)
           end if
 
           SAFE_DEALLOCATE_A(ddot)

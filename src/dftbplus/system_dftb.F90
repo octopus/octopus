@@ -72,8 +72,7 @@ module system_dftb_oct_m
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
     type(ion_dynamics_t) :: ions
-    integer                :: n_lasers            !< number of laser pulses used
-    type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    class(lasers_t), pointer :: ext_lasers => null()
     logical :: laser_field
     FLOAT :: field(3)
     FLOAT :: energy
@@ -163,6 +162,13 @@ contains
     call messages_print_stress(stdout, "DFTB+ System", namespace=namespace)
 
     call space_init(this%space, namespace)
+    if(this%space%periodic_dim > 0) then
+      call messages_not_implemented('DFTB+ for periodic systems')
+    end if
+    if(this%space%dim /= 3) then
+      call messages_not_implemented('DFTB+ for Dimensions /= 3')
+    end if
+
     call geometry_init(this%geo, namespace, this%space)
     this%n_atom = this%geo%natoms
     SAFE_ALLOCATE(this%coords(3, this%n_atom))
@@ -266,13 +272,15 @@ contains
     !%End
     call parse_variable(namespace, 'InitialIonicTemperature', M_zero, initial_temp, unit = unit_kelvin)
 
-    this%n_lasers = 0
+    allocate(this%ext_lasers)
+    this%ext_lasers%no_lasers = 0
     if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
       this%laser_field = .true.
-      this%n_lasers = parse_block_n(blk)
-      SAFE_ALLOCATE(this%lasers(1:this%n_lasers))
+      ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
+      this%ext_lasers%no_lasers = parse_block_n(blk)
+      SAFE_ALLOCATE(this%ext_lasers%lasers(1:this%ext_lasers%no_lasers))
 
-      do il = 1, this%n_lasers
+      do il = 1, this%ext_lasers%no_lasers
 
         pol(1:MAX_DIM) = M_z0
         call parse_block_cmplx(blk, il-1, 0, pol(1))
@@ -281,26 +289,26 @@ contains
         call parse_block_float(blk, il-1, 3, omega0)
         omega0 = units_to_atomic(units_inp%energy, omega0)
 
-        call laser_set_frequency(this%lasers(il), omega0)
+        call laser_set_frequency(this%ext_lasers%lasers(il), omega0)
         pol(1:3) = pol(1:3)/sqrt(sum(abs(pol(1:3))**2))
-        call laser_set_polarization(this%lasers(il), pol)
+        call laser_set_polarization(this%ext_lasers%lasers(il), pol)
 
         call parse_block_string(blk, il-1, 4, envelope_expression)
         call tdf_read(ff, namespace, trim(envelope_expression), ierr)
-        call laser_set_f(this%lasers(il), ff)
+        call laser_set_f(this%ext_lasers%lasers(il), ff)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > 5) then
           call parse_block_string(blk, il-1, 5, phase_expression)
           call tdf_read(phi, namespace, trim(phase_expression), ierr)
-          call laser_set_phi(this%lasers(il), phi)
+          call laser_set_phi(this%ext_lasers%lasers(il), phi)
           if (ierr /= 0) then
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
             call messages_warning(2, namespace=namespace)
           end if
         else
-          call laser_set_empty_phi(this%lasers(il))
+          call laser_set_empty_phi(this%ext_lasers%lasers(il))
         end if
       end do
 
@@ -513,12 +521,12 @@ contains
       case (VERLET_UPDATE_POS)
         this%field = M_zero
         time = this%clock%time()
-        do il = 1, this%n_lasers
+        do il = 1, this%ext_lasers%no_lasers
           ! get properties of laser
-          call laser_get_f(this%lasers(il), ff)
-          call laser_get_phi(this%lasers(il), phi)
-          omega = laser_carrier_frequency(this%lasers(il))
-          pol = laser_polarization(this%lasers(il))
+          call laser_get_f(this%ext_lasers%lasers(il), ff)
+          call laser_get_phi(this%ext_lasers%lasers(il), phi)
+          omega = laser_carrier_frequency(this%ext_lasers%lasers(il))
+          pol = laser_polarization(this%ext_lasers%lasers(il))
           ! calculate electric field from laser
           amp = tdf(ff, time) * exp(M_zI * (omega*time + tdf(phi, time)))
           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
@@ -782,8 +790,12 @@ contains
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
     call geometry_end(this%geo)
-    call laser_end(this%n_lasers, this%lasers)
     call ion_dynamics_end(this%ions)
+
+    ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
+    if (associated(this%ext_lasers)) then
+      deallocate(this%ext_lasers)
+    end if
 
     call system_end(this)
 

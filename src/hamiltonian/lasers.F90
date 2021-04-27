@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2021 N. Tancogne-Dejean 
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,13 +20,19 @@
 #include "global.h"
 
 module lasers_oct_m
+  use clock_oct_m
   use derivatives_oct_m
+  use ghost_interaction_oct_m
   use global_oct_m
+  use interaction_oct_m
+  use interaction_partner_oct_m
+  use kpoints_oct_m
+  use lorentz_force_oct_m
   use mpi_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use states_elec_dim_oct_m
@@ -39,9 +46,10 @@ module lasers_oct_m
 
   private
   public ::                       &
+    lasers_t,                     &
+    lasers_init,                  &
+    lasers_check_symmetries,      &
     laser_t,                      &
-    laser_init,                   &
-    laser_end,                    &
     laser_write_info,             &
     laser_field,                  &
     laser_electric_field,         & 
@@ -83,7 +91,282 @@ module lasers_oct_m
     FLOAT, allocatable :: a(:, :)
   end type laser_t
 
+  type, extends(interaction_partner_t) :: lasers_t
+    private
+
+    integer, public                    :: no_lasers            !< number of laser pulses used
+    type(laser_t), allocatable, public :: lasers(:)            !< the different laser pulses
+  contains
+    procedure :: update_exposed_quantities => lasers_update_exposed_quantities
+    procedure :: update_exposed_quantity => lasers_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => lasers_copy_quantities_to_interaction
+    final :: lasers_finalize
+  end type
+
+  interface lasers_t
+    module procedure lasers_init
+  end interface lasers_t
+
+
 contains
+
+   function lasers_init(namespace, mesh) result(this)
+    class(lasers_t), pointer :: this
+    type(namespace_t), intent(in) :: namespace
+    type(mesh_t),      intent(in) :: mesh
+
+    type(block_t)     :: blk
+    integer           :: il, ip, jj, ierr
+    character(len=200) :: scalar_pot_expression
+    character(len=200) :: envelope_expression, phase_expression
+    FLOAT :: omega0, rr, pot_re, pot_im, xx(mesh%sb%dim)
+
+    PUSH_SUB(lasers_init)
+
+    SAFE_ALLOCATE(this)
+
+    this%namespace = namespace_t("Lasers", parent=namespace)
+
+    ! Initialize clock without a time-step, as the potential will not be propagated
+    this%clock = clock_t()
+
+    call messages_obsolete_variable(namespace, "TDLasers", "TDExternalFields")
+    !%Variable TDExternalFields
+    !%Type block
+    !%Section Time-Dependent
+    !%Description
+    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
+    !% external perturbations that are applied to the system, in the form
+    !% <math>f(x,y,z) \cos(\omega t + \phi (t)) g(t)</math>, where <math>f(x,y,z)</math> is defined by
+    !% by a field type and polarization or a scalar potential, as below; <math>\omega</math>
+    !% is defined by <tt>omega</tt>; <math>g(t)</math> is defined by
+    !% <tt>envelope_function_name</tt>; and <math>\phi(t)</math> is the (time-dependent) phase from <tt>phase</tt>.
+    !%
+    !% These perturbations are only applied for time-dependent runs. If
+    !% you want the value of the perturbation at time zero to be
+    !% applied for time-independent runs, use <tt>TimeZero = yes</tt>.
+    !%
+    !% Each line of the block describes an external field; this way you can actually have more
+    !% than one laser (<i>e.g.</i> a "pump" and a "probe").
+    !%
+    !% There are two ways to specify <math>f(x,y,z)</math> but both use the same <tt>omega | envelope_function_name [| phase]</tt>
+    !% for the time-dependence.
+    !% The float <tt>omega</tt> will be the carrier frequency of the
+    !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
+    !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
+    !% it must be surrounded by quotation marks) that must match one of the function names
+    !% given in the first column of the <tt>TDFunctions</tt> block.
+    !% <tt>phase</tt> is optional and is taken to be zero if not provided, and is also a string specifying
+    !% a time-dependent function.
+    !%
+    !% (A) type = <tt>electric field, magnetic field, vector_potential</tt>
+    !%
+    !% For these cases, the syntax is:
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name | phase
+    !% <br>%</tt>
+    !%
+    !% The <tt>vector_potential</tt> option (constant in space) permits us to describe
+    !% an electric perturbation in the velocity gauge.
+    !% The three (possibly complex) numbers (<tt>nx</tt>, <tt>ny</tt>, <tt>nz</tt>) mark the polarization
+    !% direction of the field.
+    !%
+    !% (B) type = <tt>scalar_potential</tt>
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; scalar_potential | "spatial_expression" | omega | envelope_function_name | phase
+    !% <br>%</tt>
+    !%
+    !% The scalar potential is any expression of the spatial coordinates given by the string
+    !% "spatial_expression", allowing a field beyond the dipole approximation.
+    !%
+    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment, and the
+    !% <tt>type</tt> keyword is omitted.
+    !%
+    !% A NOTE ON UNITS:
+    !%
+    !% It is very common to describe the strength of a laser field by its intensity, rather
+    !% than using the electric-field amplitude. In atomic units (or, more precisely, in any
+    !% Gaussian system of units), the relationship between instantaneous electric field
+    !% and intensity is:
+    !% <math> I(t) = \frac{c}{8\pi} E^2(t) </math>.
+    !%
+    !% It is common to read intensities in W/cm<math>^2</math>. The dimensions of intensities are
+    !% [W]/(L<math>^2</math>T), where [W] are the dimensions of energy. The relevant conversion factors
+    !% are:
+    !%
+    !% Hartree / (<math>a_0^2</math> atomic_time) = <math>6.4364086 \times 10^{15} \mathrm{W/cm}^2</math>
+    !% 
+    !% eV / ( &Aring;<math>^2 (\hbar</math>/eV) ) = <math>2.4341348 \times 10^{12} \mathrm{W/cm}^2</math>
+    !%
+    !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>,
+    !% then the intensity is:
+    !%
+    !% <math> I_0 = 3.51 \times 10^{16} \mathrm{W/cm}^2 (E_0^2) </math>
+    !%
+    !% If, working with <tt>Units = ev_angstrom</tt>, we set <math>E_0</math>, then the intensity is:
+    !%
+    !% <math> I_0 = 1.327 \times 10^{13} (E_0^2) \mathrm{W/cm}^2 </math>
+    !%
+    !%Option electric_field 1
+    !% The external field is an electric field, the usual case when we want to describe a 
+    !% laser in the length gauge.
+    !%Option magnetic_field 2
+    !% The external field is a (homogeneous) time-dependent magnetic field.
+    !%Option vector_potential 3
+    !% The external field is a time-dependent homogeneous vector potential, which may describe
+    !% a laser field in the velocity gauge.
+    !%Option scalar_potential 4
+    !% The external field is an arbitrary scalar potential, which may describe an
+    !% inhomogeneous electrical field.
+    !%End
+
+    this%no_lasers = 0
+    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
+      this%no_lasers = parse_block_n(blk)
+      SAFE_ALLOCATE(this%lasers(1:this%no_lasers))
+
+      do il = 1, this%no_lasers
+
+        call parse_block_integer(blk, il-1, 0, this%lasers(il)%field)
+
+        select case(this%lasers(il)%field)
+        case(E_FIELD_SCALAR_POTENTIAL)
+          call parse_block_string(blk, il-1, 1, scalar_pot_expression)
+          jj = 1
+          this%lasers(il)%pol = M_z1
+        case default
+          call parse_block_cmplx(blk, il-1, 1, this%lasers(il)%pol(1))
+          call parse_block_cmplx(blk, il-1, 2, this%lasers(il)%pol(2))
+          call parse_block_cmplx(blk, il-1, 3, this%lasers(il)%pol(3))
+          jj = 3
+        end select
+
+        call parse_block_float(blk, il-1, jj+1, omega0)
+        omega0 = units_to_atomic(units_inp%energy, omega0)
+
+        this%lasers(il)%omega = omega0
+     
+        call parse_block_string(blk, il-1, jj+2, envelope_expression)
+        call tdf_read(this%lasers(il)%f, namespace, trim(envelope_expression), ierr)
+
+        ! Check if there is a phase.
+        if(parse_block_cols(blk, il-1) > jj+3) then
+          call parse_block_string(blk, il-1, jj+3, phase_expression)
+          call tdf_read(this%lasers(il)%phi, namespace, trim(phase_expression), ierr)
+          if (ierr /= 0) then            
+            write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
+            write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
+            call messages_warning(2, namespace=namespace)
+          end if
+        else
+          call tdf_init(this%lasers(il)%phi)
+        end if
+
+        this%lasers(il)%pol(:) = this%lasers(il)%pol(:)/sqrt(sum(abs(this%lasers(il)%pol(:))**2))
+
+        select case(this%lasers(il)%field)
+        case(E_FIELD_SCALAR_POTENTIAL)
+          SAFE_ALLOCATE(this%lasers(il)%v(1:mesh%np_part))
+          this%lasers(il)%v = M_ZERO
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords = xx)
+            call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, rr, M_ZERO, trim(scalar_pot_expression))
+            this%lasers(il)%v(ip) = pot_re
+          end do
+
+        case(E_FIELD_MAGNETIC)
+          ! \warning: note that for the moment we are ignoring the possibility of a complex
+          ! polarizability vector for the td magnetic-field case.
+          SAFE_ALLOCATE(this%lasers(il)%a(1:mesh%np_part, 1:mesh%sb%dim))
+          this%lasers(il)%a = M_ZERO
+          do ip = 1, mesh%np
+            xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
+            select case(mesh%sb%dim)
+            case(2)
+              this%lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(this%lasers(il)%pol(3)))
+            case(3)
+              this%lasers(il)%a(ip, :) = (/ xx(2)*real(this%lasers(il)%pol(3)) - xx(3)*real(this%lasers(il)%pol(2)), &
+                          xx(3)*real(this%lasers(il)%pol(1)) - xx(1)*real(this%lasers(il)%pol(3)), &
+                          xx(1)*real(this%lasers(il)%pol(2)) - xx(2)*real(this%lasers(il)%pol(1))  /)
+            case default
+              message(1) = "Magnetic fields only allowed in 2 or 3D."
+              call messages_fatal(1, namespace=namespace)
+            end select
+          end do
+          this%lasers(il)%a = -M_HALF * this%lasers(il)%a 
+
+        end select
+
+      end do
+
+      call parse_block_end(blk)
+    end if
+
+    POP_SUB(lasers_init)
+  end function lasers_init
+
+  ! ---------------------------------------------------------
+  subroutine lasers_check_symmetries(this, kpoints)
+    type(lasers_t),  intent(in) :: this
+    type(kpoints_t), intent(in) :: kpoints
+
+    integer :: iop, il
+  
+    PUSH_SUB(lasers_check_symmetries)
+
+    if(kpoints%use_symmetries) then
+      do iop = 1, symmetries_number(kpoints%symm)
+        if(iop == symmetries_identity_index(kpoints%symm)) cycle
+        do il = 1, this%no_lasers
+          if(.not. symm_op_invariant_cart(kpoints%symm%ops(iop), this%lasers(il)%pol(:), SYMPREC)) then
+            message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points  ."
+            message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
+            call messages_fatal(2, namespace=this%namespace)
+          end if
+        end do
+      end do
+    end if    
+
+    POP_SUB(lasers_check_symmetries)
+
+  end subroutine lasers_check_symmetries
+
+  ! ---------------------------------------------------------
+  subroutine lasers_finalize(this)
+    type(lasers_t), intent(inout) :: this
+
+    PUSH_SUB(lasers_finalize)
+
+    call lasers_deallocate(this)
+
+    POP_SUB(lasers_finalize)
+
+  end subroutine lasers_finalize
+
+  ! ---------------------------------------------------------
+  subroutine lasers_deallocate(this)
+    class(lasers_t), intent(inout) :: this
+
+    integer :: il
+
+    PUSH_SUB(lasers_deallocate)
+
+    do il = 1, this%no_lasers
+      call tdf_end(this%lasers(il)%f)
+      call tdf_end(this%lasers(il)%phi)
+      select case(this%lasers(il)%field)
+      case(E_FIELD_SCALAR_POTENTIAL)
+        SAFE_DEALLOCATE_A(this%lasers(il)%v)
+      case(E_FIELD_MAGNETIC)
+        SAFE_DEALLOCATE_A(this%lasers(il)%a)
+      end select
+    end do
+    SAFE_DEALLOCATE_A(this%lasers)
+
+    POP_SUB(lasers_deallocate)
+  end subroutine lasers_deallocate
 
 
   ! ---------------------------------------------------------
@@ -91,12 +374,89 @@ contains
     type(laser_t), intent(in) :: laser
 
     PUSH_SUB(laser_carrier_frequency)
+ 
     w0 = laser%omega
 
     POP_SUB(laser_carrier_frequency)
   end function laser_carrier_frequency
   ! ---------------------------------------------------------
 
+ ! ---------------------------------------------------------
+  logical function lasers_update_exposed_quantities(partner, requested_time, interaction) &
+    result(allowed_to_update)
+    class(lasers_t), intent(inout) :: partner
+    type(clock_t),               intent(in)    :: requested_time
+    class(interaction_t),        intent(inout) :: interaction
+
+    PUSH_SUB(lasers_update_exposed_quantities)
+
+    ! Always allowed to update, as the external potentials are not propagated
+    allowed_to_update = .true.
+
+    call partner%clock%set_time(requested_time)
+
+    select type (interaction)
+    type is (ghost_interaction_t)
+      ! Nothing to copy. We still need to check that we are at the right
+      ! time for the update though!
+    class default
+      call partner%copy_quantities_to_interaction(interaction)
+    end select
+
+    POP_SUB(lasers_update_exposed_quantities)
+
+  end function lasers_update_exposed_quantities
+
+  ! ---------------------------------------------------------
+  subroutine lasers_update_exposed_quantity(partner, iq)
+    class(lasers_t),      intent(inout) :: partner
+    integer,                          intent(in)    :: iq
+
+    PUSH_SUB(lasers_update_exposed_quantities)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. partner%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(lasers_update_exposed_quantities)
+
+  end subroutine lasers_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine lasers_copy_quantities_to_interaction(partner, interaction)
+    class(lasers_t),     intent(inout) :: partner
+    class(interaction_t),            intent(inout) :: interaction
+
+    PUSH_SUB(lasers_copy_quantities_to_interaction)
+
+    select type (interaction)
+    type is (lorentz_force_t)
+!      if (partner%type == EXTERNAL_POT_STATIC_EFIELD) then
+!        do ip = 1, interaction%system_np
+!          interaction%partner_E_field(:, ip) = partner%E_field
+!          interaction%partner_B_field(:, ip) = M_ZERO
+!        end do
+!      else if (partner%type == EXTERNAL_POT_STATIC_BFIELD) then
+!        do ip = 1, interaction%system_np
+!          interaction%partner_E_field(:, ip) = M_ZERO
+!          interaction%partner_B_field(:, ip) = partner%B_field
+!        end do
+!      else
+        ASSERT(.false.) !This should never occur.
+!      end if
+
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(lasers_copy_quantities_to_interaction)
+  end subroutine lasers_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   integer pure elemental function laser_kind(laser)
@@ -283,244 +643,6 @@ contains
     POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
   ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine laser_init(lasers, namespace, no_l, mesh)
-    type(laser_t),       pointer     :: lasers(:)
-    type(namespace_t),   intent(in)  :: namespace
-    integer,             intent(out) :: no_l
-    type(mesh_t),        intent(in)  :: mesh
-
-    type(block_t)     :: blk
-    integer           :: il, ip, jj, ierr
-    character(len=200) :: scalar_pot_expression
-    character(len=200) :: envelope_expression, phase_expression
-    FLOAT :: omega0, rr, pot_re, pot_im, xx(mesh%sb%dim)
-    integer :: iop 
-
-    PUSH_SUB(laser_init)
-
-    call messages_obsolete_variable(namespace, "TDLasers", "TDExternalFields")
-    !%Variable TDExternalFields
-    !%Type block
-    !%Section Time-Dependent
-    !%Description
-    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
-    !% external perturbations that are applied to the system, in the form
-    !% <math>f(x,y,z) \cos(\omega t + \phi (t)) g(t)</math>, where <math>f(x,y,z)</math> is defined by
-    !% by a field type and polarization or a scalar potential, as below; <math>\omega</math>
-    !% is defined by <tt>omega</tt>; <math>g(t)</math> is defined by
-    !% <tt>envelope_function_name</tt>; and <math>\phi(t)</math> is the (time-dependent) phase from <tt>phase</tt>.
-    !%
-    !% These perturbations are only applied for time-dependent runs. If
-    !% you want the value of the perturbation at time zero to be
-    !% applied for time-independent runs, use <tt>TimeZero = yes</tt>.
-    !%
-    !% Each line of the block describes an external field; this way you can actually have more
-    !% than one laser (<i>e.g.</i> a "pump" and a "probe").
-    !%
-    !% There are two ways to specify <math>f(x,y,z)</math> but both use the same <tt>omega | envelope_function_name [| phase]</tt>
-    !% for the time-dependence.
-    !% The float <tt>omega</tt> will be the carrier frequency of the
-    !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
-    !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
-    !% it must be surrounded by quotation marks) that must match one of the function names
-    !% given in the first column of the <tt>TDFunctions</tt> block.
-    !% <tt>phase</tt> is optional and is taken to be zero if not provided, and is also a string specifying
-    !% a time-dependent function.
-    !%
-    !% (A) type = <tt>electric field, magnetic field, vector_potential</tt>
-    !%
-    !% For these cases, the syntax is:
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name | phase
-    !% <br>%</tt>
-    !%
-    !% The <tt>vector_potential</tt> option (constant in space) permits us to describe
-    !% an electric perturbation in the velocity gauge.
-    !% The three (possibly complex) numbers (<tt>nx</tt>, <tt>ny</tt>, <tt>nz</tt>) mark the polarization
-    !% direction of the field.
-    !%
-    !% (B) type = <tt>scalar_potential</tt>
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; scalar_potential | "spatial_expression" | omega | envelope_function_name | phase
-    !% <br>%</tt>
-    !%
-    !% The scalar potential is any expression of the spatial coordinates given by the string
-    !% "spatial_expression", allowing a field beyond the dipole approximation.
-    !%
-    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment, and the
-    !% <tt>type</tt> keyword is omitted.
-    !%
-    !% A NOTE ON UNITS:
-    !%
-    !% It is very common to describe the strength of a laser field by its intensity, rather
-    !% than using the electric-field amplitude. In atomic units (or, more precisely, in any
-    !% Gaussian system of units), the relationship between instantaneous electric field
-    !% and intensity is:
-    !% <math> I(t) = \frac{c}{8\pi} E^2(t) </math>.
-    !%
-    !% It is common to read intensities in W/cm<math>^2</math>. The dimensions of intensities are
-    !% [W]/(L<math>^2</math>T), where [W] are the dimensions of energy. The relevant conversion factors
-    !% are:
-    !%
-    !% Hartree / (<math>a_0^2</math> atomic_time) = <math>6.4364086 \times 10^{15} \mathrm{W/cm}^2</math>
-    !% 
-    !% eV / ( &Aring;<math>^2 (\hbar</math>/eV) ) = <math>2.4341348 \times 10^{12} \mathrm{W/cm}^2</math>
-    !%
-    !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>,
-    !% then the intensity is:
-    !%
-    !% <math> I_0 = 3.51 \times 10^{16} \mathrm{W/cm}^2 (E_0^2) </math>
-    !%
-    !% If, working with <tt>Units = ev_angstrom</tt>, we set <math>E_0</math>, then the intensity is:
-    !%
-    !% <math> I_0 = 1.327 \times 10^{13} (E_0^2) \mathrm{W/cm}^2 </math>
-    !%
-    !%Option electric_field 1
-    !% The external field is an electric field, the usual case when we want to describe a 
-    !% laser in the length gauge.
-    !%Option magnetic_field 2
-    !% The external field is a (homogeneous) time-dependent magnetic field.
-    !%Option vector_potential 3
-    !% The external field is a time-dependent homogeneous vector potential, which may describe
-    !% a laser field in the velocity gauge.
-    !%Option scalar_potential 4
-    !% The external field is an arbitrary scalar potential, which may describe an
-    !% inhomogeneous electrical field.
-    !%End
-
-    no_l = 0
-    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
-      no_l = parse_block_n(blk)
-      SAFE_ALLOCATE(lasers(1:no_l))
-
-      do il = 1, no_l
-
-        call parse_block_integer(blk, il-1, 0, lasers(il)%field)
-
-        select case(lasers(il)%field)
-        case(E_FIELD_SCALAR_POTENTIAL)
-          call parse_block_string(blk, il-1, 1, scalar_pot_expression)
-          jj = 1
-          lasers(il)%pol = M_z1
-        case default
-          call parse_block_cmplx(blk, il-1, 1, lasers(il)%pol(1))
-          call parse_block_cmplx(blk, il-1, 2, lasers(il)%pol(2))
-          call parse_block_cmplx(blk, il-1, 3, lasers(il)%pol(3))
-          jj = 3
-        end select
-
-        call parse_block_float(blk, il-1, jj+1, omega0)
-        omega0 = units_to_atomic(units_inp%energy, omega0)
-
-        lasers(il)%omega = omega0
-     
-        call parse_block_string(blk, il-1, jj+2, envelope_expression)
-        call tdf_read(lasers(il)%f, namespace, trim(envelope_expression), ierr)
-
-        ! Check if there is a phase.
-        if(parse_block_cols(blk, il-1) > jj+3) then
-          call parse_block_string(blk, il-1, jj+3, phase_expression)
-          call tdf_read(lasers(il)%phi, namespace, trim(phase_expression), ierr)
-          if (ierr /= 0) then            
-            write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
-            write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
-            call messages_warning(2, namespace=namespace)
-          end if
-        else
-          call tdf_init(lasers(il)%phi)
-        end if
-
-        lasers(il)%pol(:) = lasers(il)%pol(:)/sqrt(sum(abs(lasers(il)%pol(:))**2))
-
-        select case(lasers(il)%field)
-        case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_ALLOCATE(lasers(il)%v(1:mesh%np_part))
-          lasers(il)%v = M_ZERO
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, coords = xx)
-            call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, rr, M_ZERO, trim(scalar_pot_expression))
-            lasers(il)%v(ip) = pot_re
-          end do
-
-        case(E_FIELD_MAGNETIC)
-          ! \warning: note that for the moment we are ignoring the possibility of a complex
-          ! polarizability vector for the td magnetic-field case.
-          SAFE_ALLOCATE(lasers(il)%a(1:mesh%np_part, 1:mesh%sb%dim))
-          lasers(il)%a = M_ZERO
-          do ip = 1, mesh%np
-            xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-            select case(mesh%sb%dim)
-            case(2)
-              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3)))
-            case(3)
-              lasers(il)%a(ip, :) = (/ xx(2)*real(lasers(il)%pol(3)) - xx(3)*real(lasers(il)%pol(2)), &
-                                xx(3)*real(lasers(il)%pol(1)) - xx(1)*real(lasers(il)%pol(3)), &
-                                xx(1)*real(lasers(il)%pol(2)) - xx(2)*real(lasers(il)%pol(1))  /)
-            case default
-              message(1) = "Magnetic fields only allowed in 2 or 3D."
-              call messages_fatal(1, namespace=namespace)
-            end select
-          end do
-          lasers(il)%a = -M_HALF * lasers(il)%a 
-
-        end select
-
-      end do
-
-      call parse_block_end(blk)
-    end if
-
-    if(mesh%sb%kpoints%use_symmetries) then
-      do iop = 1, symmetries_number(mesh%sb%symm)
-        if(iop == symmetries_identity_index(mesh%sb%symm)) cycle
-        do il = 1, no_l
-          if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
-            message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
-            message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
-            call messages_fatal(2, namespace=namespace)
-          end if
-        end do
-      end do
-    end if
-
-    POP_SUB(laser_init)
-
-  end subroutine laser_init
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine laser_end(no_l, lasers)
-    type(laser_t), pointer :: lasers(:)
-    integer,    intent(in) :: no_l
-
-    integer :: il
-
-    PUSH_SUB(laser_end)
-
-    if(no_l > 0) then
-      do il = 1, no_l
-        call tdf_end(lasers(il)%f)
-        call tdf_end(lasers(il)%phi)
-        select case(lasers(il)%field)
-        case(E_FIELD_SCALAR_POTENTIAL)
-          SAFE_DEALLOCATE_A(lasers(il)%v)
-        case(E_FIELD_MAGNETIC)
-          SAFE_DEALLOCATE_A(lasers(il)%a)
-        end select
-      end do
-      SAFE_DEALLOCATE_P(lasers)
-    end if
-
-    POP_SUB(laser_end)
-  end subroutine laser_end
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   subroutine laser_write_info(lasers, iunit, dt, max_iter)
@@ -791,21 +913,21 @@ contains
     case (E_FIELD_ELECTRIC) ! do nothing
     case (E_FIELD_MAGNETIC)
       if (.not. allocated(aa)) then 
-        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%dim))
         aa = M_ZERO
-        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%dim))
         a_prime = M_ZERO
       end if
       a_prime = M_ZERO
       call laser_vector_potential(laser, der%mesh, a_prime)
       aa = aa + a_prime
       b_prime = M_ZERO
-      call laser_field(laser, b_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, b_prime(1:der%dim))
       bb = bb + b_prime
       magnetic_field = .true.
     case (E_FIELD_VECTOR_POTENTIAL)
       a_field_prime = M_ZERO
-      call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, a_field_prime(1:der%dim))
       a_field = a_field + a_field_prime
       vector_potential = .true.
     end select
@@ -813,7 +935,7 @@ contains
     if (magnetic_field) then
       do ip = 1, der%mesh%np
         hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
-          dot_product(aa(ip, 1:der%mesh%sb%dim), aa(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c**2
+          dot_product(aa(ip, 1:der%dim), aa(ip, 1:der%dim)) * psi(ip, :) / P_c**2
       end do
       SAFE_DEALLOCATE_A(aa)
       SAFE_DEALLOCATE_A(a_prime)
@@ -821,7 +943,7 @@ contains
     if (vector_potential) then
       do ip = 1, der%mesh%np
         hpsi(ip, :) = hpsi(ip, :) + M_HALF * &
-          dot_product(a_field(1:der%mesh%sb%dim), a_field(1:der%mesh%sb%dim))*psi(ip, :) / P_c**2
+          dot_product(a_field(1:der%dim), a_field(1:der%dim))*psi(ip, :) / P_c**2
       end do
     end if
 
@@ -878,21 +1000,21 @@ contains
 
     case (E_FIELD_MAGNETIC)
       if (.not. allocated(aa)) then 
-        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%dim))
         aa = M_ZERO
-        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
+        SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%dim))
         a_prime = M_ZERO
       end if
       a_prime = M_ZERO
       call laser_vector_potential(laser, der%mesh, a_prime)
       aa = aa + a_prime
       b_prime = M_ZERO
-      call laser_field(laser, b_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, b_prime(1:der%dim))
       bb = bb + b_prime
       magnetic_field = .true.
     case (E_FIELD_VECTOR_POTENTIAL)
       a_field_prime = M_ZERO
-      call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
+      call laser_field(laser, a_field_prime(1:der%dim))
       a_field = a_field + a_field_prime
       vector_potential = .true.
     end select
@@ -905,7 +1027,7 @@ contains
     end if
 
     if (magnetic_field) then
-      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:std%dim))
+      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%dim, 1:std%dim))
  
       do idim = 1, std%dim
         call zderivatives_grad(der, psi(:, idim), grad(:, :, idim))
@@ -921,20 +1043,20 @@ contains
       ! convetion.
       if (present(a_static)) then
         do ip = 1, der%mesh%np
-          hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%mesh%sb%dim), a_static(ip, 1:der%mesh%sb%dim)) * psi(ip, :) / P_c
+          hpsi(ip, :) = hpsi(ip, :) - dot_product(aa(ip, 1:der%dim), a_static(ip, 1:der%dim)) * psi(ip, :) / P_c
         end do
       end if
 
       select case (std%ispin)
       case (UNPOLARIZED, SPIN_POLARIZED)
         do ip = 1, der%mesh%np
-          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
+          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(aa(ip, 1:der%dim), grad(ip, 1:der%dim, 1)) / P_c
         end do
       case (SPINORS)
         do ip = 1, der%mesh%np
           do idim = 1, std%dim
             hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
-              dot_product(aa(ip, 1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
+              dot_product(aa(ip, 1:der%dim), grad(ip, 1:der%dim, idim)) / P_c
           end do
         end do
       end select
@@ -967,7 +1089,7 @@ contains
     end if
 
     if (vector_potential) then
-      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:std%dim))
+      SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%dim, 1:std%dim))
 
       do idim = 1, std%dim
         call zderivatives_grad(der, psi(:, idim), grad(:, :, idim))
@@ -976,13 +1098,13 @@ contains
       select case(std%ispin)
       case (UNPOLARIZED, SPIN_POLARIZED)
         do ip = 1, der%mesh%np
-          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, 1)) / P_c
+          hpsi(ip, 1) = hpsi(ip, 1) - M_zI * dot_product(a_field(1:der%dim), grad(ip, 1:der%dim, 1)) / P_c
         end do
       case (SPINORS)
         do ip = 1, der%mesh%np
           do idim = 1, std%dim
             hpsi(ip, idim) = hpsi(ip, idim) - M_zI * &
-              dot_product(a_field(1:der%mesh%sb%dim), grad(ip, 1:der%mesh%sb%dim, idim)) / P_c
+              dot_product(a_field(1:der%dim), grad(ip, 1:der%dim, idim)) / P_c
           end do
         end do
       end select

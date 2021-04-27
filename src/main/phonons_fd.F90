@@ -35,6 +35,7 @@ module phonons_fd_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use electrons_oct_m
@@ -84,7 +85,7 @@ contains
     ! Why not? The symmetries are computed only for the unperturbed geometry,
     ! and are not valid when the atoms are displaced.
     ! FIXME: implement instead use of symmetry over dynamical matrix to make things more efficient.
-    if(sys%st%symmetrize_density .or. sys%gr%sb%kpoints%use_symmetries) then
+    if(sys%st%symmetrize_density .or. sys%kpoints%use_symmetries) then
       message(1) = "Cannot compute vibrational modes by finite differences when symmetry is being used."
       message(2) = "Set KPointsUseSymmetries = no and SymmetrizeDensity = no, for gs run and this run."
       call messages_fatal(2)
@@ -94,7 +95,7 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -104,9 +105,9 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
-    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
+    call vibrations_init(vib, sys%geo, "fd", sys%namespace)
 
     !%Variable Displacement
     !%Type float
@@ -121,7 +122,8 @@ contains
     call parse_variable(sys%namespace, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib, &
+                        sys%space)
 
     call vibrations_output(vib)
     
@@ -154,7 +156,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib, space)
     type(grid_t),     target, intent(inout) :: gr
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -164,6 +166,7 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
     type(vibrations_t),       intent(inout) :: vib
+    type(space_t),            intent(in)    :: space
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: mesh
@@ -174,16 +177,16 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
-    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
-    SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
+    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks, space)
+    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:space%dim))
+    SAFE_ALLOCATE(forces (1:geo%natoms, 1:space%dim))
     forces = M_ZERO
     forces0 = M_ZERO
 
     ! FIXME: why displace in + and -? Could just do + and take difference from undisplaced.
     
     do iatom = 1, geo%natoms
-      do alpha = 1, mesh%sb%dim
+      do alpha = 1, space%dim
         imat = vibrations_get_index(vib, iatom, alpha)
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the +', index2axis(alpha), '-direction.'
@@ -195,12 +198,12 @@ contains
         ! first force
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total (namespace, hm, gr, st)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true.)
+        call energy_calc_total (namespace, space, hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
+          forces0(jatom, 1:space%dim) = geo%atom(jatom)%f(1:space%dim)
         end do
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
@@ -211,18 +214,18 @@ contains
         ! second force
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total(namespace, hm, gr, st)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true.)
+        call energy_calc_total(namespace, space, hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
+          forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:space%dim)
         end do
 
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         do jatom = 1, geo%natoms
-          do beta = 1, gr%sb%dim
+          do beta = 1, space%dim
             jmat = vibrations_get_index(vib, jatom, beta)
             vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &

@@ -382,7 +382,7 @@ contains
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
 
-    INCR(warnings, 1)
+    warnings = warnings + 1
 
     have_to_write = mpi_grp_is_root(mpi_world)
 
@@ -1163,7 +1163,7 @@ contains
   subroutine messages_experimental(name)
     character(len=*), intent(in) :: name
 
-    INCR(experimentals, 1)
+    experimentals = experimentals + 1
 
     if(.not. conf%devel_version) then
       call messages_write(trim(name)//' is an experimental feature.')
@@ -1181,7 +1181,7 @@ contains
       call messages_warning(2)
 
       ! remove this warning from the count
-      INCR(warnings, -1)
+      warnings = warnings - 1
     end if
 
   end subroutine messages_experimental

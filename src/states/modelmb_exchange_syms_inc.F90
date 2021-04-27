@@ -75,7 +75,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     npptype = modelmbparticles%nparticles_per_type(itype)
     do nspindown = 0, floor(npptype/M_TWO)
       nspinup = npptype - nspindown
-      call young_init (young, nspinup, nspindown)
+      call young_init(young, nspinup, nspindown)
       do iyoung = 1, young%nyoung
         dg_combo_ndown(itype, idiagram_combo) = nspindown
         dg_combo_iy(itype, idiagram_combo) = iyoung
@@ -97,9 +97,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     ! skip diagram combinations already used in present degenerate subspace
     if (young_used (idiagram_combo) > 0) cycle
 
-    call X(modelmb_sym_state_1diag)(gr, &
-       modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
-       dg_combo_iy(:, idiagram_combo), &
+    call X(modelmb_sym_state_1diag)(gr, modelmbparticles, dg_combo_ndown(:, idiagram_combo), dg_combo_iy(:, idiagram_combo), &
        antisymwf, sym_ok_alltypes, norm)
    
     ! test the overall symmetrization (no 0.0 norms for present combination of Young diagrams)
@@ -119,17 +117,20 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
   end do ! idiagram_combo
 
   ! if we are projecting on all Fermionic YD, need to renormalize here
-  if (gr%mesh%parallel_in_domains) then
-    call batch_init(wfbatch, 1, 1, 1, fermicompwf)
-    call X(mesh_batch_dotp_self)(gr%mesh, wfbatch, wfdotp, reduce=.true.)
-    norm = TOFLOAT(wfdotp(1,1))
-    call wfbatch%end()
-  else
-    norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
-    norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
-  end if
+  if (symmetries_satisfied) then
+    ! Only normalize if symmetries are satisfied, other wise the norm might be zero.
+    if (gr%mesh%parallel_in_domains) then
+      call batch_init(wfbatch, 1, 1, 1, fermicompwf)
+      call X(mesh_batch_dotp_self)(gr%mesh, wfbatch, wfdotp, reduce=.true.)
+      norm = TOFLOAT(wfdotp(1,1))
+      call wfbatch%end()
+    else
+      norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
+      norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
+    end if
 
-  wf(:) = fermicompwf(:,1,1) / sqrt(norm)
+    wf(:) = fermicompwf(:,1,1) / sqrt(norm)
+  end if
 
   SAFE_DEALLOCATE_A(antisymwf)
   SAFE_DEALLOCATE_A(fermicompwf)
@@ -293,7 +294,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
 
   PUSH_SUB(X(modelmb_sym_updown))
 
-  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
 
   ! first symmetrize over pairs of particles associated in the present
@@ -303,10 +304,10 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     ipart2 = p_of_type_up(idown)
 
 
-    ! each processor needs the full map of points for send and recv
-    do ip = 1, gr%mesh%np_global
+    ! each processor needs the local map of points for send and recv
+    do ip = 1, gr%mesh%np
       ! get present position
-      call index_to_coords(gr%mesh%idx, ip, ix)
+      call mesh_local_index_to_coords(gr%mesh, ip, ix)
   
       ! invert coordinates of ipart1 and ipart2
       ixp = ix
@@ -317,7 +318,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
           ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
       
       ! get position of exchanged point
-      ipp = index_from_coords(gr%mesh%idx, ixp)
+      ipp = mesh_global_index_from_coords(gr%mesh, ixp)
       ASSERT (ipp <= gr%mesh%np_global)
       forward_map_exchange(ip) = ipp
     end do ! ip
@@ -380,7 +381,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
 
   PUSH_SUB(X(modelmb_antisym_1spin))
 
-  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np_global))
+  SAFE_ALLOCATE(forward_map_exchange(1:gr%mesh%np))
   SAFE_ALLOCATE(antisymwf_swap(1:gr%mesh%np, 1, 1))
   SAFE_ALLOCATE(antisymwf_acc(1:gr%mesh%np, 1, 1))
   ! for each permutation of particles of this type
@@ -388,9 +389,9 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   antisymwf_acc = R_TOTYPE(M_ZERO)
   do iperm_1spin = 1, perms_1spin%npermutations
 
-    do ip = 1, gr%mesh%np_global
+    do ip = 1, gr%mesh%np
       ! get present position
-      call index_to_coords(gr%mesh%idx, ip, ix)
+      call mesh_local_index_to_coords(gr%mesh, ip, ix)
       ! initialize coordinates for all particles
       ixp = ix
       ! permute the particles labeled spin up 
@@ -401,7 +402,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
         ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb) ! part1 to 2
       end do
       ! get position of exchanged point
-      forward_map_exchange(ip) = index_from_coords(gr%mesh%idx, ixp)
+      forward_map_exchange(ip) = mesh_global_index_from_coords(gr%mesh, ixp)
     end do ! ip
   
     if (gr%mesh%parallel_in_domains) then

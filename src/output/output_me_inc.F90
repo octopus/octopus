@@ -261,10 +261,11 @@ end subroutine X(output_me_ks_multipoles1d)
 !! It prints the states to the file opened in iunit.
 !!
 ! ---------------------------------------------------------
-subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
+subroutine X(output_me_dipole)(this, fname, namespace, space, st, gr, hm, geo, ik)
   type(output_me_t),   intent(in) :: this
   character(len=*),    intent(in) :: fname
   type(namespace_t),   intent(in) :: namespace
+  type(space_t),       intent(in) :: space
   type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   type(hamiltonian_elec_t), intent(in) :: hm
@@ -282,13 +283,13 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
     call messages_not_implemented("Dipole matrix elements with spinors", namespace=namespace)
   end if
 
-  ispin = states_elec_dim_get_spin_index(st%d, ik)
+  ispin = st%d%get_spin_index(ik)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(gpsii(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(gpsii(1:gr%mesh%np, 1:space%dim, 1:st%d%dim))
   
-  do idir = 1, gr%sb%dim
+  do idir = 1, space%dim
 
     iunit = io_open(trim(fname)//index2axis(idir), namespace, action = 'write')
 
@@ -300,7 +301,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
       call states_elec_get_state(st, gr%mesh, ist, ik, psii)
 
-      if(.not. simul_box_is_periodic(gr%sb)) then
+      if (.not. space%is_periodic()) then
 
         do idim = 1, st%d%dim  
           do ip = 1, gr%mesh%np
@@ -316,7 +317,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         !We need the phase here as the routines for the nonlocal contributions assume that the wavefunctions have a phase.
 #ifdef R_TCOMPLEX
-        if(associated(hm%hm_base%phase)) then
+        if (allocated(hm%hm_base%phase)) then
           call states_elec_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
         end if
 #endif
@@ -347,8 +348,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
-          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, namespace, ik, psii, gpsii, &
-                            associated(hm%hm_base%phase))
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, namespace, ik, psii, gpsii, allocated(hm%hm_base%phase))
         end if
       end if
 
@@ -356,13 +356,13 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         call states_elec_get_state(st, gr%mesh, jst, ik, psij)
 #ifdef R_TCOMPLEX
-        if(associated(hm%hm_base%phase)) then
+        if (allocated(hm%hm_base%phase)) then
           call states_elec_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
         end if
 #endif
 
         dip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
-        if(simul_box_is_periodic(gr%sb)) then
+        if (space%is_periodic()) then
           if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-5)) then  
             dip_element = -dip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else

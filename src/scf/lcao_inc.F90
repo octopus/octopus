@@ -23,7 +23,7 @@
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
 subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
-  type(lcao_t),             intent(in)    :: this
+  type(lcao_t),             intent(inout) :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(in)    :: st
@@ -62,7 +62,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   
-  call submesh_init(sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+  call submesh_init(sphere, geo%space, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
@@ -84,6 +84,8 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   end if
 #endif
   
+  if(sphere%np == 0) this%is_empty(iorb) = .true.
+
   call submesh_end(sphere)
 
 
@@ -110,11 +112,15 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
   integer :: kstart, kend, ispin
   integer :: spin_channels
-  integer :: iunit_h, iunit_s, iunit_e, ierr
-  character(len=256) :: filename
+  integer :: iunit_h, iunit_s, iunit_e
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
 #endif
+  integer :: iatom, jatom
+  FLOAT :: dist2
+  ! Variables used for some commented debug statements
+  !character(len=256) :: filename
+  !integer :: ierr
 
   PUSH_SUB(X(lcao_wf))
   
@@ -139,7 +145,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, kstart:kend))
   SAFE_ALLOCATE(hamilt(1:this%norbs, 1:this%norbs, kstart:kend))
+  hamilt = M_ZERO
   SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:spin_channels))
+  overlap = M_ZERO
+  
 
   ie = 0
   maxmtxel = this%norbs * (this%norbs + 1)/2
@@ -149,53 +158,48 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxmtxel)
 
-  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
-    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-  end if
-
   do n1 = 1, this%norbs
-    
+    iatom = this%atom(n1)
+
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
+      do idim = 1, st%d%dim
+        call boundaries_set(gr%der%boundaries, lcaopsi(:, idim, ispin))
+      end do
 
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-        write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
-          gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
-          ierr, geo = geo)
-      end if
+      ! Uncomment to output all the atomic orbitals used in the LCAO calculation
+      !if (debug%info) then
+      !  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
+      !  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
+      !    gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
+      !    ierr, geo = geo)
+      !end if
     end do
 
     do ik = kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      ispin = st%d%get_spin_index(ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), &
+                        hpsi(:, :, ik), n1, ik, set_bc = .false.)
     end do
 
     do n2 = n1, this%norbs
+      jatom = this%atom(n2)
+      dist2 = sum((geo%atom(iatom)%x(1:MAX_DIM) - geo%atom(jatom)%x(1:MAX_DIM))**2)
+
+      ! Note that here we are making an approximation for the Hamiltonian matrix, 
+      ! as the nonlocal part of the pseudopotential, or any nonlocal operator
+      ! might still couple the two wavefunctions (from atom i and atom j).
+      if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
+      if(this%is_empty(n2)) cycle !This orbital does not contribute to the domain
+
       do ispin = 1, spin_channels
 
         call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .true.)
 
-        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
-        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
-
-        if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
-        end if
-
+        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2, reduce=.false.)
         do ik = kstart, kend
-          if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
-          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
-
-          if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
-          end if
+          if(ispin /= st%d%get_spin_index(ik)) cycle
+          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2, reduce=.false.)
         end do
       end do
       
@@ -208,19 +212,54 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+  SAFE_DEALLOCATE_A(hpsi)
+
+  if(gr%mesh%parallel_in_domains) then
+    call gr%mesh%allreduce(hamilt)
+    call gr%mesh%allreduce(overlap)
+  end if 
+
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    iunit_h = io_open('debug/lcao/hamiltonian', namespace, action='write')
+    iunit_s = io_open('debug/lcao/overlap', namespace, action='write')
+    iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
+    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+  end if
+
+  !Symmetrization and debug
+  do n1 = 1, this%norbs
+    do n2 = n1, this%norbs
+      do ispin = 1, spin_channels
+        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
+         
+        if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
+        end if
+
+        do ik = kstart, kend
+          if(ispin /= st%d%get_spin_index(ik)) cycle
+          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+          if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+          end if
+        end do
+      end do
+    end do
+  end do
+
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
     call io_close(iunit_h)
     call io_close(iunit_s)
   end if
-
-  SAFE_DEALLOCATE_A(hpsi)
 
   SAFE_ALLOCATE(ev(1:this%norbs))
   SAFE_ALLOCATE(zeropsi(1:gr%mesh%np))
   zeropsi = R_TOTYPE(M_ZERO)
 
   do ik = kstart, kend
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
+    ispin = st%d%get_spin_index(ik)
     call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev, preserve_mat=.true.)
 
 #ifdef HAVE_MPI
@@ -242,9 +281,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   SAFE_DEALLOCATE_A(zeropsi)
 
-  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
     do ik =  kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik) 
+      ispin = st%d%get_spin_index(ik) 
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
@@ -269,6 +308,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! Change of basis
   do n2 = 1, this%norbs
+    
+    if(this%is_empty(n2)) cycle !No contribution on this domain
+
     !n2 fixes the spinor dimension, as we have two orbitals per spinor dimensions.
     !Otherwise we use hamilt(n2,n1,ik) twice, which is not what we want to do
     idim = this%ddim(n2)
@@ -276,7 +318,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
-        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+        if(ispin /= st%d%get_spin_index(ik)) cycle
         do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
           call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
           call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
@@ -458,8 +500,8 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     norbs = species_niwfs(geo%atom(iatom)%species)
 
     ! initialize the radial grid
-    call submesh_init(this%sphere(iatom), gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
-    INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
+    call submesh_init(this%sphere(iatom), geo%space, gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    dof = dof + this%sphere(iatom)%np*this%mult*norbs
   end do
 
   if(this%keep_orb) then
@@ -493,20 +535,39 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
-  integer :: iunit_h, iunit_s, iunit_e, ierr
+  integer :: iunit_h, iunit_s, iunit_e
   character(len=256) :: filename
+  ! Variables used for some commented debug statements
+  !integer :: ierr  
 
   PUSH_SUB(X(lcao_alt_wf))
 
   ASSERT(start == 1)
 
-  if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
-    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+  if (debug%info) then
+    if (this%parallel .or. mpi_grp_is_root(mpi_world)) then
+      ! Hamiltonian matrix
+      filename = 'debug/lcao/hamiltonian'
+      if (this%parallel) then
+        write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
+      end if
+      iunit_h = io_open(filename, namespace, action='write')
+      write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+
+      ! Overlap matrix
+      filename = 'debug/lcao/overlap'
+      if (this%parallel) then
+        write(filename, '(a,".",i6.6)') trim(filename), gr%mesh%mpi_grp%rank
+      end if
+      iunit_s = io_open(filename, namespace, action='write')
+      write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+    end if
+
+    if (.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
+      ! Eigenvectors
+      iunit_e = io_open('debug/lcao/eigenvectors', namespace, action='write')
+      write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+    end if
   end if
 
   if(.not. this%parallel) then
@@ -544,11 +605,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
     ! iterate over the kpoints for this spin
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+      if(ispin /= st%d%get_spin_index(ik)) cycle
 
       if(st%d%nik > st%d%spin_channels) then
         write(message(1), '(a)') ' '
-        write(message(2), '(a,i5)') 'LCAO for k-point ', states_elec_dim_get_kpoint_index(st%d, ik)
+        write(message(2), '(a,i5)') 'LCAO for k-point ', st%d%get_kpoint_index(ik)
         write(message(3), '(a)') ' '
         call messages_info(3)
       end if
@@ -558,7 +619,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
       call profiling_in(prof_matrix, TOSTRING(X(LCAO_MATRIX)))
 
-      if(.not. this%parallel .and. mpi_grp_is_root(gr%mesh%mpi_grp)) then
+      if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then
         hamiltonian = R_TOTYPE(M_ZERO)
         overlap = R_TOTYPE(M_ZERO)
       end if
@@ -612,43 +673,46 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
           
           !now, store the result in the matrix
 
-          if (.not. this%parallel) then
-            if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
-              do iorb = 1, norbs
-                n1 = ibasis - 1 + iorb
+          if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then
+            do iorb = 1, norbs
+              n1 = ibasis - 1 + iorb
 
-                if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-                  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
-                    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
-                    ierr, geo = geo)
-                end if
+              ! Uncomment to output all the atomic orbitals used in the LCAO calculation
+              !if (debug%info) then
+              !  write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
+              !  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "debug/lcao", filename, namespace, &
+              !    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
+              !    ierr, geo = geo)
+              !end if
 
-                do jorb = 1, this%norb_atom(jatom)
-                  n2 = jbasis - 1 + jorb
+              do jorb = 1, this%norb_atom(jatom)
+                n2 = jbasis - 1 + jorb
 
-                  if(n2 < n1) cycle ! only upper triangle
+                if(n2 < n1) cycle ! only upper triangle
+
+                if (this%parallel) then
+                  call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, ilbasis, jlbasis, prow, pcol)
+                  if (all((/prow, pcol/) == this%myroc)) then
+                    hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
+                    overlap(ilbasis, jlbasis) = bb(iorb, jorb)
+
+                    if(debug%info) then
+                      write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, &
+                        units_from_atomic(units_out%energy, hamiltonian(ilbasis, jlbasis))
+                      write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(ilbasis, jlbasis)
+                    end if
+                  end if
+
+                else
                   hamiltonian(n1, n2) = aa(iorb, jorb)
                   overlap(n1, n2) = bb(iorb, jorb)
 
-                  if(this%debug) then
+                  if (debug%info) then
                     write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
                     write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
                   end if
-
-                end do
-              end do
-            end if
-          else
-            do iorb = 1, norbs
-              do jorb = 1, this%norb_atom(jatom)
-                call lcao_local_index(this, ibasis - 1 + iorb,  jbasis - 1 + jorb, &
-                  ilbasis, jlbasis, prow, pcol)
-                ! FIXME: debug needed here too
-                if(all((/prow, pcol/) == this%myroc)) then
-                  hamiltonian(ilbasis, jlbasis) = aa(iorb, jorb)
-                  overlap(ilbasis, jlbasis) = bb(iorb, jorb)
                 end if
+
               end do
             end do
           end if
@@ -663,7 +727,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do ! iatom
 
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      if(debug%info .and. (this%parallel .or. mpi_grp_is_root(mpi_world))) then
         call io_close(iunit_h)
         call io_close(iunit_s)
       end if
@@ -882,6 +946,8 @@ contains
 
       SAFE_ALLOCATE(work(1:lwork))
       SAFE_ALLOCATE(iwork(1:liwork))
+      work = M_ZERO
+      iwork = 0
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
@@ -939,13 +1005,13 @@ contains
 
             ! we only count points per column (we have to send the
             ! same number to all points in a row)
-            INCR(send_count(st%node(jbasis) + 1), 1)
+            send_count(st%node(jbasis) + 1) = send_count(st%node(jbasis) + 1) + 1
           end if
 
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
             call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
-            INCR(recv_count(node + 1), 1)
+            recv_count(node + 1) = recv_count(node + 1) + 1
           end if
 
         end do
@@ -970,8 +1036,8 @@ contains
 
               ! get the node id from coordinates
               call MPI_Cart_rank(st%dom_st_mpi_grp%comm, dest, node, mpi_err)
-              INCR(node, 1)
-              INCR(send_count(node), 1)
+              node = node + 1
+              send_count(node) = send_count(node) + 1
               send_buffer(send_count(node), node) = levec(ilbasis, jlbasis)
             end do
 
@@ -980,9 +1046,9 @@ contains
           if(st%node(jbasis) == this%myroc(2)) then
             ! we have to receive
             call MPI_Cart_rank(st%dom_st_mpi_grp%comm, proc, node, mpi_err)
-            INCR(node, 1)
+            node = node + 1
 
-            INCR(recv_count(node), 1)
+            recv_count(node) = recv_count(node) + 1
             ! where do we put it once received?
             recv_pos(1, recv_count(node), node) = ibasis
             recv_pos(2, recv_count(node), node) = jbasis
@@ -1092,7 +1158,7 @@ contains
 #endif
     end if
 
-    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+    if(debug%info .and. .not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, evec(n1, n2)

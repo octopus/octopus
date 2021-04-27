@@ -43,6 +43,7 @@ module pes_flux_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use string_oct_m
@@ -167,14 +168,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, namespace, mesh, st, hm, save_iter, max_iter)
-    type(pes_flux_t),    intent(inout) :: this
-    type(namespace_t),   intent(in)    :: namespace
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(in)    :: st
+  subroutine pes_flux_init(this, namespace, space, mesh, st, hm, save_iter, max_iter)
+    type(pes_flux_t),         intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
+    type(mesh_t),             intent(in)    :: mesh
+    type(states_elec_t),      intent(in)    :: st
     type(hamiltonian_elec_t), intent(in)    :: hm
-    integer,             intent(in)    :: save_iter
-    integer,             intent(in)    :: max_iter
+    integer,                  intent(in)    :: save_iter
+    integer,                  intent(in)    :: max_iter
 
     type(block_t)      :: blk
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
@@ -200,13 +202,13 @@ contains
     kptend = st%d%kpt%end
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
-    pdim   = mesh%sb%periodic_dim
+    pdim   = space%periodic_dim
 
     this%surf_interp = .false.
 
 
-    do il = 1, hm%ep%no_lasers
-      if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
+    do il = 1, hm%ext_lasers%no_lasers
+      if(laser_kind(hm%ext_lasers%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
         call messages_fatal(1, namespace=namespace)
       end if
@@ -236,8 +238,8 @@ contains
     !% at <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = PES_SPHERICAL
-    if(mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
-    if(simul_box_is_periodic(mesh%sb)) default_shape = PES_PLANE
+    if (mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
+    if (space%is_periodic()) default_shape = PES_PLANE
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
@@ -325,7 +327,7 @@ contains
 
       else if (parse_is_defined(namespace, 'PES_Flux_Lsize')) then 
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
-        if (simul_box_is_periodic(mesh%sb)) then        
+        if (space%is_periodic()) then        
           ! the cube sides along the periodic directions are out of the simulation box
           border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
           call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
@@ -536,7 +538,7 @@ contains
 !     end if
 
     ! Generate the momentum space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
+    call pes_flux_reciprocal_mesh_gen(this, namespace, space, mesh%sb, st, hm%kpoints, mesh%mpi_grp%comm)
 
 
     !%Variable PES_Flux_UseSymmetries
@@ -577,7 +579,7 @@ contains
 
     else 
       
-      call pes_flux_integrate_cub_tabulate(this, mesh, st)
+      call pes_flux_integrate_cub_tabulate(this, space, mesh, st, hm%kpoints)
 
     end if
 
@@ -694,11 +696,13 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, namespace, sb, st, comm, post)
+  subroutine pes_flux_reciprocal_mesh_gen(this, namespace, space, sb, st, kpoints, comm, post)
     type(pes_flux_t),    intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
+    type(kpoints_t),     intent(in)    :: kpoints
     integer,             intent(in)    :: comm
     logical, optional,   intent(in)    :: post !< only fill the data needed for postprocessing  
 
@@ -723,7 +727,7 @@ contains
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
     mdim   = sb%dim
-    pdim   = sb%periodic_dim
+    pdim   = space%periodic_dim
 
     this%dim  = mdim
     this%pdim = pdim
@@ -771,7 +775,7 @@ contains
       if (this%kgrid == PES_CARTESIAN) then
         call messages_not_implemented('Cartesian momentum grid with a spherical surface')
       end if
-      if (simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         call messages_not_implemented('Spherical surface flux for periodic systems')
       end if
       if (mdim == 1) then
@@ -780,7 +784,7 @@ contains
     end if
     
     if (this%surf_shape == PES_CUBIC) then
-      if (simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
       end if
     end if
@@ -1088,10 +1092,10 @@ contains
     else 
       ! Cartesian
       
-      dk(1:mdim) = M_ONE/sb%kpoints%nik_axis(1:mdim)
+      dk(1:mdim) = M_ONE/kpoints%nik_axis(1:mdim)
 
       this%arpes_grid = .false.
-      if(simul_box_is_periodic(sb)) then
+      if (space%is_periodic()) then
         !%Variable PES_Flux_ARPES_grid
         !%Type logical
         !%Section Time-Dependent::PhotoElectronSpectrum
@@ -1102,7 +1106,7 @@ contains
         !% By default true when <tt>PES_Flux_Shape = pln</tt> and a <tt>KPointsPath</tt>
         !% is specified.
         !%End
-        arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
+        arpes_grid = kpoints%have_zero_weight_path()
         call parse_variable(namespace, 'PES_Flux_ARPES_grid', arpes_grid, this%arpes_grid)
         call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       end if      
@@ -1112,7 +1116,7 @@ contains
 
       this%ll(:) = 1
 
-      if (kpoints_have_zero_weight_path(sb%kpoints)) then
+      if (kpoints%have_zero_weight_path()) then
 
         if (this%arpes_grid) then
           nkmax = floor(Emax / DE)
@@ -1301,7 +1305,7 @@ contains
 
 
 
-      if (kpoints_have_zero_weight_path(sb%kpoints)) then
+      if (kpoints%have_zero_weight_path()) then
         ! its a special case because we are generating a different (1D) grid for 
         ! each kpoint and then we combine it in postprocessing
 
@@ -1312,7 +1316,7 @@ contains
           ikp = 0
           do ikk = nkmin, nkmax
     
-            kvec(1:mdim) = - kpoints_get_point(sb%kpoints, ikpt)             
+            kvec(1:mdim) = - kpoints%get_point(ikpt)             
             call fill_non_periodic_dimension(this)
         
           end do
@@ -1366,7 +1370,7 @@ contains
               
               do ik1 = 1, this%ll(1)
                 kvec(1) = this%klinear(ik1,1)
-                kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
+                kvec(1:pdim) = matmul(sb%latt%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                 call fill_non_periodic_dimension(this)               
               end do
 
@@ -1375,7 +1379,7 @@ contains
               do ik2 = 1, this%ll(2)
                 do ik1 = 1, this%ll(1)
                   kvec(1:2) = (/this%klinear(ik1,1), this%klinear(ik2,2)/)
-                  kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
+                  kvec(1:pdim) = matmul(sb%latt%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                   call fill_non_periodic_dimension(this)
                   
                   this%Lkpuvz_inv(ik1, ik2, ikk - nkmin + 1) = ikp
@@ -1435,7 +1439,7 @@ contains
         call messages_write("Number of points with E<p//^2/2 = ")
         call messages_write(nkp_out)
         call messages_write(" [of ")
-        call messages_write(this%nkpnts*kpoints_number(sb%kpoints))
+        call messages_write(this%nkpnts*kpoints_number(kpoints))
         call messages_write("]")
         call messages_info()
       end if
@@ -1503,7 +1507,7 @@ contains
           if (ikpt == kptend + 1) then
             kpoint(1:sb%dim) = M_ZERO
           else
-            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
+            kpoint(1:sb%dim) = kpoints%get_point(ikpt)
           end if
 
           do ikp = 1, this%nkpnts
@@ -1558,15 +1562,16 @@ contains
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
-    type(pes_flux_t),    intent(inout)    :: this
-    type(mesh_t),        intent(in)       :: mesh
-    type(states_elec_t), intent(inout)    :: st
-    type(grid_t),        intent(in)       :: gr
-    type(hamiltonian_elec_t), intent(in)  :: hm
-    integer,             intent(in)       :: iter
-    FLOAT,               intent(in)       :: dt
-    logical,             intent(in)       :: stopping
+  subroutine pes_flux_calc(this, space, mesh, st, gr, hm, iter, dt, stopping)
+    type(pes_flux_t),         intent(inout)    :: this
+    type(space_t),            intent(in)       :: space
+    type(mesh_t),             intent(in)       :: mesh
+    type(states_elec_t),      intent(inout)    :: st
+    type(grid_t),             intent(in)       :: gr
+    type(hamiltonian_elec_t), intent(in)       :: hm
+    integer,                  intent(in)       :: iter
+    FLOAT,                    intent(in)       :: dt
+    logical,                  intent(in)       :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
@@ -1598,8 +1603,8 @@ contains
       this%itstep = this%itstep + 1
 
       ! get and save current laser field
-      do il = 1, hm%ep%no_lasers
-        call laser_field(hm%ep%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
+      do il = 1, hm%ext_lasers%no_lasers
+        call laser_field(hm%ext_lasers%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
@@ -1614,7 +1619,7 @@ contains
             
             if(this%surf_shape == PES_PLANE) then
               ! Apply the phase containing kpoint only
-              kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+              kpoint(1:mdim) = hm%kpoints%get_point(st%d%get_kpoint_index(ik))
 
               !$omp parallel do schedule(static)
               do ip = 1, mesh%np_part
@@ -1657,9 +1662,9 @@ contains
                 end if
               end do
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
+                call mesh%allreduce(this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
                 do imdim = 1, mdim
-                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
+                  call mesh%allreduce(this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
                 end do
               end if
             end if
@@ -1672,7 +1677,7 @@ contains
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) then
-          call pes_flux_integrate_cub(this, mesh, st, dt)
+          call pes_flux_integrate_cub(this, space, mesh, st, hm%kpoints, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
         end if
@@ -1692,10 +1697,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_tabulate(this, mesh, st)
+  subroutine pes_flux_integrate_cub_tabulate(this, space, mesh, st, kpoints)
     type(pes_flux_t),    intent(inout) :: this
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
+    type(kpoints_t),     intent(in)    :: kpoints
 
     integer            :: kptst, kptend,  mdim
     integer            :: ik, j1, j2, jvec(1:2)
@@ -1708,7 +1715,7 @@ contains
     
     PUSH_SUB(pes_flux_integrate_cub_tabulate) 
 
-    if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+    if (kpoints%have_zero_weight_path()) then
       kptst     = st%d%kpt%start
       kptend    = st%d%kpt%end
     else
@@ -1717,7 +1724,7 @@ contains
     end if
 
     mdim = mesh%sb%dim
-    pdim = mesh%sb%periodic_dim
+    pdim = space%periodic_dim
 
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
@@ -1727,7 +1734,7 @@ contains
       fdim = mdim - 1
       ! This is not general but should work in the specific case where it is relevant
       !i.e. when the system is semiperiodic in <=2 dimensions
-      Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
+      Jac(1:fdim, 1:fdim) = mesh%sb%latt%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
       jdet = lalg_determinant(fdim, Jac, preserve_mat = .false.)
 
 !   Keep this because is useful for debug but not enough to bother having it polished out        
@@ -1741,7 +1748,7 @@ contains
     
     
     
-    if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+    if (.not. this%use_symmetry .or. kpoints%have_zero_weight_path()) then
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
 
@@ -1802,7 +1809,7 @@ contains
     end if
     
     
-    if(simul_box_is_periodic(mesh%sb)) then
+    if (space%is_periodic()) then
       !Tabulate the Born-von Karman phase 
       SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
 
@@ -1810,18 +1817,18 @@ contains
       vec(:) = M_ZERO
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
-        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+        kpoint(1:mdim) = kpoints%get_point(ik)
+        if (kpoints%have_zero_weight_path()) then
           ik_map = ik
         else
           ik_map = 1
         end if
         do ikp = ikp_start, ikp_end
           vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
-          do j1 = 0, mesh%sb%kpoints%nik_axis(1) - 1
-            do j2 = 0, mesh%sb%kpoints%nik_axis(2) - 1
+          do j1 = 0, kpoints%nik_axis(1) - 1
+            do j2 = 0, kpoints%nik_axis(2) - 1
               jvec(1:2)=(/j1, j2/)
-              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim, 1:2), jvec(1:2))
+              lvec(1:pdim)=matmul(mesh%sb%latt%rlattice(1:pdim, 1:2), jvec(1:2))
               tmp = sum(lvec(1:pdim) * vec(1:pdim))
               this%bvk_phase(ikp, ik) =  this%bvk_phase(ikp,ik) &
                                      +  exp(M_zI * tmp)
@@ -1831,7 +1838,7 @@ contains
 
         end do
       end do
-      this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE / product(mesh%sb%kpoints%nik_axis(1:pdim))
+      this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE / product(kpoints%nik_axis(1:pdim))
     
 
 !   Keep this because is useful for debug but not enough to bother having it polished out        
@@ -1934,10 +1941,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub(this, mesh, st, dt)
+  subroutine pes_flux_integrate_cub(this, space, mesh, st, kpoints, dt)
     type(pes_flux_t),    intent(inout) :: this
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st 
+    type(kpoints_t),     intent(in)    :: kpoints
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -2044,19 +2053,19 @@ contains
 
         do ik = kptst, kptend
 
-          if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+          if (kpoints%have_zero_weight_path()) then
             ik_map = ik 
           else
             ik_map = 1 
           end if
           
-          kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+          kpoint(1:mdim) = kpoints%get_point(ik)
           do ikp = ikp_start, ikp_end
             vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - this%veca(1:mdim, itstep) / P_c)**2)
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
 
-            if(simul_box_is_periodic(mesh%sb)) then
+            if (space%is_periodic()) then
               phase(ikp, ik)  = vphase(ikp, ik) *  this%bvk_phase(ikp,ik)
             else 
               phase(ikp, ik)  = vphase(ikp, ik) 
@@ -2071,7 +2080,7 @@ contains
               
               
               ! calculate the surface integrals
-              if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+              if (.not. this%use_symmetry .or. kpoints%have_zero_weight_path()) then
 
                 do ikp = ikp_start , ikp_end
             
@@ -2144,7 +2153,7 @@ contains
 
     if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
                                       .or. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 )) then
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+      call mesh%allreduce(spctramp_cub)
     end if
 
 
@@ -2248,8 +2257,8 @@ contains
             end do
 
             if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
-              call comm_allreduce(mesh%mpi_grp%comm, s1_act)
-              call comm_allreduce(mesh%mpi_grp%comm, s2_act)
+              call mesh%allreduce(s1_act)
+              call mesh%allreduce(s2_act)
             end if
 
             if(itstep == tdstep_on_node) then
@@ -2323,8 +2332,8 @@ contains
               end do
 
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, integ11_t)
-                call comm_allreduce(mesh%mpi_grp%comm, integ21_t)
+                call mesh%allreduce(integ11_t)
+                call mesh%allreduce(integ21_t)
               end if
 
               ! multiply with Bessel function & sum over all ll
@@ -2369,8 +2378,8 @@ contains
     SAFE_DEALLOCATE_A(phase_act)
 
     if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev)
-      call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
+      call mesh%allreduce(this%conjgphase_prev)
+      call mesh%allreduce(spctramp_sph)
     end if
 
     this%spctramp_sph(:, :, :, 1:this%nk, :) = this%spctramp_sph(:, :, :, 1:this%nk, :) & 
@@ -2508,7 +2517,7 @@ contains
       end do
       
       do isp = 1, this%nsrfcpnts
-        xx(1:mdim) = matmul(mesh%sb%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
+        xx(1:mdim) = matmul(mesh%sb%latt%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
         this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       
@@ -2526,11 +2535,7 @@ contains
       ! get the surface points
       this%nsrfcpnts = 0
       do ip_local = 1, mesh%np
-        if(mesh%parallel_in_domains) then
-          ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
-        else
-          ip_global = ip_local
-        end if
+        ip_global = mesh_local2global(mesh, ip_local)
       
         nsurfaces = 0
 
@@ -2572,8 +2577,8 @@ contains
       end do
 
       if(mesh%parallel_in_domains) then
-        call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
-        call comm_allreduce(mesh%mpi_grp%comm, which_surface)
+        call mesh%allreduce(this%nsrfcpnts)
+        call mesh%allreduce(which_surface)
       end if
 
       SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
@@ -2644,7 +2649,7 @@ contains
         RSmax = M_ZERO
         do isp = isp_start, isp_end
           !measure in reduced coordinates 
-          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%klattice_primitive(1:mdim, 1:mdim))
+          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%latt%klattice_primitive(1:mdim, 1:mdim))
           idim = 1
           do idir = 1, mdim 
             if (idir == n_dir ) cycle
