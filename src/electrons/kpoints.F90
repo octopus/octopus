@@ -539,7 +539,7 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis, this%full%nshifts, this%full%shifts, this%full%red_point)
 
       do ik = 1, this%full%npoints
-        call kpoints_to_absolute(latt%klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
+        call kpoints_to_absolute(latt, this%full%red_point(:, ik), this%full%point(:, ik))
       end do
 
       this%full%weight = M_ONE / this%full%npoints
@@ -600,11 +600,11 @@ contains
       end if
      
       do ik = 1, this%reduced%npoints
-        call kpoints_to_absolute(latt%klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
+        call kpoints_to_absolute(latt, this%reduced%red_point(:, ik), this%reduced%point(:, ik))
       end do
 
-      call kpoints_fold_to_1BZ(this%full, latt%klattice)
-      call kpoints_fold_to_1BZ(this%reduced, latt%klattice)
+      call kpoints_fold_to_1BZ(this%full, latt)
+      call kpoints_fold_to_1BZ(this%reduced, latt)
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -692,7 +692,7 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, latt%klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+      call kpoints_path_generate(dim, latt, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
         this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
@@ -710,10 +710,10 @@ contains
 
       !The points have been generated in absolute coordinates
       do ik = 1, path_kpoints_grid%npoints
-        call kpoints_to_reduced(latt%rlattice, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik), dim)
+        call kpoints_to_reduced(latt, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik))
       end do
 
-      call kpoints_fold_to_1BZ(path_kpoints_grid, latt%klattice)
+      call kpoints_fold_to_1BZ(path_kpoints_grid, latt)
 
       !We need to copy the arrays containing the information on the symmetries
       !Before calling kpoints_grid_addto
@@ -823,7 +823,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
-          call kpoints_to_absolute(latt%klattice, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik), dim)
+          call kpoints_to_absolute(latt, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik))
         end do
       else
         do ik = 1, user_kpoints_grid%npoints
@@ -832,7 +832,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(latt%rlattice, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik), dim)
+          call kpoints_to_reduced(latt, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik))
         end do
       end if
       call parse_block_end(blk)
@@ -872,7 +872,7 @@ contains
       ! for the moment we do not apply symmetries to user kpoints
 !       call kpoints_grid_copy(this%full, this%reduced)
 
-      call kpoints_fold_to_1BZ(user_kpoints_grid, latt%klattice)
+      call kpoints_fold_to_1BZ(user_kpoints_grid, latt)
 
       call kpoints_grid_addto(this%full   ,  user_kpoints_grid)
       call kpoints_grid_addto(this%reduced,  user_kpoints_grid)
@@ -908,40 +908,27 @@ contains
   end subroutine kpoints_end
 
   ! ---------------------------------------------------------
-  subroutine kpoints_to_absolute(klattice, kin, kout, dim)
-    FLOAT,   intent(in)  :: klattice(:,:)
+  subroutine kpoints_to_absolute(latt, kin, kout)
+    type(lattice_vectors_t), intent(in)  :: latt
     FLOAT,   intent(in)  :: kin(:)
     FLOAT,   intent(out) :: kout(:)
-    integer, intent(in)  :: dim
-
-    integer :: ii
 
     PUSH_SUB(kpoints_to_absolute)
 
-    kout(1:dim) = M_ZERO
-    do ii = 1, dim
-      kout(1:dim) = kout(1:dim) + kin(ii) * klattice(1:dim, ii)
-    end do
+    kout = matmul(latt%klattice, kin)
 
     POP_SUB(kpoints_to_absolute)
   end subroutine kpoints_to_absolute
 
   ! ---------------------------------------------------------
-  subroutine kpoints_to_reduced(rlattice, kin, kout, dim)
-    FLOAT,   intent(in)  :: rlattice(:,:)
-    FLOAT,   intent(in)  :: kin(:)
-    FLOAT,   intent(out) :: kout(:)
-    integer, intent(in)  :: dim
-
-    integer :: ii
+  subroutine kpoints_to_reduced(latt, kin, kout)
+    type(lattice_vectors_t), intent(in)  :: latt
+    FLOAT,                   intent(in)  :: kin(:)
+    FLOAT,                   intent(out) :: kout(:)
 
     PUSH_SUB(kpoints_to_reduced)
 
-    kout(1:dim) = M_ZERO
-    do ii = 1, dim
-      kout(1:dim) = kout(1:dim) + kin(ii) * rlattice(ii, 1:dim)
-    end do
-    kout(1:dim) = kout(1:dim) / (M_TWO * M_PI)
+    kout = matmul(kin, latt%rlattice) / (M_TWO*M_PI)
 
     POP_SUB(kpoints_to_reduced)
   end subroutine kpoints_to_reduced
@@ -1132,15 +1119,15 @@ contains
 
   ! --------------------------------------------------------------------------------------------  
   !> Generate the k-point along a path
-  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, kpoints, coord)
-    integer,           intent(in)  :: dim
-    FLOAT,             intent(in)  :: klattice(:,:)
-    integer,           intent(in)  :: nkpoints
-    integer,           intent(in)  :: nsegments
-    integer,           intent(in)  :: resolution(:)
-    FLOAT,             intent(in)  :: highsympoints(1:dim,1:nsegments)
-    FLOAT,             intent(out) :: kpoints(1:dim, 1:nkpoints) 
-    FLOAT,             intent(out) :: coord(1:nkpoints)
+  subroutine kpoints_path_generate(dim, latt, nkpoints, nsegments, resolution, highsympoints, kpoints, coord)
+    integer,                 intent(in)  :: dim
+    type(lattice_vectors_t), intent(in)  :: latt
+    integer,                 intent(in)  :: nkpoints
+    integer,                 intent(in)  :: nsegments
+    integer,                 intent(in)  :: resolution(:)
+    FLOAT,                   intent(in)  :: highsympoints(1:dim,1:nsegments)
+    FLOAT,                   intent(out) :: kpoints(1:dim, 1:nkpoints) 
+    FLOAT,                   intent(out) :: coord(1:nkpoints)
 
     integer :: is, ik, kpt_ind
     FLOAT   :: length, total_length, accumulated_length
@@ -1152,8 +1139,8 @@ contains
     !We first compute the total length of the k-point path
     do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
-      call kpoints_to_absolute(klattice, highsympoints(:,is), kpt1, dim)
-      call kpoints_to_absolute(klattice, highsympoints(:,is+1), kpt2, dim)
+      call kpoints_to_absolute(latt, highsympoints(:,is), kpt1)
+      call kpoints_to_absolute(latt, highsympoints(:,is+1), kpt2)
      
       vec = kpt2 - kpt1
       length = norm2(vec)
@@ -1165,8 +1152,8 @@ contains
     !Now we generate the points
     do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
-      call kpoints_to_absolute(klattice, highsympoints(:, is), kpt1, dim)
-      call kpoints_to_absolute(klattice, highsympoints(:, is+1), kpt2, dim)
+      call kpoints_to_absolute(latt, highsympoints(:, is), kpt1)
+      call kpoints_to_absolute(latt, highsympoints(:, is+1), kpt2)
 
       vec = kpt2 - kpt1
       length = norm2(vec)
@@ -1181,7 +1168,7 @@ contains
     end do
     !We add the last point
     kpt_ind = kpt_ind +1
-    call kpoints_to_absolute(klattice, highsympoints(:,nsegments+1), kpt1, dim)
+    call kpoints_to_absolute(latt, highsympoints(:,nsegments+1), kpt1)
     coord(kpt_ind) = accumulated_length
     kpoints(:, kpt_ind) =  kpt1
 
@@ -1308,9 +1295,9 @@ contains
 
 
   ! --------------------------------------------------------------------------------------------
-  subroutine kpoints_fold_to_1BZ(grid, klattice)
+  subroutine kpoints_fold_to_1BZ(grid, latt)
     type(kpoints_grid_t),    intent(inout) :: grid
-    FLOAT,                   intent(in)    :: klattice(:,:)
+    type(lattice_vectors_t), intent(in)    :: latt
 
     integer :: ig1, ig2, ik
     FLOAT :: Gvec(grid%dim, 3**grid%dim), Gvec_cart(grid%dim, 3**grid%dim)
@@ -1327,7 +1314,7 @@ contains
     end do
 
     do ig1 = 1, 3**grid%dim
-      call kpoints_to_absolute(klattice, Gvec(:,ig1), Gvec_cart(:,ig1), grid%dim)
+      call kpoints_to_absolute(latt, Gvec(:,ig1), Gvec_cart(:,ig1))
     end do
 
     do ik = 1, grid%npoints
@@ -1343,7 +1330,7 @@ contains
         end if
       end do
       kpt = grid%red_point(:,ik) - Gvec(:,ig2)
-      call kpoints_to_absolute(klattice, kpt, grid%point1BZ(:, ik), grid%dim) 
+      call kpoints_to_absolute(latt, kpt, grid%point1BZ(:, ik)) 
     end do
 
     POP_SUB(kpoints_fold_to_1BZ)

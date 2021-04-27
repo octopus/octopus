@@ -584,7 +584,7 @@ contains
             do iqz = -kick%nqmult(3), kick%nqmult(3)
               iq = iq + 1
               qtemp(1:3) = (/iqx, iqy, iqz/)
-              call kpoints_to_absolute(sb%latt%klattice, qtemp, kick%qvector(1:3, iq), 3)
+              call kpoints_to_absolute(sb%latt, qtemp, kick%qvector(1:3, iq))
 
               !Checking symmetries for all G vectors
               if(kpoints%use_symmetries) then
@@ -1151,9 +1151,9 @@ contains
 
         else ! Multi-q kick
 
-           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
-           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
-           call kpoints_to_absolute(mesh%sb%latt%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
+           call kpoints_to_absolute(mesh%sb%latt, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1))
+           call kpoints_to_absolute(mesh%sb%latt, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2))
+           call kpoints_to_absolute(mesh%sb%latt, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3))
 
            kick_function = M_ONE
            do ip = 1, mesh%np

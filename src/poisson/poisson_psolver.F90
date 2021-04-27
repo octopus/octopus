@@ -280,7 +280,7 @@ contains
     FLOAT,                   intent(in)    :: qq_in(1:MAX_DIM)
 
     FLOAT :: alpha, beta, gamma
-    FLOAT :: qq_abs(1:MAX_DIM), qq(1:MAX_DIM)
+    FLOAT :: qq_abs(1:mesh%sb%dim), qq(1:mesh%sb%dim)
     FLOAT :: modq2
     integer :: idim
 
@@ -309,8 +309,9 @@ contains
     do idim = 1, mesh%sb%periodic_dim
       qq(idim) = qq_in(idim) - anint(qq_in(idim) + M_HALF*CNST(1e-8))
     end do
-    call kpoints_to_absolute(mesh%sb%latt%klattice, qq, qq_abs, mesh%sb%periodic_dim)
-    modq2 = sum(qq_abs(1:mesh%sb%periodic_dim)**2)
+    qq(mesh%sb%periodic_dim + 1:mesh%sb%dim) = M_ZERO
+    call kpoints_to_absolute(mesh%sb%latt, qq, qq_abs)
+    modq2 = norm2(qq_abs)
     if (modq2 > M_EPSILON) then
       this%offset = M_ONE/modq2
     else
