@@ -1,4 +1,4 @@
-!! Copyright (C) 2020 F. Bonafé, H. Appel
+!! Copyright (C) 2020 F. Bonafé, H. Appel, R. Jestädt
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,9 +21,6 @@
 module system_linear_medium_oct_m
   use algorithm_oct_m
   use clock_oct_m
-#ifdef HAVE_DFTBPLUS
-  use dftbplus
-#endif
   use geometry_oct_m
   use global_oct_m
   use interaction_oct_m
