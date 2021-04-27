@@ -85,15 +85,15 @@ module kpoints_oct_m
     integer              :: nik_skip = 0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer                       :: nik_axis(MAX_DIM) = 0 !< number of MP divisions
-    integer                       :: niq_axis(MAX_DIM) = 0   !< number of MP divisions
+    integer, allocatable          :: nik_axis(:)         !< number of MP divisions
+    integer, allocatable          :: niq_axis(:)         !< number of MP divisions
     integer, allocatable, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, allocatable, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
     FLOAT, allocatable            :: coord_along_path(:)
 
-    integer              :: downsampling(MAX_DIM) = 1 !< downsampling coefficients
+    integer, allocatable          :: downsampling(:)     !< downsampling coefficients
 
     type(symmetries_t), pointer :: symm => null()
 
@@ -233,9 +233,11 @@ contains
 
     PUSH_SUB(kpoints_init)
 
-    ASSERT(dim <= MAX_DIM)
+    SAFE_ALLOCATE(this%nik_axis(1:dim))
+    SAFE_ALLOCATE(this%niq_axis(1:dim))
+    SAFE_ALLOCATE(this%downsampling(1:dim))
 
-    this%nik_axis(1:MAX_DIM) = 1
+    this%nik_axis = 1
 
     only_gamma = (periodic_dim == 0)
 
@@ -426,15 +428,15 @@ contains
       if(.not. gamma_only_) &
         gamma_only_ = (parse_block(namespace, 'KPointsGrid', blk) /= 0)
 
-      this%nik_axis(1:MAX_DIM) = 1
+      this%nik_axis = 1
 
       if(.not. gamma_only_) then
         nshifts = max(parse_block_n(blk)-1,1) 
       else
         nshifts = 1
       end if
-      SAFE_ALLOCATE(shifts(1:MAX_DIM,1:nshifts))
-      shifts(1:MAX_DIM,1:nshifts) = M_ZERO
+      SAFE_ALLOCATE(shifts(1:dim,1:nshifts))
+      shifts = M_ZERO
 
       if(.not. gamma_only_) then
         ncols = parse_block_cols(blk, 0)
@@ -451,7 +453,7 @@ contains
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
 
-        if (any(this%nik_axis(1:dim) < 1)) then
+        if (any(this%nik_axis < 1)) then
           message(1) = 'Input: KPointsGrid is not valid.'
           call messages_fatal(1, namespace=namespace)
         end if
@@ -478,7 +480,7 @@ contains
 
         call parse_block_end(blk)
       else
-        shifts(1:dim, 1) = -M_HALF                                                                                                                       
+        shifts(:, 1) = -M_HALF
       end if
 
       !%Variable QPointsGrid
@@ -513,15 +515,14 @@ contains
             call parse_block_integer(blk, 0, ii - 1, this%niq_axis(ii))
           end do
 
-          if (any(this%nik_axis(1:dim)/this%niq_axis(1:dim) &
-                  /= nint(this%nik_axis(1:dim)/real(this%niq_axis(1:dim))))) then
+          if (any(this%nik_axis/this%niq_axis /= nint(this%nik_axis/real(this%niq_axis)))) then
             message(1) = 'Input: QPointsGrid is not compatible with the KPointsGrid.'
             call messages_fatal(1, namespace=namespace)
           end if
 
-          this%downsampling(1:dim) = this%nik_axis(1:dim)/this%niq_axis(1:dim)
+          this%downsampling = this%nik_axis/this%niq_axis
 
-          if(any(this%downsampling(1:dim)/=1)) then
+          if (any(this%downsampling /= 1)) then
             call messages_not_implemented('QPointsGrid together with k-point symmetries', namespace=namespace)
           end if
 
@@ -529,18 +530,13 @@ contains
         end if
       end if 
 
-      call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
+      call kpoints_grid_init(dim, this%full, product(this%nik_axis)*nshifts, nshifts)
 
       !We move the k-points into this%shifts
-      do is = 1, nshifts
-        do ii = 1, dim
-          this%full%shifts(ii,is) = shifts(ii,is)
-        end do
-      end do
+      this%full%shifts = shifts
       SAFE_DEALLOCATE_A(shifts)
 
-      call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%full%nshifts, &
-               this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
+      call kpoints_grid_generate(dim, this%nik_axis, this%full%nshifts, this%full%shifts, this%full%red_point)
 
       do ik = 1, this%full%npoints
         call kpoints_to_absolute(latt%klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
@@ -842,7 +838,7 @@ contains
       call parse_block_end(blk)
 
       this%nik_skip = 0
-      if(any(user_kpoints_grid%weight(:) < M_EPSILON)) then
+      if (any(user_kpoints_grid%weight < M_EPSILON)) then
         call messages_experimental('K-points with zero weight')
         message(1) = "Found k-points with zero weight. They are excluded from density calculation"
         call messages_warning(1, namespace=namespace)
@@ -866,7 +862,7 @@ contains
         end do
       end if
       ! renormalize weights
-      weight_sum = sum(user_kpoints_grid%weight(1:user_kpoints_grid%npoints))
+      weight_sum = sum(user_kpoints_grid%weight)
       if(weight_sum < M_EPSILON) then
         message(1) = "k-point weights must sum to a positive number."
         call messages_fatal(1, namespace=namespace)
@@ -901,6 +897,9 @@ contains
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
+    SAFE_DEALLOCATE_A(this%nik_axis)
+    SAFE_DEALLOCATE_A(this%niq_axis)
+    SAFE_DEALLOCATE_A(this%downsampling)
     SAFE_DEALLOCATE_A(this%symmetry_ops)
     SAFE_DEALLOCATE_A(this%num_symmetry_ops)
     SAFE_DEALLOCATE_A(this%coord_along_path) 
@@ -916,7 +915,7 @@ contains
     integer, intent(in)  :: dim
 
     integer :: ii
-    
+
     PUSH_SUB(kpoints_to_absolute)
 
     kout(1:dim) = M_ZERO
@@ -965,7 +964,12 @@ contains
     kout%use_symmetries = kin%use_symmetries
     kout%use_time_reversal = kin%use_time_reversal
 
-    kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
+    SAFE_ALLOCATE(kout%nik_axis(1:kin%full%dim))
+    SAFE_ALLOCATE(kout%niq_axis(1:kin%full%dim))
+    SAFE_ALLOCATE(kout%downsampling(1:kin%full%dim))
+    kout%nik_axis = kin%nik_axis
+    kout%niq_axis = kin%niq_axis
+    kout%downsampling = kin%downsampling
 
     if (allocated(kin%coord_along_path)) then
       SAFE_ALLOCATE(kout%coord_along_path(1:kin%full%npoints))
@@ -1028,25 +1032,23 @@ contains
   !! shift(i) and sz shift the grid of integration points from the origin.
   subroutine kpoints_grid_generate(dim, naxis, nshifts, shift, kpoints, lk123)  
     integer,           intent(in)  :: dim
-    integer,           intent(in)  :: naxis(:)
+    integer,           intent(in)  :: naxis(1:dim)
     integer,           intent(in)  :: nshifts
     FLOAT,             intent(in)  :: shift(:,:)
     FLOAT,             intent(out) :: kpoints(:, :)
     integer, optional, intent(out) :: lk123(:,:)      !< lk123(1:nkpt,1:3): maps ik to a triplet of indices on a cube
                                                       !< running from 0 to naxis(1:3).
   
-    FLOAT :: dx(1:MAX_DIM), maxcoord
-    integer :: ii, jj, divisor, ik, idir, npoints, is
-    integer, allocatable :: ix(:), lk123_(:,:),idx(:)
+    FLOAT :: dx(dim), maxcoord
+    integer :: ii, jj, divisor, ik, idir, npoints, is, ix(dim)
+    integer, allocatable :: lk123_(:,:), idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
 
     PUSH_SUB(kpoints_grid_generate)
    
-    dx(1:dim) = M_ONE/(M_TWO*naxis(1:dim))
+    dx = M_ONE/(M_TWO*naxis)
 
-    npoints = product(naxis(1:dim))
-
-    SAFE_ALLOCATE(ix(1:dim))
+    npoints = product(naxis)
     
     if (present(lk123)) then
       SAFE_ALLOCATE(lk123_(1:npoints*nshifts,1:dim))
@@ -1074,13 +1076,11 @@ contains
 
         end do
         if (present(lk123)) then
-          lk123_(ik, 1:dim) = ix(1:dim)
+          lk123_(ik, :) = ix
           idx(ik) = ik
         end if
       end do
     end do
-
-    SAFE_DEALLOCATE_A(ix)    
 
     ! sort the k-points
 
@@ -1089,7 +1089,7 @@ contains
     SAFE_ALLOCATE(coords(1:dim, 1:npoints*nshifts))
     
     do ik = 1, npoints*nshifts
-      shell(ik) = sum((kpoints(1:dim, ik)/dx(1:dim))**2)
+      shell(ik) = sum((kpoints(:, ik)/dx)**2)
       do idir = 1, dim
         coords(idir, ik) = kpoints(idir, ik)
         if(coords(idir, ik) < CNST(0.0)) coords(idir, ik) = coords(idir, ik) + CNST(1.0)
@@ -1097,14 +1097,14 @@ contains
       end do
     end do
 
-    nrm(1:npoints*nshifts) = M_ZERO
+    nrm = M_ZERO
 
-    maxcoord = CNST(1.0)
+    maxcoord = M_ONE
     do idir = 1, dim
       do ik = 1, npoints*nshifts
         nrm(ik) = nrm(ik) + coords(idir, ik)*maxcoord
       end do
-      maxcoord = maxcoord*max(CNST(1.0), maxval(coords(idir, 1:npoints*nshifts)))
+      maxcoord = maxcoord*max(M_ONE, maxval(coords(idir, 1:npoints*nshifts)))
     end do
 
     do ik = 1, npoints*nshifts
@@ -1114,7 +1114,7 @@ contains
     if (present(lk123)) then
       call sort(nrm, idx)      
       do ik = 1, npoints*nshifts
-        lk123(ik,1:dim) = lk123_(idx(ik),1:dim)
+        lk123(ik,:) = lk123_(idx(ik),:)
       end do
       SAFE_DEALLOCATE_A(lk123_)
       SAFE_DEALLOCATE_A(idx)
@@ -1138,13 +1138,13 @@ contains
     integer,           intent(in)  :: nkpoints
     integer,           intent(in)  :: nsegments
     integer,           intent(in)  :: resolution(:)
-    FLOAT,             intent(in)  :: highsympoints(:,:)
-    FLOAT,             intent(out) :: kpoints(:, :) 
-    FLOAT,             intent(out) :: coord(:)
+    FLOAT,             intent(in)  :: highsympoints(1:dim,1:nsegments)
+    FLOAT,             intent(out) :: kpoints(1:dim, 1:nkpoints) 
+    FLOAT,             intent(out) :: coord(1:nkpoints)
 
     integer :: is, ik, kpt_ind
     FLOAT   :: length, total_length, accumulated_length
-    FLOAT   :: kpt1(1:MAX_DIM), kpt2(1:MAX_DIM), vec(1:MAX_DIM)
+    FLOAT   :: kpt1(dim), kpt2(dim), vec(dim)
 
     PUSH_SUB(kpoints_path_generate)
 
@@ -1152,11 +1152,11 @@ contains
     !We first compute the total length of the k-point path
     do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
-      call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
-      call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
+      call kpoints_to_absolute(klattice, highsympoints(:,is), kpt1, dim)
+      call kpoints_to_absolute(klattice, highsympoints(:,is+1), kpt2, dim)
      
-      vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
-      length = sqrt(sum(vec(1:dim)**2)) 
+      vec = kpt2 - kpt1
+      length = norm2(vec)
       if(resolution(is) > 0) total_length = total_length + length
     end do 
 
@@ -1165,28 +1165,28 @@ contains
     !Now we generate the points
     do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
-      call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
-      call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
+      call kpoints_to_absolute(klattice, highsympoints(:, is), kpt1, dim)
+      call kpoints_to_absolute(klattice, highsympoints(:, is+1), kpt2, dim)
 
-      vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
-      length = sqrt(sum(vec(1:dim)**2))
-      vec(1:dim) = vec(1:dim)/length
+      vec = kpt2 - kpt1
+      length = norm2(vec)
+      vec = vec/length
 
       do ik = 1, resolution(is)
         kpt_ind = kpt_ind +1
         coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
-        kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
+        kpoints(:, kpt_ind) = kpt1 + (ik-1)*length/resolution(is)*vec
       end do
       if(resolution(is) > 0) accumulated_length = accumulated_length + length
     end do
     !We add the last point
     kpt_ind = kpt_ind +1
-    call kpoints_to_absolute(klattice, highsympoints(1:dim,nsegments+1), kpt1(:), dim)
+    call kpoints_to_absolute(klattice, highsympoints(:,nsegments+1), kpt1, dim)
     coord(kpt_ind) = accumulated_length
-    kpoints(1:dim, kpt_ind) =  kpt1(1:dim)
+    kpoints(:, kpt_ind) =  kpt1
 
     !The length of the total path is arbitrarily put to 1
-     coord(1:nkpoints) = coord(1:nkpoints)/total_length
+    coord = coord/total_length
 
     POP_SUB(kpoints_path_generate)
   end subroutine kpoints_path_generate
@@ -1198,17 +1198,16 @@ contains
     logical,            intent(in)    :: time_reversal
     integer,            intent(inout) :: nkpoints
     integer,            intent(in)    :: dim
-    FLOAT,              intent(inout) :: kpoints(:, :)
-    FLOAT,              intent(out)   :: weights(:)
+    FLOAT,              intent(inout) :: kpoints(1:dim,1:nkpoints)
+    FLOAT,              intent(out)   :: weights(1:nkpoints)
     integer,            intent(out)   :: symm_ops(:, :)
     integer,            intent(out)   :: num_symm_ops(:)
 
     integer :: nreduced
     FLOAT, allocatable :: reduced(:, :)
     
-    FLOAT :: dw
-    integer ik, iop, ik2, idim
-    FLOAT :: tran(MAX_DIM), diff(MAX_DIM)
+    integer ik, iop, ik2
+    FLOAT :: tran(dim), diff(dim)
     FLOAT, allocatable :: kweight(:)
 
     FLOAT :: PREC
@@ -1228,10 +1227,7 @@ contains
     SAFE_ALLOCATE(kweight(1:nkpoints))
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
-    dw = M_ONE / nkpoints
-    do ik=1, nkpoints
-      kweight(ik) = dw
-    end do
+    kweight = M_ONE / nkpoints
 
     nreduced = 0
 
@@ -1244,10 +1240,10 @@ contains
       ! new irreducible point
       ! has reduced non-zero weight      
       nreduced = nreduced + 1
-      reduced(1:dim, nreduced) = kpoints(1:dim, ik)
+      reduced(:, nreduced) = kpoints(:, ik)
      
       !No need to check Gamma
-      if(maxval(abs(kpoints(1:dim, ik))) < M_EPSILON) cycle
+      if (maxval(abs(kpoints(:, ik))) < M_EPSILON) cycle
 
       if (ik == nkpoints) cycle
       
@@ -1258,22 +1254,18 @@ contains
 
         call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
         !We remove potential umklapp
-        do idim = 1, dim
-          tran(idim)=tran(idim)-anint(tran(idim)+M_HALF*PREC)
-        end do           
+        tran = tran - anint(tran + M_HALF*PREC)
 
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
           if (kweight(ik2) < PREC) cycle
 
           if(.not. iop==symmetries_identity_index(symm)) then ! no need to check for the identity
-            diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
+            diff = tran - kpoints(:, ik2)
+            diff = diff - anint(diff)
 
             ! both the transformed rk ...
-            if(sum(abs(diff(1:dim))) < PREC ) then 
+            if (sum(abs(diff)) < PREC ) then 
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO 
               weights(nreduced) = kweight(ik)
@@ -1284,13 +1276,11 @@ contains
           end if
 
           if (time_reversal) then
-            diff(1:dim) = tran(1:dim)+kpoints(1:dim, ik2)
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
+            diff = tran + kpoints(:, ik2)
+            diff = diff - anint(diff)
 
             ! and its inverse
-            if(sum(abs(diff(1:dim))) < PREC ) then
+            if (sum(abs(diff)) < PREC) then
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
@@ -1303,11 +1293,11 @@ contains
       end do
     end do
     
-    ASSERT(sum(weights(1:nreduced))-M_ONE<PREC) 
+    ASSERT(sum(weights(1:nreduced)) - M_ONE < PREC)
 
     nkpoints = nreduced
     do ik = 1, nreduced
-      kpoints(1:dim, ik) = reduced(1:dim, ik)
+      kpoints(:, ik) = reduced(:, ik)
     end do
 
     SAFE_DEALLOCATE_A(kweight)
@@ -1322,9 +1312,9 @@ contains
     type(kpoints_grid_t),    intent(inout) :: grid
     FLOAT,                   intent(in)    :: klattice(:,:)
 
-    integer :: ig1, ig2, ik, ii
-    FLOAT :: Gvec(MAX_DIM,3**grid%dim), Gvec_cart(MAX_DIM,3**grid%dim)
-    FLOAT :: vec(1:MAX_DIM), kpt(1:MAX_DIM)
+    integer :: ig1, ig2, ik
+    FLOAT :: Gvec(grid%dim, 3**grid%dim), Gvec_cart(grid%dim, 3**grid%dim)
+    FLOAT :: vec(grid%dim), kpt(grid%dim)
     FLOAT :: d, dmin
 
     PUSH_SUB(kpoints_fold_to_1BZ)
@@ -1337,27 +1327,23 @@ contains
     end do
 
     do ig1 = 1, 3**grid%dim
-      call kpoints_to_absolute(klattice, Gvec(1:grid%dim,ig1), Gvec_cart(1:grid%dim,ig1), grid%dim)
+      call kpoints_to_absolute(klattice, Gvec(:,ig1), Gvec_cart(:,ig1), grid%dim)
     end do
 
     do ik = 1, grid%npoints
 
       dmin = CNST(1e10)
       do ig1 = 1, 3**grid%dim
-        do ii = 1, grid%dim
-          vec(ii) = Gvec_cart(ii,ig1) - grid%point(ii,ik)
-        end do
-        d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
+        vec = Gvec_cart(:,ig1) - grid%point(:,ik)
+        d = real(sum(vec**2),4) !Conversion to simple precision
                                             !To avoid numerical error problems
         if (d < dmin) then
           dmin = d
           ig2 = ig1
         end if
       end do
-      do ii = 1, grid%dim
-        kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
-      end do
-      call kpoints_to_absolute(klattice, kpt(1:grid%dim), grid%point1BZ(1:grid%dim, ik), grid%dim) 
+      kpt = grid%red_point(:,ik) - Gvec(:,ig2)
+      call kpoints_to_absolute(klattice, kpt, grid%point1BZ(:, ik), grid%dim) 
     end do
 
     POP_SUB(kpoints_fold_to_1BZ)
@@ -1577,8 +1563,8 @@ contains
     type(namespace_t),    intent(in) :: namespace
     
     integer, allocatable :: kmap(:)
-    FLOAT :: kpt(1:MAX_DIM), diff(1:MAX_DIM)
-    integer :: nk, ik, ik2, iop, idim
+    FLOAT :: kpt(dim), diff(dim)
+    integer :: nk, ik, ik2, iop
     type(distributed_t) :: kpt_dist
 
     PUSH_SUB(kpoints_check_symmetries)
@@ -1605,34 +1591,28 @@ contains
 
       do ik = kpt_dist%start, kpt_dist%end
         !We apply the symmetry
-        call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
+        call symmetries_apply_kpoint_red(symm, iop, grid%red_point(:, ik), kpt)
         !We remove potential umklapp
-        do idim = 1, dim
-          kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
-        end do
+        kpt = kpt - anint(kpt + M_HALF*SYMPREC)
 
         ! remove (mark) k-points which already have a symmetric point
         do ik2 = 1, nk
 
           if(iop /= symmetries_identity_index(symm)) then
-            diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
+            diff = kpt - grid%red_point(:, ik2)  
+            diff = diff - anint(diff)
             !We found point corresponding to the symmetric kpoint
-            if(sum(abs(diff(1:dim))) < symprec ) then
+            if (sum(abs(diff)) < symprec) then
               kmap(ik) = -ik2
               exit
             end if
           end if
  
           if(time_reversal) then
-            diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
+            diff = kpt + grid%red_point(:, ik2)
+            diff = diff - anint(diff)
             !We found point corresponding to the symmetric kpoint
-            if(sum(abs(diff(1:dim))) < symprec ) then
+            if (sum(abs(diff)) < symprec ) then
               kmap(ik) = -ik2
               exit
             end if
@@ -1665,7 +1645,7 @@ contains
     integer,              intent(in) :: iq
 
     integer :: dim, idim
-    FLOAT :: diff(1:MAX_DIM), red(1:MAX_DIM)
+    FLOAT :: diff(kpt%reduced%dim), red(kpt%reduced%dim)
 
     PUSH_SUB(kpoints_is_compatible_downsampling)
 
@@ -1673,19 +1653,19 @@ contains
     dim = kpt%reduced%dim
 
     !No downsampling. We use all k-points
-    if(all(kpt%downsampling(1:dim) == 1)) then
+    if (all(kpt%downsampling == 1)) then
       POP_SUB(kpoints_is_compatible_downsampling)
       return
     end if
 
     ASSERT(kpt%method == KPOINTS_MONKH_PACK)
     
-    diff(1:dim) = kpt%reduced%red_point(1:dim, ik)-kpt%reduced%red_point(1:dim, iq)
+    diff = kpt%reduced%red_point(:, ik) - kpt%reduced%red_point(:, iq)
     do idim = 1, dim
       !We remove potential umklapp
-      diff(idim)= diff(idim)-anint(diff(idim)+M_HALF*SYMPREC)
+      diff(idim) = diff(idim) - anint(diff(idim) + M_HALF*SYMPREC)
       red(idim) = diff(idim)*kpt%nik_axis(idim)/real(kpt%downsampling(idim))
-      if( abs(red(idim) - anint(red(idim))) > M_EPSILON) then
+      if (abs(red(idim) - anint(red(idim))) > M_EPSILON) then
         compatible = .false.
         POP_SUB(kpoints_is_compatible_downsampling)
         return
@@ -1693,7 +1673,6 @@ contains
     end do
 
     POP_SUB(kpoints_is_compatible_downsampling)
-
   end function kpoints_is_compatible_downsampling
 
 
