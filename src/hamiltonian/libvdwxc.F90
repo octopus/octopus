@@ -293,7 +293,6 @@ contains
     cube_dedrho = M_ZERO
     cube_dedsigma = M_ZERO
 
-    call cube_function_null(cf)
     call dcube_function_alloc_RS(this%cube, cf, in_device = .false.)
 
     call tocube(rho(:, 1), cube_rho)

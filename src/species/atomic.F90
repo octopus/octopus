@@ -40,7 +40,6 @@ use iso_c_binding
     valconf_copy,  &
     write_valconf, &
     read_valconf,  &
-    valconf_null,  &
     VALCONF_STRING_LENGTH
 
   character(len=1), parameter :: &
@@ -50,37 +49,18 @@ use iso_c_binding
 
   type valconf_t
     ! Components are public by default
-    integer           :: z
-    character(len=3)  :: symbol
-    integer           :: type     !< 0 for the most normal valence configuration, 1 for semicore.
-    integer           :: p        !< number of orbitals.
-    integer           :: n(12)     !< n quantum number
-    integer           :: l(12)     !< l quantum number
-    FLOAT             :: occ(12,2) !< occupations of each level
-    FLOAT             :: j(12)     !< j quantum number
+    integer           :: z = 0
+    character(len=3)  :: symbol = ""
+    integer           :: type = 0  !< 0 for the most normal valence configuration, 1 for semicore.
+    integer           :: p = 0     !< number of orbitals.
+    integer           :: n(12) = 0 !< n quantum number
+    integer           :: l(12) = 0 !< l quantum number
+    FLOAT             :: occ(12,2) = M_ZERO !< occupations of each level
+    FLOAT             :: j(12) = M_ZERO     !< j quantum number
   end type valconf_t
 
 
 contains
-
-  ! ---------------------------------------------------------
-  !> Subroutines to write and read valence configurations.
-  subroutine valconf_null(c)
-    type(valconf_t), intent(out) :: c
-
-    PUSH_SUB(valconf_null)
-    c%z = 0
-    c%symbol = ""
-    c%type = 0
-    c%p = 0
-    c%n = 0
-    c%l = 0
-    c%occ = M_ZERO
-    c%j = M_ZERO
-
-    POP_SUB(valconf_null)
-  end subroutine valconf_null
-
 
   ! ---------------------------------------------------------
   subroutine valconf_copy(cout, cin)

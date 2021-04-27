@@ -201,7 +201,6 @@ contains
     call curvilinear_init(gr%cv, namespace, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
-    call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
@@ -267,7 +266,6 @@ contains
 
         call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
-        call derivatives_nullify(gr%fine%der)
         call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
         call mesh_init_stage_3(gr%fine%mesh, namespace, space, gr%stencil, mc)

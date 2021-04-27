@@ -336,8 +336,6 @@ contains
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_RMMDIIS/))) then
       call preconditioner_init(eigens%pre, namespace, gr, mc, space)
-    else
-      call preconditioner_null(eigens%pre)
     end if
 
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))

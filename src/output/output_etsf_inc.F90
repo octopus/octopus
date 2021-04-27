@@ -60,7 +60,6 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
     fft_type=FFT_REAL, dont_optimize = .true.)
   call cube_init(zcube, gr%mesh%idx%ll, gr%sb, namespace, &
     fft_type=FFT_COMPLEX, dont_optimize = .true.)
-  call cube_function_null(cf)
   
 #ifdef HAVE_ETSF_IO
 

@@ -55,7 +55,6 @@ module preconditioners_oct_m
   public ::                            &
     preconditioner_t,                  &
     preconditioner_init,               &
-    preconditioner_null,               &
     preconditioner_end,                &
     dpreconditioner_apply,             &
     zpreconditioner_apply,             &
@@ -65,7 +64,7 @@ module preconditioners_oct_m
 
   type preconditioner_t
     private
-    integer :: which
+    integer :: which = PRE_NONE
 
     type(nl_operator_t), allocatable :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
     type(nl_operator_t), pointer, public :: op   !< pointer to access op_array(1) simply as op
@@ -254,20 +253,6 @@ contains
     POP_SUB(preconditioner_init)
   end subroutine preconditioner_init
 
-
-  ! ---------------------------------------------------------
-  subroutine preconditioner_null(this)
-    type(preconditioner_t), intent(inout) :: this
-
-    PUSH_SUB(preconditioner_null)
-    this%which = PRE_NONE
-
-    nullify(this%der)
-
-    POP_SUB(preconditioner_null)
-  end subroutine preconditioner_null
-
-
   ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
     type(preconditioner_t), intent(inout) :: this
@@ -290,7 +275,6 @@ contains
     nullify(this%op)
     SAFE_DEALLOCATE_A(this%op_array)
 
-    call preconditioner_null(this)
     POP_SUB(preconditioner_end)
   end subroutine preconditioner_end
 

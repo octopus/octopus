@@ -47,10 +47,10 @@ module boundaries_oct_m
 
   type boundaries_t
     private
-    type(mesh_t), pointer :: mesh
+    type(mesh_t), pointer :: mesh => NULL()
     logical              :: periodic = .false.       !< some boundaries are to be treated periodic
     logical              :: fully_periodic = .false. !< all boundaries are to be treated periodic
-    integer              :: nper             !< the number of points that correspond to pbc
+    integer              :: nper = 0         !< the number of points that correspond to pbc
     integer, allocatable :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
     integer, allocatable :: per_send(:, :)
     integer, allocatable :: per_recv(:, :)
@@ -61,14 +61,13 @@ module boundaries_oct_m
     type(accel_mem_t)    :: buff_per_recv
     type(accel_mem_t)    :: buff_nsend
     type(accel_mem_t)    :: buff_nrecv
-    logical, public      :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
-    logical, public      :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
-    FLOAT,   public      :: spiral_q(MAX_DIM)
+    logical, public      :: spiralBC = .false. !< set .true. when SpiralBoundaryCondition are set in the input file
+    logical, public      :: spiral   = .false. !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
+    FLOAT,   public      :: spiral_q(MAX_DIM) = M_ZERO
   end type boundaries_t
 
   public ::                        &
     boundaries_t,                  &
-    boundaries_nullify,            &
     boundaries_init,               &
     boundaries_end,                &
     boundaries_set
@@ -107,23 +106,6 @@ module boundaries_oct_m
   end interface boundaries_set
 
 contains
-  
-  ! ---------------------------------------------------------
-  elemental subroutine boundaries_nullify(this)
-    type(boundaries_t), intent(out) :: this
-
-    nullify(this%mesh)
-    this%nper = 0
-    call accel_mem_nullify(this%buff_per_points)
-    call accel_mem_nullify(this%buff_per_send)
-    call accel_mem_nullify(this%buff_per_recv)
-    call accel_mem_nullify(this%buff_nsend)
-    call accel_mem_nullify(this%buff_nrecv)
-    this%spiralBC = .false.
-    this%spiral = .false.
-    this%spiral_q(1:MAX_DIM) = M_ZERO
-
-  end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
   subroutine boundaries_init(this, namespace, space, mesh)

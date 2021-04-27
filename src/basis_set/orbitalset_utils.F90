@@ -183,8 +183,6 @@ contains
 
         ios = this%map_os(inn)
 
-        call submesh_null(sm)
-
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
                        shift = this%V_ij(inn, 1:geo%space%dim))

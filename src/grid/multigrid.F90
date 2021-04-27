@@ -45,7 +45,6 @@ module multigrid_oct_m
   public ::                         &
     multigrid_level_t,              &
     multigrid_t,                    &
-    multigrid_level_nullify,        &
     multigrid_init,                 &
     multigrid_end,                  &
     multigrid_mesh_half,            &
@@ -68,8 +67,8 @@ module multigrid_oct_m
   type multigrid_level_t
     ! Components are public by default
     type(transfer_table_t)          :: tt
-    type(mesh_t),          pointer  :: mesh
-    type(derivatives_t),   pointer  :: der
+    type(mesh_t),          pointer  :: mesh => NULL()
+    type(derivatives_t),   pointer  :: der  => NULL()
   end type multigrid_level_t
 
   type multigrid_t
@@ -86,15 +85,6 @@ module multigrid_oct_m
   type(profile_t), save :: interp_prof, injection_prof, restrict_prof
 
 contains
-
-  ! ---------------------------------------------------------
-  elemental subroutine multigrid_level_nullify(this)
-    type(multigrid_level_t), intent(out) :: this
-
-    call transfer_table_nullify(this%tt)
-    nullify(this%mesh, this%der)
-
-  end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
   subroutine multigrid_init(mgrid, namespace, space, cv, mesh, der, stencil, mc, used_for_preconditioner)
@@ -181,7 +171,6 @@ contains
       
       call multigrid_mesh_half(space, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
-      call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, space, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
       call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, space, stencil, mc, parent = mgrid%level(i - 1)%mesh)

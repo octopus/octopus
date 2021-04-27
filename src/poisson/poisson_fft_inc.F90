@@ -44,7 +44,6 @@
     ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
 #endif
 
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
     ! put the density in the cube

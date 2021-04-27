@@ -334,7 +334,6 @@ end subroutine X(get_atomic_orbital)
       end do
 
       SAFE_ALLOCATE(map(1:is))
-      call submesh_null(tmp_sm)
       tmp_sm%mesh => submesh%mesh
       tmp_sm%np = is
       tmp_sm%np_part = is

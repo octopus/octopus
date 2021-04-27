@@ -282,9 +282,6 @@ contains
     hm%hm_base%kinetic => gr%der%lapl
 
     SAFE_ALLOCATE(hm%energy)
-    call energy_nullify(hm%energy)
-
-    call oct_exchange_nullify(hm%oct_exchange)
 
     !Keep pointers to derivatives, geometry and xc
     hm%der => gr%der
@@ -439,7 +436,6 @@ contains
     !%End
     call parse_variable(namespace, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
-    call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
@@ -490,10 +486,7 @@ contains
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
-    call scissor_nullify(hm%scissor)
-
     !Cam parameters are irrelevant here and are updated later
-    call exchange_operator_nullify(hm%exxop)
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &

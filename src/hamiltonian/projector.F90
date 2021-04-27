@@ -46,7 +46,6 @@ module projector_oct_m
   private
   public ::                    &
     projector_t,               &
-    projector_null,            &
     projector_is_null,         &
     projector_is,              &
     projector_init,            &
@@ -104,28 +103,14 @@ module projector_oct_m
 
 contains
 
-  ! ---------------------------------------------------------
-  subroutine projector_null(p)
-    type(projector_t), intent(inout) :: p !< valgrind objects to intent(out) due to the initializations above
-
-    PUSH_SUB(projector_null)
-
-    p%type = PROJ_NONE
-    call submesh_null(p%sphere)
-
-    POP_SUB(projector_null)
-
-  end subroutine projector_null
-  !---------------------------------------------------------
-
-
   !---------------------------------------------------------
   logical elemental function projector_is_null(p)
     type(projector_t), intent(in) :: p
+
     projector_is_null = (p%type == PROJ_NONE)
   end function projector_is_null
-  !---------------------------------------------------------
 
+  !---------------------------------------------------------
   logical elemental function projector_is(p, type)
     type(projector_t), intent(in) :: p
     integer,           intent(in) :: type
@@ -144,7 +129,6 @@ contains
     
     PUSH_SUB(projector_init)
 
-    call projector_null(p)
     ps => species_ps(atm%species)
 
     p%reltype = reltype
@@ -273,7 +257,6 @@ contains
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
-          call hgh_projector_null(p%hgh_p(ll, mm))
           call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, p%reltype, a, ll, mm, so_strength)
         end do
       end do

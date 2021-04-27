@@ -35,7 +35,6 @@ module oct_exchange_oct_m
   private
   public ::                          &
     oct_exchange_t,                  &
-    oct_exchange_nullify,            &
     oct_exchange_enabled,            &
     oct_exchange_prepare,            &
     oct_exchange_set,                &
@@ -44,31 +43,21 @@ module oct_exchange_oct_m
 
   type oct_exchange_t
     private
-    logical :: oct_exchange
-    type(states_elec_t), pointer :: oct_st
+    logical :: oct_exchange = .false.
+    type(states_elec_t), pointer :: oct_st => NULL()
     FLOAT, allocatable :: oct_fxc(:, :, :)
     FLOAT, allocatable :: oct_pot(:, :)
     FLOAT, allocatable :: oct_rho(:, :)
   end type oct_exchange_t
 
 contains
-
-  subroutine oct_exchange_nullify(this)
-    type(oct_exchange_t), intent(out) :: this
-
-    PUSH_SUB(oct_exchange_nullify)
-
-    this%oct_exchange = .false.
-    nullify(this%oct_st)
-
-    POP_SUB(oct_exchange_nullify)
-  end subroutine oct_exchange_nullify
   
   ! ---------------------------------------------------------
   logical function oct_exchange_enabled(this) result(oct_exchange)
     type(oct_exchange_t), intent(in) :: this
 
     PUSH_SUB(oct_exchange_enabled)
+
     oct_exchange = this%oct_exchange
 
     POP_SUB(oct_exchange_enabled)

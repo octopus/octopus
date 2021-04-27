@@ -378,10 +378,12 @@ contains
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)
-    type(geometry_t), intent(out) :: geo_out
-    type(geometry_t), intent(in)  :: geo_in
+    type(geometry_t), intent(inout) :: geo_out
+    type(geometry_t), intent(in)    :: geo_in
 
     PUSH_SUB(geometry_copy)
+
+    call geometry_end(geo_out)
 
     geo_out%latt = geo_in%latt
 

@@ -198,7 +198,6 @@ contains
       cube => this%cube
       coulb => this%fft_solver%coulb
 
-      call cube_function_null(cf)
       call dcube_function_alloc_RS(cube, cf, in_device = (this%fft_solver%kernel /= POISSON_FFT_KERNEL_CORRECTED))
       
       

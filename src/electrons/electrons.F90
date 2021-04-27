@@ -165,7 +165,6 @@ contains
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
-    call v_ks_nullify(sys%ks)
     call elf_init(sys%namespace)
 
     sys%generate_epot = optional_default(generate_epot, .true.)

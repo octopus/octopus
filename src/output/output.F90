@@ -1285,7 +1285,6 @@ contains
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1, namespace=namespace)
     end if
-    call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
     call cube_function_alloc_fs(cube, cf)
 

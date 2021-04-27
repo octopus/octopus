@@ -40,7 +40,6 @@ module singularity_oct_m
   private
   public ::                          &
     singularity_t,             &
-    singularity_nullify,       &
     singularity_init,          &
     singularity_end
 
@@ -53,23 +52,13 @@ module singularity_oct_m
    
   type singularity_t
     !For the treatment of the singularity in solids
-    integer :: coulomb_singularity
+    integer :: coulomb_singularity = 0
     FLOAT, allocatable :: Fk(:)
     FLOAT :: FF
   end type singularity_t
  
 contains
 
-  subroutine singularity_nullify(this)
-    type(singularity_t), intent(out) :: this
-
-    PUSH_SUB(singularity_nullify)
-
-    this%coulomb_singularity = 0
-
-    POP_SUB(singularity_nullify)
-  end subroutine singularity_nullify
- 
   subroutine singularity_init(this, namespace, space, st, latt, kpoints)
     type(singularity_t),       intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
@@ -164,7 +153,6 @@ contains
     !At the moment this is only implemented in 3D.
     ASSERT(space%dim == 3)
 
-    call distributed_nullify(dist_kpt, 0)
     kpt_start = st%d%kpt%start
     kpt_end = st%d%kpt%end
 

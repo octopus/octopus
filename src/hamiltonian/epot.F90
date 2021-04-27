@@ -276,9 +276,6 @@ contains
     end if
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
-    do ia = 1, geo%natoms
-      call projector_null(ep%proj(ia))
-    end do
 
     ep%natoms = geo%natoms
     ep%non_local = .false.
@@ -289,8 +286,6 @@ contains
 
     SAFE_ALLOCATE(ep%vdw_forces(1:geo%space%dim, 1:geo%natoms))
     ep%vdw_forces = M_ZERO
-
-    call gauge_field_nullify(ep%gfield)
 
     ep%local_potential_precalculated = .false.
     

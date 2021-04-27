@@ -174,46 +174,6 @@ module species_oct_m
   
 contains
 
-  
-  ! ---------------------------------------------------------
-  subroutine species_nullify(this)
-    type(species_t), intent(out) :: this
-
-    PUSH_SUB(species_nullify)
-
-    this%index=0
-    this%label=""
-    this%type=0
-    this%z = CNST(-1.0)
-    this%z_val = CNST(-1.0)
-    this%mass = CNST(-1.0)
-    this%vdw_radius = CNST(-1.0)
-    this%has_density=.false.
-    this%potential_formula=""
-    this%omega=M_ZERO
-    this%filename=""
-    this%jradius=M_ZERO
-    this%jthick=M_ZERO
-    this%nlcc=.false.
-    this%sigma=M_ZERO
-    this%density_formula=""
-    this%def_rsize = CNST(-1.0)
-    this%def_h = CNST(-1.0)
-    this%niwfs=-1
-    this%hubbard_l=-1
-    this%hubbard_U=M_ZERO
-    this%hubbard_j=M_ZERO
-    this%hubbard_alpha = M_ZERO
-    this%user_lmax   = INVALID_L
-    this%user_llocal = INVALID_L
-    this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
-    this%pseudopotential_set_initialized = .false.
-    call pseudo_set_nullify(this%pseudopotential_set)
-    
-    POP_SUB(species_nullify)
-  end subroutine species_nullify
-
-
   ! ---------------------------------------------------------
   subroutine species_init_global(namespace)
     type(namespace_t),         intent(in)  :: namespace
@@ -376,9 +336,35 @@ contains
     
     ASSERT(initialized)
 
-    call species_nullify(this)
     this%label = trim(label)
     this%index = index
+
+    this%type = 0
+    this%z = -M_ONE
+    this%z_val = -M_ONE
+    this%mass = -M_ONE
+    this%vdw_radius = -M_ONE
+    this%has_density = .false.
+    this%potential_formula = ""
+    this%omega = M_ZERO
+    this%filename = ""
+    this%jradius = M_ZERO
+    this%jthick = M_ZERO
+    this%nlcc = .false.
+    this%sigma = M_ZERO
+    this%density_formula = ""
+    this%def_rsize = -M_ONE
+    this%def_h = -M_ONE
+    this%niwfs = -1
+    this%hubbard_l = -1
+    this%hubbard_U = M_ZERO
+    this%hubbard_j = M_ZERO
+    this%hubbard_alpha = M_ZERO
+    this%user_lmax   = INVALID_L
+    this%user_llocal = INVALID_L
+    this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
+    this%pseudopotential_set_initialized = .false.
+    call pseudo_set_nullify(this%pseudopotential_set)
 
     POP_SUB(species_init)
   end subroutine species_init

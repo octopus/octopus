@@ -415,12 +415,14 @@ contains
 
   ! -------------------------------------------------------------------------------
   subroutine symmetries_copy(inp, outp)
-    type(symmetries_t),  intent(in)  :: inp
-    type(symmetries_t),  intent(out) :: outp
+    type(symmetries_t),  intent(in)    :: inp
+    type(symmetries_t),  intent(inout) :: outp
 
     integer :: iop
 
     PUSH_SUB(symmetries_copy)
+
+    call symmetries_end(outp)
 
     outp%nops = inp%nops
     outp%breakdir = inp%breakdir

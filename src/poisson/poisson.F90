@@ -928,8 +928,6 @@ contains
       end if
 
     case(POISSON_POKE)
-      call cube_function_null(crho)
-      call cube_function_null(cpot)
       call dcube_function_alloc_RS(this%cube, crho)
       call dcube_function_alloc_RS(this%cube, cpot)
       call dmesh_to_cube(der%mesh, rho, this%cube, crho)

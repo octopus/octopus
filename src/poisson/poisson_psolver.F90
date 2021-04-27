@@ -369,7 +369,6 @@ contains
 
     PUSH_SUB(poisson_psolver_parallel_solve)
 
-    call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
 
     call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
@@ -447,7 +446,6 @@ contains
 
     PUSH_SUB(poisson_psolver_global_solve)
     
-    call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
 
     if(present(sm)) then

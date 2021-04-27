@@ -36,7 +36,6 @@ module hgh_projector_oct_m
   private
   public :: &
        hgh_projector_t,              &
-       hgh_projector_null,           &
        hgh_projector_init,           &
        dhgh_project, zhgh_project,   &
        dhgh_project_bra,             &
@@ -52,24 +51,12 @@ module hgh_projector_oct_m
     integer                    :: n_s         !< number of points inside the sphere
     FLOAT, allocatable, public :: dp(:, :)    !< projectors
     CMPLX, allocatable, public :: zp(:, :)
-    FLOAT,              public :: h(3, 3)     !< parameters
-    FLOAT,              public :: k(3, 3)     !< spin-orbit parameters
+    FLOAT,              public :: h(3, 3) = M_ZERO !< parameters
+    FLOAT,              public :: k(3, 3) = M_ZERO !< spin-orbit parameters
   end type hgh_projector_t
 
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine hgh_projector_null(hgh_p)
-    type(hgh_projector_t), intent(out) :: hgh_p
-
-    PUSH_SUB(hgh_projector_null)
-
-    hgh_p%h = M_ZERO
-    hgh_p%k = M_ZERO
-
-    POP_SUB(hgh_projector_null)
-  end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
   subroutine hgh_projector_init(hgh_p, sm, reltyp, a, l, lm, so_strength)
