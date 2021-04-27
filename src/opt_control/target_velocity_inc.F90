@@ -19,10 +19,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_velocity(gr, namespace, geo, tg, oct, td, ep)
+  subroutine target_init_velocity(gr, namespace, ions, tg, oct, td, ep)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(ions_t),      intent(in)    :: ions
     type(target_t),    intent(inout) :: tg
     type(oct_t),       intent(in)    :: oct
     type(td_t),        intent(in)    :: td
@@ -99,7 +99,7 @@
       call messages_fatal(2)
     end if
        
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     if(tg%move_ions) then
       message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must not allow the ions'
       message(2) = 'to move. If you want to move the ions, then you can get the same functionality'
@@ -109,8 +109,8 @@
        
     if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG .or. oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS) then
       if(parse_block(namespace, 'OCTVelocityDerivatives', blk)==0) then
-        SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
-        do ist=0, geo%natoms-1
+        SAFE_ALLOCATE(tg%vel_der_array(1:ions%natoms,1:gr%sb%dim))
+        do ist=0, ions%natoms-1
           do jst=0, gr%sb%dim-1
             call parse_block_string(blk, ist, jst, tg%vel_der_array(ist+1, jst+1))
           end do
@@ -124,16 +124,16 @@
       end if
     end if
 
-      SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+      SAFE_ALLOCATE(tg%grad_local_pot(1:ions%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
       SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
 
       ! calculate gradient of each species potential
-      do iatom = 1, geo%natoms
+      do iatom = 1, ions%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(iatom), iatom, vl)
+        call epot_local_potential(ep, namespace, ions%space, gr%mesh, ions%atom(iatom), iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         do ist = 1, gr%mesh%np
           do jst=1, gr%sb%dim
@@ -178,19 +178,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_velocity(tg, namespace, gr, dir, geo, hm, outp)
+  subroutine target_output_velocity(tg, namespace, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
     type(namespace_t),   intent(in) :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
+    type(ions_t),        intent(in) :: ions
     type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_velocity)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_velocity)
   end subroutine target_output_velocity
@@ -199,9 +199,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_velocity(tg, geo) result(j1)
+  FLOAT function target_j1_velocity(tg, ions) result(j1)
     type(target_t),   intent(in) :: tg
-    type(geometry_t), intent(in) :: geo
+    type(ions_t),     intent(in) :: ions
 
     integer :: i
     FLOAT :: f_re, dummy(3)
@@ -209,9 +209,9 @@
     character(len=4096) :: inp_string
     PUSH_SUB(target_j1_velocity)
 
-    SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
-    do i = 1, geo%natoms
-      x(i, 1:geo%space%dim) = geo%atom(i)%v(1:geo%space%dim)
+    SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
+    do i = 1, ions%natoms
+      x(i, 1:ions%space%dim) = ions%atom(i)%v(1:ions%space%dim)
     end do
 
     f_re = M_ZERO
@@ -229,11 +229,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_velocity(gr, tg, chi_out, geo)
+  subroutine target_chi_velocity(gr, tg, chi_out, ions)
     type(grid_t),        intent(in)    :: gr
     type(target_t),      intent(inout) :: tg
     type(states_elec_t), intent(inout) :: chi_out
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ist, jst, ik, ib
     character(len=1024) :: temp_string
@@ -248,22 +248,22 @@
       end do
     end do
 
-    SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
-    do ip = 1, geo%natoms
-      x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
+    SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
+    do ip = 1, ions%natoms
+      x(ip, 1:ions%space%dim) = ions%atom(ip)%v(1:ions%space%dim)
     end do
 
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
     df_dv = M_ZERO
     dummy(:) = M_ZERO
     tg%rho(:) = M_ZERO
-    do ist = 1, geo%natoms
+    do ist = 1, ions%natoms
       do jst=1, gr%sb%dim
         temp_string = tg%vel_der_array(ist, jst)
         call parse_array(temp_string, x, 'v')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
-        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_mass(geo%atom(ist)%species)
+        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_mass(ions%atom(ist)%species)
       end do
     end do
 
@@ -275,11 +275,11 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_velocity(tg, hm, gr, geo, psi, time, max_time)
+  subroutine target_tdcalc_velocity(tg, hm, gr, ions, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(inout) :: geo
+    type(ions_t),        intent(inout) :: ions
     type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
@@ -295,14 +295,14 @@
     SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
     opsi = M_z0
     ! WARNING This does not work for spinors.
-    do iatom = 1, geo%natoms
-      geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+    do iatom = 1, ions%natoms
+      ions%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
             call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
-            geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) &
+            ions%atom(iatom)%f(idim) = ions%atom(iatom)%f(idim) &
               + TOFLOAT(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
           end do
         end do
@@ -313,9 +313,9 @@
     
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
-    do iatom = 1, geo%natoms
-       geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
-         geo%atom(iatom)%f(1:MAX_DIM) * dt / species_mass(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+       ions%atom(iatom)%v(1:MAX_DIM) = ions%atom(iatom)%v(1:MAX_DIM) + &
+         ions%atom(iatom)%f(1:MAX_DIM) * dt / species_mass(ions%atom(iatom)%species)
     end do
 
     POP_SUB(target_tdcalc_velocity)

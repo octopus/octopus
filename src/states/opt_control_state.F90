@@ -22,8 +22,8 @@
 !> This module holds the "opt_control_state_t" datatype, which contains a quantum-classical
 !! state.
 module opt_control_state_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use messages_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -117,46 +117,46 @@ contains
     POP_SUB(opt_control_get_qs)
   end subroutine opt_control_get_qs
 
-  subroutine opt_control_get_classical(geo, ocs)
-    type(geometry_t),          intent(inout) :: geo
+  subroutine opt_control_get_classical(ions, ocs)
+    type(ions_t),              intent(inout) :: ions
     type(opt_control_state_t), intent(in)    :: ocs
 
     integer :: idim, iatom
 
     PUSH_SUB(opt_control_get_classical)
 
-    do idim = 1, geo%space%dim
-      do iatom = 1, geo%natoms
-        geo%atom(iatom)%x(idim) = ocs%q(iatom, idim)
-        geo%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_mass(geo%atom(iatom)%species)
+    do idim = 1, ions%space%dim
+      do iatom = 1, ions%natoms
+        ions%atom(iatom)%x(idim) = ocs%q(iatom, idim)
+        ions%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_mass(ions%atom(iatom)%species)
       end do
     end do
 
     POP_SUB(opt_control_get_classical)
   end subroutine opt_control_get_classical
 
-  subroutine opt_control_set_classical(geo, ocs)
-    type(geometry_t),          intent(inout) :: geo
+  subroutine opt_control_set_classical(ions, ocs)
+    type(ions_t),              intent(inout) :: ions
     type(opt_control_state_t), intent(inout) :: ocs
 
     integer :: idim, iatom
 
     PUSH_SUB(opt_control_set_classical)
 
-    do idim = 1, geo%space%dim
-      do iatom = 1, geo%natoms
-        ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
-        ocs%p(iatom, idim) = geo%atom(iatom)%v(idim) * species_mass(geo%atom(iatom)%species)
+    do idim = 1, ions%space%dim
+      do iatom = 1, ions%natoms
+        ocs%q(iatom, idim) = ions%atom(iatom)%x(idim)
+        ocs%p(iatom, idim) = ions%atom(iatom)%v(idim) * species_mass(ions%atom(iatom)%species)
       end do
     end do
 
     POP_SUB(opt_control_set_classical)
   end subroutine opt_control_set_classical
 
-  subroutine opt_control_state_init(ocs, qstate, geo)
+  subroutine opt_control_state_init(ocs, qstate, ions)
     type(opt_control_state_t), intent(inout) :: ocs
     type(states_elec_t),       intent(in)    :: qstate
-    type(geometry_t),          intent(in)    :: geo
+    type(ions_t),              intent(in)    :: ions
 
     integer :: iatom, idim
 
@@ -167,16 +167,16 @@ contains
     SAFE_DEALLOCATE_A(ocs%q)
     SAFE_DEALLOCATE_A(ocs%p)
 
-    ocs%ndim   = geo%space%dim
-    ocs%natoms = geo%natoms
+    ocs%ndim   = ions%space%dim
+    ocs%natoms = ions%natoms
 
     SAFE_ALLOCATE(ocs%q(1:ocs%natoms, 1:ocs%ndim))
     SAFE_ALLOCATE(ocs%p(1:ocs%natoms, 1:ocs%ndim))
 
-    do idim = 1, geo%space%dim
-      do iatom = 1, geo%natoms
-        ocs%q(iatom, idim) = geo%atom(iatom)%x(idim)
-        ocs%p(iatom, idim) = species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%v(idim)
+    do idim = 1, ions%space%dim
+      do iatom = 1, ions%natoms
+        ocs%q(iatom, idim) = ions%atom(iatom)%x(idim)
+        ocs%p(iatom, idim) = species_mass(ions%atom(iatom)%species) * ions%atom(iatom)%v(idim)
       end do
     end do
     

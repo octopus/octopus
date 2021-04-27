@@ -20,10 +20,10 @@
 
 module berry_oct_m
   use eigensolver_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -82,7 +82,7 @@ contains
   end subroutine berry_init
 
   ! ---------------------------------------------------------
-  subroutine berry_perform_internal_scf(this, namespace, space, eigens, gr, st, hm, iter, ks, geo)
+  subroutine berry_perform_internal_scf(this, namespace, space, eigens, gr, st, hm, iter, ks, ions)
     type(berry_t),            intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
@@ -92,7 +92,7 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
     type(v_ks_t),             intent(inout) :: ks
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
 
     integer :: iberry, idir
     logical :: berry_conv
@@ -107,7 +107,7 @@ contains
       call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
     end if
 
-    call calc_dipole(dipole, space, gr, st, geo)
+    call calc_dipole(dipole, space, gr, st, ions)
 
     do iberry = 1, this%max_iter_berry
       eigens%converged = 0
@@ -121,10 +121,10 @@ contains
          hm%ep%E_field(1:space%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
   
       !We recompute the KS potential
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=.false.)
 
       dipole_prev = dipole
-      call calc_dipole(dipole, space, gr, st, geo)
+      call calc_dipole(dipole, space, gr, st, ions)
       write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
       call messages_info(1)
   
@@ -147,19 +147,19 @@ contains
   ! ---------------------------------------------------------
   !TODO: This should be a method of the electronic system directly
   ! that can be exposed
-  subroutine calc_dipole(dipole, space, gr, st, geo)
+  subroutine calc_dipole(dipole, space, gr, st, ions)
     FLOAT,                 intent(out)   :: dipole(:)
     type(space_t),         intent(in)    :: space
     type(grid_t),          intent(in)    :: gr
     type(states_elec_t),   intent(in)    :: st
-    type(geometry_t),      intent(in)    :: geo
+    type(ions_t),          intent(in)    :: ions
 
     integer :: ispin, idir
     FLOAT :: e_dip(space%dim + 1, st%d%nspin), n_dip(space%dim), nquantumpol
 
     PUSH_SUB(calc_dipole)
 
-    ASSERT(.not. geo%latt%nonorthogonal)
+    ASSERT(.not. ions%latt%nonorthogonal)
 
     dipole(1:space%dim) = M_ZERO
 
@@ -167,7 +167,7 @@ contains
       call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
     end do
 
-    n_dip = geo%dipole()
+    n_dip = ions%dipole()
 
     do idir = 1, space%dim
       ! in periodic directions use single-point Berry`s phase calculation
@@ -175,8 +175,8 @@ contains
         dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
         ! use quantum of polarization to reduce to smallest possible magnitude
-        nquantumpol = nint(dipole(idir)/norm2(geo%latt%rlattice(:, idir)))
-        dipole(idir) = dipole(idir) - nquantumpol * norm2(geo%latt%rlattice(:, idir))
+        nquantumpol = nint(dipole(idir)/norm2(ions%latt%rlattice(:, idir)))
+        dipole(idir) = dipole(idir) - nquantumpol * norm2(ions%latt%rlattice(:, idir))
        ! in aperiodic directions use normal dipole formula
 
       else

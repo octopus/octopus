@@ -384,7 +384,7 @@ contains
     call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     ! Initialize external potential
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
 
     call sys%st%group%psib(1, 1)%copy_to(epsib)
 
@@ -455,11 +455,11 @@ contains
     ! Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace, sys%space%periodic_dim)
     if (states_are_real(sys%st)) then
-      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
+      call dorbitalbasis_build(basis, sys%ions, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
       SAFE_ALLOCATE(ddot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
-      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
+      call zorbitalbasis_build(basis, sys%ions, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       call orbitalset_update_phase(basis%orbsets(1), sys%space%dim, sys%st%d%kpt, sys%kpoints, (sys%st%d%ispin==SPIN_POLARIZED))
       SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
@@ -551,9 +551,9 @@ contains
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
@@ -689,9 +689,9 @@ contains
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 
     call exponential_init(te, namespace)
 
@@ -737,9 +737,9 @@ contains
     call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 
     call subspace_init(sdiag, sys%namespace, sys%st, no_sd = .false.)
 
@@ -1107,7 +1107,7 @@ contains
     sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%space, sys%geo%latt, sys%geo%atom, sys%geo%natoms, sys%geo%catom, sys%geo%ncatoms, &
+    call ion_interaction_test(sys%space, sys%ions%latt, sys%ions%atom, sys%ions%natoms, sys%ions%catom, sys%ions%ncatoms, &
       sys%gr%sb%lsize, namespace, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)

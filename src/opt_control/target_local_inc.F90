@@ -30,7 +30,7 @@
     character(len=1024) :: expression
     PUSH_SUB(target_init_local)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     tg%dt = td%dt
 
     !%Variable OCTLocalTarget
@@ -76,12 +76,12 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_local(tg, namespace, gr, dir, geo, outp)
+  subroutine target_output_local(tg, namespace, gr, dir, ions, outp)
     type(target_t),    intent(in) :: tg
     type(namespace_t), intent(in) :: namespace
     type(grid_t),      intent(in) :: gr
     character(len=*),  intent(in) :: dir
-    type(geometry_t),  intent(in) :: geo
+    type(ions_t),      intent(in) :: ions
     type(output_t),    intent(in) :: outp
 
     integer :: ierr
@@ -90,7 +90,7 @@
     call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
       call dio_function_output(outp%how, trim(dir), 'local_target', namespace, gr%mesh, &
-        tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+        tg%rho, units_out%length**(-gr%sb%dim), ierr, ions = ions)
     end if
 
     POP_SUB(target_output_local)

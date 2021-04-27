@@ -400,7 +400,7 @@ contains
 
     PUSH_SUB(velocities_write)
 
-    n_atoms = sys%geo%natoms
+    n_atoms = sys%ions%natoms
     dim = sys%space%dim
 
     ! write header of the velocities output file
@@ -424,7 +424,7 @@ contains
     do i = 1, n_atoms
        do j = 1, dim
           write(iterator%velocities_iunit,'(4(" "),(f12.10))',advance='no') &
-               sys%geo%atom(i)%v(j)
+               sys%ions%atom(i)%v(j)
        end do
     end do
     write(iterator%velocities_iunit,'("")')

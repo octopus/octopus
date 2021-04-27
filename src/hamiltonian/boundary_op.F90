@@ -20,8 +20,8 @@
 module boundary_op_oct_m
   use io_function_oct_m
   use cube_function_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -59,12 +59,12 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, namespace, mesh, sb, geo)
+  subroutine bc_init(this, namespace, mesh, sb, ions)
     type(bc_t),               intent(out) :: this
     type(namespace_t),        intent(in)  :: namespace
     type(mesh_t),             intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
-    type(geometry_t),         intent(in)  :: geo
+    type(ions_t),             intent(in)  :: ions
 
     integer             :: ip
     FLOAT               :: bounds(1:sb%dim, 1:2)
@@ -241,7 +241,7 @@ contains
       
       ! generate boundary function
       SAFE_ALLOCATE(mf(1:mesh%np))
-      call bc_generate_mf(this, mesh, sb, geo, bounds, mf)
+      call bc_generate_mf(this, mesh, sb, ions, bounds, mf)
       
       ! mask or cap
       SAFE_ALLOCATE(this%mf(1:mesh%np))
@@ -304,11 +304,11 @@ contains
   end subroutine bc_write_info
 
   ! ---------------------------------------------------------
-  subroutine bc_generate_mf(this, mesh, sb, geo, bounds, mf)
+  subroutine bc_generate_mf(this, mesh, sb, ions, bounds, mf)
     type(bc_t),               intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     type(simul_box_t),        intent(in)    :: sb
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     FLOAT,                    intent(in)    :: bounds(1:sb%dim, 1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
@@ -391,7 +391,7 @@ contains
 
         case default
 
-          if (mesh_inborder(mesh, geo, ip, dd, width(1))) then
+          if (mesh_inborder(mesh, ions, ip, dd, width(1))) then
             mf(ip) = M_ONE - sin(dd * M_PI / (M_TWO * width(1)))**2
           end if
 

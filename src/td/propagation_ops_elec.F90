@@ -23,13 +23,13 @@ module propagation_ops_elec_oct_m
   use batch_oct_m
   use density_oct_m  
   use exponential_oct_m
-  use geometry_oct_m
   use gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -89,14 +89,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_move_ions(wo, gr, hm, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
+  subroutine propagation_ops_elec_move_ions(wo, gr, hm, st, namespace, ions_dyn, ions, time, ion_time, save_pos, move_ions)
     class(propagation_ops_elec_t), intent(inout) :: wo
     type(grid_t),                  intent(in)    :: gr
     type(hamiltonian_elec_t),      intent(inout) :: hm
     type(states_elec_t),           intent(inout) :: st
     type(namespace_t),             intent(in)    :: namespace
-    type(ion_dynamics_t),          intent(inout) :: ions
-    type(geometry_t),              intent(inout) :: geo
+    type(ion_dynamics_t),          intent(inout) :: ions_dyn
+    type(ions_t),                  intent(inout) :: ions
     FLOAT,                         intent(in)    :: time
     FLOAT,                         intent(in)    :: ion_time
     logical, optional,             intent(in)    :: save_pos
@@ -108,12 +108,12 @@ contains
 
     call profiling_in(prof, 'ELEC_MOVE_IONS')
    
-    if (ion_dynamics_ions_move(ions) .and. optional_default(move_ions, .true.)) then
+    if (ion_dynamics_ions_move(ions_dyn) .and. optional_default(move_ions, .true.)) then
       if (optional_default(save_pos, .false.)) then
-        call ion_dynamics_save_state(ions, geo, wo%ions_state)
+        call ion_dynamics_save_state(ions_dyn, ions, wo%ions_state)
       end if
-      call ion_dynamics_propagate(ions, geo, time, ion_time, namespace)
-      call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time)
+      call ion_dynamics_propagate(ions_dyn, ions, time, ion_time, namespace)
+      call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = time)
     end if
 
     call profiling_out(prof)
@@ -122,10 +122,10 @@ contains
   end subroutine propagation_ops_elec_move_ions
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_restore_ions(wo, ions, geo, move_ions)
+  subroutine propagation_ops_elec_restore_ions(wo, ions_dyn, ions, move_ions)
     class(propagation_ops_elec_t),    intent(inout) :: wo
-    type(ion_dynamics_t),    intent(inout) :: ions
-    type(geometry_t),        intent(inout) :: geo
+    type(ion_dynamics_t),    intent(inout) :: ions_dyn
+    type(ions_t),            intent(inout) :: ions
     logical, optional,       intent(in)    :: move_ions
 
     type(profile_t), save :: prof
@@ -134,8 +134,8 @@ contains
 
     call profiling_in(prof, 'ELEC_RESTORE_IONS')
 
-    if (ion_dynamics_ions_move(ions) .and. optional_default(move_ions, .true.)) then
-      call ion_dynamics_restore_state(ions, geo, wo%ions_state)
+    if (ion_dynamics_ions_move(ions_dyn) .and. optional_default(move_ions, .true.)) then
+      call ion_dynamics_restore_state(ions_dyn, ions, wo%ions_state)
     end if
 
     call profiling_out(prof)

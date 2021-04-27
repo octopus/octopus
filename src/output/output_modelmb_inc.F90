@@ -20,13 +20,13 @@
 !
 !> routine for output of model many-body quantities.
 !
-subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
+subroutine X(output_modelmb) (outp, namespace, dir, gr, st, ions)
   type(output_t),         intent(in)    :: outp
   type(namespace_t),      intent(in)    :: namespace
   character(len=*),       intent(in)    :: dir
   type(grid_t),           intent(in)    :: gr
   type(states_elec_t),    intent(in)    :: st
-  type(geometry_t),       intent(in)    :: geo
+  type(ions_t),           intent(in)    :: ions
 
   integer :: mm
   integer :: ierr, iunit
@@ -112,7 +112,7 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
       fn_unit = units_out%length**(-gr%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, &
-        gr%mesh, wf, fn_unit, ierr, geo = geo)
+        gr%mesh, wf, fn_unit, ierr, ions = ions)
     end if
 
   end do

@@ -31,11 +31,11 @@ module scf_oct_m
   use energy_calc_oct_m
   use energy_criterion_oct_m
   use forces_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lcao_oct_m
   use lda_u_oct_m
@@ -131,11 +131,11 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, space)
+  subroutine scf_init(scf, namespace, gr, ions, st, mc, hm, ks, space)
     type(scf_t),              intent(inout) :: scf
     type(grid_t),             intent(in)    :: gr
     type(namespace_t),        intent(in)    :: namespace
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -361,7 +361,7 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
+    call parse_variable(namespace, 'SCFCalculateForces', .not. ions%only_user_def, scf%calc_force)
 
     if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
       message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
@@ -427,7 +427,7 @@ contains
     call parse_variable(namespace, 'SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
-    rmin = geo%min_distance()
+    rmin = ions%min_distance()
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
@@ -491,14 +491,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, namespace, space, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, &
+  subroutine scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run, verbosity, iters_done, &
     restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
-    type(geometry_t),          intent(inout) :: geo !< geometry
+    type(ions_t),              intent(inout) :: ions !< geometry
     type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_elec_t),  intent(inout) :: hm !< Hamiltonian
@@ -536,7 +536,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, namespace, space, gr, geo, st)
+      call lcao_init(lcao, namespace, space, gr, ions, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
@@ -554,10 +554,10 @@ contains
           call messages_warning(1)
         else
           if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
-            call v_ks_calc(ks, namespace, space, hm, st, geo)
+            call v_ks_calc(ks, namespace, space, hm, st, ions)
           else
             if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= XC_OEP_FULL) then
-              call v_ks_calc(ks, namespace, space, hm, st, geo)
+              call v_ks_calc(ks, namespace, space, hm, st, ions)
             end if
           end if
         end if
@@ -575,7 +575,7 @@ contains
               do is = 1, st%d%nspin
                 ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
               end do
-              call v_ks_calc(ks, namespace, space, hm, st, geo)
+              call v_ks_calc(ks, namespace, space, hm, st, ions)
             end if
           end if
         end if
@@ -678,8 +678,8 @@ contains
       end if
       
       if(scf%lcao_restricted) then
-        call lcao_init_orbitals(lcao, st, gr, geo)
-        call lcao_wf(lcao, st, gr, geo, hm, namespace)
+        call lcao_init_orbitals(lcao, st, gr, ions)
+        call lcao_wf(lcao, st, gr, ions, hm, namespace)
       else
 
         !We check if the system is coupled with a partner that requires self-consistency
@@ -689,7 +689,7 @@ contains
           ! partners that require SCF
           ks%frozen_hxc = .true.
          ! call perform_scf_partners()
-          call berry_perform_internal_scf(scf%berry, namespace, space, scf%eigens, gr, st, hm, iter, ks, geo)
+          call berry_perform_internal_scf(scf%berry, namespace, space, scf%eigens, gr, st, hm, iter, ks, ions)
           !and we unfreeze the potential once finished
           ks%frozen_hxc = .false.
         else
@@ -709,7 +709,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=outp%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -731,7 +731,7 @@ contains
       if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
          .and. outp%output_interval /= 0 &
          .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
+        call forces_calculate(gr, namespace, ions, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       !We update the quantities at the end of the scf cycle
@@ -775,7 +775,7 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -793,10 +793,10 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=outp%duringscf)
       end select
 
 
@@ -872,7 +872,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, space, dirname, gr, geo, st, hm, ks)
+        call output_all(outp, namespace, space, dirname, gr, ions, st, hm, ks)
       end if
 
       ! save information for the next iteration
@@ -911,7 +911,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current=output_needs_current(outp, states_are_real(st)))
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=output_needs_current(outp, states_are_real(st)))
     end if
 
     select case(scf%mix_field)
@@ -941,11 +941,11 @@ contains
 
     ! calculate forces
     if(scf%calc_force) then
-      call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
+      call forces_calculate(gr, namespace, ions, hm, st, ks, vhxc_old=vhxc_old)
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo, ks)
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, ions, ks)
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
@@ -956,19 +956,19 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, space, STATIC_DIR, gr, geo, st, hm, ks)
+      call output_all(outp, namespace, space, STATIC_DIR, gr, ions, st, hm, ks)
     end if
 
     if (space%is_periodic() .and. st%d%nik > st%d%nspin) then
       if(bitand(hm%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
-          geo, gr%mesh, hm%kpoints, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+          ions, gr%mesh, hm%kpoints, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
 
     if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
-      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff', namespace)
+      call vdw_ts_write_c6ab(ks%vdw_ts, ions, STATIC_DIR, 'c6ab_eff', namespace)
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)
@@ -1007,12 +1007,12 @@ contains
         end if
 
         if (allocated(hm%vberry)) then
-          call calc_dipole(dipole, space, gr, st, geo)
+          call calc_dipole(dipole, space, gr, st, ions)
           call write_dipole(stdout, dipole)
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
+          call write_magnetic_moments(stdout, gr%mesh, st, ions, gr%der%boundaries, scf%lmm_r)
         end if
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
@@ -1097,7 +1097,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
+        call write_magnetic_moments(iunit, gr%mesh, st, ions, gr%der%boundaries, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
@@ -1113,7 +1113,7 @@ contains
         end if 
 
       if(scf%calc_dipole) then
-        call calc_dipole(dipole, space, gr, st, geo)
+        call calc_dipole(dipole, space, gr, st, ions)
         call write_dipole(iunit, dipole)
       end if
 
@@ -1139,7 +1139,7 @@ contains
           end if
         end if
 
-        if(scf%calc_force) call forces_write_info(iunit, geo, dir, namespace)
+        if(scf%calc_force) call forces_write_info(iunit, ions, dir, namespace)
 
         if(scf%calc_stress) then
            write(iunit,'(a)') "Stress tensor [H/b^3]"
@@ -1152,17 +1152,17 @@ contains
       end if
 
       if(scf%calc_partial_charges) then
-        SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
+        SAFE_ALLOCATE(hirshfeld_charges(1:ions%natoms))
 
-        call partial_charges_calculate(namespace, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+        call partial_charges_calculate(namespace, gr%fine%mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 
           write(iunit,'(a)') 'Partial ionic charges'
           write(iunit,'(a)') ' Ion                     Hirshfeld'
 
-          do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,f16.3)') iatom, trim(species_label(geo%atom(iatom)%species)), hirshfeld_charges(iatom)
+          do iatom = 1, ions%natoms
+            write(iunit,'(i4,a10,f16.3)') iatom, trim(species_label(ions%atom(iatom)%species)), hirshfeld_charges(iatom)
 
           end do
 

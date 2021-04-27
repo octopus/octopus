@@ -363,13 +363,13 @@ end subroutine X(calc_polarizability_periodic)
 ! ---------------------------------------------------------
 !> alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
 !! minus sign is from electronic charge -e
-subroutine X(calc_polarizability_finite)(namespace, space, gr, st, hm, geo, lr, nsigma, perturbation, zpol, doalldirs, ndir)
+subroutine X(calc_polarizability_finite)(namespace, space, gr, st, hm, ions, lr, nsigma, perturbation, zpol, doalldirs, ndir)
   type(namespace_t),           intent(in)    :: namespace
   type(space_t),               intent(in)    :: space
   type(grid_t),                intent(in)    :: gr
   type(states_elec_t),         intent(in)    :: st
   type(hamiltonian_elec_t),    intent(inout) :: hm
-  type(geometry_t),            intent(in)    :: geo
+  type(ions_t),                intent(in)    :: ions
   type(lr_t),                  intent(inout) :: lr(:,:)
   integer,                     intent(in)    :: nsigma
   type(pert_t),                intent(inout) :: perturbation
@@ -397,11 +397,11 @@ subroutine X(calc_polarizability_finite)(namespace, space, gr, st, hm, geo, lr, 
   do dir1 = startdir, ndir_
     do dir2 = 1, space%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, namespace, gr, geo, hm, st, psi, lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, namespace, gr, ions, hm, st, psi, lr(dir2, 1)%X(dl_psi))
       if (nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
-        zpol(dir1, dir2) = zpol(dir1, dir2) - X(pert_expectation_value)(perturbation, namespace, gr, geo, hm, st, &
+        zpol(dir1, dir2) = zpol(dir1, dir2) - X(pert_expectation_value)(perturbation, namespace, gr, ions, hm, st, &
           lr(dir2, 2)%X(dl_psi), psi)
       end if
     end do
@@ -414,13 +414,13 @@ end subroutine X(calc_polarizability_finite)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_susceptibility)(namespace, space, gr, st, hm, geo, lr, nsigma, perturbation, chi_para, chi_dia)
+subroutine X(lr_calc_susceptibility)(namespace, space, gr, st, hm, ions, lr, nsigma, perturbation, chi_para, chi_dia)
   type(namespace_t),           intent(in)    :: namespace
   type(space_t),               intent(in)    :: space
   type(grid_t),                intent(in)    :: gr
   type(states_elec_t),         intent(in)    :: st
   type(hamiltonian_elec_t),    intent(inout) :: hm
-  type(geometry_t),            intent(in)    :: geo
+  type(ions_t),                intent(in)    :: ions
   type(lr_t),                  intent(inout) :: lr(:,:)
   integer,                     intent(in)    :: nsigma
   type(pert_t),                intent(inout) :: perturbation
@@ -444,18 +444,18 @@ subroutine X(lr_calc_susceptibility)(namespace, space, gr, st, hm, geo, lr, nsig
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, namespace, gr, geo, hm, st, psi, lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, namespace, gr, ions, hm, st, psi, lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
-        trace = trace + X(pert_expectation_value)(perturbation, namespace, gr, geo, hm, st, lr(dir2, 2)%X(dl_psi), psi)
+        trace = trace + X(pert_expectation_value)(perturbation, namespace, gr, ions, hm, st, lr(dir2, 2)%X(dl_psi), psi)
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
-      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, namespace, gr, geo, hm, st, psi, psi, &
+      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, namespace, gr, ions, hm, st, psi, psi, &
         pert_order=2)
 
     end do
@@ -482,7 +482,7 @@ end subroutine X(lr_calc_susceptibility)
 !! em_lr(dir, sigma, omega) = electric perturbation of ground-state wavefunctions
 !! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
 !! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
-subroutine X(lr_calc_beta)(sh, namespace, space, gr, st, hm, xc, geo, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response, &
+subroutine X(lr_calc_beta)(sh, namespace, space, gr, st, hm, xc, ions, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response, &
   dl_eig)
   type(sternheimer_t),         intent(inout) :: sh
   type(namespace_t),           intent(in)    :: namespace
@@ -491,7 +491,7 @@ subroutine X(lr_calc_beta)(sh, namespace, space, gr, st, hm, xc, geo, em_lr, dip
   type(states_elec_t),         intent(in)    :: st
   type(hamiltonian_elec_t),    intent(inout) :: hm
   type(xc_t),                  intent(in)    :: xc
-  type(geometry_t),            intent(in)    :: geo
+  type(ions_t),                intent(in)    :: ions
   type(lr_t),                  intent(inout) :: em_lr(:,:,:)
   type(pert_t),                intent(inout) :: dipole
   CMPLX,                       intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
@@ -585,7 +585,7 @@ subroutine X(lr_calc_beta)(sh, namespace, space, gr, st, hm, xc, geo, em_lr, dip
                     tmp(1:gr%mesh%np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:gr%mesh%np, idim, ist, ik)
                   else
                     call pert_setup_dir(dipole, u(2))
-                    call X(pert_apply)(dipole, namespace, gr, geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
+                    call X(pert_apply)(dipole, namespace, gr, ions, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
                   end if
 
                   do ip = 1, gr%mesh%np
@@ -727,7 +727,7 @@ contains
                   end do
                 end if
               else
-                call X(pert_apply)(dipole, namespace, gr, geo, hm, ik, psi1, ppsi)
+                call X(pert_apply)(dipole, namespace, gr, ions, hm, ik, psi1, ppsi)
               end if
 
               isigma = 1
@@ -903,7 +903,7 @@ subroutine X(em_resp_calc_eigenvalues)(space, mesh, sb, st, dl_eig)
 end subroutine X(em_resp_calc_eigenvalues)
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st, hm, xc, geo, nsigma, nfactor, lr_e, &
+subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st, hm, xc, ions, nsigma, nfactor, lr_e, &
   lr_b, chi)
   type(sternheimer_t),      intent(inout) :: sh, sh_mo
   type(namespace_t),        intent(in)    :: namespace
@@ -912,7 +912,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(xc_t),               intent(in)    :: xc
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: nsigma
   integer,                  intent(in)    :: nfactor
   type(lr_t),               intent(inout) :: lr_e(:,:,:)
@@ -969,9 +969,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
   pertpsi_e(:,:,:) = M_ZERO
   pertpsi_b(:,:) = M_ZERO
   
-  call pert_init(pert_m, namespace, PERTURBATION_MAGNETIC, gr, geo)
+  call pert_init(pert_m, namespace, PERTURBATION_MAGNETIC, gr, ions)
   do ii = 1, nfactor
-    call pert_init(pert_e(ii), namespace, PERTURBATION_ELECTRIC, gr, geo)
+    call pert_init(pert_e(ii), namespace, PERTURBATION_ELECTRIC, gr, ions)
   end do
   
   psi(:,:) = M_ZERO
@@ -1009,7 +1009,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
             if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
               do ii = 1, nfactor
                 do isigma = 1, nsigma
-                  call X(pert_apply)(pert_e(swap_sigma(ii)), namespace, gr, geo, hm, ik, &
+                  call X(pert_apply)(pert_e(swap_sigma(ii)), namespace, gr, ions, hm, ik, &
                     lr_e(dir(ii), isigma, ii)%X(dl_psi)(:, :, ist, ik), pertpsi_e(:, :, isigma))
                   if(calc_var) then
                     do idim = 1, hm%d%dim
@@ -1025,7 +1025,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
                 end do
                 chi(dir(nfactor), dir(1), dir3) = chi(dir(nfactor), dir(1), dir3) + term(1) + R_CONJ(term(nsigma))
 
-                call X(pert_apply)(pert_m, namespace, gr, geo, hm, ik, &
+                call X(pert_apply)(pert_m, namespace, gr, ions, hm, ik, &
                   lr_e(dir(ii), 1, ii)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
                 if(calc_var_mo) then
                   do idim = 1, hm%d%dim
@@ -1055,7 +1055,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
             do ist = 1, st%nst
               if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
                 call states_elec_get_state(st, gr%mesh, ist, ik, psi)
-                call X(pert_apply)(pert_e(ii), namespace, gr, geo, hm, ik, psi, pertpsi_e(:, :, 1))
+                call X(pert_apply)(pert_e(ii), namespace, gr, ions, hm, ik, psi, pertpsi_e(:, :, 1))
                 if(nfactor > 1) pertpsi_e(:, :, nfactor) = pertpsi_e(:, :, 1)
                 if(calc_var) then
                   do idim = 1, hm%d%dim
@@ -1067,7 +1067,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, namespace, space, gr, st,
                     end do
                   end do
                 end if
-                call X(pert_apply)(pert_m, namespace, gr, geo, hm, ik, psi, pertpsi_b(:, :))
+                call X(pert_apply)(pert_m, namespace, gr, ions, hm, ik, psi, pertpsi_b(:, :))
                 if(calc_var_mo) then
                   do idim = 1, hm%d%dim
                     do ip = 1, gr%mesh%np
@@ -1171,7 +1171,7 @@ subroutine X(calc_kvar_energy)(sh_mo, mesh, st, lr1, lr2, lr3, hpol_density)
 end subroutine X(calc_kvar_energy)
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st, hm, xc, geo, nsigma, nfactor, nfactor_ke, &
+subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st, hm, xc, ions, nsigma, nfactor, nfactor_ke, &
   freq_factor, lr_e, lr_b, lr_k, lr_ke, lr_kb, frequency, zpol, zpol_kout)
   type(sternheimer_t),      intent(inout) :: sh, sh2
   type(namespace_t),        intent(in)    :: namespace
@@ -1180,7 +1180,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st,
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(xc_t),               intent(in)    :: xc
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: nsigma
   integer,                  intent(in)    :: nfactor
   integer,                  intent(in)    :: nfactor_ke
@@ -1354,7 +1354,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, namespace, space, gr, st,
               factor1, psi_be(:,:,:, isigma), lr_k(magn_dir(idir1, 1), 1)%X(dl_psi)(:,:,:, ik), &
               lr_k(magn_dir(idir1, 2), 1)%X(dl_psi)(:,:,:, ik))
 
-            call X(inhomog_BE)(namespace, gr, st, hm, geo, magn_dir(idir1, 1), magn_dir(idir1, 2), ik, & 
+            call X(inhomog_BE)(namespace, gr, st, hm, ions, magn_dir(idir1, 1), magn_dir(idir1, 2), ik, & 
               add_hartree2, add_fxc2, hvar2(:, ispin, 1, idir1),  & 
               lr_e(idir2, isigma, ii)%X(dl_psi)(:,:,:, ik), lr_e(idir2, isigma_alt, ii)%X(dl_psi)(:,:,:, ik), &
               lr_ke(magn_dir(idir1, 1), idir2, isigma, ii)%X(dl_psi)(:,:,:, ik), &
@@ -1597,12 +1597,12 @@ contains
 
     ASSERT(nsigma_h .ge. nsigma_in)
 
-    call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, geo)
+    call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, ions)
     call pert_setup_dir(pert_kdotp, dir)
 
     psi_out(:, :, :) = M_ZERO
     do isigma = 1, nsigma_in
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik0, &
+      call X(pert_apply)(pert_kdotp, namespace, gr, ions, hm, ik0, &
         lr_in(isigma)%X(dl_psi)(:, :, ist0, ik0), psi_out(:, :, isigma))
     end do
     if((nsigma_h == 2) .and. (nsigma_in == 1)) psi_out(:, :, nsigma_h) = psi_out(:, :, 1)
@@ -2060,12 +2060,12 @@ end subroutine X(lr_calc_susceptibility_periodic)
 ! This subroutine can be used for setting the right-hand side of
 ! the Sternheimer equation for magnetic and second-order kdotp 
 ! perturbations according to the density matrix formulation.
-subroutine X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_k2, psi_out, factor_tot, factor_k, factor_second)
+subroutine X(inhomog_per_component)(namespace, gr, st, hm, ions, idir, ik, psi_k2, psi_out, factor_tot, factor_k, factor_second)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir
   integer,                  intent(in)    :: ik
   R_TYPE,                   intent(inout) :: psi_k2(:,:,:)    
@@ -2094,7 +2094,7 @@ subroutine X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_k2
 
   f_out(:,:) = M_ZERO
   
-  call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, geo)
+  call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, ions)
   call pert_setup_dir(pert_kdotp, idir)
   
   vel(:,:,:) = M_ZERO
@@ -2102,7 +2102,7 @@ subroutine X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_k2
   do ist = 1, st%nst
     if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_elec_get_state(st, gr%mesh, ist, ik, psi(:,:,ist))
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik, psi(:,:,ist), f_out) 
+      call X(pert_apply)(pert_kdotp, namespace, gr, ions, hm, ik, psi(:,:,ist), f_out) 
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -2117,7 +2117,7 @@ subroutine X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_k2
   do ist = 1, st%nst
     if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
 
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik, factor_k * psi_k2(:, :, ist), f_out)
+      call X(pert_apply)(pert_kdotp, namespace, gr, ions, hm, ik, factor_k * psi_k2(:, :, ist), f_out)
         
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -2153,13 +2153,13 @@ end subroutine X(inhomog_per_component)
 ! This subroutine can be used for setting the right-hand side of
 ! the Sternheimer equation for second-order magnetic
 ! perturbations according to the density matrix formulation.  
-subroutine X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir, ik, psi_k2, psi_e, psi_out, factor_tot, factor_k, &
+subroutine X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir, ik, psi_k2, psi_e, psi_out, factor_tot, factor_k, &
   factor_e)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir
   integer,                  intent(in)    :: ik
   R_TYPE,                   intent(inout) :: psi_k2(:,:,:)   
@@ -2191,14 +2191,14 @@ subroutine X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir, 
 
   f_out(:,:) = M_ZERO
   
-  call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, geo)
+  call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, ions)
   call pert_setup_dir(pert_kdotp, idir)
 
   vel(:,:,:) = M_ZERO
   do ist = 1, st%nst
     if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_elec_get_state(st, gr%mesh, ist, ik, psi)
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik, psi, f_out)
+      call X(pert_apply)(pert_kdotp, namespace, gr, ions, hm, ik, psi, f_out)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           vel(ip, idim, ist) = factor * f_out(ip, idim)
@@ -2242,14 +2242,14 @@ end subroutine X(inhomog_per_component_2nd_order)
 
 
   ! --------------------------------------------------------------------------
-subroutine X(inhomog_B)(sh, namespace, gr, st, hm, xc, geo, idir1, idir2, lr_k1, lr_k2, psi_out)
+subroutine X(inhomog_B)(sh, namespace, gr, st, hm, xc, ions, idir1, idir2, lr_k1, lr_k2, psi_out)
   type(sternheimer_t),      intent(inout) :: sh
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(xc_t),               intent(in)    :: xc
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir1
   integer,                  intent(in)    :: idir2
   type(lr_t),               intent(inout) :: lr_k1(:) 
@@ -2279,9 +2279,9 @@ subroutine X(inhomog_B)(sh, namespace, gr, st, hm, xc, geo, idir1, idir2, lr_k1,
  
   do ik = st%d%kpt%start, st%d%kpt%end
     ik0 = ik-st%d%kpt%start+1
-    call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir1, ik, lr_k2(1)%X(dl_psi)(:, :, :, ik), &
+    call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir1, ik, lr_k2(1)%X(dl_psi)(:, :, :, ik), &
       psi_out(:, :, :, ik0, 1), factor_plus, factor_k, factor_magn)
-    call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir2, ik, lr_k1(1)%X(dl_psi)(:, :, :, ik), &
+    call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir2, ik, lr_k1(1)%X(dl_psi)(:, :, :, ik), &
       psi_out(:, :, :, ik0, 1), factor_minus, factor_k, factor_magn)
   end do
   if(sternheimer_add_hartree(sh) .or. sternheimer_add_fxc(sh)) then
@@ -2423,13 +2423,13 @@ contains
 end subroutine X(inhomog_EB)
 
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_BE)(namespace, gr, st, hm, geo, idir1, idir2, ik, add_hartree, add_fxc, hvar, psi_e1, psi_e2, psi_ek1, &
+subroutine X(inhomog_BE)(namespace, gr, st, hm, ions, idir1, idir2, ik, add_hartree, add_fxc, hvar, psi_e1, psi_e2, psi_ek1, &
   psi_ek2, psi_k1, psi_k2, factor_e1, factor_e2, psi_out)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir1, idir2
   integer,                  intent(in)    :: ik
   logical,                  intent(in)    :: add_hartree, add_fxc
@@ -2461,17 +2461,17 @@ subroutine X(inhomog_BE)(namespace, gr, st, hm, geo, idir1, idir2, ik, add_hartr
 #endif
   factor_magn = M_ONE
 
-  call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir1, ik, psi_ek2, psi_out, factor_plus, factor_magn, factor_magn)
-  call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir2, ik, psi_ek1, psi_out, factor_minus, factor_magn, factor_magn)
+  call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir1, ik, psi_ek2, psi_out, factor_plus, factor_magn, factor_magn)
+  call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir2, ik, psi_ek1, psi_out, factor_minus, factor_magn, factor_magn)
 
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir1, ik, psi_k2, psi_e2, psi_out, factor_plus, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir1, ik, psi_k2, psi_e2, psi_out, factor_plus, &
     factor_k, factor_e1)
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir2, ik, psi_k1, psi_e2, psi_out, factor_minus, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir2, ik, psi_k1, psi_e2, psi_out, factor_minus, &
     factor_k, factor_e1)
 
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir1, ik, psi_e1, psi_k2, psi_out, factor_plus, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir1, ik, psi_e1, psi_k2, psi_out, factor_plus, &
     factor_e2, factor_k0)
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir2, ik, psi_e1, psi_k1, psi_out, factor_minus, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir2, ik, psi_e1, psi_k1, psi_out, factor_minus, &
     factor_e2, factor_k0)
 
   if(add_hartree .or. add_fxc) then 
@@ -2482,12 +2482,12 @@ subroutine X(inhomog_BE)(namespace, gr, st, hm, geo, idir1, idir2, ik, add_hartr
 end subroutine X(inhomog_BE)
 
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_KE)(namespace, gr, st, hm, geo, idir, ik, psi_e, psi_out)
+subroutine X(inhomog_KE)(namespace, gr, st, hm, ions, idir, ik, psi_e, psi_out)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir, ik
   R_TYPE,                   intent(inout) :: psi_e(:,:,:) 
   R_TYPE,                   intent(inout) :: psi_out(:,:,:) 
@@ -2500,19 +2500,19 @@ subroutine X(inhomog_KE)(namespace, gr, st, hm, geo, idir, ik, psi_e, psi_out)
   factor_magn = -M_ONE
   factor_e = -M_ONE
    
-  call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_e, psi_out, factor_plus, factor_e, factor_magn)
+  call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir, ik, psi_e, psi_out, factor_plus, factor_e, factor_magn)
 
   POP_SUB(X(inhomog_KE))
 end subroutine X(inhomog_KE)
 
 ! --------------------------------------------------------------------------
 
-subroutine X(inhomog_k2)(namespace, gr, st, hm, geo, idir1, idir2, ik, psi_k2, psi_out)
+subroutine X(inhomog_k2)(namespace, gr, st, hm, ions, idir1, idir2, ik, psi_k2, psi_out)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir1, idir2
   integer,                  intent(in)    :: ik
   R_TYPE,                   intent(inout) :: psi_k2(:,:,:) 
@@ -2536,15 +2536,15 @@ subroutine X(inhomog_k2)(namespace, gr, st, hm, geo, idir1, idir2, ik, psi_k2, p
 #endif 
   factor_magn = -M_ONE
 
-  call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir1, ik, psi_k2, psi_out, factor_plus, factor_k, factor_magn)
+  call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir1, ik, psi_k2, psi_out, factor_plus, factor_k, factor_magn)
   
-  call pert_init(pert_kdotp2, namespace, PERTURBATION_KDOTP, gr, geo)
+  call pert_init(pert_kdotp2, namespace, PERTURBATION_KDOTP, gr, ions)
   call pert_setup_dir(pert_kdotp2, idir1, idir2)
   
   do ist = 1, st%nst
     if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_elec_get_state(st, gr%mesh, ist, ik, psi) 
-      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, geo, hm, ik, psi, f_out)
+      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, ions, hm, ik, psi, f_out)
       if(idir1 == idir2) f_out(:,:) = M_HALF * f_out(:,:)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -2562,12 +2562,12 @@ subroutine X(inhomog_k2)(namespace, gr, st, hm, geo, idir1, idir2, ik, psi_k2, p
 end subroutine X(inhomog_K2)
 
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi_out)
+subroutine X(inhomog_kb)(namespace, gr, st, hm, ions, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi_out)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir, idir1, idir2
   integer,                  intent(in)    :: ik
   R_TYPE,                   intent(inout) :: psi_k1(:,:,:)
@@ -2605,13 +2605,13 @@ subroutine X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, psi
   factor_magn = -M_ONE
   factor = M_ONE
 
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir, ik, psi_k2, psi_k1, psi_out, factor_plus, factor_k, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir, ik, psi_k2, psi_k1, psi_out, factor_plus, factor_k, &
     factor_k)
-  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, geo, idir, ik, psi_k1, psi_k2, psi_out, factor_minus, factor_k, &
+  call X(inhomog_per_component_2nd_order)(namespace, gr, st, hm, ions, idir, ik, psi_k1, psi_k2, psi_out, factor_minus, factor_k, &
     factor_k)
-  call X(inhomog_per_component)(namespace, gr, st, hm, geo, idir, ik, psi_b, psi_out, factor, factor, factor_magn)
+  call X(inhomog_per_component)(namespace, gr, st, hm, ions, idir, ik, psi_b, psi_out, factor, factor, factor_magn)
 
-  call pert_init(pert_kdotp2, namespace, PERTURBATION_KDOTP, gr, geo)
+  call pert_init(pert_kdotp2, namespace, PERTURBATION_KDOTP, gr, ions)
   call pert_setup_dir(pert_kdotp2, idir1, idir2)
 
 
@@ -2622,10 +2622,10 @@ subroutine X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, psi
     if(abs(st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_elec_get_state(st, gr%mesh, ist, ik, psi(:, :, ist))
       call pert_setup_dir(pert_kdotp2, idir, idir1)
-      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, geo, hm, ik, psi_k2(:, :, ist), f_out1(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, ions, hm, ik, psi_k2(:, :, ist), f_out1(:, :, ist))
       if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO * f_out1(:, :, ist)   
       call pert_setup_dir(pert_kdotp2,idir,idir2)
-      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, geo, hm, ik, psi_k1(:, :, ist), f_out2(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, ions, hm, ik, psi_k1(:, :, ist), f_out2(:, :, ist))
       if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO * f_out2(:, :, ist)
 
       do idim = 1, hm%d%dim
@@ -2636,10 +2636,10 @@ subroutine X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, psi
       end do
 
       call pert_setup_dir(pert_kdotp2, idir, idir1)
-      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, geo, hm, ik, psi(:, :, ist), f_out1(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, ions, hm, ik, psi(:, :, ist), f_out1(:, :, ist))
       if(idir .ne. idir1) f_out1(:, :, ist) = M_TWO * f_out1(:, :, ist)  
       call pert_setup_dir(pert_kdotp2, idir, idir2)
-      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, geo, hm, ik, psi(:, :, ist), f_out2(:, :,ist))
+      call X(pert_apply_order_2)(pert_kdotp2, namespace, gr, ions, hm, ik, psi(:, :, ist), f_out2(:, :,ist))
       if(idir .ne. idir2) f_out2(:, :, ist) = M_TWO * f_out2(:, :, ist)
     end if
   end do
@@ -2677,7 +2677,7 @@ end subroutine X(inhomog_kb)
 
 
  ! --------------------------------------------------------------------------
-subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, idir2, lr_k, lr_b, lr_k1, lr_k2, lr_kk1, lr_kk2, &
+subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, ions, idir, idir1, idir2, lr_k, lr_b, lr_k1, lr_k2, lr_kk1, lr_kk2, &
   psi_out)
   type(sternheimer_t),      intent(inout) :: sh
   type(namespace_t),        intent(in)    :: namespace
@@ -2685,7 +2685,7 @@ subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, id
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(xc_t),               intent(in)    :: xc
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir, idir1, idir2
   type(lr_t),               intent(inout) :: lr_k(:)
   type(lr_t),               intent(inout) :: lr_b(:)
@@ -2745,11 +2745,11 @@ subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, id
   
   do ik = st%d%kpt%start, st%d%kpt%end
     ik0 = ik-st%d%kpt%start+1
-    call X(inhomog_kb)(namespace, gr, st, hm, geo, idir, idir1, idir2, ik, lr_b(1)%X(dl_psi)(:, :, :, ik), &
+    call X(inhomog_kb)(namespace, gr, st, hm, ions, idir, idir1, idir2, ik, lr_b(1)%X(dl_psi)(:, :, :, ik), &
       lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), psi_out(:, :, :, ik0, 1))
     
     ispin = st%d%get_spin_index(ik)
-    call X(inhomog_BE)(namespace, gr, st, hm, geo, idir1, idir2, ik, add_hartree, add_fxc, hvar(:, ispin, 1), &
+    call X(inhomog_BE)(namespace, gr, st, hm, ions, idir1, idir2, ik, add_hartree, add_fxc, hvar(:, ispin, 1), &
       lr_k(1)%X(dl_psi)(:, :, :, ik), lr_k(1)%X(dl_psi)(:, :, :, ik), lr_kk1(1)%X(dl_psi)(:, :, :, ik), &
       lr_kk2(1)%X(dl_psi)(:, :, :, ik), lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), &
       factor1, factor2, psi_out(:, :, :, ik0, 1))
@@ -2761,14 +2761,14 @@ subroutine X(inhomog_KB_tot)(sh, namespace, gr, st, hm, xc, geo, idir, idir1, id
 end subroutine X(inhomog_KB_tot)
 
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_KE_tot)(sh, namespace, gr, st, hm, xc, geo, idir, nsigma, lr_k, lr_e, lr_kk, psi_out)
+subroutine X(inhomog_KE_tot)(sh, namespace, gr, st, hm, xc, ions, idir, nsigma, lr_k, lr_e, lr_kk, psi_out)
   type(sternheimer_t),      intent(inout) :: sh
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
   type(xc_t),               intent(in)    :: xc
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir, nsigma
   type(lr_t),               intent(inout) :: lr_e(:) 
   type(lr_t),               intent(inout) :: lr_k(:)  
@@ -2807,7 +2807,7 @@ subroutine X(inhomog_KE_tot)(sh, namespace, gr, st, hm, xc, geo, idir, nsigma, l
       call X(inhomog_EB)(gr%mesh, st, ik, add_hartree, add_fxc, hvar(:, ispin, isigma), lr_k(1)%X(dl_psi)(:, :, :, ik), &
         lr_kk(1)%X(dl_psi)(:, :, :, ik), factor_k, psi_out(:, :, :, ik0, isigma))
 
-      call X(inhomog_KE)(namespace, gr, st, hm, geo, idir, ik, lr_e(isigma)%X(dl_psi)(:, :, :, ik), psi_out(:, :, :, ik0, isigma))
+      call X(inhomog_KE)(namespace, gr, st, hm, ions, idir, ik, lr_e(isigma)%X(dl_psi)(:, :, :, ik), psi_out(:, :, :, ik0, isigma))
     end do
   end do
   
@@ -2817,12 +2817,12 @@ subroutine X(inhomog_KE_tot)(sh, namespace, gr, st, hm, xc, geo, idir, nsigma, l
 end subroutine X(inhomog_KE_tot)
  
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_k2_tot)(namespace, gr, st, hm, geo, idir1, idir2, lr_k1, lr_k2, psi_out)
+subroutine X(inhomog_k2_tot)(namespace, gr, st, hm, ions, idir1, idir2, lr_k1, lr_k2, psi_out)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   integer,                  intent(in)    :: idir1, idir2
   type(lr_t),               intent(inout) :: lr_k1(:)
   type(lr_t),               intent(inout) :: lr_k2(:)
@@ -2836,12 +2836,12 @@ subroutine X(inhomog_k2_tot)(namespace, gr, st, hm, geo, idir1, idir2, lr_k1, lr
 
   do ik = st%d%kpt%start, st%d%kpt%end
     ik0 = ik - st%d%kpt%start + 1
-    call X(inhomog_k2)(namespace, gr, st, hm, geo, idir1, idir2, ik, lr_k2(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
+    call X(inhomog_k2)(namespace, gr, st, hm, ions, idir1, idir2, ik, lr_k2(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
 
     if(idir1 == idir2) then
       psi_out(:,:,:, ik0, 1) = M_TWO * psi_out(:,:,:, ik0, 1)
     else
-      call X(inhomog_k2)(namespace, gr, st, hm, geo, idir2, idir1, ik, lr_k1(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
+      call X(inhomog_k2)(namespace, gr, st, hm, ions, idir2, idir1, ik, lr_k1(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
     end if
   end do
 

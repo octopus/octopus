@@ -22,11 +22,11 @@ module td_calc_oct_m
   use derivatives_oct_m
   use iso_c_binding 
   use forces_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_base_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lasers_oct_m
   use loct_math_oct_m
@@ -61,11 +61,11 @@ contains
 !! \warning This subroutine only works if ions are not
 !!          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(namespace, space, gr, geo, st, hm, acc, time)
+subroutine td_calc_tacc(namespace, space, gr, ions, st, hm, acc, time)
   type(namespace_t),        intent(in)  :: namespace
   type(space_t),            intent(in)  :: space
   type(grid_t),             intent(in)  :: gr
-  type(geometry_t),         intent(in)  :: geo
+  type(ions_t),             intent(in)  :: ions
   type(states_elec_t),      intent(in)  :: st
   type(hamiltonian_elec_t), intent(in)  :: hm
   FLOAT,                    intent(in)  :: time
@@ -84,7 +84,7 @@ subroutine td_calc_tacc(namespace, space, gr, geo, st, hm, acc, time)
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
-  call total_force_calculate(space, gr, geo, hm%ep, st, hm%kpoints, acc, hm%lda_u_level)
+  call total_force_calculate(space, gr, ions, hm%ep, st, hm%kpoints, acc, hm%lda_u_level)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.

@@ -26,11 +26,11 @@ program oct_convert
   use command_line_oct_m
   use fft_oct_m
   use fftw_params_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
-  use io_function_oct_m
   use io_binary_oct_m
+  use io_function_oct_m
+  use ions_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use loct_oct_m
@@ -249,16 +249,16 @@ contains
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, global_namespace, sys%ions, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%kpoints, basename, folder, &
+      call convert_transform(sys%gr%mesh, global_namespace, sys%ions, sys%mc, sys%kpoints, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, global_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, global_namespace, sys%ions, sys%hm%psolver, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -271,11 +271,11 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, namespace, geo, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+  subroutine convert_low(mesh, namespace, ions, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
     subtract_file, ref_name, ref_folder)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(ions_t),      intent(in)    :: ions
     type(poisson_t),   intent(in)    :: psolver
     type(multicomm_t), intent(in)   :: mc
     character(len=*),  intent(inout) :: basename       !< File name
@@ -376,13 +376,13 @@ contains
       end if
       ! Write the corresponding output
       call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
-           trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, ions = ions)
       
       if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
-             trim(out_name), namespace, mesh, pot, units_out%energy, ierr, geo = geo)
+             trim(out_name), namespace, mesh, pot, units_out%energy, ierr, ions = ions)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
       ! It does not matter if the current write has failed for the next iteration
@@ -399,11 +399,11 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, namespace, geo, mc, kpoints, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, namespace, ions, mc, kpoints, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    ,  intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(ions_t),      intent(in)    :: ions
     type(multicomm_t), intent(in)    :: mc
     type(kpoints_t),   intent(in)    :: kpoints
     character(len=*),  intent(inout) :: basename       !< File name
@@ -571,7 +571,7 @@ contains
     call messages_print_var_value(wd_info, 'ConvertEnergyStep', dw, unit = units_out%energy)
 
     !TODO: set system variable common for all the program in 
-    !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
+    !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%ions%periodic_dim)
     call kick_init(kick, namespace, mesh%sb, kpoints, 1)
 
     e_start = nint(min_energy / dw)
@@ -724,7 +724,7 @@ contains
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         call dio_function_output(outp%how, trim(filename), & 
            trim('density'), namespace, mesh, point_tmp(:, i_energy), &
-           units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           units_out%length**(-mesh%sb%dim), ierr, ions = ions)
       end do
       call restart_end(restart)
     else
@@ -735,7 +735,7 @@ contains
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
           call dio_function_output(outp%how, trim(filename), & 
              trim('density'), namespace, mesh, read_rff, &
-             units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+             units_out%length**(-mesh%sb%dim), ierr, ions = ions)
         end do
       end if
     end if
@@ -758,10 +758,10 @@ contains
   ! ---------------------------------------------------------
   !> Given a set of mesh function operations it computes a  
   !! a resulting mesh function from linear combination of them.
-  subroutine convert_operate(mesh, namespace, geo, mc, outp)
+  subroutine convert_operate(mesh, namespace, ions, mc, outp)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)   :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(ions_t),      intent(in)    :: ions
     type(multicomm_t), intent(in)   :: mc
     type(output_t)  ,  intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
 
@@ -872,7 +872,7 @@ contains
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
     call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, mesh, & 
-      scalar_ff, units, ierr, geo = geo)
+      scalar_ff, units, ierr, ions = ions)
 
     SAFE_DEALLOCATE_A(tmp_ff)
     SAFE_DEALLOCATE_A(scalar_ff)

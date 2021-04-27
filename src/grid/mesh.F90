@@ -22,12 +22,12 @@ module mesh_oct_m
   use basis_set_abst_oct_m
   use comm_oct_m
   use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
+  use ions_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -267,9 +267,9 @@ contains
   !!
   !! So, if n > 0, the point is in the border.
   ! ----------------------------------------------------------------------
-  logical function mesh_inborder(mesh, geo, ip, dist, width) result(is_on_border)
+  logical function mesh_inborder(mesh, ions, ip, dist, width) result(is_on_border)
     type(mesh_t),     intent(in)  :: mesh   !< the mesh
-    type(geometry_t), intent(in)  :: geo
+    type(ions_t),     intent(in)  :: ions
     integer,          intent(in)  :: ip     !< the point in the mesh
     FLOAT,            intent(in)  :: width  !< the width of the border
     !> distance from border. The distances of the point to the walls,
@@ -310,19 +310,19 @@ contains
 
     case(MINIMUM)
       radius = mesh%sb%rsize
-      do iatom = 1, geo%natoms
-        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x)
-        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%species)
+      do iatom = 1, ions%natoms
+        call mesh_r(mesh, ip, rr, origin=ions%atom(iatom)%x)
+        if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(ions%atom(iatom)%species)
         dd = rr - (radius - width)
 	! check if the point is on the spherical shell of atom # iatom
 	if ((dd < M_ZERO) .or. (rr > radius)) cycle
  
         ! make sure that the point is not inside some other atomic sphere
         is_on_border = .true.
-        do jatom = 1, geo%natoms
+        do jatom = 1, ions%natoms
           if(jatom == iatom) cycle
-          call mesh_r(mesh, ip, rr, origin=geo%atom(jatom)%x)
-          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(jatom)%species)
+          call mesh_r(mesh, ip, rr, origin=ions%atom(jatom)%x)
+          if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(ions%atom(jatom)%species)
           if(rr < radius - width) then 
             is_on_border = .false.
             exit

@@ -21,9 +21,9 @@
 program spin_susceptibility
   use batch_oct_m
   use command_line_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use ions_oct_m
   use kick_oct_m
   use lalg_adv_oct_m
   use loct_oct_m

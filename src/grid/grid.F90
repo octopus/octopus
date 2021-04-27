@@ -23,8 +23,8 @@ module grid_oct_m
   use cube_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
   use messages_oct_m
@@ -70,10 +70,10 @@ module grid_oct_m
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, namespace, geo, space)
+  subroutine grid_init_stage_1(gr, namespace, ions, space)
     type(grid_t),      intent(inout) :: gr
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(inout) :: geo
+    type(ions_t),      intent(inout) :: ions
     type(space_t),     intent(in)    :: space
 
     type(stencil_t) :: cube
@@ -85,9 +85,9 @@ contains
 
     PUSH_SUB(grid_init_stage_1)
 
-    call simul_box_init(gr%sb, namespace, geo, space)
+    call simul_box_init(gr%sb, namespace, ions, space)
 
-    call symmetries_init(gr%symm, namespace, geo, space)
+    call symmetries_init(gr%symm, namespace, ions, space)
 
 
     !%Variable UseFineMesh
@@ -107,7 +107,7 @@ contains
 
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
-    call geo%grid_defaults(def_h, def_rsize)
+    call ions%grid_defaults(def_h, def_rsize)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -165,7 +165,7 @@ contains
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
-        call geo%grid_defaults_info()
+        call ions%grid_defaults_info()
         do idir = 1, space%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
@@ -198,7 +198,7 @@ contains
     end if
 
     ! initialize curvilinear coordinates
-    call curvilinear_init(gr%cv, namespace, gr%sb, geo, grid_spacing)
+    call curvilinear_init(gr%cv, namespace, gr%sb, ions, grid_spacing)
 
     ! initialize derivatives
     call derivatives_init(gr%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)

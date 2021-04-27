@@ -24,10 +24,10 @@ module ion_electron_local_potential_oct_m
   use comm_oct_m
   use distributed_oct_m
   use epot_oct_m
-  use geometry_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -102,11 +102,11 @@ contains
   end function ion_electron_local_potential_constructor
 
   ! ---------------------------------------------------------
-  subroutine ion_electron_local_potential_init(this, mesh, psolver, geo, namespace)
+  subroutine ion_electron_local_potential_init(this, mesh, psolver, ions, namespace)
     class(ion_electron_local_potential_t),    intent(inout) :: this
     type(mesh_t),                     target, intent(in)    :: mesh
     type(poisson_t),                  target, intent(in)    :: psolver
-    type(geometry_t),                 target, intent(in)    :: geo
+    type(ions_t),                     target, intent(in)    :: ions
     type(namespace_t),                target, intent(in)    :: namespace
 
     integer :: ia
@@ -119,16 +119,16 @@ contains
     SAFE_ALLOCATE(this%potential(1:mesh%np, 1:1))
 
     this%have_density = .false.
-    do ia = 1, geo%natoms
-      if(local_potential_has_density(geo%space, geo%atom(ia))) then
+    do ia = 1, ions%natoms
+      if(local_potential_has_density(ions%space, ions%atom(ia))) then
         this%have_density = .true.
         exit
       end if
     end do
 
-    this%atoms_dist => geo%atoms_dist
-    this%atom => geo%atom
-    this%space => geo%space
+    this%atoms_dist => ions%atoms_dist
+    this%atom => ions%atom
+    this%space => ions%space
 
     this%namespace => namespace
 

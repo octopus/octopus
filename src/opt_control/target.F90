@@ -26,13 +26,13 @@ module target_oct_m
   use epot_oct_m
   use excited_states_oct_m
   use fft_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -182,11 +182,11 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, kpoints, namespace, geo, qcs, td, w0, tg, oct, ep, mc)
+  subroutine target_init(gr, kpoints, namespace, ions, qcs, td, w0, tg, oct, ep, mc)
     type(grid_t),                intent(in)    :: gr
     type(kpoints_t),             intent(in)    :: kpoints
     type(namespace_t),           intent(in)    :: namespace
-    type(geometry_t),            intent(in)    :: geo
+    type(ions_t),                intent(in)    :: ions
     type(opt_control_state_t),   intent(inout) :: qcs
     type(td_t),                  intent(in)    :: td
     FLOAT,                       intent(in)    :: w0
@@ -301,12 +301,12 @@ contains
       call target_init_hhg(tg, namespace, td, w0)
     case(oct_tg_hhgnew)
       call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
-      call target_init_hhgnew(gr, namespace, tg, td, geo, ep)
+      call target_init_hhgnew(gr, namespace, tg, td, ions, ep)
     case(oct_tg_velocity)
-      call target_init_velocity(gr, namespace, geo, tg, oct, td, ep)
+      call target_init_velocity(gr, namespace, ions, tg, oct, td, ep)
     case(oct_tg_classical)
       call messages_experimental('OCTTargetOperator = oct_tg_classical')
-      call target_init_classical(geo, namespace, tg, td, oct)
+      call target_init_classical(ions, namespace, tg, td, oct)
     case(oct_tg_spin)
       call messages_experimental('OCTTargetOperator = oct_tg_spin')
       call target_init_spin(tg, namespace)
@@ -365,12 +365,12 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(tg, namespace, gr, dir, geo, hm, outp)
+  subroutine target_output(tg, namespace, gr, dir, ions, hm, outp)
     type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     character(len=*),         intent(in)    :: dir
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(output_t),           intent(in)    :: outp
 
@@ -378,27 +378,27 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_output_groundstate(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_groundstate(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_excited)
-      call target_output_excited(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_excited(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_exclude_state)
-      call target_output_exclude(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_exclude(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_gstransformation)
-      call target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_gstransformation(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_userdefined) 
-      call target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_userdefined(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_jdensity)
-      call target_output_density(tg, namespace, gr, dir, geo, outp)
+      call target_output_density(tg, namespace, gr, dir, ions, outp)
     case(oct_tg_local)
-      call target_output_local(tg, namespace, gr, dir, geo, outp)
+      call target_output_local(tg, namespace, gr, dir, ions, outp)
     case(oct_tg_td_local)
-      call target_output_tdlocal(tg, namespace, gr, dir, geo, outp)
+      call target_output_tdlocal(tg, namespace, gr, dir, ions, outp)
     case(oct_tg_hhg)
-      call target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_hhg(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_hhgnew)
-      call target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_hhg(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_velocity)
-      call target_output_velocity(tg, namespace, gr, dir, geo, hm, outp)
+      call target_output_velocity(tg, namespace, gr, dir, ions, hm, outp)
     case(oct_tg_classical)
       call target_output_classical()
     end select
@@ -412,13 +412,13 @@ contains
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(tg, namespace, space, hm, gr, geo, psi, time, max_time)
+  subroutine target_tdcalc(tg, namespace, space, hm, gr, ions, psi, time, max_time)
     type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: psi
     integer,                  intent(in)    :: time
     integer,                  intent(in)    :: max_time
@@ -433,11 +433,11 @@ contains
     case(oct_tg_hhgnew)
       call target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
     case(oct_tg_velocity)
-      call target_tdcalc_velocity(tg, hm, gr, geo, psi, time, max_time)
+      call target_tdcalc_velocity(tg, hm, gr, ions, psi, time, max_time)
     case(oct_tg_td_local)
       call target_tdcalc_tdlocal(tg, gr, psi, time)
     case(oct_tg_hhg)
-      call target_tdcalc_hhg(tg, namespace, space, hm, gr, geo, psi, time)
+      call target_tdcalc_hhg(tg, namespace, space, hm, gr, ions, psi, time)
     case(oct_tg_jdensity)
       call target_tdcalc_density(tg, gr, hm%kpoints, psi, time)
     case default
@@ -545,13 +545,13 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, namespace, gr, kpoints, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, namespace, gr, kpoints, qcpsi, ions) result(j1)
     type(target_t),             intent(inout)   :: tg
     type(namespace_t),          intent(in)      :: namespace
     type(grid_t),               intent(in)      :: gr
     type(kpoints_t),            intent(in)      :: kpoints
     type(opt_control_state_t),  intent(inout)   :: qcpsi
-    type(geometry_t), optional, intent(in)      :: geo
+    type(ions_t),     optional, intent(in)      :: ions
 
     type(states_elec_t), pointer :: psi
 
@@ -581,7 +581,7 @@ contains
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)
-      j1 = target_j1_velocity(tg, geo)
+      j1 = target_j1_velocity(tg, ions)
     case(oct_tg_classical)
       j1 = target_j1_classical(tg, qcpsi)
     case(oct_tg_spin)
@@ -596,14 +596,14 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(tg, namespace, gr, kpoints, qcpsi_in, qcchi_out, geo)
+  subroutine target_chi(tg, namespace, gr, kpoints, qcpsi_in, qcchi_out, ions)
     type(target_t),                    intent(inout) :: tg
     type(namespace_t),                 intent(in)    :: namespace
     type(grid_t),                      intent(in)    :: gr
     type(kpoints_t),                   intent(in)    :: kpoints
     type(opt_control_state_t), target, intent(inout) :: qcpsi_in
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
-    type(geometry_t),                  intent(in)    :: geo
+    type(ions_t),                      intent(in)    :: ions
 
     FLOAT, pointer :: q(:, :), p(:, :)
     type(states_elec_t), pointer :: psi_in, chi_out
@@ -635,9 +635,9 @@ contains
     case(oct_tg_hhgnew)
       call target_chi_hhg(chi_out)
     case(oct_tg_velocity)
-      call target_chi_velocity(gr, tg, chi_out, geo)
+      call target_chi_velocity(gr, tg, chi_out, ions)
     case(oct_tg_classical)
-      call target_chi_classical(tg, qcpsi_in, qcchi_out, geo)
+      call target_chi_classical(tg, qcpsi_in, qcchi_out, ions)
     case(oct_tg_spin)
       call target_chi_spin(tg, gr, psi_in, chi_out)
     end select

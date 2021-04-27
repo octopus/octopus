@@ -21,10 +21,10 @@
 module states_elec_io_oct_m
   use atomic_orbital_oct_m
   use comm_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -638,14 +638,14 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, kpoints, &
+  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, ions, mesh, kpoints, &
                                               phase, vec_pot, vec_pot_var)
     character(len=*),             intent(in)  :: dir
     type(namespace_t),            intent(in)  :: namespace
     integer,                      intent(in)  :: nst
     type(states_elec_t),          intent(in)  :: st
     type(simul_box_t),            intent(in)  :: sb
-    type(geometry_t), target,     intent(in)  :: geo
+    type(ions_t),     target,     intent(in)  :: ions
     type(mesh_t),                 intent(in)  :: mesh
     type(kpoints_t),              intent(in)  :: kpoints
     CMPLX,           allocatable, intent(in)  :: phase(:, :)
@@ -703,10 +703,10 @@ contains
           write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
         else 
          write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
-         do ia = 1, geo%natoms
-            work = orbitalset_utils_count(geo, ia)
+         do ia = 1, ions%natoms
+            work = orbitalset_utils_count(ions, ia)
             do norb = 1, work
-             work2 = orbitalset_utils_count(geo, ia, norb)
+             work2 = orbitalset_utils_count(ions, ia, norb)
               write(iunit(is),'(a, i3.3,a,i1.1,a)',advance='no') 'w(at=',ia,',os=',norb,') '
             end do
           end do
@@ -728,17 +728,17 @@ contains
       end if
 
       maxnorb = 0
-      do ia = 1, geo%natoms
-        maxnorb = max(maxnorb, orbitalset_utils_count(geo, ia))
+      do ia = 1, ions%natoms
+        maxnorb = max(maxnorb, orbitalset_utils_count(ions, ia))
       end do
 
-      SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms))
-      weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms) = M_ZERO
+      SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:ions%natoms))
+      weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:ions%natoms) = M_ZERO
  
-      do ia = 1, geo%natoms
+      do ia = 1, ions%natoms
 
         !We first count how many orbital set we have
-        work = orbitalset_utils_count(geo, ia)
+        work = orbitalset_utils_count(ions, ia)
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
@@ -746,30 +746,30 @@ contains
 
           !We count the orbitals
           work2 = 0
-          do iorb = 1, species_niwfs(geo%atom(ia)%species)
-           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+          do iorb = 1, species_niwfs(ions%atom(ia)%species)
+           call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
             if(ii == norb) then
               os%ll = ll
               os%nn = nn
               os%ii = ii
-              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+              os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
               work2 = work2 + 1
             end if
           end do
           os%norbs = work2
           os%ndim = 1
           os%submesh = .false.
-          os%spec => geo%atom(ia)%species
+          os%spec => ions%atom(ia)%species
 
           do iorb = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
-              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call dget_atomic_orbital(ions, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim, use_mesh=.not.os%submesh, &
                                                 normalize = .true.)
             else
-              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call zget_atomic_orbital(ions, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim, &
                                                 use_mesh =.not.allocated(phase) .and. .not.os%submesh, &
                                                 normalize = .true.)
@@ -861,10 +861,10 @@ contains
           write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
         end do
         if(projection) then
-          do ia = 1, geo%natoms
-            work = orbitalset_utils_count(geo, ia)
+          do ia = 1, ions%natoms
+            work = orbitalset_utils_count(ions, ia)
             do norb = 1, work
-              work2 = orbitalset_utils_count(geo, ia, norb)              
+              work2 = orbitalset_utils_count(ions, ia, norb)              
               do iorb = 1, work2
                 do ist = 1, nst
                   write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)

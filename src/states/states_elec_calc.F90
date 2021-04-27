@@ -28,7 +28,6 @@ module states_elec_calc_oct_m
   use iso_c_binding
   use comm_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use fourier_space_oct_m
   use global_oct_m
   use grid_oct_m

@@ -22,11 +22,11 @@ module sternheimer_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use density_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m

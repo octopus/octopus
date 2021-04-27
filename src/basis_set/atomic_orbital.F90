@@ -18,8 +18,8 @@
 #include "global.h"
 
 module atomic_orbital_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
   use math_oct_m
@@ -55,8 +55,8 @@ module atomic_orbital_oct_m
 contains
 
   ! ---------------------------------------------------------
-  FLOAT function atomic_orbital_get_radius(geo, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
-    type(geometry_t), target, intent(in)   :: geo
+  FLOAT function atomic_orbital_get_radius(ions, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
+    type(ions_t),     target, intent(in)   :: ions
     type(mesh_t),             intent(in)   :: mesh
     integer,                  intent(in)   :: ia, iorb, ispin
     integer(8),               intent(in)   :: truncation
@@ -67,7 +67,7 @@ contains
 
     PUSH_SUB(atomic_orbital_get_radius)
 
-    spec => geo%atom(ia)%species
+    spec => ions%atom(ia)%species
     call species_iwf_ilm(spec, iorb, ispin, ii, ll, mm)
 
     if(truncation == OPTION__AOTRUNCATION__AO_FULL) then

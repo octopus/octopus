@@ -19,9 +19,9 @@
 #include "global.h"
 
 module vibrations_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -70,9 +70,9 @@ module vibrations_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vibrations_init(this, geo, suffix, namespace)
+  subroutine vibrations_init(this, ions, suffix, namespace)
     type(vibrations_t),        intent(out) :: this
-    type(geometry_t),          intent(in)  :: geo
+    type(ions_t),              intent(in)  :: ions
     character (len=2),         intent(in)  :: suffix
     type(namespace_t), target, intent(in)  :: namespace
 
@@ -80,9 +80,9 @@ contains
 
     PUSH_SUB(vibrations_init)
 
-    this%ndim = geo%space%dim
-    this%natoms = geo%natoms
-    this%num_modes = geo%natoms*geo%space%dim
+    this%ndim = ions%space%dim
+    this%natoms = ions%natoms
+    this%num_modes = ions%natoms*ions%space%dim
     this%namespace => namespace
     SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%infrared(1:this%num_modes, 1:this%ndim))
@@ -90,8 +90,8 @@ contains
     SAFE_ALLOCATE(this%freq(1:this%num_modes))
 
     this%total_mass = M_ZERO
-    do iatom = 1, geo%natoms
-      this%total_mass = this%total_mass + species_mass(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+      this%total_mass = this%total_mass + species_mass(ions%atom(iatom)%species)
     end do
 
     ! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
@@ -167,9 +167,9 @@ contains
   end subroutine vibrations_symmetrize_dyn_matrix
 
   ! ---------------------------------------------------------
-  subroutine vibrations_normalize_dyn_matrix(this, geo)
+  subroutine vibrations_normalize_dyn_matrix(this, ions)
     type(vibrations_t), intent(inout) :: this
-    type(geometry_t),   intent(in)    :: geo
+    type(ions_t),       intent(in)    :: ions
 
     integer :: iatom, idir, jatom, jdir, imat, jmat
 
@@ -186,7 +186,7 @@ contains
             jmat = vibrations_get_index(this, jatom, jdir)
             
             this%dyn_matrix(jmat, imat) = &
-              this%dyn_matrix(jmat, imat) * vibrations_norm_factor(this, geo, iatom, jatom)
+              this%dyn_matrix(jmat, imat) * vibrations_norm_factor(this, ions, iatom, jatom)
 
           end do
         end do
@@ -198,14 +198,14 @@ contains
   end subroutine vibrations_normalize_dyn_matrix
 
   ! ---------------------------------------------------------
-  FLOAT pure function vibrations_norm_factor(this, geo, iatom, jatom)
+  FLOAT pure function vibrations_norm_factor(this, ions, iatom, jatom)
     type(vibrations_t), intent(in) :: this
-    type(geometry_t),   intent(in) :: geo
+    type(ions_t),       intent(in) :: ions
     integer,            intent(in) :: iatom
     integer,            intent(in) :: jatom
 
     vibrations_norm_factor = this%total_mass / &
-      sqrt(species_mass(geo%atom(iatom)%species) * species_mass(geo%atom(jatom)%species))
+      sqrt(species_mass(ions%atom(iatom)%species) * species_mass(ions%atom(jatom)%species))
 
   end function vibrations_norm_factor
 

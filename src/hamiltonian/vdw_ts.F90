@@ -22,11 +22,11 @@
 
 module vdw_ts_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hirshfeld_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lattice_vectors_oct_m
   use messages_oct_m
   use mesh_oct_m
@@ -69,10 +69,10 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, namespace, geo)
+  subroutine vdw_ts_init(this, namespace, ions)
     type(vdw_ts_t),      intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
@@ -113,22 +113,22 @@ contains
     call parse_variable(namespace, 'VDW_TS_sr', CNST(0.94), this%sr)
 
 
-    SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
-    SAFE_ALLOCATE(this%dpfree(1:geo%nspecies))
-    SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
-    SAFE_ALLOCATE(this%volfree(1:geo%nspecies))
-    SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
-    SAFE_ALLOCATE(this%c6ab(1:geo%natoms, 1:geo%natoms))
-    SAFE_ALLOCATE(this%derivative_coeff(1:geo%natoms))
+    SAFE_ALLOCATE(this%c6free(1:ions%nspecies))
+    SAFE_ALLOCATE(this%dpfree(1:ions%nspecies))
+    SAFE_ALLOCATE(this%r0free(1:ions%nspecies))
+    SAFE_ALLOCATE(this%volfree(1:ions%nspecies))
+    SAFE_ALLOCATE(this%c6abfree(1:ions%nspecies, 1:ions%nspecies))
+    SAFE_ALLOCATE(this%c6ab(1:ions%natoms, 1:ions%natoms))
+    SAFE_ALLOCATE(this%derivative_coeff(1:ions%natoms))
 
-    do ispecies = 1, geo%nspecies
-      call get_vdw_param(namespace, species_label(geo%species(ispecies)), &
+    do ispecies = 1, ions%nspecies
+      call get_vdw_param(namespace, species_label(ions%species(ispecies)), &
         this%c6free(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
-      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)), namespace)
+      this%volfree(ispecies) = ps_density_volume(species_ps(ions%species(ispecies)), namespace)
     end do
 
-    do ispecies = 1, geo%nspecies
-      do jspecies = 1, geo%nspecies
+    do ispecies = 1, ions%nspecies
+      do jspecies = 1, ions%nspecies
         num = M_TWO*this%c6free(ispecies)*this%c6free(jspecies)
         den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
           + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
@@ -158,10 +158,10 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, namespace, geo, der, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, ions, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
     type(derivatives_t), intent(in)    :: der
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
@@ -191,57 +191,57 @@ contains
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
-    FLOAT :: x_j(geo%space%dim)
+    FLOAT :: x_j(ions%space%dim)
 
     PUSH_SUB(vdw_ts_calculate)
 
-    SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
+    SAFE_ALLOCATE(vol_ratio(1:ions%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
-    SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
+    SAFE_ALLOCATE(dr0dvra(1:ions%natoms))
 
     energy=M_ZERO
-    force(1:geo%space%dim, 1:geo%natoms) = M_ZERO
-    this%derivative_coeff(1:geo%natoms) = M_ZERO
-    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
+    force(1:ions%space%dim, 1:ions%natoms) = M_ZERO
+    this%derivative_coeff(1:ions%natoms) = M_ZERO
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, ions, st)
 
-    do iatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
     end do
 
-    do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+      ispecies = species_index(ions%atom(iatom)%species)
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
-      do jatom = 1, geo%natoms
-        jspecies = species_index(geo%atom(jatom)%species)
+      do jatom = 1, ions%natoms
+        jspecies = species_index(ions%atom(jatom)%species)
         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
       end do
     end do
   
-    if (geo%space%is_periodic()) then ! periodic case
-      SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
+    if (ions%space%is_periodic()) then ! periodic case
+      SAFE_ALLOCATE(r0ab(1:ions%natoms,1:ions%natoms))
 
       !Precomputing some quantities
-      do iatom = 1, geo%natoms
-        ispecies = species_index(geo%atom(iatom)%species)
-        do jatom = 1, geo%natoms
-         jspecies = species_index(geo%atom(jatom)%species)
+      do iatom = 1, ions%natoms
+        ispecies = species_index(ions%atom(iatom)%species)
+        do jatom = 1, ions%natoms
+         jspecies = species_index(ions%atom(jatom)%species)
 
          r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
                            + (vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
         end do
       end do
 
-      latt_iter = lattice_iterator_t(geo%latt, this%cutoff)
-      do jatom = 1, geo%natoms
-        jspecies = species_index(geo%atom(jatom)%species)
+      latt_iter = lattice_iterator_t(ions%latt, this%cutoff)
+      do jatom = 1, ions%natoms
+        jspecies = species_index(ions%atom(jatom)%species)
                 
         do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-          x_j = geo%atom(jatom)%x(1:geo%space%dim) + latt_iter%get(jcopy)
+          x_j = ions%atom(jatom)%x(1:ions%space%dim) + latt_iter%get(jcopy)
 
-          do iatom = 1, geo%natoms
-            ispecies = species_index(geo%atom(iatom)%species) 
-            rr2 =  sum((x_j - geo%atom(iatom)%x(1:geo%space%dim))**2)
+          do iatom = 1, ions%natoms
+            ispecies = species_index(ions%atom(iatom)%species) 
+            rr2 =  sum((x_j - ions%atom(iatom)%x(1:ions%space%dim))**2)
             rr =  sqrt(rr2)
             rr6 = rr2**3
 
@@ -272,16 +272,16 @@ contains
 
       SAFE_DEALLOCATE_A(r0ab)
     else ! Non periodic case 
-      SAFE_ALLOCATE(coordinates(1:geo%space%dim, 1:geo%natoms))
-      SAFE_ALLOCATE(zatom(1:geo%natoms))
+      SAFE_ALLOCATE(coordinates(1:ions%space%dim, 1:ions%natoms))
+      SAFE_ALLOCATE(zatom(1:ions%natoms))
 
-      do iatom = 1, geo%natoms
-        coordinates(:, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
-        zatom(iatom) = int(species_z(geo%atom(iatom)%species))
+      do iatom = 1, ions%natoms
+        coordinates(:, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
+        zatom(iatom) = int(species_z(ions%atom(iatom)%species))
 
       end do
       
-      call f90_vdw_calculate(geo%natoms,  this%damping, this%sr, zatom(1), coordinates(1, 1), &
+      call f90_vdw_calculate(ions%natoms,  this%damping, this%sr, zatom(1), coordinates(1, 1), &
                              vol_ratio(1), energy, force(1, 1), this%derivative_coeff(1))
 
 
@@ -291,7 +291,7 @@ contains
 
     ! Calculate the potential
     potential = M_ZERO
-    do iatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
       call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
       potential(1:der%mesh%np) = potential(1:der%mesh%np) - this%derivative_coeff(iatom)*dvadens(1:der%mesh%np) 
     end do
@@ -313,11 +313,11 @@ contains
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, geo, der, st, density)
+  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, ions, der, st, density)
     type(vdw_ts_t),      intent(in)    :: this
     type(namespace_t),   intent(in)    :: namespace
-    type(geometry_t),    intent(in)    :: geo
-    FLOAT,               intent(inout) :: force_vdw(1:geo%space%dim, 1:geo%natoms)
+    type(ions_t),        intent(in)    :: ions
+    FLOAT,               intent(inout) :: force_vdw(1:ions%space%dim, 1:ions%natoms)
     type(derivatives_t), intent(in)    :: der
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
@@ -326,7 +326,7 @@ contains
     type(lattice_iterator_t) :: latt_iter
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(geo%space%dim) 
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(ions%space%dim) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
     type(profile_t), save :: prof
 
@@ -334,44 +334,44 @@ contains
 
     call profiling_in(prof, "FORCE_VDW_TS")
 
-    SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
+    SAFE_ALLOCATE(vol_ratio(1:ions%natoms))
     SAFE_ALLOCATE(dvadrr(1:3))
-    SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
-    SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
-    SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
-    SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
+    SAFE_ALLOCATE(dr0dvra(1:ions%natoms))
+    SAFE_ALLOCATE(r0ab(1:ions%natoms,1:ions%natoms))
+    SAFE_ALLOCATE(derivative_coeff(1:ions%natoms))
+    SAFE_ALLOCATE(c6ab(1:ions%natoms,1:ions%natoms))
 
 
-    force_vdw(1:geo%space%dim, 1:geo%natoms) = M_ZERO
-    derivative_coeff(1:geo%natoms) = M_ZERO
-    c6ab(1:geo%natoms,1:geo%natoms) = M_ZERO
-    r0ab(1:geo%natoms,1:geo%natoms) = M_ZERO
-    dr0dvra(1:geo%natoms) = M_ZERO
-    dvadrr(1:geo%space%dim) = M_ZERO
-    vol_ratio(1:geo%natoms) = M_ZERO
+    force_vdw(1:ions%space%dim, 1:ions%natoms) = M_ZERO
+    derivative_coeff(1:ions%natoms) = M_ZERO
+    c6ab(1:ions%natoms,1:ions%natoms) = M_ZERO
+    r0ab(1:ions%natoms,1:ions%natoms) = M_ZERO
+    dr0dvra(1:ions%natoms) = M_ZERO
+    dvadrr(1:ions%space%dim) = M_ZERO
+    vol_ratio(1:ions%natoms) = M_ZERO
 
 
-    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, ions, st)
 
 
-    do iatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
     end do
 
-    do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+      ispecies = species_index(ions%atom(iatom)%species)
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
-      do jatom = 1, geo%natoms
-        jspecies = species_index(geo%atom(jatom)%species)
+      do jatom = 1, ions%natoms
+        jspecies = species_index(ions%atom(jatom)%species)
         c6ab(iatom, jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies) 
       end do
     end do
 
     !Precomputing some quantities
-    do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
-      do jatom = iatom, geo%natoms
-       jspecies = species_index(geo%atom(jatom)%species)
+    do iatom = 1, ions%natoms
+      ispecies = species_index(ions%atom(iatom)%species)
+      do jatom = iatom, ions%natoms
+       jspecies = species_index(ions%atom(jatom)%species)
 
        r0ab(iatom, jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
                           + (vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
@@ -379,15 +379,15 @@ contains
       end do
     end do
 
-    latt_iter = lattice_iterator_t(geo%latt, this%cutoff)
-    do jatom = 1, geo%natoms
-      jspecies = species_index(geo%atom(jatom)%species)
+    latt_iter = lattice_iterator_t(ions%latt, this%cutoff)
+    do jatom = 1, ions%natoms
+      jspecies = species_index(ions%atom(jatom)%species)
 
       do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-        x_j = geo%atom(jatom)%x(1:geo%space%dim) + latt_iter%get(jcopy)
-        do iatom = 1, geo%natoms
-          ispecies = species_index(geo%atom(iatom)%species)
-          rr2 =  sum((x_j - geo%atom(iatom)%x(1:geo%space%dim))**2)
+        x_j = ions%atom(jatom)%x(1:ions%space%dim) + latt_iter%get(jcopy)
+        do iatom = 1, ions%natoms
+          ispecies = species_index(ions%atom(iatom)%species)
+          rr2 =  sum((x_j - ions%atom(iatom)%x(1:ions%space%dim))**2)
           rr  =  sqrt(rr2)
           rr6 = rr2**3
 
@@ -409,15 +409,15 @@ contains
 
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
           deabdrab = c6ab(iatom, jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6
-          force_vdw(:, iatom) = force_vdw(:, iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:geo%space%dim) - x_j)/rr
+          force_vdw(:, iatom) = force_vdw(:, iatom) + M_HALF*deabdrab*(ions%atom(iatom)%x(1:ions%space%dim) - x_j)/rr
         end do
       end do
     end do
 
-    do iatom = 1, geo%natoms
-      do jatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
+      do jatom = 1, ions%natoms
         call hirshfeld_position_derivative(hirshfeld, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-        force_vdw(:, jatom)= force_vdw(:, jatom) + derivative_coeff(iatom)*dvadrr  ! geo%atom(jatom)%f_vdw = sum_i coeff_i * dvadrr_ij
+        force_vdw(:, jatom)= force_vdw(:, jatom) + derivative_coeff(iatom)*dvadrr  ! ions%atom(jatom)%f_vdw = sum_i coeff_i * dvadrr_ij
       end do
     end do
 
@@ -437,9 +437,9 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, geo, dir, fname, namespace)
+  subroutine vdw_ts_write_c6ab(this, ions, dir, fname, namespace)
      type(vdw_ts_t)  , intent(inout) :: this
-     type(geometry_t),    intent(in) :: geo
+     type(ions_t),        intent(in) :: ions
      character(len=*), intent(in)    :: dir, fname
      type(namespace_t),   intent(in) :: namespace
  
@@ -453,8 +453,8 @@ contains
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 
-       do iatom = 1, geo%natoms
-         do jatom = 1, geo%natoms
+       do iatom = 1, ions%natoms
+         do jatom = 1, ions%natoms
            write(iunit, '(3x, i5, i5, e15.6)') iatom, jatom, this%c6ab(iatom, jatom)
          end do
        end do

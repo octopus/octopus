@@ -30,11 +30,11 @@ module propagation_oct_m
   use excited_states_oct_m
   use forces_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lasers_oct_m
   use loct_oct_m
@@ -162,12 +162,12 @@ contains
 
     psi => opt_control_point_qs(qcpsi)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
-    call opt_control_get_classical(sys%geo, qcpsi)
+    call opt_control_get_classical(sys%ions, qcpsi)
 
     if(write_iter_) then
-      call td_write_init(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, sys%st, sys%hm, sys%geo, sys%ks, &
-        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%ep%kick, td%iter, td%max_iter, td%dt, &
-        sys%mc)
+      call td_write_init(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, sys%st, sys%hm, sys%ions, sys%ks, &
+        ion_dynamics_ions_move(td%ions_dyn), gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%ep%kick, td%iter, td%max_iter, &
+        td%dt, sys%mc)
       call td_write_data(write_handler)
     end if
 
@@ -175,11 +175,11 @@ contains
 
     ! setup the Hamiltonian
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, time = M_ZERO)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, time = M_ZERO)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
-    if(ion_dynamics_ions_move(td%ions)) then
-      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace,  sys%gr, sys%geo, psi, time = M_ZERO)
-      call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
+    if(ion_dynamics_ions_move(td%ions_dyn)) then
+      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace,  sys%gr, sys%ions, psi, time = M_ZERO)
+      call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
 
@@ -187,18 +187,18 @@ contains
       call target_init_propagation(tg)
     
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
-       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:sys%gr%sb%dim))
+       SAFE_ALLOCATE(x_initial(1:sys%ions%natoms, 1:sys%gr%sb%dim))
        vel_target_ = .true.
-       do iatom = 1, sys%geo%natoms
-          sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-          sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-          x_initial(iatom, 1:sys%gr%sb%dim) = sys%geo%atom(iatom)%x(1:sys%gr%sb%dim)
+       do iatom = 1, sys%ions%natoms
+          sys%ions%atom(iatom)%f(1:MAX_DIM) = M_ZERO
+          sys%ions%atom(iatom)%v(1:MAX_DIM) = M_ZERO
+          x_initial(iatom, 1:sys%gr%sb%dim) = sys%ions%atom(iatom)%x(1:sys%gr%sb%dim)
        end do
     end if
 
-    if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
+    if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%ions)
 
-    call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%ions, psi, 0, td%max_iter)
 
     if (present(prop)) then
       call oct_prop_dump_states(prop, 0, psi, sys%gr, sys%kpoints, ierr)
@@ -216,7 +216,7 @@ contains
       ! time-iterate wavefunctions
 
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, &
-        td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+        td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
 
       if(present(prop)) then
         call oct_prop_dump_states(prop, istep, psi, sys%gr, sys%kpoints, ierr)
@@ -227,17 +227,17 @@ contains
       end if
 
       ! update
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, time = istep*td%dt)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, time = istep*td%dt)
       call energy_calc_total(sys%namespace, sys%space, sys%hm, sys%gr, psi)
 
       if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(sys%gr%mesh, sys%hm, psi)
 
       ! if td_target
-      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%ions, psi, istep, td%max_iter)
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm, sys%geo, sys%hm%ep%kick, &
+        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm, sys%ions, sys%hm%ep%kick, &
           td%dt, istep)
         ii = ii + 1 
         if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
@@ -256,13 +256,13 @@ contains
     call messages_info(1)
 
     if(vel_target_) then
-       do iatom = 1, sys%geo%natoms
-          sys%geo%atom(iatom)%x(1:sys%gr%sb%dim) = x_initial(iatom, 1:sys%gr%sb%dim)
+       do iatom = 1, sys%ions%natoms
+          sys%ions%atom(iatom)%x(1:sys%gr%sb%dim) = x_initial(iatom, 1:sys%gr%sb%dim)
        end do
        SAFE_DEALLOCATE_A(x_initial)
     end if
 
-    call opt_control_set_classical(sys%geo, qcpsi)
+    call opt_control_set_classical(sys%ions, qcpsi)
 
     if(write_iter_) call td_write_end(write_handler)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
@@ -297,7 +297,7 @@ contains
 
     ! setup the Hamiltonian
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
 
     call oct_prop_dump_states(prop, td%max_iter, psi, sys%gr, sys%kpoints, ierr)
@@ -310,8 +310,8 @@ contains
 
     do istep = td%max_iter, 1, -1
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, &
-        (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp, &
-        move_ions = ion_dynamics_ions_move(td%ions))
+        (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions_dyn, sys%ions, sys%outp, &
+        move_ions = ion_dynamics_ions_move(td%ions_dyn))
 
       call oct_prop_dump_states(prop, istep - 1, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
@@ -319,7 +319,7 @@ contains
         call messages_warning(1)
       end if
 
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
 
@@ -391,7 +391,7 @@ contains
 
     ! setup forward propagation
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
     if(aux_fwd_propagation) then
@@ -414,21 +414,21 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     do i = 1, td%max_iter
-      call update_field(i, par, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
-      call update_hamiltonian_elec_chi(i, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi2)
+      call update_field(i, par, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par_chi, dir = 'f')
+      call update_hamiltonian_elec_chi(i, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%ions, psi2)
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = (i - 1)*td%dt)
-      call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, &
-        sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, &
+        td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       if(aux_fwd_propagation) then
-        call update_hamiltonian_elec_psi(i, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par_prev, psi2, sys%geo)
+        call update_hamiltonian_elec_psi(i, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par_prev, psi2, sys%ions)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, &
-          td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+          td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       end if
-      call update_hamiltonian_elec_psi(i, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
+      call update_hamiltonian_elec_psi(i, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = (i - 1)*td%dt)
-      call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, &
-        sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
-      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%geo, psi, i, td%max_iter) 
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, &
+        td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
+      call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%ions, psi, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
@@ -437,10 +437,10 @@ contains
       end if
       call oct_prop_check(prop_chi, sys%namespace, chi, sys%gr, sys%kpoints, i)
     end do
-    call update_field(td%max_iter+1, par, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
+    call update_field(td%max_iter+1, par, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par_chi, dir = 'f')
 
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
 
     if( target_mode(tg) == oct_targetmode_td .or. &
         (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
@@ -510,7 +510,7 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
@@ -524,26 +524,26 @@ contains
 
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, i)
-      call update_field(i, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
-      call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
+      call update_field(i, par_chi, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par, dir = 'b')
+      call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%ions, psi)
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, &
-        i-1, td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+        i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, sys%kpoints, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
       end if
-      call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
+      call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, &
-        i-1, td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+        i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
     end do
     td%dt = -td%dt
-    call update_field(0, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
+    call update_field(0, par_chi, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
 
     call controlfunction_to_basis(par_chi)
@@ -598,8 +598,8 @@ contains
     chi => opt_control_point_qs(qcchi)
     q => opt_control_point_q(qcchi)
     p => opt_control_point_p(qcchi)
-    SAFE_ALLOCATE(qtildehalf(1:sys%geo%natoms, 1:sys%geo%space%dim))
-    SAFE_ALLOCATE(qinitial(1:sys%geo%natoms, 1:sys%geo%space%dim))
+    SAFE_ALLOCATE(qtildehalf(1:sys%ions%natoms, 1:sys%ions%space%dim))
+    SAFE_ALLOCATE(qinitial(1:sys%ions%natoms, 1:sys%ions%space%dim))
 
     call propagator_elec_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
@@ -619,7 +619,7 @@ contains
     SAFE_ALLOCATE(vhxc(1:sys%gr%mesh%np, 1:sys%hm%d%nspin))
 
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
@@ -634,8 +634,8 @@ contains
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st_ref%pack()
 
-    if (ion_dynamics_ions_move(td%ions)) then
-      call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
+    if (ion_dynamics_ions_move(td%ions_dyn)) then
+      call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
     end if
 
     message(1) = "Info: Backward propagation."
@@ -647,38 +647,38 @@ contains
     do i = td%max_iter, 1, -1
 
       call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, i)
-      call update_field(i, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
+      call update_field(i, par_chi, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par, dir = 'b')
 
       select case(td%tr%method)
 
       case(PROP_EXPLICIT_RUNGE_KUTTA4)
 
-        call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
+        call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, &
-          i-1, td%ions, sys%geo, sys%outp, qcchi = qcchi, move_ions = ion_dynamics_ions_move(td%ions))
+          i-1, td%ions_dyn, sys%ions, sys%outp, qcchi = qcchi, move_ions = ion_dynamics_ions_move(td%ions_dyn))
 
       case default
 
-        if(ion_dynamics_ions_move(td%ions)) then
+        if(ion_dynamics_ions_move(td%ions_dyn)) then
           qtildehalf = q
 
-          call ion_dynamics_save_state(td%ions, sys%geo, ions_state_initial)
-          call ion_dynamics_propagate(td%ions, sys%geo, abs((i-1)*td%dt), M_HALF * td%dt, sys%namespace)
-          call sys%geo%get_positions(qinitial)
-          call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_initial)
+          call ion_dynamics_save_state(td%ions_dyn, sys%ions, ions_state_initial)
+          call ion_dynamics_propagate(td%ions_dyn, sys%ions, abs((i-1)*td%dt), M_HALF * td%dt, sys%namespace)
+          call sys%ions%get_positions(qinitial)
+          call ion_dynamics_restore_state(td%ions_dyn, sys%ions, ions_state_initial)
 
-          SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:sys%gr%sb%dim))
-          SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:sys%gr%sb%dim))
-          call forces_costate_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, psi, chi, fold, q)
+          SAFE_ALLOCATE(fold(1:sys%ions%natoms, 1:sys%gr%sb%dim))
+          SAFE_ALLOCATE(fnew(1:sys%ions%natoms, 1:sys%gr%sb%dim))
+          call forces_costate_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, chi, fold, q)
 
-          call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
-          call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
+          call ion_dynamics_verlet_step1(sys%ions, qtildehalf, p, fold, M_HALF * td%dt)
+          call ion_dynamics_verlet_step1(sys%ions, q, p, fold, td%dt)
         end if
 
         ! Here propagate psi one full step, and then simply interpolate to get the state
         ! at half the time interval. Perhaps one could gain some accuracy by performing two
         ! successive propagations of half time step.
-        call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
+        call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
@@ -688,12 +688,12 @@ contains
 
         vhxc(:, :) = sys%hm%vhxc(:, :)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, &
-          i-1, td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
+          i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
 
-        if(ion_dynamics_ions_move(td%ions)) then
-          call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
-          call sys%geo%set_positions(qinitial)
-          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, psi, time = abs((i-1)*td%dt))
+        if(ion_dynamics_ions_move(td%ions_dyn)) then
+          call ion_dynamics_save_state(td%ions_dyn, sys%ions, ions_state_final)
+          call sys%ions%set_positions(qinitial)
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
         end if
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
@@ -706,19 +706,19 @@ contains
         end do
 
         sys%hm%vhxc(:, :) = M_HALF * (sys%hm%vhxc(:, :) + vhxc(:, :))
-        call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par, sys%geo, st_ref, &
+        call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par, sys%ions, st_ref, &
           qtildehalf)
-        freeze = ion_dynamics_freeze(td%ions)
+        freeze = ion_dynamics_freeze(td%ions_dyn)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, &
-          i-1, td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
-        if(freeze) call ion_dynamics_unfreeze(td%ions)
+          i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
+        if(freeze) call ion_dynamics_unfreeze(td%ions_dyn)
 
-        if(ion_dynamics_ions_move(td%ions)) then
-          call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
-          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, psi, time = abs((i-1)*td%dt))
-          call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
-          call forces_costate_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, psi, chi, fnew, q)
-          call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
+        if(ion_dynamics_ions_move(td%ions_dyn)) then
+          call ion_dynamics_restore_state(td%ions_dyn, sys%ions, ions_state_final)
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
+          call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
+          call forces_costate_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, chi, fnew, q)
+          call ion_dynamics_verlet_step2(sys%ions, p, fold, fnew, td%dt)
           SAFE_DEALLOCATE_A(fold)
           SAFE_DEALLOCATE_A(fnew)
         end if
@@ -747,11 +747,11 @@ contains
     call states_elec_end(st_ref)
 
     td%dt = -td%dt
-    call update_hamiltonian_elec_psi(0, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
-    call update_field(0, par_chi, sys%gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
+    call update_hamiltonian_elec_psi(0, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
+    call update_field(0, par_chi, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par, dir = 'b')
 
     call density_calc(psi, sys%gr, psi%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
 
     call propagator_elec_end(tr_chi)
@@ -773,7 +773,7 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_elec_chi(iter, namespace, gr, ks, hm, td, tg, par_chi, geo, st, qtildehalf)
+  subroutine update_hamiltonian_elec_chi(iter, namespace, gr, ks, hm, td, tg, par_chi, ions, st, qtildehalf)
     integer,                  intent(in)    :: iter
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
@@ -782,7 +782,7 @@ contains
     type(td_t),               intent(inout) :: td
     type(target_t),           intent(inout) :: tg
     type(controlfunction_t),  intent(in)    :: par_chi
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(states_elec_t),      intent(inout) :: st
     FLOAT,          optional, intent(in)    :: qtildehalf(:, :)
 
@@ -801,7 +801,7 @@ contains
       call states_elec_end(inh)
     end if
 
-    if(ion_dynamics_ions_move(td%ions)) then
+    if(ion_dynamics_ions_move(td%ions_dyn)) then
       call states_elec_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
       do ik = inh%d%kpt%start, inh%d%kpt%end
@@ -817,12 +817,12 @@ contains
           call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
           call states_elec_get_state(inh, gr%mesh, ist, ik, inhzpsi)
 
-          do iatom = 1, geo%natoms
+          do iatom = 1, ions%natoms
             do idim = 1, gr%sb%dim
-              call pert_init(pert, namespace, PERTURBATION_IONIC, gr, geo)
+              call pert_init(pert, namespace, PERTURBATION_IONIC, gr, ions)
               call pert_setup_atom(pert, iatom)
               call pert_setup_dir(pert, idim)
-              call zpert_apply(pert, namespace, gr, geo, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
+              call zpert_apply(pert, namespace, gr, ions, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
               dvpsi(:, :, idim) = - dvpsi(:, :, idim)
               inhzpsi(:,  :)  = &
                 inhzpsi(:, :) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
@@ -861,7 +861,7 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_elec_psi(iter, namespace, space, gr, ks, hm, td, tg, par, st, geo)
+  subroutine update_hamiltonian_elec_psi(iter, namespace, space, gr, ks, hm, td, tg, par, st, ions)
     integer,                  intent(in)    :: iter
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
@@ -872,7 +872,7 @@ contains
     type(target_t),           intent(inout) :: tg
     type(controlfunction_t),  intent(in)    :: par
     type(states_elec_t),      intent(inout) :: st
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
 
     integer :: j
 
@@ -882,7 +882,7 @@ contains
       call hamiltonian_elec_remove_inh(hm)
     end if
 
-    if(ion_dynamics_ions_move(td%ions)) then
+    if(ion_dynamics_ions_move(td%ions_dyn)) then
       call hamiltonian_elec_remove_inh(hm)
     end if
 
@@ -899,7 +899,7 @@ contains
     end do
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, space, hm, st, geo)
+      call v_ks_calc(ks, namespace, space, hm, st, ions)
       call hamiltonian_elec_update(hm, gr%mesh, namespace)
     end if
 
@@ -992,12 +992,12 @@ contains
   !! going to be done moves from iter*|dt| to (iter-1)*|dt|.
   !!
   !! cp = (1-eta)*cpp - (eta/alpha) * <chi|V|Psi>
-  subroutine update_field(iter, cp, gr, hm, geo, qcpsi, qcchi, cpp, dir)
+  subroutine update_field(iter, cp, gr, hm, ions, qcpsi, qcchi, cpp, dir)
     integer,                   intent(in)    :: iter
     type(controlfunction_t),   intent(inout) :: cp
     type(grid_t),              intent(inout) :: gr
     type(hamiltonian_elec_t),       intent(in)    :: hm
-    type(geometry_t),          intent(in)    :: geo
+    type(ions_t),              intent(in)    :: ions
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(opt_control_state_t), intent(inout) :: qcchi
     type(controlfunction_t),   intent(in)    :: cpp
@@ -1052,8 +1052,8 @@ contains
     ! This is for the classical target.
     if(dir == 'b') then
       pol = laser_polarization(hm%ext_lasers%lasers(1))
-      do iatom = 1, geo%natoms
-        d(1) = d(1) - species_zval(geo%atom(iatom)%species) * &
+      do iatom = 1, ions%natoms
+        d(1) = d(1) - species_zval(ions%atom(iatom)%species) * &
           TOFLOAT(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)))
       end do
     end if

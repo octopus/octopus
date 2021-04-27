@@ -21,9 +21,9 @@
 
 program casida_spectrum
   use command_line_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use ions_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -46,7 +46,7 @@ program casida_spectrum
   type(casida_spectrum_t) :: cs
   FLOAT :: rotation(MAX_DIM, MAX_DIM), rot2(MAX_DIM, MAX_DIM), identity(MAX_DIM, MAX_DIM), coord(MAX_DIM)
   type(block_t) :: blk
-  type(geometry_t), pointer :: geo
+  type(ions_t),     pointer :: ions
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -146,13 +146,13 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    geo => geometry_t(global_namespace, cs%space)
-    do iatom = 1, geo%natoms
-      coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
-      geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
+    ions => ions_t(global_namespace, cs%space)
+    do iatom = 1, ions%natoms
+      coord(1:cs%space%dim) = ions%atom(iatom)%x(1:cs%space%dim)
+      ions%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
-    call geo%write_xyz(trim(CASIDA_DIR)//'rotated', global_namespace)
-    SAFE_DEALLOCATE_P(geo)
+    call ions%write_xyz(trim(CASIDA_DIR)//'rotated', global_namespace)
+    SAFE_DEALLOCATE_P(ions)
   else
     rotation(:,:) = identity(:,:)
   end if

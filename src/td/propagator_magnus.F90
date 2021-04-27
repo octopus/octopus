@@ -23,11 +23,11 @@ module propagator_magnus_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use lasers_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -116,7 +116,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
-  subroutine td_cfmagnus4(ks, namespace, space, hm, gr, st, tr, time, dt, ions, geo, iter)
+  subroutine td_cfmagnus4(ks, namespace, space, hm, gr, st, tr, time, dt, ions_dyn, ions, iter)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(space_t),                    intent(in)    :: space
@@ -126,14 +126,14 @@ contains
     type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     integer,                          intent(in)    :: iter
 
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
 
-    if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
+    if(ion_dynamics_ions_move(ions_dyn) .or. gauge_field_is_applied(hm%ep%gfield)) then
       message(1) = "The commutator-free Magnus expansion cannot be used with moving ions or gauge fields"
       call messages_fatal(1, namespace=namespace)
     end if
@@ -141,7 +141,7 @@ contains
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
-      call td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions, geo)
+      call td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions_dyn, ions)
       POP_SUB(propagator_dt.td_cfmagnus4)
       return
     end if

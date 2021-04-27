@@ -302,7 +302,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
+        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, ions = sys%ions)
     end if
   end do
 
@@ -379,7 +379,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
-    call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi(:, :, ist), pert_psi(:, :))
+    call X(pert_apply)(pert, sys%namespace, sys%gr, sys%ions, sys%hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     end do
@@ -972,7 +972,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
 
   call restart_init(restart_vib, sys%namespace, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
 
-  do iatom = 1, sys%geo%natoms
+  do iatom = 1, sys%ions%natoms
     do idir = 1, mesh%sb%dim
       
       if(ierr == 0) &
@@ -1041,11 +1041,11 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   SAFE_DEALLOCATE_A(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
+    call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
-      do iatom = 1, sys%geo%natoms
+      do iatom = 1, sys%ions%natoms
         do idir = 1, sys%space%dim
-          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
+          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%ions%atom(iatom)%f(idir)
         end do
       end do
     end do
@@ -1132,7 +1132,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
     return
   end if
 
-  call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, sys%gr, sys%geo)
+  call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, sys%gr, sys%ions)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
 
@@ -1529,7 +1529,7 @@ subroutine X(casida_write)(cas, sys)
           
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
             iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
-            call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
+            call write_xsf_geometry(iunit, sys%ions, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if
         end if

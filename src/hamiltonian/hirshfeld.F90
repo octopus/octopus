@@ -21,8 +21,8 @@
 module hirshfeld_oct_m
   use comm_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -51,7 +51,7 @@ module hirshfeld_oct_m
   type hirshfeld_t
     private
     type(mesh_t),        pointer     :: mesh
-    type(geometry_t),    pointer     :: geo
+    type(ions_t),        pointer     :: ions
     type(states_elec_t), pointer     :: st
     FLOAT,               allocatable :: total_density(:)  !< (mesh%np)
     FLOAT,               allocatable :: free_volume(:)    !< (natoms)
@@ -62,15 +62,15 @@ module hirshfeld_oct_m
     
 contains
 
-  subroutine hirshfeld_init(this, namespace, mesh, geo, st)
+  subroutine hirshfeld_init(this, namespace, mesh, ions, st)
     type(hirshfeld_t),           intent(out)   :: this
     type(namespace_t),           intent(in)    :: namespace
     type(mesh_t),        target, intent(in)    :: mesh
-    type(geometry_t),    target, intent(in)    :: geo
+    type(ions_t),        target, intent(in)    :: ions
     type(states_elec_t), target, intent(in)    :: st
     
     integer :: iatom, ip, isp
-    FLOAT :: rr, pos(geo%space%dim), rmax
+    FLOAT :: rr, pos(ions%space%dim), rmax
     FLOAT, allocatable :: atom_density(:, :), atom_density_acc(:)
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
@@ -81,19 +81,19 @@ contains
     call profiling_in(prof, "HIRSHFELD_INIT")
 
     this%mesh => mesh
-    this%geo  => geo
+    this%ions  => ions
     this%st   => st
 
     SAFE_ALLOCATE(this%total_density(1:mesh%np))
-    SAFE_ALLOCATE(this%free_volume(1:geo%natoms))
-    SAFE_ALLOCATE(this%free_vol_r3(1:geo%natoms,1:mesh%np))
+    SAFE_ALLOCATE(this%free_volume(1:ions%natoms))
+    SAFE_ALLOCATE(this%free_vol_r3(1:ions%natoms,1:mesh%np))
     SAFE_ALLOCATE(atom_density(1:mesh%np, st%d%nspin))
     SAFE_ALLOCATE(atom_density_acc(1:mesh%np))
 
     this%total_density = CNST(0.0)
   
-    do iatom = 1, geo%natoms
-      ps => species_ps(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+      ps => species_ps(ions%atom(iatom)%species)
       atom_density_acc(1:mesh%np) = M_ZERO
 
       rmax = CNST(0.0)
@@ -101,12 +101,12 @@ contains
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
-      latt_iter = lattice_iterator_t(geo%latt, rmax)
+      latt_iter = lattice_iterator_t(ions%latt, rmax)
       do icell = 1, latt_iter%n_cells
-        pos = this%geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icell)
+        pos = this%ions%atom(iatom)%x(1:ions%space%dim) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(mesh, geo%atom(iatom), namespace, pos, st%d%nspin, atom_density)
+        call species_atom_density_np(mesh, ions%atom(iatom), namespace, pos, st%d%nspin, atom_density)
 
         do ip = 1, mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
@@ -145,7 +145,7 @@ contains
     SAFE_DEALLOCATE_A(this%free_vol_r3)
 
     nullify(this%mesh)
-    nullify(this%geo)
+    nullify(this%ions)
     nullify(this%st)
 
     POP_SUB(hirshfeld_end)    
@@ -174,8 +174,8 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, this%geo%space, namespace, this%mesh%sb, &
-                                  this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, this%ions%space, namespace, this%mesh%sb, &
+                                  this%ions%atom(iatom), this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -281,32 +281,32 @@ contains
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir, icell, jcell, isp
-    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(this%geo%space%dim), pos_j(this%geo%space%dim), rmax_i, rmax_j, &
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(this%ions%space%dim), pos_j(this%ions%space%dim), rmax_i, rmax_j, &
              rij, rmax_isqu, rmax_jsqu
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(lattice_iterator_t) :: latt_iter_i, latt_iter_j
     type(ps_t), pointer :: ps_i, ps_j
     type(profile_t), save :: prof
-    FLOAT :: tmp, xxi(this%geo%space%dim), xxj(this%geo%space%dim)
+    FLOAT :: tmp, xxi(this%ions%space%dim), xxj(this%ions%space%dim)
 
     FLOAT :: TOL_SPACING
 
     PUSH_SUB(hirshfeld_position_derivative)
 
-    TOL_SPACING = maxval(this%mesh%spacing(1:this%geo%space%dim))
+    TOL_SPACING = maxval(this%mesh%spacing(1:this%ions%space%dim))
 
     call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
 
-    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%geo%space%dim))
+    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%ions%space%dim))
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
-    dposition(1:this%geo%space%dim) = M_ZERO
-    grad(1:this%mesh%np, 1:this%geo%space%dim) = M_ZERO
+    dposition(1:this%ions%space%dim) = M_ZERO
+    grad(1:this%mesh%np, 1:this%ions%space%dim) = M_ZERO
 
-    ps_i => species_ps(this%geo%atom(iatom)%species)
-    ps_j => species_ps(this%geo%atom(jatom)%species)
+    ps_i => species_ps(this%ions%atom(iatom)%species)
+    ps_j => species_ps(this%ions%atom(jatom)%species)
 
     rmax_i = CNST(0.0)
     rmax_j = CNST(0.0)
@@ -318,20 +318,20 @@ contains
     rmax_isqu = rmax_i**2
     rmax_jsqu = rmax_j**2
 
-    latt_iter_j = lattice_iterator_t(this%geo%latt, rmax_j)
+    latt_iter_j = lattice_iterator_t(this%ions%latt, rmax_j)
     do jcell = 1, latt_iter_j%n_cells
 
-      pos_j = this%geo%atom(jatom)%x(1:this%geo%space%dim) + latt_iter_j%get(jcell)
+      pos_j = this%ions%atom(jatom)%x(1:this%ions%space%dim) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
+      call species_atom_density_derivative_np(this%mesh, this%ions%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      latt_iter_i = lattice_iterator_t(this%geo%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      latt_iter_i = lattice_iterator_t(this%ions%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
 
-        pos_i = pos_j + latt_iter_i%get(icell) + (this%geo%atom(iatom)%x(1:this%geo%space%dim) &
-                                                - this%geo%atom(jatom)%x(1:this%geo%space%dim))
+        pos_i = pos_j + latt_iter_i%get(icell) + (this%ions%atom(iatom)%x(1:this%ions%space%dim) &
+                                                - this%ions%atom(jatom)%x(1:this%ions%space%dim))
         rij =  norm2(pos_i - pos_j)
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
@@ -341,7 +341,7 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%geo%atom(iatom), namespace, &
+          call species_atom_density_np(this%mesh, this%ions%atom(iatom), namespace, &
                                          pos_i, this%st%d%nspin, &
                                          atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
@@ -367,7 +367,7 @@ contains
             atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
 
             if(rrj > TOL_HIRSHFELD) then
-              do idir = 1, this%geo%space%dim
+              do idir = 1, this%ions%space%dim
                 grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
               end do
             end if
@@ -383,13 +383,13 @@ contains
       end do
     end do
 
-    do idir = 1, this%geo%space%dim
+    do idir = 1, this%ions%space%dim
       dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir), reduce = .false.) &
                              /this%free_volume(iatom)
     end do
 
     if(this%mesh%parallel_in_domains) then
-      call this%mesh%allreduce(dposition, dim = this%geo%space%dim)
+      call this%mesh%allreduce(dposition, dim = this%ions%space%dim)
     end if
 
     SAFE_DEALLOCATE_A(atom_density)

@@ -29,7 +29,7 @@
     type(block_t) :: blk
     PUSH_SUB(target_init_hhg)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
 
     !%Variable OCTOptimizeHarmonicSpectrum
     !%Type block
@@ -98,12 +98,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhgnew(gr, namespace, tg, td, geo, ep)
+  subroutine target_init_hhgnew(gr, namespace, tg, td, ions, ep)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
-    type(geometry_t),  intent(in)    :: geo
+    type(ions_t),      intent(in)    :: ions
     type(epot_t),      intent(in)    :: ep
 
     integer :: ist, jst, iunit, jj, nn(3), optimize_parity(3)
@@ -112,7 +112,7 @@
     FLOAT, allocatable  :: vl(:), vl_grad(:,:)
     PUSH_SUB(target_init_hhgnew)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
 
     ! We allocate many things that are perhaps not necessary if we use a direct optimization scheme.
     SAFE_ALLOCATE(tg%vel(1:td%max_iter+1, 1:gr%sb%dim))
@@ -121,25 +121,25 @@
     SAFE_ALLOCATE(tg%alpha(1:td%max_iter))
 
     ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
-    if(geo%natoms > 1) then
+    if(ions%natoms > 1) then
       message(1) = 'If "OCTTargetOperator = oct_tg_hhgnew", then you can only have one atom.'
       call messages_fatal(1)
     end if
 
     ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
-    if(geo%natoms > 1) then
+    if(ions%natoms > 1) then
       message(1) = 'If "OCTTargetOperator = oct_tg_hhgnew", then you can only have one atom.'
       call messages_fatal(1)
     end if
 
-    SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+    SAFE_ALLOCATE(tg%grad_local_pot(1:ions%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
     SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
     SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
     SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, namespace, geo%space, gr%mesh, geo%atom(1), 1, vl)
+    call epot_local_potential(ep, namespace, ions%space, gr%mesh, ions%atom(1), 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
     do jst=1, gr%sb%dim
       do ist = 1, gr%mesh%np
@@ -208,19 +208,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
+  subroutine target_output_hhg(tg, namespace, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
     type(namespace_t),   intent(in) :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
+    type(ions_t),        intent(in) :: ions
     type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_hhg)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -393,20 +393,20 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_hhg(tg, namespace, space, hm, gr, geo, psi, time)
+  subroutine target_tdcalc_hhg(tg, namespace, space, hm, gr, ions, psi, time)
     type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(in)    :: psi
     integer,                  intent(in)    :: time
 
     FLOAT :: acc(MAX_DIM)
     PUSH_SUB(target_tdcalc_hhg)
 
-    call td_calc_tacc(namespace, space, gr, geo, psi, hm, acc, time*tg%dt)
+    call td_calc_tacc(namespace, space, gr, ions, psi, hm, acc, time*tg%dt)
     tg%td_fitness(time) = acc(1)
 
     POP_SUB(target_tdcalc_hhg)

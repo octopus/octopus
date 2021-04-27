@@ -27,13 +27,13 @@ module pes_mask_oct_m
   use density_oct_m
   use fft_oct_m
   use fourier_space_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lasers_oct_m
   use loct_oct_m

@@ -19,10 +19,10 @@
 #include "global.h"
 
 module pes_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -185,7 +185,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_output(pes, namespace, space, mesh, st, iter, outp, dt, gr, geo)
+  subroutine pes_output(pes, namespace, space, mesh, st, iter, outp, dt, gr, ions)
     type(pes_t),         intent(inout) :: pes
     type(namespace_t),   intent(in)    :: namespace
     type(space_t),       intent(in)    :: space
@@ -195,13 +195,13 @@ contains
     type(output_t),      intent(in)    :: outp
     FLOAT,               intent(in)    :: dt
     type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     PUSH_SUB(pes_output)
     
     if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, namespace, iter, dt)
 
-    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, space, "td.general/PESM", gr, geo,iter)
+    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, space, "td.general/PESM", gr, ions,iter)
 
     if(pes%calc_flux) call pes_flux_output(pes%flux, mesh%sb, st, namespace)
 

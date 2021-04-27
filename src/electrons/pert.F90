@@ -25,10 +25,10 @@ module pert_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use epot_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -114,12 +114,12 @@ module pert_oct_m
 contains
 
   ! --------------------------------------------------------------------
-  subroutine pert_init(this, namespace, pert_type, gr, geo)
+  subroutine pert_init(this, namespace, pert_type, gr, ions)
     type(pert_t),      intent(out) :: this
     type(namespace_t), intent(in)  :: namespace
     integer,           intent(in)  :: pert_type
     type(grid_t),      intent(in)  :: gr
-    type(geometry_t),  intent(in)  :: geo
+    type(ions_t),      intent(in)  :: ions
 
     PUSH_SUB(pert_init)
     
@@ -155,8 +155,8 @@ contains
     end if
 
     if(this%pert_type == PERTURBATION_IONIC) then
-      SAFE_ALLOCATE(this%ionic%mix1(1:geo%natoms, 1:gr%sb%dim))
-      SAFE_ALLOCATE(this%ionic%mix2(1:geo%natoms, 1:gr%sb%dim))
+      SAFE_ALLOCATE(this%ionic%mix1(1:ions%natoms, 1:gr%sb%dim))
+      SAFE_ALLOCATE(this%ionic%mix2(1:ions%natoms, 1:gr%sb%dim))
     end if
 
     if(this%pert_type == PERTURBATION_KDOTP) then

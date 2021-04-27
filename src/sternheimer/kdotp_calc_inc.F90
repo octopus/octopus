@@ -20,13 +20,13 @@
 !> m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
 !! for each state, spin, and k-point
 !! The off-diagonal elements are not correct in a degenerate subspace
-subroutine X(calc_eff_mass_inv)(namespace, space, gr, st, hm, geo, lr, perturbation, eff_mass_inv, degen_thres)
+subroutine X(calc_eff_mass_inv)(namespace, space, gr, st, hm, ions, lr, perturbation, eff_mass_inv, degen_thres)
   type(namespace_t),        intent(in)    :: namespace
   type(space_t),            intent(in)    :: space
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   type(lr_t),               intent(in)    :: lr(:,:) !< (1, pdim)
   type(pert_t),             intent(inout) :: perturbation
   FLOAT,                    intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
@@ -67,7 +67,7 @@ subroutine X(calc_eff_mass_inv)(namespace, space, gr, st, hm, geo, lr, perturbat
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
-        call X(pert_apply)(perturbation, namespace, gr, geo, hm, ik, psi, pertpsi(:, :, idir1))
+        call X(pert_apply)(perturbation, namespace, gr, ions, hm, ik, psi, pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -100,7 +100,7 @@ subroutine X(calc_eff_mass_inv)(namespace, space, gr, st, hm, geo, lr, perturbat
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           call pert_setup_dir(perturbation, idir1, idir2)
-          call X(pert_apply_order_2)(perturbation, namespace, gr, geo, hm, ik, psi, pertpsi2(1:gr%mesh%np, 1:hm%d%dim))
+          call X(pert_apply_order_2)(perturbation, namespace, gr, ions, hm, ik, psi, pertpsi2(1:gr%mesh%np, 1:hm%d%dim))
           eff_mass_inv(idir1, idir2, ist, ik) = &
             eff_mass_inv(idir1, idir2, ist, ik) - R_REAL(X(mf_dotp)(gr%mesh, hm%d%dim, psi, pertpsi2))
 
@@ -135,12 +135,12 @@ end subroutine X(calc_eff_mass_inv)
 
 ! ---------------------------------------------------------
 !> add projection onto occupied states, by sum over states
-subroutine X(kdotp_add_occ)(namespace, gr, st, hm, geo, pert, kdotp_lr, degen_thres)
+subroutine X(kdotp_add_occ)(namespace, gr, st, hm, ions, pert, kdotp_lr, degen_thres)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   type(pert_t),             intent(in)    :: pert
   type(lr_t),               intent(inout) :: kdotp_lr
   FLOAT,                    intent(in)    :: degen_thres
@@ -164,7 +164,7 @@ subroutine X(kdotp_add_occ)(namespace, gr, st, hm, geo, pert, kdotp_lr, degen_th
 
       call states_elec_get_state(st, gr%mesh, ist, ik, psi1)
       
-      call X(pert_apply)(pert, namespace, gr, geo, hm, ik, psi1, pertpsi)
+      call X(pert_apply)(pert, namespace, gr, ions, hm, ik, psi1, pertpsi)
       
       do ist2 = ist + 1, st%nst
 
@@ -202,13 +202,13 @@ end subroutine X(kdotp_add_occ)
 
 
 ! ---------------------------------------------------------
-subroutine X(kdotp_add_diagonal)(namespace, space, gr, st, hm, geo, em_pert, kdotp_lr)
+subroutine X(kdotp_add_diagonal)(namespace, space, gr, st, hm, ions, em_pert, kdotp_lr)
   type(namespace_t),        intent(in)    :: namespace
   type(space_t),            intent(in)    :: space
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   type(pert_t),             intent(inout) :: em_pert
   type(lr_t),               intent(inout) :: kdotp_lr(:)
 
@@ -228,7 +228,7 @@ subroutine X(kdotp_add_diagonal)(namespace, space, gr, st, hm, geo, em_pert, kdo
 
         call states_elec_get_state(st, gr%mesh, ist, ik, psi)
         
-        call X(pert_apply)(em_pert, namespace, gr, geo, hm, ik, psi, ppsi)
+        call X(pert_apply)(em_pert, namespace, gr, ions, hm, ik, psi, ppsi)
         
         expectation = X(mf_dotp)(gr%mesh, st%d%dim, psi, ppsi)
         

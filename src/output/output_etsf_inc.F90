@@ -28,7 +28,7 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
+subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
   type(space_t),          intent(in) :: space
@@ -36,7 +36,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
   type(kpoints_t),        intent(in) :: kpoints
-  type(geometry_t),       intent(in) :: geo
+  type(ions_t),           intent(in) :: ions
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
@@ -70,12 +70,12 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
   if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_dims(geo, gr%symm, geometry_dims, geometry_flags)
+      call output_etsf_geometry_dims(ions, gr%symm, geometry_dims, geometry_flags)
 
       call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", &
         geometry_dims, geometry_flags, ncid, namespace)
 
-      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(ions, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -86,7 +86,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
   if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%symm, density_dims, density_flags)
+    call output_etsf_geometry_dims(ions, gr%symm, density_dims, density_flags)
     call output_etsf_density_dims(st, dcube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, &
@@ -95,7 +95,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
     call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(ions, gr%symm, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
@@ -114,7 +114,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
 
     call dcube_function_alloc_rs(dcube, cf)
 
-    call output_etsf_geometry_dims(geo, gr%symm, wfs_dims, wfs_flags)
+    call output_etsf_geometry_dims(ions, gr%symm, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(kpoints, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
     call output_etsf_wfs_rsp_dims(st, dcube, wfs_dims, wfs_flags)
@@ -124,7 +124,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(ions, gr%symm, ncid, namespace)
       call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
     end if
     call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
@@ -151,7 +151,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
     call cube_function_alloc_fs(zcube, cf)
     call fourier_shell_init(shell, space, zcube, gr%mesh)
 
-    call output_etsf_geometry_dims(geo, gr%symm, pw_dims, pw_flags)
+    call output_etsf_geometry_dims(ions, gr%symm, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(kpoints, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
     call output_etsf_basisdata_dims(pw_flags)
@@ -162,7 +162,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, geo)
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_electrons_write(st, ncid, namespace)
-      call output_etsf_geometry_write(geo, gr%symm, ncid, namespace)
+      call output_etsf_geometry_write(ions, gr%symm, ncid, namespace)
       call output_etsf_kpoints_write(kpoints, space%dim, ncid, namespace)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
@@ -235,8 +235,8 @@ end subroutine output_etsf_error
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_dims(geo, symm, dims, flags)
-  type(geometry_t),        intent(in)    :: geo
+subroutine output_etsf_geometry_dims(ions, symm, dims, flags)
+  type(ions_t),            intent(in)    :: ions
   type(symmetries_t),      intent(in)    :: symm
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -246,16 +246,16 @@ subroutine output_etsf_geometry_dims(geo, symm, dims, flags)
   flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - etsf_geometry_pseudo_types
 
   dims%number_of_symmetry_operations = symmetries_number(symm)
-  dims%number_of_atom_species = geo%nspecies
-  dims%number_of_atoms = geo%natoms
+  dims%number_of_atom_species = ions%nspecies
+  dims%number_of_atoms = ions%natoms
 
   POP_SUB(output_etsf_geometry_dims)
 end subroutine output_etsf_geometry_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_write(geo, symm, ncid, namespace)
-  type(geometry_t),       intent(in)    :: geo
+subroutine output_etsf_geometry_write(ions, symm, ncid, namespace)
+  type(ions_t),           intent(in)    :: ions
   type(symmetries_t),     intent(in)    :: symm
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
@@ -270,8 +270,8 @@ subroutine output_etsf_geometry_write(geo, symm, ncid, namespace)
 
   ! Primitive vectors
   SAFE_ALLOCATE(geometry%primitive_vectors(1:3, 1:3))
-  do idir = 1, geo%space%dim
-    geometry%primitive_vectors(1:3, idir) = geo%latt%rlattice(1:3, idir)
+  do idir = 1, ions%space%dim
+    geometry%primitive_vectors(1:3, idir) = ions%latt%rlattice(1:3, idir)
   end do
 
   ! The symmetries
@@ -286,24 +286,24 @@ subroutine output_etsf_geometry_write(geo, symm, ncid, namespace)
   end do
 
   ! The species
-  SAFE_ALLOCATE(geometry%atomic_numbers(1:geo%nspecies))
-  SAFE_ALLOCATE(geometry%chemical_symbols(1:geo%nspecies))
-  SAFE_ALLOCATE(geometry%atom_species_names(1:geo%nspecies))
+  SAFE_ALLOCATE(geometry%atomic_numbers(1:ions%nspecies))
+  SAFE_ALLOCATE(geometry%chemical_symbols(1:ions%nspecies))
+  SAFE_ALLOCATE(geometry%atom_species_names(1:ions%nspecies))
 
-  do ispecies = 1, geo%nspecies
-    geometry%atomic_numbers(ispecies) = species_z(geo%species(ispecies))
-    geometry%chemical_symbols(ispecies) = trim(species_label(geo%species(ispecies)))
+  do ispecies = 1, ions%nspecies
+    geometry%atomic_numbers(ispecies) = species_z(ions%species(ispecies))
+    geometry%chemical_symbols(ispecies) = trim(species_label(ions%species(ispecies)))
     ! according to the specification atomic_numbers is enough, but
     ! v_sim wants atom_species_name, so we use the label as name
-    geometry%atom_species_names(ispecies) = trim(species_label(geo%species(ispecies)))
+    geometry%atom_species_names(ispecies) = trim(species_label(ions%species(ispecies)))
   end do
 
   ! The atoms
-  SAFE_ALLOCATE(geometry%atom_species(1:geo%natoms))
+  SAFE_ALLOCATE(geometry%atom_species(1:ions%natoms))
 
-  do i = 1, geo%natoms
-    do j = 1, geo%nspecies
-      if (species_z(geo%atom(i)%species) == species_z(geo%species(j))) then
+  do i = 1, ions%natoms
+    do j = 1, ions%nspecies
+      if (species_z(ions%atom(i)%species) == species_z(ions%species(j))) then
         geometry%atom_species(i) = j
         exit
       end if
@@ -311,15 +311,15 @@ subroutine output_etsf_geometry_write(geo, symm, ncid, namespace)
   end do
 
   ! The coordinates
-  SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:geo%natoms))
+  SAFE_ALLOCATE(geometry%reduced_atom_positions(1:3, 1:ions%natoms))
 
   offset = M_ZERO
-  offset(1:geo%space%dim) = -M_HALF*sum(geo%latt%rlattice, dim=2)
+  offset(1:ions%space%dim) = -M_HALF*sum(ions%latt%rlattice, dim=2)
 
-  do i = 1, geo%natoms
+  do i = 1, ions%natoms
     ! this is only valid if the primitive vectors are along the x, y, and z directions.
     do idir = 1, 3
-      geometry%reduced_atom_positions(idir, i) = (geo%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
+      geometry%reduced_atom_positions(idir, i) = (ions%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
     end do
   end do
 

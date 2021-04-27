@@ -21,11 +21,11 @@
 module output_me_oct_m
   use boundaries_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
   use lda_u_oct_m
@@ -199,14 +199,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, namespace, space, dir, st, gr, geo, hm)
+  subroutine output_me(this, namespace, space, dir, st, gr, ions, hm)
     type(output_me_t),        intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(hamiltonian_elec_t), intent(inout) :: hm
 
     integer :: id, ll, mm, ik, iunit
@@ -283,9 +283,9 @@ contains
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
+            call doutput_me_dipole(this, fname, namespace, space, st, gr, hm, ions, ik)
           else
-            call zoutput_me_dipole(this, fname, namespace, space, st, gr, hm, geo, ik)
+            call zoutput_me_dipole(this, fname, namespace, space, st, gr, hm, ions, ik)
           end if
       end do
     end if
@@ -361,7 +361,7 @@ contains
       end if
 
       if(states_are_complex(st)) then
-        call singularity_init(singul, namespace, space, st, geo%latt, hm%kpoints)
+        call singularity_init(singul, namespace, space, st, ions%latt, hm%kpoints)
       end if
 
       SAFE_ALLOCATE(iindex(1:2, 1:id))

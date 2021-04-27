@@ -34,13 +34,13 @@ module hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use epot_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
   use interaction_oct_m
   use interaction_partner_oct_m
   use ion_electron_local_potential_oct_m
+  use ions_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -131,7 +131,7 @@ module hamiltonian_elec_oct_m
 
     type(derivatives_t), pointer, private :: der !< pointer to derivatives
     
-    type(geometry_t), pointer :: geo
+    type(ions_t),     pointer :: ions
     FLOAT :: exx_coef !< how much of EXX to mix
 
     type(poisson_t)          :: psolver      !< Poisson solver
@@ -216,12 +216,12 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, space, gr, geo, st, theory_level, xc, mc, kpoints, need_exchange)
+  subroutine hamiltonian_elec_init(hm, namespace, space, gr, ions, st, theory_level, xc, mc, kpoints, need_exchange)
     type(hamiltonian_elec_t),           target, intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(space_t),                              intent(in)    :: space
     type(grid_t),                       target, intent(inout) :: gr
-    type(geometry_t),                   target, intent(inout) :: geo
+    type(ions_t),                       target, intent(inout) :: ions
     type(states_elec_t),                target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
     type(xc_t),                         target, intent(in)    :: xc
@@ -288,7 +288,7 @@ contains
 
     !Keep pointers to derivatives, geometry and xc
     hm%der => gr%der
-    hm%geo => geo
+    hm%ions => ions
     hm%xc => xc
 
     ! allocate potentials and density of the cores
@@ -330,12 +330,12 @@ contains
     end if
   
     ! Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
+    call epot_init(hm%ep, namespace, gr, hm%ions, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
     !Temporary construction of the ion-electron interactions
-    call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%geo, namespace)
+    call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%ions, namespace)
     if(hm%ep%nlcc) then
-      call hm%nlcc%init(gr%mesh, hm%geo)
+      call hm%nlcc%init(gr%mesh, hm%ions)
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
@@ -385,7 +385,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, namespace, gr%mesh, gr%sb, hm%geo)
+    call bc_init(hm%bc, namespace, gr%mesh, gr%sb, hm%ions)
 
     !%Variable MassScaling
     !%Type block
@@ -441,7 +441,7 @@ contains
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
+      call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, ions, st, hm%psolver, hm%kpoints)
 
       !In the present implementation of DFT+U, in case of spinors, we have off-diagonal terms
       !in spin space which break the assumption of the generalized Bloch theorem
@@ -780,7 +780,7 @@ contains
 
       kick_present = epot_have_kick(hm%ep)
 
-      call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+      call pcm_init(hm%pcm, namespace, ions, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
       if (hm%pcm%run_pcm) then
         if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= kohn_sham", namespace=namespace)
         if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
@@ -846,7 +846,7 @@ contains
 
 
     call epot_end(hm%ep)
-    nullify(hm%geo)
+    nullify(hm%ions)
 
     call bc_end(hm%bc)
 
@@ -1272,18 +1272,18 @@ contains
   end subroutine hamiltonian_elec_update_pot
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_epot_generate(this, namespace, gr, geo, st, time)
+  subroutine hamiltonian_elec_epot_generate(this, namespace, gr, ions, st, time)
     type(hamiltonian_elec_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t), target, intent(inout) :: geo
+    type(ions_t),     target, intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     FLOAT,          optional, intent(in)    :: time
 
     PUSH_SUB(hamiltonian_elec_epot_generate)
 
-    this%geo => geo
-    call epot_generate(this%ep, namespace, gr, this%geo, this%d)
+    this%ions => ions
+    call epot_generate(this%ep, namespace, gr, this%ions, this%d)
 
     ! Interation terms are treated below
 
@@ -1298,8 +1298,8 @@ contains
 
     ! Here we need to pass this again, else test are failing.
     ! This is not a real problem, as the multisystem framework will indeed to this anyway
-    this%v_ie_loc%atoms_dist => geo%atoms_dist
-    this%v_ie_loc%atom => geo%atom
+    this%v_ie_loc%atoms_dist => ions%atoms_dist
+    this%v_ie_loc%atom => ions%atom
     call this%v_ie_loc%calculate()
 
     ! At the moment we need to add this to ep%vpsl, to keep the behavior of the code
@@ -1308,8 +1308,8 @@ contains
     ! Here we need to pass this again, else test are failing.
     ! This is not a real problem, as the multisystem framework will indeed to this anyway
     if(this%ep%nlcc) then
-      this%nlcc%atoms_dist => geo%atoms_dist
-      this%nlcc%atom => geo%atom
+      this%nlcc%atoms_dist => ions%atoms_dist
+      this%nlcc%atom => ions%atom
       call this%nlcc%calculate()
       call lalg_copy(gr%mesh%np, this%nlcc%density(:,1), st%rho_core)
     end if
@@ -1348,7 +1348,7 @@ contains
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
      if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, geo = geo)
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, ions = ions)
 
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
@@ -1359,7 +1359,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, this%kpoints, &
+    call lda_u_update_basis(this%lda_u, gr, ions, st, this%psolver, namespace, this%kpoints, &
                                 allocated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_elec_epot_generate)

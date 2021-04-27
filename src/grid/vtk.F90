@@ -21,10 +21,10 @@
 module vtk_oct_m
   use cube_function_oct_m
   use cube_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use io_binary_oct_m
+  use ions_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
@@ -60,9 +60,9 @@ contains
 
   ! -----------------------------------------------------
   
-  subroutine vtk_output_geometry(filename, geo, namespace, ascii)
+  subroutine vtk_output_geometry(filename, ions, namespace, ascii)
     character(len=*),           intent(in) :: filename
-    type(geometry_t),           intent(in) :: geo
+    type(ions_t),               intent(in) :: ions
     type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: ascii
 
@@ -90,63 +90,63 @@ contains
     
     write(iunit, '(1a)') 'DATASET POLYDATA'
     
-    write(iunit, '(a,i9,a)') 'POINTS ', geo%natoms, ' double'
+    write(iunit, '(a,i9,a)') 'POINTS ', ions%natoms, ' double'
 
     if(ascii_) then
-      do iatom = 1, geo%natoms
-        write(iunit, '(3f12.6)') geo%atom(iatom)%x(1:3)
+      do iatom = 1, ions%natoms
+        write(iunit, '(3f12.6)') ions%atom(iatom)%x(1:3)
       end do
     else
       call io_close(iunit)
-      SAFE_ALLOCATE(data(1:3, 1:geo%natoms))
-      do iatom = 1, geo%natoms
-        data(1:3, iatom) = geo%atom(iatom)%x(1:3)
+      SAFE_ALLOCATE(data(1:3, 1:ions%natoms))
+      do iatom = 1, ions%natoms
+        data(1:3, iatom) = ions%atom(iatom)%x(1:3)
       end do
-      call io_binary_write(io_workpath(fullname, namespace), 3*geo%natoms, data, &
+      call io_binary_write(io_workpath(fullname, namespace), 3*ions%natoms, data, &
         ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(data)
       iunit = io_open(trim(fullname), namespace, action='write', position = 'append')
       write(iunit, '(1a)') ''
     end if
     
-    write(iunit, '(a,2i9)') 'VERTICES ', geo%natoms, 2*geo%natoms
+    write(iunit, '(a,2i9)') 'VERTICES ', ions%natoms, 2*ions%natoms
 
     if(ascii_) then
-      do iatom = 1, geo%natoms
+      do iatom = 1, ions%natoms
         write(iunit, '(2i9)') 1, iatom - 1
       end do
     else
       call io_close(iunit)
-      SAFE_ALLOCATE(idata(1:2, 1:geo%natoms))
-      do iatom = 1, geo%natoms
+      SAFE_ALLOCATE(idata(1:2, 1:ions%natoms))
+      do iatom = 1, ions%natoms
         idata(1, iatom) = 1
         idata(2, iatom) = iatom - 1
       end do
-      call io_binary_write(io_workpath(fullname, namespace), 2*geo%natoms, idata, &
+      call io_binary_write(io_workpath(fullname, namespace), 2*ions%natoms, idata, &
         ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(idata)
       iunit = io_open(trim(fullname), namespace, action='write', position = 'append')
       write(iunit, '(1a)') ''
     end if
     
-    write(iunit, '(a,i9)') 'POINT_DATA', geo%natoms
+    write(iunit, '(a,i9)') 'POINT_DATA', ions%natoms
     write(iunit, '(a)') 'SCALARS element integer'
     write(iunit, '(a)') 'LOOKUP_TABLE default'
 
     if(ascii_) then
-      do iatom = 1, geo%natoms
-        write(iunit, '(i9)') nint(species_z(geo%atom(iatom)%species))
+      do iatom = 1, ions%natoms
+        write(iunit, '(i9)') nint(species_z(ions%atom(iatom)%species))
       end do
     else
       call io_close(iunit)
 
-      SAFE_ALLOCATE(idata(1:geo%natoms, 1:1))
+      SAFE_ALLOCATE(idata(1:ions%natoms, 1:1))
 
-      do iatom = 1, geo%natoms
-        idata(iatom, 1) = nint(species_z(geo%atom(iatom)%species))
+      do iatom = 1, ions%natoms
+        idata(iatom, 1) = nint(species_z(ions%atom(iatom)%species))
       end do
       
-      call io_binary_write(io_workpath(fullname, namespace), geo%natoms, idata, &
+      call io_binary_write(io_workpath(fullname, namespace), ions%natoms, idata, &
         ierr, nohead = .true., fendian = is_little_endian())
 
       SAFE_DEALLOCATE_A(idata)

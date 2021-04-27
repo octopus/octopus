@@ -430,11 +430,11 @@ end subroutine pes_mask_map_from_state
 ! ---------------------------------------------------------
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
-subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
+subroutine pes_mask_output_states(namespace, st, gr, ions, dir, outp, mask)
   type(namespace_t),     intent(in)    :: namespace
   type(states_elec_t),   intent(in)    :: st
   type(grid_t),          intent(in)    :: gr
-  type(geometry_t),      intent(in)    :: geo
+  type(ions_t),          intent(in)    :: ions
   character(len=*),      intent(in)    :: dir
   type(output_t),        intent(in)    :: outp
   type(pes_mask_t),      intent(inout) :: mask
@@ -503,7 +503,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
       call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
-        RhoAB(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        RhoAB(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
@@ -529,7 +529,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
             end if
               
             call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, &
-              PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
+              PsiAB(1:, idim, ist, ik), fn_unit, ierr, ions = ions)
 
           end do
         end do
@@ -1872,7 +1872,7 @@ end subroutine pes_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo, iter)
+subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, ions, iter)
   type(pes_mask_t),    intent(inout)    :: mask
   type(mesh_t),        intent(in)       :: mesh
   type(states_elec_t), intent(in)       :: st
@@ -1881,7 +1881,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo
   type(space_t),       intent(in)       :: space
   character(len=*),    intent(in)       :: file
   type(grid_t),        intent(in)       :: gr
-  type(geometry_t),    intent(in)       :: geo
+  type(ions_t),        intent(in)       :: ions
   integer,             intent(in)       :: iter
 
   CMPLX, allocatable :: wfAk(:,:,:,:,:,:), psi(:)
@@ -1903,7 +1903,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, space, file, gr, geo
   !Photoelectron wavefunction and density in real space
   if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
-    call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
+    call  pes_mask_output_states(namespace, st, gr, ions, dir, outp, mask)
   end if
   
   if (space%is_periodic()) then

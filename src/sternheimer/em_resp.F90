@@ -23,12 +23,12 @@ module em_resp_oct_m
   use electrons_oct_m
   use em_resp_calc_oct_m
   use forces_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use output_oct_m
   use io_oct_m
+  use ions_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
   use kpoints_oct_m
@@ -219,7 +219,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
 
     use_kdotp = sys%space%is_periodic() .and. .not. em_vars%force_no_kdotp
 
@@ -277,8 +277,8 @@ contains
     end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
-      call pert_init(pert_kdotp, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
-      call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
+      call pert_init(pert_kdotp, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%ions)
+      call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%ions)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_em_lr2(1:sys%space%periodic_dim, 1:sys%space%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -326,7 +326,7 @@ contains
       em_vars%occ_response = .false.
    
       if(use_kdotp) then
-        call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
+        call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%ions)
         call pert_setup_dir(pert2_none, 1) 
 
         SAFE_ALLOCATE(k2_lr(1:sys%space%dim, 1:sys%space%dim, 1:1))
@@ -366,7 +366,7 @@ contains
 
     SAFE_ALLOCATE(em_vars%lr(1:sys%space%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
-      call born_charges_init(em_vars%Born_charges(ifactor), sys%namespace, sys%geo, sys%st, sys%space%dim)
+      call born_charges_init(em_vars%Born_charges(ifactor), sys%namespace, sys%ions, sys%st, sys%space%dim)
     end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
@@ -445,7 +445,7 @@ contains
           end do
         end do
       else
-        call pert_init(pert_b, sys%namespace, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
+        call pert_init(pert_b, sys%namespace, PERTURBATION_MAGNETIC,  sys%gr, sys%ions)
       end if
     end if
 
@@ -576,10 +576,10 @@ contains
 
           if(states_are_real(sys%st)) then
             call drun_sternheimer(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%geo)
+              sys%ions)
           else
             call zrun_sternheimer(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%geo)
+              sys%ions)
           end if
 
         end if ! have_to_calculate
@@ -588,18 +588,18 @@ contains
 
         if(states_are_real(sys%st)) then
           call dcalc_properties_linear(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, &
-            sys%geo, sys%outp)
+            sys%ions, sys%outp)
         else
           call zcalc_properties_linear(em_vars, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, &
-            sys%geo, sys%outp)
+            sys%ions, sys%outp)
         end if
 
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo)
+        call dcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%ions)
       else
-        call zcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%geo)
+        call zcalc_properties_nonlinear(em_vars, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%ions)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -834,7 +834,7 @@ contains
       call parse_variable(sys%namespace, 'EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
       call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
       
-      call pert_init(em_vars%perturbation, sys%namespace, perturb_type, sys%gr, sys%geo)
+      call pert_init(em_vars%perturbation, sys%namespace, perturb_type, sys%gr, sys%ions)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable EMCalcRotatoryResponse
@@ -1015,13 +1015,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, namespace, space, gr, hm, geo, outp, sh, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, namespace, space, gr, hm, ions, outp, sh, em_vars, iomega, ifactor)
     type(states_elec_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(output_t),           intent(in)    :: outp
     type(sternheimer_t),      intent(in)    :: sh
     type(em_resp_t),          intent(inout) :: em_vars
@@ -1057,7 +1057,7 @@ contains
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
         call out_polarizability()
         if(em_vars%calc_Born) then
-          call out_Born_charges(em_vars%Born_charges(ifactor), geo, namespace, gr%sb%dim, dirname, &
+          call out_Born_charges(em_vars%Born_charges(ifactor), ions, namespace, gr%sb%dim, dirname, &
             write_real = em_vars%eta < M_EPSILON)
         end if
 
@@ -1207,7 +1207,7 @@ contains
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / geo%latt%rcell_volume
+        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / ions%latt%rcell_volume
       do idir = 1, gr%sb%dim
         epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
       end do
@@ -1223,7 +1223,7 @@ contains
         write(iunit, '(a)') '# Without G = G'' = 0 term of the LRC kernel'
 
         epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / geo%latt%rcell_volume
+          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / ions%latt%rcell_volume
         do idir = 1, gr%sb%dim
           epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
         end do
@@ -1242,7 +1242,7 @@ contains
         do ik = 1, hm%kpoints%reduced%npoints
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
-              epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / geo%latt%rcell_volume
+              epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / ions%latt%rcell_volume
             end do
           end do
         end do
@@ -1397,7 +1397,8 @@ contains
             end if
           end if
           do isigma = 1, em_vars%nsigma
-            call zoutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
+            call zoutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+              units_out%force)
           end do
         else
 
@@ -1410,7 +1411,8 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call doutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
+            call doutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+              units_out%force)
           end do
 
         end if
@@ -1439,7 +1441,7 @@ contains
         message(1) = "Info: Calculating rotatory response."
         call messages_info(1)
 
-        call pert_init(angular_momentum, namespace, PERTURBATION_MAGNETIC, gr, geo)
+        call pert_init(angular_momentum, namespace, PERTURBATION_MAGNETIC, gr, ions)
         
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -1449,9 +1451,9 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
+            + zpert_expectation_value(angular_momentum, namespace, gr, ions, hm, st, &
             psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
+            + zpert_expectation_value(angular_momentum, namespace, gr, ions, hm, st, &
             em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
@@ -1527,9 +1529,9 @@ contains
         ASSERT(space%periodic_dim == 3)
 
         do idir = 1, space%dim
-          epsilon_m(idir) = 4 * M_PI * diff(idir) / geo%latt%rcell_volume
+          epsilon_m(idir) = 4 * M_PI * diff(idir) / ions%latt%rcell_volume
         end do
-        epsilon_m(4) = 4 * M_PI * diff(4) / geo%latt%rcell_volume
+        epsilon_m(4) = 4 * M_PI * diff(4) / ions%latt%rcell_volume
 
         write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
         do idir = 1, gr%sb%dim + 1
@@ -1553,10 +1555,10 @@ contains
             diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
               em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
 
-            epsilon_m(idir) = 4 * M_PI * diff(idir) / geo%latt%rcell_volume
+            epsilon_m(idir) = 4 * M_PI * diff(idir) / ions%latt%rcell_volume
           end do
           diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
-          epsilon_m(4) = 4 * M_PI * diff(4) / geo%latt%rcell_volume
+          epsilon_m(4) = 4 * M_PI * diff(4) / ions%latt%rcell_volume
 
           write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
           write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
@@ -1614,7 +1616,7 @@ contains
           write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
           do idir = 1, gr%sb%dim
             eps_mk(idir) = M_TWO * M_PI * (em_vars%alpha_be_k(magn_dir(idir, 1), magn_dir(idir, 2), idir, ik) - &
-              em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / geo%latt%rcell_volume
+              em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / ions%latt%rcell_volume
           end do
 
           do idir = 1, gr%sb%dim

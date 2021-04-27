@@ -505,9 +505,9 @@ end subroutine X(projector_commute_r)
 
 !------------------------------------------------------------------------------
 !> This function calculates |cpsi> += [x, V_nl] |psi>
-subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, bnd, ik, psi, cpsi)
+subroutine X(projector_commute_r_allatoms_alldir)(pj, ions, mesh, dim, bnd, ik, psi, cpsi)
   type(projector_t), target, intent(in)     :: pj(:)
-  type(geometry_t),          intent(in)     :: geo
+  type(ions_t),              intent(in)     :: ions
   type(mesh_t),              intent(in)     :: mesh
   integer,                   intent(in)     :: dim
   type(boundaries_t),        intent(in)     :: bnd
@@ -527,8 +527,8 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, bnd, ik, p
 
   ASSERT(.not. bnd%spiral)
 
-  do iatom = 1, geo%natoms
-    if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= PROJ_NONE) then
+  do iatom = 1, ions%natoms
+    if(species_is_ps(ions%atom(iatom)%species) .and. pj(iatom)%type /= PROJ_NONE) then
 
       ns = pj(iatom)%sphere%np
       map => pj(iatom)%sphere%map

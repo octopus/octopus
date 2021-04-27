@@ -20,10 +20,10 @@
 
 module propagator_expmid_oct_m
   use grid_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -44,7 +44,7 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(namespace_t),                intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
@@ -53,8 +53,8 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     logical,                          intent(in)    :: move_ions
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
@@ -73,7 +73,7 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
             time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, M_HALF*dt, time, save_gf = .true.)
@@ -83,7 +83,7 @@ contains
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, dt)
 
     !restore to time 'time - dt'
-    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo, move_ions = move_ions)
+    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions_dyn, ions, move_ions = move_ions)
 
     call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr%mesh)
 

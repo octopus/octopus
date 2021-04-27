@@ -20,12 +20,12 @@
 module maxwell_boundary_op_oct_m
   use derivatives_oct_m
   use cube_function_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use maxwell_function_oct_m
   use medium_mxll_oct_m
   use mesh_function_oct_m
@@ -142,13 +142,13 @@ module maxwell_boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_init(bc, namespace, gr, st, sb, geo, dt)
+  subroutine bc_mxll_init(bc, namespace, gr, st, sb, ions, dt)
     type(bc_mxll_t),          intent(inout) :: bc
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(simul_box_t),        intent(in)    :: sb
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     FLOAT, optional,          intent(in)    :: dt
 
     integer             :: idim, nlines, icol, ncols, ab_shape_dim
@@ -251,8 +251,8 @@ contains
 
       case (MXLL_BC_MEDIUM)
         call bc_mxll_medium_init(bc%medium, gr, namespace, bounds, idim)
-        call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
-        call bc_mxll_generate_medium(bc, gr, bounds, geo)
+        call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, ions)
+        call bc_mxll_generate_medium(bc, gr, bounds, ions)
 
       end select
 
@@ -358,28 +358,28 @@ contains
 
     ! mapping of mask boundary points
     if (ab_mask_check) then
-      call maxwell_mask_points_mapping(bc, gr%mesh, ab_bounds, geo)
+      call maxwell_mask_points_mapping(bc, gr%mesh, ab_bounds, ions)
     end if
 
     ! mapping of pml boundary points
     if (ab_pml_check) then
-      call maxwell_pml_points_mapping(bc, gr%mesh, ab_bounds, geo)
+      call maxwell_pml_points_mapping(bc, gr%mesh, ab_bounds, ions)
     end if
 
     ! mapping of constant boundary points
     if (constant_check) then
-      call maxwell_constant_points_mapping(bc, gr%mesh, bounds, geo)
+      call maxwell_constant_points_mapping(bc, gr%mesh, bounds, ions)
     end if
 
     ! mapping of plane waves boundary points
     if (plane_waves_check) then
-      call maxwell_plane_waves_points_mapping(bc, gr%mesh, bounds, geo)
+      call maxwell_plane_waves_points_mapping(bc, gr%mesh, bounds, ions)
       call maxwell_plane_waves_boundaries_init(bc, namespace)
     end if
 
     ! mapping of zero points
     if (zero_check) then
-      call maxwell_zero_points_mapping(bc, gr%mesh, bounds, geo)
+      call maxwell_zero_points_mapping(bc, gr%mesh, bounds, ions)
     end if
 
     if (ab_mask_check) then
@@ -781,11 +781,11 @@ contains
   end subroutine bc_mxll_write_info
 
   ! ---------------------------------------------------------
-  subroutine maxwell_mask_points_mapping(bc, mesh, bounds, geo)
+  subroutine maxwell_mask_points_mapping(bc, mesh, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
     type(profile_t), save :: prof
@@ -799,7 +799,7 @@ contains
         ! allocate mask points map
         ip_in = 0
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
@@ -816,7 +816,7 @@ contains
         ! mask points mapping
         ip_in = 0
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
             bc%mask_points_map(ip_in, idim) = ip
@@ -830,11 +830,11 @@ contains
   end subroutine maxwell_mask_points_mapping
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_points_mapping(bc, mesh, bounds, geo)
+  subroutine maxwell_pml_points_mapping(bc, mesh, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, point_info
     type(profile_t), save :: prof
@@ -846,7 +846,7 @@ contains
     ! allocate pml points map
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+      call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
       end if
@@ -858,7 +858,7 @@ contains
     bc%pml%points_map_inv = 0
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+      call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
         bc%pml%points_map(ip_in) = ip
@@ -872,11 +872,11 @@ contains
   end subroutine maxwell_pml_points_mapping
 
   ! ---------------------------------------------------------
-  subroutine maxwell_constant_points_mapping(bc, mesh, bounds, geo)
+  subroutine maxwell_constant_points_mapping(bc, mesh, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, point_info
     type(profile_t), save :: prof
@@ -888,7 +888,7 @@ contains
     ! allocate constant points map
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+      call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
       end if
@@ -900,7 +900,7 @@ contains
     ! zero constant mapping
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+      call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
         bc%constant_points_map(ip_in) = ip
@@ -913,11 +913,11 @@ contains
   end subroutine maxwell_constant_points_mapping
 
   ! ---------------------------------------------------------
-  subroutine maxwell_plane_waves_points_mapping(bc, mesh, bounds, geo)
+  subroutine maxwell_plane_waves_points_mapping(bc, mesh, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, point_info
     type(profile_t), save :: prof
@@ -929,7 +929,7 @@ contains
     ! allocate zero points map
     ip_in = 0
     do ip = 1, mesh%np
-     call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+     call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
       end if
@@ -940,7 +940,7 @@ contains
     ! zero points mapping
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+      call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
         bc%plane_wave%points_map(ip_in) = ip
@@ -953,11 +953,11 @@ contains
   end subroutine maxwell_plane_waves_points_mapping
 
   ! ---------------------------------------------------------
-  subroutine maxwell_zero_points_mapping(bc, mesh, bounds, geo)
+  subroutine maxwell_zero_points_mapping(bc, mesh, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
     type(profile_t), save :: prof
@@ -972,7 +972,7 @@ contains
         ! allocate zero points map
         ip_in = 0
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
@@ -989,7 +989,7 @@ contains
         ! zero points mapping
         ip_in = 0
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
             bc%zero_points_map(ip_in, idim) = ip
@@ -1004,12 +1004,12 @@ contains
   end subroutine maxwell_zero_points_mapping
 
   ! ---------------------------------------------------------
-  subroutine maxwell_medium_points_mapping(bc, mesh, st, bounds, geo)
+  subroutine maxwell_medium_points_mapping(bc, mesh, st, bounds, ions)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     type(states_mxll_t), intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
 
     integer :: ip, ip_in, ip_in_max, ip_bd, ip_bd_max, point_info, boundary_info, idim
     type(profile_t), save :: prof
@@ -1026,7 +1026,7 @@ contains
         ip_in = 0
         ip_bd = 0
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
@@ -1049,7 +1049,7 @@ contains
     do idim = 1, 3
       if (bc%bc_type(idim) == MXLL_BC_MEDIUM) then
         do ip = 1, mesh%np
-          call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+          call maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info)
           call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
@@ -1249,11 +1249,11 @@ contains
   end subroutine bc_mxll_generate_mask
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_generate_medium(bc, gr, bounds, geo)
+  subroutine bc_mxll_generate_medium(bc, gr, bounds, ions)
     type(bc_mxll_t),         intent(inout) :: bc
     type(grid_t),            intent(in)    :: gr
     FLOAT,                   intent(in)    :: bounds(:,:)
-    type(geometry_t),        intent(in)    :: geo
+    type(ions_t),            intent(in)    :: ions
 
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
     FLOAT   :: dd, dd_min, dd_max, xx(3), xxp(3)
@@ -1284,7 +1284,7 @@ contains
     do idim = 1, 3
       tmp = P_ep
       do  ip = 1, gr%mesh%np_part
-        call maxwell_box_point_info(bc, gr%mesh, ip, bounds, geo, point_info)
+        call maxwell_box_point_info(bc, gr%mesh, ip, bounds, ions, point_info)
         if ((point_info /= 0) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
@@ -1308,7 +1308,7 @@ contains
     do idim = 1, 3
       tmp = P_mu
       do ip = 1, gr%mesh%np_part
-        call maxwell_box_point_info(bc, gr%mesh, ip, bounds, geo, point_info)
+        call maxwell_box_point_info(bc, gr%mesh, ip, bounds, ions, point_info)
         if ((point_info == 1) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
@@ -1632,12 +1632,12 @@ contains
   end subroutine maxwell_surfaces_init
 
   ! ---------------------------------------------------------
-  subroutine maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info) 
+  subroutine maxwell_box_point_info(bc, mesh, ip, bounds, ions, point_info) 
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
     integer,             intent(out)   :: point_info
 
     FLOAT   :: rr, dd, xx(3), width(3)
@@ -1682,7 +1682,7 @@ contains
         end if
 
       case default
-        if(mesh_inborder(mesh, geo, ip, dd, width(1))) then
+        if(mesh_inborder(mesh, ions, ip, dd, width(1))) then
           point_info = 1
         end if
 

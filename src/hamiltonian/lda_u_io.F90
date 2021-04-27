@@ -19,10 +19,10 @@
 
 module lda_u_io_oct_m
   use atomic_orbital_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
@@ -344,10 +344,10 @@ contains
 
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
+ subroutine lda_u_write_magnetization(dir, this, ions, mesh, st, namespace)
    type(lda_u_t),       intent(in)    :: this
    character(len=*),    intent(in)    :: dir
-   type(geometry_t),    intent(in)    :: geo
+   type(ions_t),        intent(in)    :: ions
    type(mesh_t),        intent(in)    :: mesh
    type(states_elec_t), intent(in)    :: st
    type(namespace_t),   intent(in)    :: namespace
@@ -363,8 +363,8 @@ contains
     iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
-      SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))
-      mm(1:geo%natoms, 1:mesh%sb%dim) = M_ZERO
+      SAFE_ALLOCATE(mm(1:ions%natoms, 1:mesh%sb%dim))
+      mm(1:ions%natoms, 1:mesh%sb%dim) = M_ZERO
       !We compute the magnetization vector for each orbital set
       do ios = 1, this%norbsets
         ia = this%orbsets(ios)%iatom
@@ -381,7 +381,7 @@ contains
           end if  
         end do !im
       end do ! ios
-      call write_xsf_geometry(iunit, geo, mesh, forces = mm)
+      call write_xsf_geometry(iunit, ions, mesh, forces = mm)
       SAFE_DEALLOCATE_A(mm)
     end if
 

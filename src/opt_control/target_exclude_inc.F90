@@ -29,7 +29,7 @@
 
     PUSH_SUB(target_init_exclude)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     tg%dt = td%dt
 
     message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
@@ -64,19 +64,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_exclude(tg, namespace, gr, dir, geo, hm, outp)
+  subroutine target_output_exclude(tg, namespace, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
     type(namespace_t),   intent(in) :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
+    type(ions_t),        intent(in) :: ions
     type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_exclude)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_exclude)
   end subroutine target_output_exclude

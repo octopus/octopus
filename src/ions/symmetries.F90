@@ -19,9 +19,9 @@
 #include "global.h"
 
 module symmetries_oct_m
-  use iso_c_binding
-  use geometry_oct_m
   use global_oct_m
+  use iso_c_binding
+  use ions_oct_m
   use lattice_vectors_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -92,10 +92,10 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, namespace, geo, space)
+  subroutine symmetries_init(this, namespace, ions, space)
     type(symmetries_t),     intent(out) :: this
     type(namespace_t),      intent(in)  :: namespace
-    type(geometry_t),       intent(in)  :: geo
+    type(ions_t),           intent(in)  :: ions
     type(space_t),          intent(in)  :: space
 
     integer :: max_size, dim4syms
@@ -118,12 +118,12 @@ contains
 
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
     this%any_non_spherical = .false.
-    do iatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
       this%any_non_spherical = this%any_non_spherical                   .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_USDEF          .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE  
+        species_type(ions%atom(iatom)%species) == SPECIES_USDEF          .or. &
+        species_type(ions%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
+        species_type(ions%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
+        species_type(ions%atom(iatom)%species) == SPECIES_FROM_FILE  
       if(this%any_non_spherical)exit
     end do
 
@@ -131,7 +131,7 @@ contains
 
     dim4syms = min(3, space%dim)
 
-    def_sym_comp = (geo%natoms < 100) .or. space%periodic_dim > 0
+    def_sym_comp = (ions%natoms < 100) .or. space%periodic_dim > 0
     def_sym_comp = def_sym_comp .and. space%dim == 3
     
     !%Variable SymmetriesCompute
@@ -166,20 +166,20 @@ contains
 
       ! for the moment symmetries are only used for information, so we compute them only on one node.
       if(mpi_grp_is_root(mpi_world)) then
-        natoms = max(1,geo%natoms)
+        natoms = max(1,ions%natoms)
         verbosity = -1
 
         SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
 
-        do iatom = 1, geo%natoms
+        do iatom = 1, ions%natoms
           position(1:3, iatom) = M_ZERO
-          position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
-          typs(iatom) = species_index(geo%atom(iatom)%species)
+          position(1:dim4syms, iatom) = ions%atom(iatom)%x(1:dim4syms)
+          typs(iatom) = species_index(ions%atom(iatom)%species)
         end do
 
         if (this%symmetries_compute) then
-          call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
+          call symmetries_finite_init(ions%natoms, typs(1), position(1, 1), verbosity, point_group)
           if(point_group > -1) then
             call symmetries_finite_get_group_name(point_group, this%group_name)
             call symmetries_finite_get_group_elements(point_group, this%group_elements)
@@ -192,27 +192,27 @@ contains
 
     else
 
-      SAFE_ALLOCATE(position(1:3,1:geo%natoms))  ! transpose!!
-      SAFE_ALLOCATE(typs(1:geo%natoms))
+      SAFE_ALLOCATE(position(1:3,1:ions%natoms))  ! transpose!!
+      SAFE_ALLOCATE(typs(1:ions%natoms))
 
-      do iatom = 1, geo%natoms
+      do iatom = 1, ions%natoms
         position(1:3,iatom) = M_ZERO
 
         ! Transform atomic positions to reduced coordinates
-        position(1:dim4syms,iatom) = geo%latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
+        position(1:dim4syms,iatom) = ions%latt%cart_to_red(ions%atom(iatom)%x(1:dim4syms))
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
         do idir = 1, dim4syms
           position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
         end do
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom) + M_HALF
 
-        typs(iatom) = species_index(geo%atom(iatom)%species)
+        typs(iatom) = species_index(ions%atom(iatom)%species)
       end do
 
       lattice = M_ZERO
       !NOTE: Why "inverse matrix" ? (NTD)
       ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:space%dim, 1:space%dim) = geo%latt%rlattice(1:space%dim, 1:space%dim)
+      lattice(1:space%dim, 1:space%dim) = ions%latt%rlattice(1:space%dim, 1:space%dim)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
@@ -221,17 +221,17 @@ contains
       end do
 
       this%space_group = spg_get_international(c_symbol, lattice(1,1), &
-                 position(1,1), typs(1), geo%natoms, SYMPREC)
+                 position(1,1), typs(1), ions%natoms, SYMPREC)
       this%space_group = spg_get_schoenflies(c_schoenflies, lattice(1, 1), &
-                 position(1, 1), typs(1), geo%natoms, SYMPREC)
+                 position(1, 1), typs(1), ions%natoms, SYMPREC)
       
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
         call messages_warning(1, namespace=namespace)
 
-        do iatom = 1, geo%natoms
+        do iatom = 1, ions%natoms
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
-            ' reduced coords ', position(:, iatom), ' cartesian coords ', geo%atom(iatom)%x(:)
+            ' reduced coords ', position(:, iatom), ' cartesian coords ', ions%atom(iatom)%x(:)
           call messages_info(1)
         end do
 
@@ -244,14 +244,14 @@ contains
       call c_to_f_string(c_schoenflies, this%schoenflies)
       
       max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), &
-                                      typs(1), geo%natoms, SYMPREC)
+                                      typs(1), ions%natoms, SYMPREC)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
       fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
-        max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, SYMPREC)
+        max_size, lattice(1, 1), position(1, 1), typs(1), ions%natoms, SYMPREC)
 
       do iop = 1, fullnops
         ! transpose due to array order difference between C and fortran
@@ -319,8 +319,8 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), geo%latt%rlattice(1:dim4syms,1:dim4syms), &
-                              geo%latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), ions%latt%rlattice(1:dim4syms,1:dim4syms), &
+                              ions%latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
                               TOFLOAT(translation(1:3, iop)))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
@@ -352,17 +352,17 @@ contains
     do iop = 1, symmetries_number(this)
       if(iop == symmetries_identity_index(this)) cycle
 
-      do iatom = 1, geo%natoms
-        ratom(1:geo%space%dim) = symm_op_apply_cart(this%ops(iop), geo%atom(iatom)%x)
+      do iatom = 1, ions%natoms
+        ratom(1:ions%space%dim) = symm_op_apply_cart(this%ops(iop), ions%atom(iatom)%x)
 
-        ratom(1:geo%space%dim) = geo%latt%fold_into_cell(ratom(1:geo%space%dim))
+        ratom(1:ions%space%dim) = ions%latt%fold_into_cell(ratom(1:ions%space%dim))
 
         ! find iatom_symm
-        do iatom_symm = 1, geo%natoms
-          if(all(abs(ratom(1:geo%space%dim) - geo%atom(iatom_symm)%x(1:geo%space%dim)) < CNST(1.0e-5))) exit
+        do iatom_symm = 1, ions%natoms
+          if(all(abs(ratom(1:ions%space%dim) - ions%atom(iatom_symm)%x(1:ions%space%dim)) < CNST(1.0e-5))) exit
         end do
 
-        if (iatom_symm > geo%natoms) then
+        if (iatom_symm > ions%natoms) then
           write(message(1),'(a,i6)') 'Internal error: could not find symetric partner for atom number', iatom
           write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
           call messages_fatal(2, namespace=namespace)
@@ -385,7 +385,7 @@ contains
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  geo%latt%rlattice, geo%latt%klattice, dim4syms)
+                  ions%latt%rlattice, ions%latt%klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       

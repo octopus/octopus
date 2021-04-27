@@ -20,10 +20,10 @@
 
 module electrons_ground_state_oct_m
   use global_oct_m
-  use geometry_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lcao_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -50,11 +50,11 @@ module electrons_ground_state_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+  subroutine electrons_ground_state_run(namespace, mc, gr, ions, st, ks, hm, outp, space, fromScratch)
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -114,19 +114,19 @@ contains
       end if
     end if
 
-    call write_canonicalized_xyz_file("exec", "initial_coordinates", geo, gr%sb, namespace)
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", ions, gr%sb, namespace)
 
     if (ks%theory_level /= RDMFT) then
-      call scf_init(scfv, namespace, gr, geo, st, mc, hm, ks, space)
+      call scf_init(scfv, namespace, gr, ions, st, mc, hm, ks, space)
     end if
 
     if (fromScratch .and. ks%theory_level /= RDMFT) then
-      call lcao_run(namespace, space, gr, geo, st, ks, hm, lmm_r = scfv%lmm_r)
+      call lcao_run(namespace, space, gr, ions, st, ks, hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current = .false.)
+      call v_ks_h_setup(namespace, space, gr, ions, st, ks, hm, calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, namespace, RESTART_GS, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
@@ -141,14 +141,14 @@ contains
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if (ks%theory_level == RDMFT) then
       call rdmft_init(rdm, namespace, gr, st, mc, space, fromScratch)
-      call scf_rdmft(rdm, namespace, space, gr, geo, st, ks, hm, outp, restart_dump)
+      call scf_rdmft(rdm, namespace, space, gr, ions, st, ks, hm, outp, restart_dump)
       call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
-        call scf_run(scfv, namespace, space, mc, gr, geo, st, ks, hm, outp, restart_load=restart_load, restart_dump=restart_dump)
+        call scf_run(scfv, namespace, space, mc, gr, ions, st, ks, hm, outp, restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
-        call scf_run(scfv, namespace, space, mc, gr, geo, st, ks, hm, outp, restart_dump=restart_dump)
+        call scf_run(scfv, namespace, space, mc, gr, ions, st, ks, hm, outp, restart_dump=restart_dump)
       end if
 
       call scf_end(scfv)

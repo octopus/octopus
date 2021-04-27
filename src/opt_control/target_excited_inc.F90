@@ -34,7 +34,7 @@
     message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
     call messages_info(1)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     tg%dt = td%dt
 
     call states_elec_look(restart, nik, dim, tg%st%nst, ierr)
@@ -81,19 +81,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_excited(tg, namespace, gr, dir, geo, hm, outp)
+  subroutine target_output_excited(tg, namespace, gr, dir, ions, hm, outp)
     type(target_t),      intent(in)  :: tg
     type(namespace_t),   intent(in)  :: namespace
     type(grid_t),        intent(in)  :: gr
     character(len=*),    intent(in)  :: dir
-    type(geometry_t),    intent(in)  :: geo
+    type(ions_t),        intent(in)  :: ions
     type(hamiltonian_elec_t), intent(in)  :: hm
     type(output_t),      intent(in)  :: outp
 
     PUSH_SUB(target_output_excited)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir)//'/st', tg%est%st, gr, geo, hm)
+    call output_states(outp, namespace, trim(dir)//'/st', tg%est%st, gr, ions, hm)
     call excited_states_output(tg%est, trim(dir), namespace)
 
     POP_SUB(target_output_excited)

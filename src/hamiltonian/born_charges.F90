@@ -19,9 +19,9 @@
 #include "global.h"
 
 module born_charges_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use ions_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -51,10 +51,10 @@ module born_charges_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine born_charges_init(this, namespace, geo, st, dim)
+  subroutine born_charges_init(this, namespace, ions, st, dim)
     type(Born_charges_t), intent(out) :: this
     type(namespace_t),    intent(in)  :: namespace
-    type(geometry_t),     intent(in)  :: geo
+    type(ions_t),         intent(in)  :: ions
     type(states_elec_t),  intent(in)  :: st
     integer,              intent(in)  :: dim
 
@@ -62,8 +62,8 @@ contains
 
     PUSH_SUB(born_charges_init)
 
-    SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
-    this%charge(1:dim, 1:dim, 1:geo%natoms) = M_ZERO
+    SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:ions%natoms))
+    this%charge(1:dim, 1:dim, 1:ions%natoms) = M_ZERO
     this%delta(1:dim, 1:dim) = M_ZERO
 
     this%sum_ideal(1:dim, 1:dim) = M_ZERO
@@ -101,9 +101,9 @@ contains
   ! ---------------------------------------------------------
   !> The sum over atoms of a given tensor component of the Born charges
   !!  should be Z delta_ij to satisfy the acoustic sum rule, where Z is total charge of system
-  subroutine correct_Born_charges(this, geo, dim)
+  subroutine correct_Born_charges(this, ions, dim)
     type(Born_charges_t), intent(inout) :: this
-    type(geometry_t),     intent(in)    :: geo
+    type(ions_t),         intent(in)    :: ions
     integer,              intent(in)    :: dim
 
     CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation 
@@ -113,14 +113,14 @@ contains
 
     Born_sum(1:dim, 1:dim) = M_ZERO 
 
-    do iatom = 1, geo%natoms
+    do iatom = 1, ions%natoms
       Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(1:dim, 1:dim, iatom)
     end do
 
-    this%delta(1:dim, 1:dim) = (Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)) / geo%natoms
+    this%delta(1:dim, 1:dim) = (Born_sum(1:dim, 1:dim) - this%sum_ideal(1:dim, 1:dim)) / ions%natoms
 
     if(this%correct) then
-      do iatom = 1, geo%natoms
+      do iatom = 1, ions%natoms
         this%charge(1:dim, 1:dim, iatom) = &
           this%charge(1:dim, 1:dim, iatom) - this%delta(1:dim, 1:dim)
       end do
@@ -130,9 +130,9 @@ contains
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
-  subroutine out_Born_charges(this, geo, namespace, dim, dirname, write_real)
+  subroutine out_Born_charges(this, ions, namespace, dim, dirname, write_real)
     type(Born_charges_t), intent(inout) :: this
-    type(geometry_t),     intent(in)    :: geo
+    type(ions_t),         intent(in)    :: ions
     type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
@@ -144,14 +144,14 @@ contains
 
     PUSH_SUB(out_Born_charges)
 
-    call correct_Born_charges(this, geo, dim)
+    call correct_Born_charges(this, ions, dim)
 
     iunit = io_open(trim(dirname)//'/Born_charges', namespace, action='write')
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
-    do iatom = 1, geo%natoms
-      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%species)), &
-        '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
+    do iatom = 1, ions%natoms
+      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(ions%atom(iatom)%species)), &
+        '   Ionic charge: ', species_zval(ions%atom(iatom)%species)
 
       if(.not. write_real) write(iunit,'(a)') 'Real:'
       call output_tensor(iunit, TOFLOAT(this%charge(:, :, iatom)), dim, unit_one)
@@ -166,9 +166,9 @@ contains
 
     if(.not. write_real) then
       write(iunit,'(a)') '# Magnitude and phase'
-      do iatom = 1, geo%natoms
-        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%species)), &
-          '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
+      do iatom = 1, ions%natoms
+        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(ions%atom(iatom)%species)), &
+          '   Ionic charge: ', species_zval(ions%atom(iatom)%species)
 
         write(iunit,'(a)') 'Magnitude:'
         call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)

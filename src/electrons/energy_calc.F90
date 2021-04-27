@@ -24,11 +24,11 @@ module energy_calc_oct_m
   use derivatives_oct_m
   use energy_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
+  use ions_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
@@ -98,12 +98,12 @@ contains
     if (hm%pcm%run_pcm) then
       hm%pcm%counter = hm%pcm%counter + 1
       if (hm%pcm%localf) then
-        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
+        call pcm_elect_energy(hm%ions, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
                                               hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
                                               E_int_e_ext = hm%energy%int_e_ext_pcm,      &
                                               E_int_n_ext = hm%energy%int_n_ext_pcm       )
       else
-        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
+        call pcm_elect_energy(hm%ions, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
                                               hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )
       end if
     end if

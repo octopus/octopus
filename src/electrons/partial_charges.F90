@@ -19,9 +19,9 @@
 #include "global.h"
 
 module partial_charges_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hirshfeld_oct_m
+  use ions_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -38,11 +38,11 @@ module partial_charges_oct_m
 contains
 
   !----------------------------------------------
-  subroutine partial_charges_calculate(namespace, mesh, st, geo, hirshfeld_charges)
+  subroutine partial_charges_calculate(namespace, mesh, st, ions, hirshfeld_charges)
     type(namespace_t),       intent(in)    :: namespace
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
-    type(geometry_t),        intent(in)    :: geo
+    type(ions_t),            intent(in)    :: ions
     FLOAT, optional,         intent(out)   :: hirshfeld_charges(:)
 
     integer :: iatom
@@ -54,9 +54,9 @@ contains
 
     if(present(hirshfeld_charges)) then
 
-      call hirshfeld_init(hirshfeld, namespace, mesh, geo, st)
+      call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
       
-      do iatom = 1, geo%natoms
+      do iatom = 1, ions%natoms
         call hirshfeld_charge(hirshfeld, namespace, iatom, st%rho, hirshfeld_charges(iatom))
       end do
       

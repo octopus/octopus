@@ -20,10 +20,10 @@
 
 module kdotp_calc_oct_m
   use comm_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -69,13 +69,13 @@ contains
 ! ---------------------------------------------------------
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
-subroutine zcalc_band_velocity(namespace, space, gr, st, hm, geo, pert, velocity)
+subroutine zcalc_band_velocity(namespace, space, gr, st, hm, ions, pert, velocity)
   type(namespace_t),        intent(in)    :: namespace
   type(space_t),            intent(in)    :: space
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(geometry_t),         intent(in)    :: geo
+  type(ions_t),             intent(in)    :: ions
   type(pert_t),             intent(inout) :: pert
   FLOAT,                    intent(out)   :: velocity(:,:,:)
 
@@ -99,7 +99,7 @@ subroutine zcalc_band_velocity(namespace, space, gr, st, hm, geo, pert, velocity
 
       do idir = 1, space%periodic_dim
         call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, namespace, gr, geo, hm, ik, psi, pertpsi)
+        call zpert_apply(pert, namespace, gr, ions, hm, ik, psi, pertpsi)
         velocity(idir, ist, ik) = -aimag(zmf_dotp(gr%mesh, st%d%dim, psi, pertpsi))
       end do
     end do

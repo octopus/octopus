@@ -22,8 +22,8 @@ module curvilinear_oct_m
   use curv_briggs_oct_m
   use curv_gygi_oct_m
   use curv_modine_oct_m
-  use geometry_oct_m
   use global_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -69,11 +69,11 @@ module curvilinear_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_init(cv, namespace, sb, geo, spacing)
+  subroutine curvilinear_init(cv, namespace, sb, ions, spacing)
     type(curvilinear_t), intent(out) :: cv
     type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
-    type(geometry_t),    intent(in)  :: geo
+    type(ions_t),        intent(in)  :: ions
     FLOAT,               intent(in)  :: spacing(:)
 
     PUSH_SUB(curvilinear_init)
@@ -112,11 +112,11 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, namespace, sb, geo, cv%min_mesh_scaling_product)
+      call curv_gygi_init(cv%gygi, namespace, sb, ions, cv%min_mesh_scaling_product)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(cv%briggs, namespace, sb, spacing, cv%min_mesh_scaling_product)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, namespace, sb, geo, spacing, cv%min_mesh_scaling_product)
+      call curv_modine_init(cv%modine, namespace, sb, ions, spacing, cv%min_mesh_scaling_product)
     end select
 
     ! initialize root solver
