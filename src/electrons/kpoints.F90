@@ -75,6 +75,9 @@ module kpoints_oct_m
 
   type kpoints_t
     ! Components are public by default
+
+    type(lattice_vectors_t) :: latt !< lattice vectors defining the periodic lattice (in real-space).
+
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
@@ -232,6 +235,8 @@ contains
     logical :: default_timereversal, only_gamma
 
     PUSH_SUB(kpoints_init)
+
+    this%latt = latt
 
     SAFE_ALLOCATE(this%nik_axis(1:dim))
     SAFE_ALLOCATE(this%niq_axis(1:dim))
@@ -539,7 +544,7 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis, this%full%nshifts, this%full%shifts, this%full%red_point)
 
       do ik = 1, this%full%npoints
-        call kpoints_to_absolute(latt, this%full%red_point(:, ik), this%full%point(:, ik))
+        call kpoints_to_absolute(this%latt, this%full%red_point(:, ik), this%full%point(:, ik))
       end do
 
       this%full%weight = M_ONE / this%full%npoints
@@ -600,11 +605,11 @@ contains
       end if
      
       do ik = 1, this%reduced%npoints
-        call kpoints_to_absolute(latt, this%reduced%red_point(:, ik), this%reduced%point(:, ik))
+        call kpoints_to_absolute(this%latt, this%reduced%red_point(:, ik), this%reduced%point(:, ik))
       end do
 
-      call kpoints_fold_to_1BZ(this%full, latt)
-      call kpoints_fold_to_1BZ(this%reduced, latt)
+      call kpoints_fold_to_1BZ(this%full, this%latt)
+      call kpoints_fold_to_1BZ(this%reduced, this%latt)
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -692,7 +697,7 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, latt, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+      call kpoints_path_generate(dim, this%latt, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
         this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
@@ -710,10 +715,10 @@ contains
 
       !The points have been generated in absolute coordinates
       do ik = 1, path_kpoints_grid%npoints
-        call kpoints_to_reduced(latt, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik))
+        call kpoints_to_reduced(this%latt, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik))
       end do
 
-      call kpoints_fold_to_1BZ(path_kpoints_grid, latt)
+      call kpoints_fold_to_1BZ(path_kpoints_grid, this%latt)
 
       !We need to copy the arrays containing the information on the symmetries
       !Before calling kpoints_grid_addto
@@ -823,7 +828,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
-          call kpoints_to_absolute(latt, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik))
+          call kpoints_to_absolute(this%latt, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik))
         end do
       else
         do ik = 1, user_kpoints_grid%npoints
@@ -832,7 +837,7 @@ contains
             call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(latt, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik))
+          call kpoints_to_reduced(this%latt, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik))
         end do
       end if
       call parse_block_end(blk)
@@ -872,7 +877,7 @@ contains
       ! for the moment we do not apply symmetries to user kpoints
 !       call kpoints_grid_copy(this%full, this%reduced)
 
-      call kpoints_fold_to_1BZ(user_kpoints_grid, latt)
+      call kpoints_fold_to_1BZ(user_kpoints_grid, this%latt)
 
       call kpoints_grid_addto(this%full   ,  user_kpoints_grid)
       call kpoints_grid_addto(this%reduced,  user_kpoints_grid)

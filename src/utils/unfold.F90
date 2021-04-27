@@ -213,8 +213,7 @@ program oct_unfold
 
   !We convert the k-point to the reduced coordinate of the supercell
   do ik = 1, path_kpoints_grid%npoints
-    call kpoints_to_reduced(sys%geo%latt, path_kpoints_grid%point(:, ik), &
-                                path_kpoints_grid%red_point(:, ik))
+    call kpoints_to_reduced(sys%kpoints%latt, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik))
   end do
 
   call kpoints_fold_to_1BZ(path_kpoints_grid, pc)
@@ -385,7 +384,7 @@ contains
     read(file_gvec,*)
     do ik = 1, st%d%nik
       read(file_gvec,*) vec_sc(1:3)
-      call kpoints_to_absolute(sys%geo%latt, vec_sc(1:sys%space%dim), gvec_abs(1:sys%space%dim, ik))
+      call kpoints_to_absolute(sys%kpoints%latt, vec_sc(1:sys%space%dim), gvec_abs(1:sys%space%dim, ik))
     end do 
     call io_close(file_gvec)
 
@@ -410,7 +409,7 @@ contains
       select case(sys%space%periodic_dim)
       case(3)
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sys%geo%latt, TOFLOAT(shell%red_gvec(1:3,ig)),vec_sc(1:3))
+          call kpoints_to_absolute(sys%kpoints%latt, TOFLOAT(shell%red_gvec(1:3,ig)),vec_sc(1:3))
           do ix = gmin, gmax
             do iy = gmin, gmax
               do iz = gmin, gmax
@@ -428,7 +427,7 @@ contains
       case(2)
 
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sys%geo%latt, TOFLOAT(shell%red_gvec(1:3,ig)), vec_sc(1:3))
+          call kpoints_to_absolute(sys%kpoints%latt, TOFLOAT(shell%red_gvec(1:3,ig)), vec_sc(1:3))
           do ix = gmin, gmax
             do iy = gmin, gmax
               vec_pc(1:2) = ix * pc%klattice(1:2,1) + iy * pc%klattice(1:2,2)
