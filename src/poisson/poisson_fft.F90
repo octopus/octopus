@@ -259,20 +259,20 @@ contains
     do lz = 1, n3
       iz = cube%fs_istart(3) + lz - 1
       ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
-      if(2 * ixx(3) == cube%rs_n_global(3)) cycle
+    !  if(2 * ixx(3) == cube%rs_n_global(3)) cycle
       do ly = 1, n2
         iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, cube%rs_n_global(2), .true.)
-        if(2 * ixx(2) == cube%rs_n_global(2)) cycle
+     !   if(2 * ixx(2) == cube%rs_n_global(2)) cycle
         do lx = 1, n1
           ix = cube%fs_istart(1) + lx - 1
           ixx(1) = pad_feq(ix, cube%rs_n_global(1), .true.)
-          if(2 * ixx(1) == cube%rs_n_global(1)) cycle
+      !    if(2 * ixx(1) == cube%rs_n_global(1)) cycle
 
           call poisson_fft_gg_transform(ixx, mesh%sb, coulb%qq, gg, modg2)
 
           !We only keep closed shells
-          if(M_HALF*modg2 > ekin_cutoff + CNST(1e-8)) cycle
+       !   if(M_HALF*modg2 > ekin_cutoff + CNST(1e-8)) cycle
 
           !HH not very elegant
           if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
