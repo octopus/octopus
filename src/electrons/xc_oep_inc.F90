@@ -40,7 +40,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, sb, fine, hm,
   FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(mesh%np, st%d%nspin)
 
   FLOAT :: eig
-  integer :: is, ist, ixc, nspin_, isp, idm
+  integer :: is, ist, ixc, nspin_, isp, idm, ib, ik
   logical, save :: first = .true.
   R_TYPE, allocatable :: psi(:), xpsi(:)
   type(states_elec_t) :: xst
@@ -72,6 +72,15 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, sb, fine, hm,
       exx = .true.
     end select
   end do functl_loop
+
+  ! MGGA from OEP
+  if(family_is_mgga_with_exc(xcs)) then
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call X(h_mgga_terms)(hm, mesh, st%group%psib(ib, ik), xst%group%psib(ib, ik))
+      end do
+    end do 
+  end if
 
   ! this part handles the (pure) orbital functionals
   ! SIC a la PZ is handled here

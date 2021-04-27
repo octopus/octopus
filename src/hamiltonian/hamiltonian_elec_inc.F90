@@ -224,7 +224,8 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     
   end if
 
-  if (bitand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc)) then
+  if (bitand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc) &
+        .and. hm%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
     call X(h_mgga_terms)(hm, mesh, epsib, hpsib)
   end if
 

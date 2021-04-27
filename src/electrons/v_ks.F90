@@ -342,7 +342,7 @@ contains
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
-        call messages_not_implemented("MGGA within the Kohn-Sham scheme")
+        call messages_experimental("MGGA within the Kohn-Sham scheme")
       end if 
     end if
 
@@ -1050,7 +1050,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .or. family_is_mgga_with_exc(ks%xc)) then
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
@@ -1076,9 +1076,10 @@ contains
               call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
               ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
-
-            if (ks%oep%has_photons) then
-              ks%calc%energy%photon_exchange = ks%oep%pt%ex
+            if( bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+              if (ks%oep%has_photons) then
+                ks%calc%energy%photon_exchange = ks%oep%pt%ex
+              end if
             end if
           end if
 
@@ -1333,7 +1334,7 @@ contains
         select case(ks%theory_level)
         case(GENERALIZED_KOHN_SHAM_DFT)
           if(family_is_hybrid(ks%xc)) then
-            call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+            call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)
           end if
         case(HARTREE_FOCK)
           call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)

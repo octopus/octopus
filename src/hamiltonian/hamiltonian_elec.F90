@@ -109,7 +109,9 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_atom,         &
     hamiltonian_elec_dump_vhxc,           &
     hamiltonian_elec_load_vhxc,           &
-    hamiltonian_elec_set_vhxc
+    hamiltonian_elec_set_vhxc,            &
+    dh_mgga_terms,                        &
+    zh_mgga_terms
 
   type, extends(hamiltonian_abst_t) :: hamiltonian_elec_t
     ! Components are public by default
@@ -504,10 +506,10 @@ contains
           .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &
        (hm%theory_level == GENERALIZED_KOHN_SHAM_DFT .and. family_is_hybrid(hm%xc)) &
          .or.  hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER &
-         or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
+         .or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
       !We test Slater before OEP, as Slater is treated as OEP for the moment....
       if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then 
-        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, &
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
                  M_ZERO, M_ONE, M_ZERO)
       else if(bitand(hm%xc%family, XC_FAMILY_OEP) /= 0 .or. hm%theory_level == RDMFT) then
         call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
