@@ -697,8 +697,10 @@ contains
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(geo%space%is_periodic())  call periodic_write_crystal(geo, geo%latt, dir, namespace)
+        call geo%write_xyz(trim(dir)//'/geometry', namespace)
+        if(geo%space%is_periodic()) then
+          call geo%write_crystal(dir, namespace)
+        end if
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)

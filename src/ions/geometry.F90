@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -45,32 +46,7 @@ module geometry_oct_m
   implicit none
 
   private
-  public ::                          &
-    geometry_t,                      &
-    geometry_init,                   &
-    geometry_copy,                   &
-    geometry_partition,              &
-    geometry_write_xyz,              &
-    geometry_read_xyz,               &
-    geometry_fold_atoms_into_cell,         &
-    geometry_min_distance,           &
-    geometry_species_time_dependent, &
-    geometry_val_charge,             &
-    geometry_dipole,                 &
-    geometry_center_of_mass,         &
-    geometry_center_of_mass_vel,     &
-    geometry_center,                 &
-    geometry_axis_large,             &
-    geometry_axis_inertia,           &
-    geometry_translate,              &
-    geometry_rotate,                 &
-    geometry_grid_defaults,          &
-    geometry_grid_defaults_info,     &
-    geometry_get_positions,          &
-    geometry_set_positions,          &
-    geometry_global_force,           &
-    geometry_end,                    &
-    periodic_write_crystal
+  public :: geometry_t
 
   type geometry_t
     ! Components are public by default
@@ -98,26 +74,56 @@ module geometry_oct_m
     type(ion_interaction_t) :: ion_interaction
   
     !> variables for external forces over the ions
-    logical,     private :: global_force
+    logical,     private :: apply_global_force
     type(tdf_t), private :: global_force_function
-
+  contains
+    procedure :: copy => geometry_copy
+    generic   :: assignment(=) => copy
+    procedure :: partition => geometry_partition
+    procedure :: write_xyz => geometry_write_xyz
+    procedure :: read_xyz => geometry_read_xyz
+    procedure :: fold_atoms_into_cell => geometry_fold_atoms_into_cell
+    procedure :: min_distance => geometry_min_distance
+    procedure :: has_time_dependent_species => geometry_has_time_dependent_species
+    procedure :: val_charge => geometry_val_charge
+    procedure :: dipole => geometry_dipole
+    procedure :: center_of_mass => geometry_center_of_mass
+    procedure :: center_of_mass_vel => geometry_center_of_mass_vel
+    procedure :: center => geometry_center
+    procedure :: axis_large => geometry_axis_large
+    procedure :: axis_inertia => geometry_axis_inertia
+    procedure :: translate => geometry_translate
+    procedure :: rotate => geometry_rotate
+    procedure :: grid_defaults => geometry_grid_defaults
+    procedure :: grid_defaults_info => geometry_grid_defaults_info
+    procedure :: get_positions => geometry_get_positions
+    procedure :: set_positions => geometry_set_positions
+    procedure :: global_force => geometry_global_force
+    procedure :: write_crystal => geometry_write_crystal
+    final :: geometry_finalize
   end type geometry_t
+
+  interface geometry_t
+    procedure geometry_constructor
+  end interface geometry_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, namespace, space, print_info)
-    type(geometry_t),           intent(inout) :: geo
+  function geometry_constructor(namespace, space, print_info) result(geo)
     type(namespace_t),          intent(in)    :: namespace
     type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
+    class(geometry_t), pointer :: geo
 
     character(len=100)  :: function_name
     integer :: ierr
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
 
-    PUSH_SUB(geometry_init)
+    PUSH_SUB(geometry_constructor)
+
+    SAFE_ALLOCATE(geo)
 
     geo%space => space
 
@@ -141,7 +147,7 @@ contains
 
         ! then write out the geometry, whether asked for or not in Output variable
         call io_mkdir(STATIC_DIR, namespace)
-        call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
+        call geo%write_xyz(trim(STATIC_DIR)//'/geometry', namespace)
       end if
 
       if (geometry_min_distance(geo, real_atoms_only = .true.) < threshold) then
@@ -177,7 +183,7 @@ contains
   
     if(parse_is_defined(namespace, 'TDGlobalForce')) then
   
-      geo%global_force = .true.
+      geo%apply_global_force = .true.
   
       call parse_variable(namespace, 'TDGlobalForce', 'none', function_name)
       call tdf_read(geo%global_force_function, namespace, trim(function_name), ierr)
@@ -190,12 +196,12 @@ contains
   
     else
   
-      geo%global_force = .false.
+      geo%apply_global_force = .false.
   
     end if
 
-    POP_SUB(geometry_init)
-  end subroutine geometry_init
+    POP_SUB(geometry_constructor)
+  end function geometry_constructor
 
   ! ---------------------------------------------------------------
   !> initializes the xyz positions of the atoms in the structure geo
@@ -378,12 +384,10 @@ contains
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)
-    type(geometry_t), intent(inout) :: geo_out
-    type(geometry_t), intent(in)    :: geo_in
+    class(geometry_t), intent(out) :: geo_out
+    class(geometry_t), intent(in)  :: geo_in
 
     PUSH_SUB(geometry_copy)
-
-    call geometry_end(geo_out)
 
     geo_out%latt = geo_in%latt
 
@@ -410,22 +414,22 @@ contains
   end subroutine geometry_copy
 
   ! ---------------------------------------------------------
-  subroutine geometry_partition(geo, mc)
-    type(geometry_t),            intent(inout) :: geo
+  subroutine geometry_partition(this, mc)
+    class(geometry_t),           intent(inout) :: this
     type(multicomm_t),           intent(in)    :: mc
 
     PUSH_SUB(geometry_partition)
 
-    call distributed_init(geo%atoms_dist, geo%natoms, mc%group_comm(P_STRATEGY_STATES), "atoms")
+    call distributed_init(this%atoms_dist, this%natoms, mc%group_comm(P_STRATEGY_STATES), "atoms")
 
-    call ion_interaction_init_parallelization(geo%ion_interaction, geo%natoms, mc)
+    call ion_interaction_init_parallelization(this%ion_interaction, this%natoms, mc)
 
     POP_SUB(geometry_partition)
   end subroutine geometry_partition
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_xyz(geo, fname, namespace, append, comment)
-    type(geometry_t),           intent(in) :: geo
+  subroutine geometry_write_xyz(this, fname, namespace, append, comment)
+    class(geometry_t),           intent(in) :: this
     character(len=*),           intent(in) :: fname
     type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: append
@@ -444,23 +448,23 @@ contains
     end if
     iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
 
-    write(iunit, '(i4)') geo%natoms
+    write(iunit, '(i4)') this%natoms
     if (present(comment)) then
       write(iunit, '(1x,a)') comment
     else
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length_xyz_file))
     end if
-    do iatom = 1, geo%natoms
-      call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit)
+    do iatom = 1, this%natoms
+      call atom_write_xyz(this%atom(iatom), this%space%dim, iunit)
     end do
     call io_close(iunit)
 
-    if (geo%ncatoms > 0) then
+    if (this%ncatoms > 0) then
       iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
-      write(iunit, '(i4)') geo%ncatoms
+      write(iunit, '(i4)') this%ncatoms
       write(iunit, '(1x)')
-      do iatom = 1, geo%ncatoms
-        call atom_classical_write_xyz(geo%catom(iatom), geo%space%dim, iunit)
+      do iatom = 1, this%ncatoms
+        call atom_classical_write_xyz(this%catom(iatom), this%space%dim, iunit)
       end do
       call io_close(iunit)
     end if
@@ -469,8 +473,8 @@ contains
   end subroutine geometry_write_xyz
 
   ! ---------------------------------------------------------
-  subroutine geometry_read_xyz(geo, fname, namespace, comment)
-    type(geometry_t),           intent(inout) :: geo
+  subroutine geometry_read_xyz(this, fname, namespace, comment)
+    class(geometry_t),          intent(inout) :: this
     character(len=*),           intent(in)    :: fname
     type(namespace_t),          intent(in)    :: namespace
     character(len=*), optional, intent(in)    :: comment
@@ -481,23 +485,23 @@ contains
 
     iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
 
-    read(iunit, '(i4)') geo%natoms
+    read(iunit, '(i4)') this%natoms
     if (present(comment)) then
       read(iunit, *) 
     else
       read(iunit, *)  
     end if
-    do iatom = 1, geo%natoms
-      call atom_read_xyz(geo%atom(iatom), geo%space%dim, iunit)
+    do iatom = 1, this%natoms
+      call atom_read_xyz(this%atom(iatom), this%space%dim, iunit)
     end do
     call io_close(iunit)
 
-    if (geo%ncatoms > 0) then
+    if (this%ncatoms > 0) then
       iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
-      read(iunit, '(i4)') geo%ncatoms
+      read(iunit, '(i4)') this%ncatoms
       read(iunit, *)
-      do iatom = 1, geo%ncatoms
-        call atom_classical_read_xyz(geo%catom(iatom), geo%space%dim, iunit)
+      do iatom = 1, this%ncatoms
+        call atom_classical_read_xyz(this%catom(iatom), this%space%dim, iunit)
       end do
       call io_close(iunit)
     end if
@@ -506,27 +510,27 @@ contains
   end subroutine geometry_read_xyz
 
   ! ---------------------------------------------------------
-  subroutine geometry_fold_atoms_into_cell(geo)
-    type(geometry_t),   intent(inout) :: geo
+  subroutine geometry_fold_atoms_into_cell(this)
+    class(geometry_t),   intent(inout) :: this
 
     integer :: iatom
 
     PUSH_SUB(geometry_fold_atoms_into_cell)
 
-    do iatom = 1, geo%natoms
-      geo%atom(iatom)%x(1:geo%space%dim) = geo%latt%fold_into_cell(geo%atom(iatom)%x(1:geo%space%dim))
+    do iatom = 1, this%natoms
+      this%atom(iatom)%x(1:this%space%dim) = this%latt%fold_into_cell(this%atom(iatom)%x(1:this%space%dim))
     end do
 
     POP_SUB(geometry_fold_atoms_into_cell)
   end subroutine geometry_fold_atoms_into_cell
 
   ! ---------------------------------------------------------
-  FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
-    type(geometry_t),  intent(in) :: geo
-    logical, optional, intent(in) :: real_atoms_only
+  FLOAT function geometry_min_distance(this, real_atoms_only) result(rmin)
+    class(geometry_t),  intent(in) :: this
+    logical,  optional, intent(in) :: real_atoms_only
 
     integer :: iatom, jatom, idir
-    FLOAT   :: xx(geo%space%dim)
+    FLOAT   :: xx(this%space%dim)
     logical :: real_atoms_only_
     type(species_t), pointer :: species
 
@@ -535,28 +539,28 @@ contains
     real_atoms_only_ = optional_default(real_atoms_only, .false.)
 
     rmin = huge(rmin)
-    do iatom = 1, geo%natoms
-      call atom_get_species(geo%atom(iatom), species)
+    do iatom = 1, this%natoms
+      call atom_get_species(this%atom(iatom), species)
       if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-      do jatom = iatom + 1, geo%natoms
-        call atom_get_species(geo%atom(iatom), species)
+      do jatom = iatom + 1, this%natoms
+        call atom_get_species(this%atom(iatom), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        xx(1:geo%space%dim) = abs(geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim))
-        if (geo%space%is_periodic()) then
-          xx = geo%latt%cart_to_red(xx)
-          do idir = 1, geo%space%periodic_dim
+        xx = abs(this%atom(iatom)%x(1:this%space%dim) - this%atom(jatom)%x(1:this%space%dim))
+        if (this%space%is_periodic()) then
+          xx = this%latt%cart_to_red(xx)
+          do idir = 1, this%space%periodic_dim
             xx(idir) = xx(idir) - floor(xx(idir) + M_HALF)
           end do
-          xx = geo%latt%red_to_cart(xx)
+          xx = this%latt%red_to_cart(xx)
         end if
         rmin = min(norm2(xx), rmin)
       end do
     end do
 
-    if(.not. (geo%only_user_def .and. real_atoms_only_)) then
+    if(.not. (this%only_user_def .and. real_atoms_only_)) then
       ! what if the nearest neighbors are periodic images?
-      do idir = 1, geo%space%periodic_dim
-        rmin = min(rmin, norm2(geo%latt%rlattice(:,idir)))
+      do idir = 1, this%space%periodic_dim
+        rmin = min(rmin, norm2(this%latt%rlattice(:,idir)))
       end do
     end if
 
@@ -564,53 +568,52 @@ contains
   end function geometry_min_distance
 
   ! ---------------------------------------------------------
-  logical function geometry_species_time_dependent(geo) result(time_dependent)
-    type(geometry_t), intent(in) :: geo
+  logical function geometry_has_time_dependent_species(this) result(time_dependent)
+    class(geometry_t), intent(in) :: this
 
-    PUSH_SUB(geometry_species_time_dependent)
+    PUSH_SUB(geometry_has_time_dependent_species)
 
-    time_dependent = geo%species_time_dependent
+    time_dependent = this%species_time_dependent
 
-    POP_SUB(geometry_species_time_dependent)
-  end function geometry_species_time_dependent
+    POP_SUB(geometry_has_time_dependent_species)
+  end function geometry_has_time_dependent_species
 
   ! ---------------------------------------------------------
-  FLOAT function geometry_val_charge(geo, mask) result(val_charge)
-    type(geometry_t),          intent(in) :: geo
-    logical,         optional, intent(in) :: mask(:)
+  FLOAT function geometry_val_charge(this, mask) result(val_charge)
+    class(geometry_t),          intent(in) :: this
+    logical,          optional, intent(in) :: mask(:)
 
     integer :: iatom
 
     PUSH_SUB(geometry_val_charge)
 
     val_charge = M_ZERO
-    do iatom = 1, geo%natoms
+    do iatom = 1, this%natoms
       if (present(mask)) then
         if (.not. mask(iatom)) cycle
       end if
-      val_charge = val_charge - species_zval(geo%atom(iatom)%species)
+      val_charge = val_charge - species_zval(this%atom(iatom)%species)
     end do
 
     POP_SUB(geometry_val_charge)
   end function geometry_val_charge
 
   ! ---------------------------------------------------------
-  function geometry_dipole(geo, mask) result(dipole)
-    type(geometry_t),           intent(in) :: geo
-    logical,          optional, intent(in) :: mask(:)
-    FLOAT :: dipole(geo%space%dim)
+  function geometry_dipole(this, mask) result(dipole)
+    class(geometry_t),           intent(in) :: this
+    logical,           optional, intent(in) :: mask(:)
+    FLOAT :: dipole(this%space%dim)
 
     integer :: ia
 
     PUSH_SUB(geometry_dipole)
 
     dipole = M_ZERO
-    do ia = 1, geo%natoms
+    do ia = 1, this%natoms
       if (present(mask)) then
         if (.not. mask(ia)) cycle
       end if
-      dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
-        species_zval(geo%atom(ia)%species)*geo%atom(ia)%x(1:geo%space%dim)
+      dipole = dipole + species_zval(this%atom(ia)%species)*this%atom(ia)%x(1:this%space%dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -618,11 +621,11 @@ contains
   end function geometry_dipole
 
   ! ---------------------------------------------------------
-  function geometry_center_of_mass(geo, mask, pseudo) result(pos)
-    type(geometry_t),           intent(in) :: geo
-    logical,          optional, intent(in) :: mask(:)
-    logical,          optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
-    FLOAT :: pos(MAX_DIM)
+  function geometry_center_of_mass(this, mask, pseudo) result(pos)
+    class(geometry_t),           intent(in) :: this
+    logical,           optional, intent(in) :: mask(:)
+    logical,           optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
+    FLOAT :: pos(this%space%dim)
 
     FLOAT :: mass, total_mass
     integer :: ia
@@ -632,25 +635,25 @@ contains
     pos = M_ZERO
     total_mass = M_ZERO
     mass = M_ONE
-    do ia = 1, geo%natoms
+    do ia = 1, this%natoms
       if (present(mask)) then
         if (.not. mask(ia)) cycle
       end if
       if (.not. optional_default(pseudo, .false.)) then
-        mass = species_mass(geo%atom(ia)%species)
+        mass = species_mass(this%atom(ia)%species)
       end if
-      pos(1:geo%space%dim) = pos(1:geo%space%dim) + mass*geo%atom(ia)%x(1:geo%space%dim)
+      pos = pos + mass*this%atom(ia)%x(1:this%space%dim)
       total_mass = total_mass + mass
     end do
-    pos(1:geo%space%dim) = pos(1:geo%space%dim)/total_mass
+    pos = pos/total_mass
 
     POP_SUB(geometry_center_of_mass)
   end function geometry_center_of_mass
 
   ! ---------------------------------------------------------
-  function geometry_center_of_mass_vel(geo) result(vel)
-    type(geometry_t), intent(in) :: geo
-    FLOAT :: vel(MAX_DIM)
+  function geometry_center_of_mass_vel(this) result(vel)
+    class(geometry_t), intent(in) :: this
+    FLOAT :: vel(this%space%dim)
 
     FLOAT :: mass, total_mass
     integer :: iatom
@@ -659,45 +662,44 @@ contains
 
     vel = M_ZERO
     total_mass = M_ZERO
-    do iatom = 1, geo%natoms
-      mass = species_mass(geo%atom(iatom)%species)
+    do iatom = 1, this%natoms
+      mass = species_mass(this%atom(iatom)%species)
       total_mass = total_mass + mass
-      vel(1:geo%space%dim) = vel(1:geo%space%dim) + mass*geo%atom(iatom)%v(1:geo%space%dim)
+      vel = vel + mass*this%atom(iatom)%v(1:this%space%dim)
     end do
-    vel(1:geo%space%dim) = vel(1:geo%space%dim)/total_mass
+    vel = vel/total_mass
 
     POP_SUB(geometry_center_of_mass_vel)
   end function geometry_center_of_mass_vel
 
   ! ---------------------------------------------------------
-  function geometry_center(geo) result(pos)
-    type(geometry_t), intent(in) :: geo
-    FLOAT :: pos(MAX_DIM)
+  function geometry_center(this) result(pos)
+    class(geometry_t), intent(in) :: this
+    FLOAT :: pos(this%space%dim)
 
-    FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
+    FLOAT :: xmin(this%space%dim), xmax(this%space%dim)
     integer  :: i, j
 
     PUSH_SUB(geometry_center)
 
     xmin =  M_HUGE
     xmax = -M_HUGE
-    do i = 1, geo%natoms
-      do j = 1, geo%space%dim
-        if (geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
-        if (geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
+    do i = 1, this%natoms
+      do j = 1, this%space%dim
+        if (this%atom(i)%x(j) > xmax(j)) xmax(j) = this%atom(i)%x(j)
+        if (this%atom(i)%x(j) < xmin(j)) xmin(j) = this%atom(i)%x(j)
       end do
     end do
 
-    pos = M_ZERO
-    pos(1:geo%space%dim) = (xmax(1:geo%space%dim) + xmin(1:geo%space%dim))/M_TWO
+    pos = (xmax + xmin)/M_TWO
 
     POP_SUB(geometry_center)
   end function geometry_center
 
   ! ---------------------------------------------------------
-  subroutine geometry_axis_large(geo, x, x2)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+  subroutine geometry_axis_large(this, x, x2)
+    class(geometry_t), intent(in)  :: this
+    FLOAT,             intent(out) :: x(this%space%dim), x2(this%space%dim)
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
@@ -706,25 +708,25 @@ contains
 
     ! first get the further apart atoms
     rmax = -M_HUGE
-    do i = 1, geo%natoms
-      do j = 1, geo%natoms/2 + 1
-        r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim)-geo%atom(j)%x(1:geo%space%dim))**2))
+    do i = 1, this%natoms
+      do j = 1, this%natoms/2 + 1
+        r = norm2(this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim))
         if (r > rmax) then
           rmax = r
-          x = geo%atom(i)%x - geo%atom(j)%x
+          x = this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim)
         end if
       end do
     end do
-    x  = x /sqrt(sum(x(1:geo%space%dim)**2))
+    x  = x /norm2(x)
 
     ! now let us find out what is the second most important axis
     rmax = -M_HUGE
-    do i = 1, geo%natoms
-      r2 = sum(x(1:geo%space%dim) * geo%atom(i)%x(1:geo%space%dim))
-      r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim) - r2*x(1:geo%space%dim))**2))
+    do i = 1, this%natoms
+      r2 = sum(x * this%atom(i)%x(1:this%space%dim))
+      r = norm2(this%atom(i)%x(1:this%space%dim) - r2*x)
       if (r > rmax) then
         rmax = r
-        x2 = geo%atom(i)%x - r2*x
+        x2 = this%atom(i)%x(1:this%space%dim) - r2*x
       end if
     end do
 
@@ -734,12 +736,12 @@ contains
   ! ---------------------------------------------------------
   !> This subroutine assumes that the origin of the coordinates is the
   !! center of mass of the system
-  subroutine geometry_axis_inertia(geo, x, x2, pseudo)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: x(MAX_DIM), x2(MAX_DIM)
-    logical,          intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
+  subroutine geometry_axis_inertia(this, x, x2, pseudo)
+    class(geometry_t), intent(in)  :: this
+    FLOAT,             intent(out) :: x(this%space%dim), x2(this%space%dim)
+    logical,           intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
 
-    FLOAT :: mass, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
+    FLOAT :: mass, tinertia(this%space%dim, this%space%dim), eigenvalues(this%space%dim)
     integer :: ii, jj, iatom
     type(unit_t) :: unit
 
@@ -748,13 +750,13 @@ contains
     ! first calculate the inertia tensor
     tinertia = M_ZERO
     mass = M_ONE
-    do iatom = 1, geo%natoms
-      if (.not.pseudo) mass = species_mass(geo%atom(iatom)%species)
-      do ii = 1, geo%space%dim
-        do jj = 1, geo%space%dim
-          tinertia(ii, jj) = tinertia(ii, jj) - mass*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
+    do iatom = 1, this%natoms
+      if (.not.pseudo) mass = species_mass(this%atom(iatom)%species)
+      do ii = 1, this%space%dim
+        do jj = 1, this%space%dim
+          tinertia(ii, jj) = tinertia(ii, jj) - mass*this%atom(iatom)%x(ii)*this%atom(iatom)%x(jj)
         end do
-        tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(geo%atom(iatom)%x(:)**2)
+        tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(this%atom(iatom)%x(:)**2)
       end do
     end do
 
@@ -766,12 +768,11 @@ contains
       write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
     end if
     call messages_info(1)
-    call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
+    call output_tensor(stdout, tinertia, this%space%dim, unit, write_average = .true.)
 
-    call lalg_eigensolve(geo%space%dim, tinertia, eigenvalues)
+    call lalg_eigensolve(this%space%dim, tinertia, eigenvalues)
 
-    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
-      (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
+    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', units_from_atomic(unit, eigenvalues)
     call messages_info(1)
 
     ! make a choice to fix the sign of the axis.
@@ -786,46 +787,46 @@ contains
   end subroutine geometry_axis_inertia
 
   ! ---------------------------------------------------------
-  subroutine geometry_translate(geo, x)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: x(MAX_DIM)
+  subroutine geometry_translate(this, xx)
+    class(geometry_t), intent(inout) :: this
+    FLOAT,             intent(in)    :: xx(this%space%dim)
 
     integer  :: iatom
 
     PUSH_SUB(geometry_translate)
 
-    do iatom = 1, geo%natoms
-      geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) - x(1:geo%space%dim)
+    do iatom = 1, this%natoms
+      this%atom(iatom)%x(1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim) - xx
     end do
-    do iatom = 1, geo%ncatoms
-      geo%catom(iatom)%x(1:geo%space%dim) = geo%catom(iatom)%x(1:geo%space%dim) - x(1:geo%space%dim)
+    do iatom = 1, this%ncatoms
+      this%catom(iatom)%x(1:this%space%dim) = this%catom(iatom)%x(1:this%space%dim) - xx
     end do
 
     POP_SUB(geometry_translate)
   end subroutine geometry_translate
 
   ! ---------------------------------------------------------
-  subroutine geometry_rotate(geo, namespace, from, from2, to)
-    type(geometry_t),  intent(inout) :: geo
+  subroutine geometry_rotate(this, namespace, from, from2, to)
+    class(geometry_t), intent(inout) :: this
     type(namespace_t), intent(in)    :: namespace
-    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+    FLOAT,             intent(in)    :: from(this%space%dim)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(this%space%dim)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(this%space%dim)     !< assumed to be normalized
 
     integer :: iatom, idim
-    FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
-    FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
+    FLOAT :: m1(3, 3), m2(3, 3)
+    FLOAT :: m3(3, 3), f2(3), per(3)
     FLOAT :: alpha, r
 
     PUSH_SUB(geometry_rotate)
 
-    if (geo%space%dim /= 3) then
+    if (this%space%dim /= 3) then
       call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
     end if
 
     ! initialize matrices
     m1 = M_ZERO
-    do idim = 1, MAX_DIM
+    do idim = 1, this%space%dim
       m1(idim, idim) = M_ONE
     end do
 
@@ -842,9 +843,9 @@ contains
     per(1) = -f2(2)
     per(2) =  f2(1)
     per(3) = M_ZERO
-    r = sqrt(sum(per(1:3)**2))
+    r = norm2(per)
     if (r > M_ZERO) then
-      per(1:3) = per(1:3)/r
+      per = per/r
     else
       per(2) = M_ONE
     end if
@@ -872,14 +873,14 @@ contains
 
     ! now transform the coordinates
     ! it is written in this way to avoid what I consider a bug in the Intel compiler
-    do iatom = 1, geo%natoms
-      f2 = geo%atom(iatom)%x
-      geo%atom(iatom)%x = matmul(m1, f2)
+    do iatom = 1, this%natoms
+      f2 = this%atom(iatom)%x(1:this%space%dim)
+      this%atom(iatom)%x(1:this%space%dim) = matmul(m1, f2)
     end do
 
-    do iatom = 1, geo%ncatoms
-      f2 = geo%catom(iatom)%x
-      geo%catom(iatom)%x = matmul(m1, f2)
+    do iatom = 1, this%ncatoms
+      f2 = this%catom(iatom)%x(1:this%space%dim)
+      this%catom(iatom)%x(1:this%space%dim) = matmul(m1, f2)
     end do
 
     POP_SUB(geometry_rotate)
@@ -887,11 +888,11 @@ contains
 
     ! ---------------------------------------------------------
     subroutine rotate(m, angle, dir)
-      FLOAT,   intent(inout) :: m(MAX_DIM, MAX_DIM)
+      FLOAT,   intent(inout) :: m(3, 3)
       FLOAT,   intent(in)    :: angle
       integer, intent(in)    :: dir
 
-      FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+      FLOAT :: aux(3, 3), ca, sa
 
       PUSH_SUB(geometry_rotate.rotate)
 
@@ -928,9 +929,9 @@ contains
   end subroutine geometry_rotate
 
   ! ---------------------------------------------------------
-  subroutine geometry_grid_defaults(geo, def_h, def_rsize)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: def_h, def_rsize
+  subroutine geometry_grid_defaults(this, def_h, def_rsize)
+    class(geometry_t), intent(in)  :: this
+    FLOAT,             intent(out) :: def_h, def_rsize
 
     integer :: ispec
 
@@ -938,33 +939,33 @@ contains
 
     def_h     =  huge(def_h)
     def_rsize = -huge(def_rsize)
-    do ispec = 1, geo%nspecies
-      def_h     = min(def_h,     species_def_h(geo%species(ispec)))
-      def_rsize = max(def_rsize, species_def_rsize(geo%species(ispec)))
+    do ispec = 1, this%nspecies
+      def_h     = min(def_h,     species_def_h(this%species(ispec)))
+      def_rsize = max(def_rsize, species_def_rsize(this%species(ispec)))
     end do
 
     POP_SUB(geometry_grid_defaults)
   end subroutine geometry_grid_defaults
 
   ! ---------------------------------------------------------
-  subroutine geometry_grid_defaults_info(geo)
-    type(geometry_t), intent(in) :: geo
+  subroutine geometry_grid_defaults_info(this)
+    class(geometry_t), intent(in) :: this
 
     integer :: ispec
 
     PUSH_SUB(geometry_grid_defaults_info)
 
-    do ispec = 1, geo%nspecies
-      call messages_write("Species '"//trim(species_label(geo%species(ispec)))//"': spacing = ")
-      if (species_def_h(geo%species(ispec)) > M_ZERO) then
-        call messages_write(species_def_h(geo%species(ispec)), fmt = '(f7.3)')
+    do ispec = 1, this%nspecies
+      call messages_write("Species '"//trim(species_label(this%species(ispec)))//"': spacing = ")
+      if (species_def_h(this%species(ispec)) > M_ZERO) then
+        call messages_write(species_def_h(this%species(ispec)), fmt = '(f7.3)')
         call messages_write(" b")
       else
         call messages_write(" unknown")
       end if
       call messages_write(", radius = ")
-      if (species_def_rsize(geo%species(ispec)) > M_ZERO) then
-        call messages_write(species_def_rsize(geo%species(ispec)), fmt = '(f5.1)')
+      if (species_def_rsize(this%species(ispec)) > M_ZERO) then
+        call messages_write(species_def_rsize(this%species(ispec)), fmt = '(f5.1)')
         call messages_write(" b.")
       else
         call messages_write(" unknown.")
@@ -976,42 +977,96 @@ contains
   end subroutine geometry_grid_defaults_info
 
   ! ---------------------------------------------------------
-  subroutine geometry_get_positions(geo, q)
-    type(geometry_t), intent(in)    :: geo
-    FLOAT,            intent(inout) :: q(:, :)
+  subroutine geometry_get_positions(this, q)
+    class(geometry_t), intent(in)    :: this
+    FLOAT,             intent(inout) :: q(:, :)
 
     integer :: iatom
 
     PUSH_SUB(geometry_get_positions)
 
-    do iatom = 1, geo%natoms
-      q(iatom, 1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim)
+    do iatom = 1, this%natoms
+      q(iatom, 1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim)
     end do
 
     POP_SUB(geometry_get_positions)
   end subroutine geometry_get_positions
 
   ! ---------------------------------------------------------
-  subroutine geometry_set_positions(geo, q)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: q(:, :)
+  subroutine geometry_set_positions(this, q)
+    class(geometry_t), intent(inout) :: this
+    FLOAT,             intent(in)    :: q(:, :)
 
     integer :: iatom
 
     PUSH_SUB(geometry_get_positions)
 
-    do iatom = 1, geo%natoms
-      geo%atom(iatom)%x(1:geo%space%dim) = q(iatom, 1:geo%space%dim)
+    do iatom = 1, this%natoms
+      this%atom(iatom)%x(1:this%space%dim) = q(iatom, 1:this%space%dim)
     end do
 
     POP_SUB(geometry_get_positions)
   end subroutine geometry_set_positions
 
   ! ---------------------------------------------------------
-  subroutine geometry_end(geo)
+  function geometry_global_force(this, time) result(force)
+    class(geometry_t),    intent(in)    :: this
+    FLOAT,                intent(in)    :: time
+    FLOAT :: force(this%space%dim)
+
+    PUSH_SUB(geometry_global_force)
+
+    force = M_ZERO
+
+    if (this%apply_global_force) then
+      force(1) = units_to_atomic(units_inp%force, tdf(this%global_force_function, time))
+    end if
+
+    POP_SUB(geometry_global_force)
+  end function geometry_global_force
+
+  ! ----------------------------------------------------------------
+  !> This subroutine creates a crystal by replicating the geometry and
+  !! writes the result to dir//'crystal.xyz'
+  subroutine geometry_write_crystal(this, dir, namespace)
+    class(geometry_t),       intent(in) :: this 
+    character(len=*),        intent(in) :: dir
+    type(namespace_t),       intent(in) :: namespace 
+    
+    type(lattice_iterator_t) :: latt_iter
+    FLOAT :: radius, pos(this%space%dim)
+    integer :: iatom, icopy, iunit
+
+    PUSH_SUB(geometry_write_crystal)
+    
+    radius = maxval(M_HALF*norm2(this%latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
+    latt_iter = lattice_iterator_t(this%latt, radius)
+
+    if(mpi_grp_is_root(mpi_world)) then
+      
+      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
+      
+      write(iunit, '(i9)') this%natoms*latt_iter%n_cells
+      write(iunit, '(a)') '#generated by Octopus'
+      
+      do iatom = 1, this%natoms
+        do icopy = 1, latt_iter%n_cells
+          pos = units_from_atomic(units_out%length, this%atom(iatom)%x(1:this%space%dim) + latt_iter%get(icopy))
+          write(iunit, '(a, 99f12.6)') this%atom(iatom)%label, pos
+        end do
+      end do
+
+      call io_close(iunit)
+    end if
+
+    POP_SUB(geometry_write_crystal)
+  end subroutine geometry_write_crystal
+
+  ! ---------------------------------------------------------
+  subroutine geometry_finalize(geo)
     type(geometry_t), intent(inout) :: geo
 
-    PUSH_SUB(geometry_end)
+    PUSH_SUB(geometry_finalize)
 
     call distributed_end(geo%atoms_dist)
 
@@ -1028,64 +1083,8 @@ contains
 
     call species_end_global()
 
-    POP_SUB(geometry_end)
-  end subroutine geometry_end
-
-  ! ---------------------------------------------------------
-
-  subroutine geometry_global_force(geo, time, force)
-    type(geometry_t),     intent(in)    :: geo
-    FLOAT,                intent(in)    :: time
-    FLOAT,                intent(out)   :: force(:)
-
-    PUSH_SUB(geometry_global_force)
-
-    force(1:geo%space%dim) = CNST(0.0)
-
-    if(geo%global_force) then
-      force(1) = units_to_atomic(units_inp%force, tdf(geo%global_force_function, time))
-    end if
-
-    POP_SUB(geometry_global_force)
-  end subroutine geometry_global_force
-
-  ! ----------------------------------------------------------------
-  !> This subroutine creates a crystal by replicating the geometry and
-  !! writes the result to dir//'crystal.xyz'
-  subroutine periodic_write_crystal(geo, latt, dir, namespace)
-    type(geometry_t),        intent(in) :: geo 
-    type(lattice_vectors_t), intent(in) :: latt
-    character(len=*),        intent(in) :: dir
-    type(namespace_t),       intent(in) :: namespace 
-    
-    type(lattice_iterator_t) :: latt_iter
-    FLOAT :: radius, pos(geo%space%dim)
-    integer :: iatom, icopy, iunit
-
-    PUSH_SUB(periodic_write_crystal)
-    
-    radius = maxval(M_HALF*norm2(latt%rlattice, dim=1))*(M_ONE + M_EPSILON)
-    latt_iter = lattice_iterator_t(latt, radius)
-
-    if(mpi_grp_is_root(mpi_world)) then
-      
-      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
-      
-      write(iunit, '(i9)') geo%natoms*latt_iter%n_cells
-      write(iunit, '(a)') '#generated by Octopus'
-      
-      do iatom = 1, geo%natoms
-        do icopy = 1, latt_iter%n_cells
-          pos = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:geo%space%dim) + latt_iter%get(icopy))
-          write(iunit, '(a, 99f12.6)') geo%atom(iatom)%label, pos
-        end do
-      end do
-
-      call io_close(iunit)
-    end if
-
-    POP_SUB(periodic_write_crystal)
-  end subroutine periodic_write_crystal
+    POP_SUB(geometry_finalize)
+  end subroutine geometry_finalize
 
 end module geometry_oct_m
 

@@ -28,7 +28,6 @@ module ion_dynamics_oct_m
   use namespace_oct_m
   use parser_oct_m
   use read_coords_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use tdfunction_oct_m
   use profiling_oct_m
@@ -206,7 +205,7 @@ contains
       end do
       
       SAFE_ALLOCATE(this%geo_t0)
-      call geometry_copy(this%geo_t0, geo)
+      this%geo_t0 = geo
       
     end if
     
@@ -332,7 +331,8 @@ contains
 
       kin1 = ion_dynamics_kinetic_energy(geo)
 
-      x = geometry_center_of_mass_vel(geo)
+      x = M_ZERO
+      x(1:geo%space%dim) = geo%center_of_mass_vel()
       do i = 1, geo%natoms
         geo%atom(i)%v = geo%atom(i)%v - x
       end do
@@ -472,7 +472,7 @@ contains
       end if
       SAFE_DEALLOCATE_A(this%td_displacements)
       if (any (this%td_displacements(:)%move)) then
-        call geometry_end(this%geo_t0)
+        SAFE_DEALLOCATE_P(this%geo_t0)
       end if
     end if
 
@@ -481,9 +481,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_propagate(this, sb, geo, time, dt, namespace)
+  subroutine ion_dynamics_propagate(this, geo, time, dt, namespace)
     type(ion_dynamics_t), intent(inout) :: this
-    type(simul_box_t),    intent(in)    :: sb
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(in)    :: dt
@@ -566,7 +565,7 @@ contains
     end if
 
     ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
-    call geometry_fold_atoms_into_cell(geo)
+    call geo%fold_atoms_into_cell()
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate

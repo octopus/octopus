@@ -409,7 +409,7 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
-    rmin = geometry_min_distance(geo)
+    rmin = geo%min_distance()
 
     ! This variable is documented in scf/scf.F90
     call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', min(M_HALF*rmin, CNST(100.0)), writ%lmm_r, &
@@ -1441,7 +1441,7 @@ contains
     end do
 
     if (lmax > 0) then
-      ionic_dipole = geometry_dipole(geo)
+      ionic_dipole = geo%dipole()
       do is = 1, st%d%nspin
         multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
@@ -2447,7 +2447,7 @@ contains
       call comm_allreduce(st%dom_st_kpt_mpi_grp, projections)
 
       ! n_dip is not defined for more than space%dim
-      n_dip = geometry_dipole(geo)
+      n_dip = geo%dipole()
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end

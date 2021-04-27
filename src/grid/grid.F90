@@ -107,7 +107,7 @@ contains
 
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
-    call geometry_grid_defaults(geo, def_h, def_rsize)
+    call geo%grid_defaults(def_h, def_rsize)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -165,7 +165,7 @@ contains
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
-        call geometry_grid_defaults_info(geo)
+        call geo%grid_defaults_info()
         do idir = 1, space%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &

@@ -426,7 +426,7 @@ contains
     call parse_variable(namespace, 'SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
-    rmin = geometry_min_distance(geo)
+    rmin = geo%min_distance()
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float

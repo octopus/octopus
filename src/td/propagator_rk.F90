@@ -615,7 +615,7 @@ contains
       end if
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time, dt, namespace)
+        call ion_dynamics_propagate(ions, geo, time, dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -818,7 +818,7 @@ contains
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt, namespace)
+        call ion_dynamics_propagate(ions, geo, time - dt + c(1)*dt, c(1)*dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -859,7 +859,7 @@ contains
                                                      calc_energy = .false., calc_eigenval = .false.)
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt, namespace)
+        call ion_dynamics_propagate(ions, geo, time - dt + c(2)*dt, c(2)*dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if

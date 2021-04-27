@@ -76,7 +76,7 @@ module electrons_oct_m
 
   type, extends(system_t) :: electrons_t
     ! Components are public by default
-    type(geometry_t)             :: geo
+    type(geometry_t), pointer    :: geo => NULL()
     type(grid_t)                 :: gr    !< the mesh
     type(states_elec_t)          :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
@@ -138,7 +138,7 @@ contains
       call messages_experimental('Support for mixed periodicity systems')
     end if
 
-    call geometry_init(sys%geo, sys%namespace, sys%space)
+    sys%geo => geometry_t(sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
     if (sys%space%is_periodic()) then
       call sys%geo%latt%write_info(stdout)
@@ -160,7 +160,7 @@ contains
     ! we need k-points for periodic systems
     call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, sys%space%periodic_dim, sys%geo%latt)
 
-    call states_elec_init(sys%st, sys%namespace, sys%space, geometry_val_charge(sys%geo), sys%kpoints)
+    call states_elec_init(sys%st, sys%namespace, sys%space, sys%geo%val_charge(), sys%kpoints)
     call sys%st%write_info(sys%namespace)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
@@ -212,7 +212,7 @@ contains
     call multicomm_init(this%mc, this%namespace, this%grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
       mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call geometry_partition(this%geo, this%mc)
+    call this%geo%partition(this%mc)
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
     call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)
@@ -538,7 +538,7 @@ contains
 
     call states_elec_end(sys%st)
 
-    call geometry_end(sys%geo)
+    SAFE_DEALLOCATE_P(sys%geo)
 
     call kpoints_end(sys%kpoints)
 

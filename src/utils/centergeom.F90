@@ -26,6 +26,7 @@ program centergeom
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use profiling_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -66,14 +67,19 @@ contains
       PSEUDO  = 2,        &
       LARGE   = 3
 
-    type(geometry_t)  :: geo
+    type(geometry_t), pointer :: geo
     type(space_t)     :: space
-    FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
+    FLOAT, allocatable :: center(:), x1(:), x2(:), to(:)
     integer :: axis_type, idir, default
     type(block_t) :: blk
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
+    geo => geometry_t(global_namespace, space)
+
+    SAFE_ALLOCATE(center(1:geo%space%dim))
+    SAFE_ALLOCATE(x1(1:geo%space%dim))
+    SAFE_ALLOCATE(x2(1:geo%space%dim))
+    SAFE_ALLOCATE(to(1:geo%space%dim))
 
     ! is there something to do
     if (geo%natoms > 1) then
@@ -99,9 +105,9 @@ contains
         to(:) = M_ZERO
         to(1) = M_ONE
       end if
-      to = to / sqrt(sum(to(1:geo%space%dim)**2))
+      to = to / norm2(to)
 
-      write(message(1),'(a,6f15.6)') 'Using main axis ', to(1:geo%space%dim)
+      write(message(1),'(a,6f15.6)') 'Using main axis ', to
       call messages_info(1)
 
       !%Variable AxisType
@@ -135,44 +141,50 @@ contains
 
       select case (axis_type)
       case (NONE, INERTIA, PSEUDO)
-        center = geometry_center_of_mass(geo, pseudo = (axis_type==PSEUDO))
+        center = geo%center_of_mass(pseudo = (axis_type==PSEUDO))
 
         write(message(1),'(3a,99f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
-          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+          units_from_atomic(units_out%length, center)
         call messages_info(1)
 
-        call geometry_translate(geo, center)
-        call geometry_axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
+        call geo%translate(center)
+        call geo%axis_inertia(x1, x2, pseudo = (axis_type==PSEUDO))
       case (LARGE)
-        center = geometry_center(geo)
+        center = geo%center()
 
         write(message(1),'(3a,99f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
-          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+          units_from_atomic(units_out%length, center)
         call messages_info(1)
 
-        call geometry_translate(geo, center)
-        call geometry_axis_large(geo, x1, x2)
+        call geo%translate(center)
+        call geo%axis_large(x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
         call messages_fatal(1, namespace=global_namespace)
       end select
 
-      write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
-      write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
+      write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1
+      write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2
       call messages_info(2)
 
-      if (axis_type /= NONE) call geometry_rotate(geo, global_namespace, x1, x2, to)
+      if (axis_type /= NONE) then
+        call geo%rotate(global_namespace, x1, x2, to)
+      end if
 
     end if
 
     ! recenter
-    center = geometry_center(geo)
-    call geometry_translate(geo, center)
+    center = geo%center()
+    call geo%translate(center)
 
     ! write adjusted geometry
-    call geometry_write_xyz(geo, './adjusted', global_namespace)
+    call geo%write_xyz('./adjusted', global_namespace)
 
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_A(center)
+    SAFE_DEALLOCATE_A(x1)
+    SAFE_DEALLOCATE_A(x2)
+    SAFE_DEALLOCATE_A(to)
+    SAFE_DEALLOCATE_P(geo)
 
   end subroutine center_geo
 
