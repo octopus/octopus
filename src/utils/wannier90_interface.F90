@@ -1292,6 +1292,7 @@ contains
     call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
+    what = .false.
     call io_function_read_what_how_when(global_namespace, space, what, how, output_interval)
 
     call io_mkdir('wannier', global_namespace)

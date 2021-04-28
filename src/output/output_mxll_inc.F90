@@ -92,6 +92,7 @@
     !% Must be >= 0. If it is 0, then no output is written. 
     !%End
 
+    outp%what = .false.
     call io_function_read_what_how_when(sb, namespace, outp%what, outp%how, outp%output_interval, &
       'MaxwellOutput', 'OutputFormat', 'MaxwellOutputInterval')
 

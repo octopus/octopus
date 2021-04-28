@@ -126,6 +126,7 @@ contains
     !%End
 
     ! MFT: TODO: should I ignore the errors?
+    this%what = .false.
     call io_function_read_what_how_when(sb, namespace, this%what, how, output_interval, &
     'OutputMatrixElements')
 
