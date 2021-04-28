@@ -52,20 +52,25 @@ module system_linear_medium_oct_m
     system_linear_medium_t,    &
     system_linear_medium_init
 
+  integer, parameter :: &
+    MEDIUM_PARALLELEPIPED = 1,         &
+    MEDIUM_BOX_FILE       = 2
+
   type, extends(system_t) :: system_linear_medium_t
+     integer                         :: box_shape
      integer                         :: number   !< number of linear media boxes
-     integer, allocatable            :: shape(:)  !< edge shape profile (smooth or steep)
-     FLOAT, allocatable              :: center(:,:) !< center of each box
-     FLOAT, allocatable              :: lsize(:,:)  !< length in each direction of each box
-     FLOAT, allocatable              :: ep(:,:) !< permitivity of the linear media
-     FLOAT, allocatable              :: mu(:,:) !< permeability of the linear media
-     FLOAT, allocatable              :: c(:,:) !< speed of light in the linear media
-     FLOAT, allocatable              :: ep_factor(:) !< permitivity before applying edge profile
-     FLOAT, allocatable              :: mu_factor(:) !< permeability before applying edge profile
-     FLOAT, allocatable              :: sigma_e_factor(:) !< electric conductivy before applying edge profile
-     FLOAT, allocatable              :: sigma_m_factor(:) !< magnetic conductivity before applying edge4 profile
-     FLOAT, allocatable              :: sigma_e(:,:) !< electric conductivy of (lossy) medium
-     FLOAT, allocatable              :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
+     integer, allocatable            :: edge_profile(:)  !< edge shape profile (smooth or steep)
+     FLOAT              :: center(3) !< center of a box
+     FLOAT              :: lsize(3)  !< length in each direction of a box
+     FLOAT, allocatable              :: ep(:) !< permitivity of the linear media
+     FLOAT, allocatable              :: mu(:) !< permeability of the linear media
+     FLOAT, allocatable              :: c(:) !< speed of light in the linear media
+     FLOAT, allocatable              :: ep_factor !< permitivity before applying edge profile
+     FLOAT, allocatable              :: mu_factor !< permeability before applying edge profile
+     FLOAT, allocatable              :: sigma_e_factor !< electric conductivy before applying edge profile
+     FLOAT, allocatable              :: sigma_m_factor !< magnetic conductivity before applying edge4 profile
+     FLOAT, allocatable              :: sigma_e(:) !< electric conductivy of (lossy) medium
+     FLOAT, allocatable              :: sigma_m(:) !< magnetic conductivy of (lossy) medium
      integer, allocatable            :: points_number(:)
      integer, allocatable            :: global_points_number(:)
      integer, allocatable            :: points_map(:,:)
@@ -73,7 +78,7 @@ module system_linear_medium_oct_m
      FLOAT, allocatable              :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
      integer, allocatable            :: bdry_number(:)
      integer, allocatable            :: bdry_map(:,:)
-     character(len=256), allocatable :: filename(:)
+     character(len=256)  :: filename
      FLOAT                           :: width !< width of medium medium when used as boundary condition
 
   contains
@@ -135,172 +140,188 @@ contains
 
     call profiling_in(prof, 'MEDIUM_BOX_INIT')
 
-    !%Variable LinearMediumBox
-    !%Type block
-    !%Section Time-Dependent::Propagation
+    !%Variable LinearMediumBoxShape
+    !%Type integer
+    !%Section
     !%Description
-    !% Defines parameters for a linear medium box.
-    !%
-    !% Example:
-    !%
-    !% <tt>%LinearMediumBox
-    !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
-    !% <br>%</tt>
-    !%
-    !% Position of center (three components) and length (three components), followed by permittivity
-    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
-    !% approximation used for the derivatives at the edges.
-    !%
-    !%Option edged 1
-    !% Medium box edges are considered steep for derivatives.
-    !%Option smooth 2
-    !% Medium box edged and softened for derivatives.
+    !% This variable defines the shape of the linear medium box.
+    !% The default is <tt>parallelepiped</tt>.
+    !%Option parallelepiped 1
+    !% The medium box will be a parallelepiped whose center and dimensions are taken from
+    !% the variable <tt>LinearMediumLsize</tt>.
+    !%Option box_file 2
+    !% The simulation box will be read from an external file in OFF format, defined by the variable <tt>LinearMediumBoxFile</tt>.
     !%End
-    if(parse_block(namespace, 'LinearMediumBox', blk) == 0) then
+    call parse_variable(namespace, 'LinearMediumBoxShape', MEDIUM_PARALLELEPIPED, this%box_shape)
 
-      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      calc_medium_box = .true.
+    if(.not.varinfo_valid_option('LinearMediumBoxShape', this%box_shape)) call messages_input_error(namespace, 'LinearMediumBoxShape')
 
-      ! find out how many lines (i.e. states) the block has
-      nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(medium_box%center(1:3,1:nlines))
-      SAFE_ALLOCATE(medium_box%lsize(1:3,1:nlines))
-      SAFE_ALLOCATE(medium_box%ep_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%mu_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%shape(1:nlines))
-      do il = 1, nlines
-        ncols = parse_block_cols(blk, il-1)
-        if (ncols /= 11) then
-          call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
-        end if
-        do idim = 1, 3
-          call parse_block_float(blk, il-1, idim-1, medium_box%center(idim,il))
-          call parse_block_float(blk, il-1, idim+2, medium_box%lsize(idim,il))
-        end do
-        call parse_block_float(blk, il-1, 6, medium_box%ep_factor(il))
-        call parse_block_float(blk, il-1, 7, medium_box%mu_factor(il))
-        call parse_block_float(blk, il-1, 8, medium_box%sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 9, medium_box%sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 10, medium_box%shape(il))
-        write(message(1),'(a,I1)')    'Medium box number:  ', il
-        write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', medium_box%center(1,il), ' | ',&
-            medium_box%center(2,il), ' | ', medium_box%center(3,il)
-        write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', medium_box%lsize(1,il), ' | ', &
-            medium_box%lsize(2,il), ' | ', medium_box%lsize(3,il)
-        write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-        write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-        write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-        write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-        if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-          write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-        else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-          write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-        end if
-        write(message(9),'(a)') ""
-        call messages_info(9)
-      end do
-      call parse_block_end(blk)
+    select case(this%box_shape)
+    case (MEDIUM_PARALLELEPIPED)
 
-      call generate_medium_boxes(medium_box, gr, nlines, namespace)
-
-      call messages_print_stress(stdout)
-    end if
-
-    !%Variable LinearMediumFromFile
-    !%Type block
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% Defines parameters and geometry to create a new linear medium box.
-    !%
-    !% Example:
-    !%
-    !% <tt>%LinearMediumFromFile
-    !% <br>&nbsp;&nbsp;   medium_surface_file | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
-    !% <br>%</tt>
-    !%
-    !% Medium surface file, followed by permittivity
-    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
-    !% approximation used for the derivatives at the edges.
-    !%
-    !%Option edged 1
-    !% Medium box edges are considered steep for derivatives.
-    !%Option smooth 2
-    !% Medium box edged and softened for derivatives.
-    !%End
-    if(parse_block(namespace, 'LinearMediumFromFile', blk) == 0) then
-
-      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      calc_medium_box = .true.
-
-      nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(medium_box%filename(1:nlines))
-      SAFE_ALLOCATE(medium_box%ep_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%mu_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(medium_box%shape(1:nlines))
-      do il = 1, nlines
-        ncols = parse_block_cols(blk, il-1)
-        call parse_block_string(blk, il-1, 0, medium_box%filename(il))
-        call parse_block_float(blk, il-1, 1, medium_box%ep_factor(il))
-        call parse_block_float(blk, il-1, 2, medium_box%mu_factor(il))
-        call parse_block_float(blk, il-1, 3, medium_box%sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 4, medium_box%sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 5, medium_box%shape(il))
-        if (medium_box%shape(il) /= OPTION__LINEARMEDIUMBOX__EDGED) then
-          call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
-        end if
-        write(message(1),'(a,I1)')    'Medium box number:  ', il
-        write(message(2),'(a,a)') 'Box surface file: ', trim(medium_box%filename(il))
-        write(message(3),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-        write(message(4),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-        write(message(5),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-        write(message(6),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-        write(message(7),'(a,a)')   'Box shape:          ', 'edged'
-        write(message(8),'(a)') ""
-        call messages_info(8)
-      end do
-      call parse_block_end(blk)
-
-      call generate_medium_boxes(medium_box, gr, nlines, namespace)
-
-      !%Variable CheckPointsMediumFromFile
-      !%Type logical
-      !%Default no
+      !%Variable LinearMediumBoxSize
+      !%Type block
       !%Section Maxwell
       !%Description
-      !% Whether to re-calculate the points map by artificially shrinking the coordinate system by a factor of
-      !% 0.99 to check if the points inside the medium surface are properly detected. This works for only one
-      !% medium surface which is centered in the origin of the coordinate system.
+      !% Defines center and size of a parallelepiped linear medium box.
+      !%
+      !% Example:
+      !%
+      !% <tt>%LinearMediumBox
+      !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length
+      !% <br>%</tt>
       !%End
-      call parse_variable(namespace, 'CheckPointsMediumFromFile', .false., checkmediumpoints)
 
-      if (checkmediumpoints .and. (nlines > 1)) then
-        message(1) = 'Check for points only works for one medium surface, centered at the origin.'
-        call messages_fatal(1, namespace=namespace)
-      end if
+      if(parse_block(namespace, 'LinearMediumBoxSize', blk) == 0) then
+        call messages_print_stress(stdout, trim('Linear Medium box center and size:'))
+        calc_medium_box = .true.
 
-      if (checkmediumpoints) then
-        allocate(medium_box_aux, source=medium_box)
-        SAFE_ALLOCATE(tmp(gr%mesh%np, nlines))
-        ip_in_max2 = 0
-        write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(medium_box%filename(1)), ":"
-        call messages_info(1)
-        call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
-
-        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', medium_box%global_points_number(1)
-        write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number(1)
-        write(message(3), '(a)') ""
+        nlines = parse_block_n(blk)
+        if (nlines /=  1) then
+          call messages_input_error(namespace, 'LinearMediumBoxSize', 'should consist of one line')
+        end if
+        SAFE_ALLOCATE(medium_box%center(1:3))
+        SAFE_ALLOCATE(medium_box%lsize(1:3))
+        ncols = parse_block_cols(blk, 0)
+        if (ncols /= 6) then
+          call messages_input_error(namespace, 'LinearMediumBoxSize', 'should consist of six columns')
+        end if
+        do idim = 1, 3
+          call parse_block_float(blk, 0, idim-1, medium_box%center(idim))
+          call parse_block_float(blk, 0, idim+2, medium_box%lsize(idim))
+        end do
+        write(message(1),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', medium_box%center(1), ' | ',&
+            medium_box%center(2), ' | ', medium_box%center(3)
+        write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', medium_box%lsize(1), ' | ', &
+            medium_box%lsize(2), ' | ', medium_box%lsize(3)
+        write(message(3),'(a)') ""
         call messages_info(3)
+      call parse_block_end(blk)
 
-        deallocate(medium_box_aux)
-        SAFE_DEALLOCATE_A(tmp)
-      end if
+      call generate_medium_boxes(medium_box, gr, nlines, namespace)
 
       call messages_print_stress(stdout)
+    else
+      message(1) = "For parallelepiped box shapes, you must provide a LinearMediumBoxSize block."
+      call messages_fatal(1, namespace=namespace)
     end if
+
+  case (MEDIUM_BOX_FILE)
+    !%Variable LinearMediumBoxFile
+    !%Type string
+    !%Section Maxwell
+    !%Description
+    !% File in OFF format with the shape of the linear medium.
+    if parse_is_defined(namespace, 'LinearMediumBoxFile') then
+      call parse_variable(namespace, 'LinearMediumBoxFile', this%filename)
+    else
+      message(1) = "When using box_file as the box shape, you must provide a filename through the LinearMediumBoxFile variable."
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    !%Variable CheckPointsMediumFromFile
+    !%Type logical
+    !%Default no
+    !%Section Maxwell
+    !%Description
+    !% Whether to re-calculate the points map by artificially shrinking the coordinate system by a factor of
+    !% 0.99 to check if the points inside the medium surface are properly detected. This works for only one
+    !% medium surface which is centered in the origin of the coordinate system.
+    !%End
+    call parse_variable(namespace, 'CheckPointsMediumFromFile', .false., checkmediumpoints)
+
+    if (checkmediumpoints .and. (nlines > 1)) then
+      message(1) = 'Check for points only works for one medium surface, centered at the origin.'
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    if (checkmediumpoints) then
+      allocate(medium_box_aux, source=medium_box)
+      SAFE_ALLOCATE(tmp(gr%mesh%np, 1))
+      ip_in_max2 = 0
+      write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(medium_box%filename(1)), ":"
+      call messages_info(1)
+      call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
+
+      write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', medium_box%global_points_number(1)
+      write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number(1)
+      write(message(3), '(a)') ""
+      call messages_info(3)
+
+      deallocate(medium_box_aux)
+      SAFE_DEALLOCATE_A(tmp)
+    end if
+
+    end select
+
+    !%Variable LinearMediumProperties
+    !%Type block
+    !%Section Maxwell
+    !%Description
+    !% Defines electromagnetic parameters for a linear medium box.
+    !%
+    !% Example:
+    !%
+    !% <tt>%LinearMediumProperties
+    !% <br>&nbsp;&nbsp;   epsilon_factor | mu_factor | sigma_e | sigma_m
+    !% <br>%</tt>
+    !%
+    !% Permittivity factor, permeability factor, electric conductivity and magnetic conductivity of the medium box.
+    !.
+    !%End
+
+    if (parse_block(namespace, 'LinearMediumProperties', blk) == 0) then
+
+      calc_medium_box = .true.
+
+      nlines = parse_block_n(blk)
+      if (nlines /=  1) then
+        call messages_input_error(namespace, 'LinearMediumProperties', 'should consist of one line', nlines)
+      end if
+      ncols = parse_block_cols(blk, 0)
+      if (ncols /= 4) then
+        call messages_input_error(namespace, 'LinearMediumProperties', 'should consist of four columns')
+      end if
+      call parse_block_float(blk, 0, 0, medium_box%ep_factor)
+      call parse_block_float(blk, 0, 1, medium_box%mu_factor)
+      call parse_block_float(blk, 0, 2, medium_box%sigma_e_factor)
+      call parse_block_float(blk, 0, 3, medium_box%sigma_m_factor)
+      write(message(1),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor
+      write(message(2),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor
+      write(message(3),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor
+      write(message(4),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor
+      write(message(5),'(a)') ""
+      call messages_info(5)
+      call parse_block_end(blk)
+
+      call generate_medium_boxes(medium_box, gr, nlines, namespace)
+
+      call messages_print_stress(stdout)
+    else
+      message(1) = 'You must specify the properties of your linear medium through the LinearMediumProperties block.'
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    !%Variable LinearMediumEdgeProfile
+    !%Type integer
+    !%Section Maxwell
+    !%Description
+    !% Defines the type of numerical approximation used for the derivatives at the edges of the medium box.
+    !% Default is edged. When the box shape is read from file, only the edged profile is supported.
+    !%
+    !%Option edged 1
+    !% Medium box edges are considered steep for derivatives.
+    !%Option smooth 2
+    !% Medium box edged and softened for derivatives.
+    !%End
+    call parse_variable(namespace, 'LinearMediumEdgeProfile', OPTION__LINEARMEDIUMBOX__EDGED, medium_box%edge_profile)
+    if (medium_box%edge_profile == OPTION__LINEARMEDIUMBOX__EDGED) then
+      write(message(1),'(a,a)')   'Box shape:          ', 'edged'
+    else if (medium_box%edge_profile == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+      write(message(1),'(a,a)')   'Box shape:          ', 'smooth'
+    end if
+    call messages_info(1)
+
 
     call profiling_out(prof)
 
@@ -514,7 +535,7 @@ contains
     SAFE_DEALLOCATE_A(medium_box%mu_factor)
     SAFE_DEALLOCATE_A(medium_box%sigma_e_factor)
     SAFE_DEALLOCATE_A(medium_box%sigma_m_factor)
-    SAFE_DEALLOCATE_A(medium_box%shape)
+    SAFE_DEALLOCATE_A(medium_box%edge_profile)
     SAFE_DEALLOCATE_A(medium_box%points_number)
     SAFE_DEALLOCATE_A(medium_box%bdry_number)
     SAFE_DEALLOCATE_A(medium_box%points_map)
@@ -643,7 +664,7 @@ contains
 
       do ip_in = 1, medium_box%points_number(il)
         ip = medium_box%points_map(ip_in,il)
-        if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+        if (medium_box%edge_profile(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
           xx(1:3) = gr%mesh%x(ip,1:3)
           dd_min = M_HUGE
 
@@ -664,7 +685,7 @@ contains
           medium_box%sigma_m(ip_in,il) = medium_box%sigma_m_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
-        else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+        else if (medium_box%edge_profile(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
 
           medium_box%ep(ip_in, il) = P_ep * medium_box%ep_factor(il)
           medium_box%mu(ip_in, il) = P_mu * medium_box%mu_factor(il)

@@ -110,26 +110,6 @@ contains
   end subroutine linear_medium_em_field_finalize
 
   ! ---------------------------------------------------------
-  subroutine linear_medium_em_field_allocate(this, mesh)
-    class(linear_medium_em_field_t), intent(inout) :: this
-    type(mesh_t),                    intent(in)    :: mesh
-
-    PUSH_SUB(linear_medium_em_field_allocate)
-
-    POP_SUB(linear_medium_em_field_allocate)
-
-  end subroutine linear_medium_em_field_allocate
-
-  ! ---------------------------------------------------------
-  subroutine linear_medium_em_field_deallocate(this)
-    class(linear_medium_em_field_t), intent(inout) :: this
-
-    PUSH_SUB(linear_medium_em_field_deallocate)
-
-    POP_SUB(linear_medium_em_field_deallocate)
-  end subroutine linear_medium_em_field_deallocate
-
-  ! ---------------------------------------------------------
   logical function linear_medium_em_field_update_exposed_quantities(partner, requested_time, interaction) &
     result(allowed_to_update)
     class(linear_medium_em_field_t), intent(inout) :: partner
