@@ -192,7 +192,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
       weight = st%d%kweights(ik)*st%occ(ist, ik)     
       if(weight < CNST(1.0e-10)) cycle
  
-      call states_elec_get_state(st, mesh, ist, ik, psi )
+      call states_elec_get_state(st, mesh, ist, ik, psi)
 
       if(present(phase)) then
 #ifdef R_TCOMPLEX
@@ -437,7 +437,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
           call X(compute_ACBNO_U)(this, ios, namespace)
-          if(this%intersite) call X(compute_ACBNO_V)(this, ios)
+          call X(compute_ACBNO_V)(this, ios)
         else
           call compute_ACBNO_U_noncollinear(this, ios, namespace)
           if(this%intersite) then

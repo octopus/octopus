@@ -639,7 +639,8 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%sb%dim, hm%d, gr%der%boundaries, namespace, hm%kpoints)
+        call lda_u_build_phase_correction(hm%lda_u, gr%sb%dim, gr%sb%periodic_dim, &
+                hm%d, gr%der%boundaries, namespace, hm%kpoints)
       end if
 
       POP_SUB(hamiltonian_elec_init.init_phase)
@@ -1139,7 +1140,8 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb%dim, this%d, this%der%boundaries, namespace, this%kpoints,  &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb%dim, mesh%sb%periodic_dim, &
+               this%d, this%der%boundaries, namespace, this%kpoints,  &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if

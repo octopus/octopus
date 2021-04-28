@@ -576,13 +576,15 @@ contains
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%sb%dim, st%d, gr%der%boundaries, namespace, kpoints)
+      call lda_u_build_phase_correction(this, gr%sb%dim, gr%sb%periodic_dim, st%d, gr%der%boundaries, namespace, kpoints)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then
         call dloewdin_orthogonalize(this%basis, st%d%kpt, namespace)
       else
-        if(debug%info) call dloewdin_info(this%basis, st%d%kpt, namespace)
+        if(debug%info .and. gr%sb%periodic_dim > 0) then
+          call dloewdin_info(this%basis, st%d%kpt, namespace)
+        end if
       end if
     end if
 
@@ -617,9 +619,10 @@ contains
 
 
   !> Build the phase correction to the global phase for all orbitals
-  subroutine lda_u_build_phase_correction(this, dim, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
+  subroutine lda_u_build_phase_correction(this, dim, periodic_dim, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
     type(lda_u_t),                 intent(inout) :: this
     integer,                       intent(in)    :: dim
+    integer,                       intent(in)    :: periodic_dim
     type(states_elec_dim_t),       intent(in)    :: std
     type(boundaries_t),            intent(in)    :: boundaries
     type(namespace_t),             intent(in)    :: namespace
@@ -646,7 +649,7 @@ contains
     if(this%basis%orthogonalization) then
       call zloewdin_orthogonalize(this%basis, std%kpt, namespace)
     else
-      if(debug%info) call zloewdin_info(this%basis, std%kpt, namespace)
+      if(debug%info .and. periodic_dim > 0) call zloewdin_info(this%basis, std%kpt, namespace)
     end if
 
     POP_SUB(lda_u_build_phase_correction)
