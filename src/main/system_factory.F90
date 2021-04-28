@@ -29,6 +29,7 @@ module system_factory_oct_m
   use system_oct_m
   use system_dftb_oct_m
   use system_factory_abst_oct_m
+  use system_linear_medium_oct_m
   use system_mxll_oct_m
   implicit none
 
@@ -42,7 +43,8 @@ module system_factory_oct_m
     SYSTEM_CLASSICAL_PARTICLE = 3,  &
     SYSTEM_CHARGED_PARTICLE   = 4,  &
     SYSTEM_DFTBPLUS           = 5,  &
-    SYSTEM_MULTISYSTEM        = 6
+    SYSTEM_LINEAR_MEDIUM      = 6,  &
+    SYSTEM_MULTISYSTEM        = 7
 
 
   type, extends(system_factory_abst_t) :: system_factory_t
@@ -81,7 +83,9 @@ contains
     !% A charged classical particle.
     !%Option dftbplus 5
     !% A DFTB+ system
-    !%Option multisystem 6
+    !%Option linear_medium 6
+    !% A linear medium for classical electrodynamics.
+    !%Option multisystem 7
     !% A system containing other systems.
     !%End
     select case (type)
@@ -97,6 +101,8 @@ contains
       system => charged_particle_t(namespace_t(name, parent=namespace))
     case (SYSTEM_DFTBPLUS)
       system => system_dftb_t(namespace_t(name, parent=namespace))
+    case (SYSTEM_LINEAR_MEDIUM)
+      system => system_linear_medium_t(namespace_t(name, parent=namespace))
     case default
       system => null()
     end select

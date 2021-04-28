@@ -587,6 +587,7 @@ maxwell_f_srcs =                                 \
 	maxwell/hamiltonian_mxll.F90             \
 	maxwell/medium_mxll.F90                  \
 	maxwell/propagator_mxll.F90              \
+	maxwell/system_linear_medium.F90         \
 	maxwell/system_mxll.F90
 
 maxwell_srcs = $(maxwell_f_srcs)

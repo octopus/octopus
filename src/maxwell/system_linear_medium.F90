@@ -21,29 +21,23 @@
 module system_linear_medium_oct_m
   use algorithm_oct_m
   use clock_oct_m
-  use geometry_oct_m
+  use cgal_polyhedra_oct_m
+  use derivatives_oct_m
   use global_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
-  use io_oct_m
-  use ion_dynamics_oct_m
   use iso_c_binding
-  use lasers_oct_m
   use messages_oct_m
+  use comm_oct_m
+  use grid_oct_m
+  use mesh_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_oct_m
-  use propagator_verlet_oct_m
   use quantity_oct_m
-  use space_oct_m
-  use species_oct_m
   use system_oct_m
-  use tdfunction_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use write_iter_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -134,7 +128,7 @@ contains
     integer :: nlines, ncols, idim, ip_in_max2
     integer, allocatable :: tmp(:)
     type(block_t) :: blk
-    type(medium_box_t), allocatable :: medium_box_aux
+    class(system_linear_medium_t), allocatable :: medium_box_aux
     logical :: checkmediumpoints
     type(profile_t), save :: prof
 
@@ -159,7 +153,8 @@ contains
     !%End
     call parse_variable(namespace, 'LinearMediumBoxShape', MEDIUM_PARALLELEPIPED, this%box_shape)
 
-    if(.not.varinfo_valid_option('LinearMediumBoxShape', this%box_shape)) call messages_input_error(namespace, 'LinearMediumBoxShape')
+    if(.not.varinfo_valid_option('LinearMediumBoxShape', this%box_shape)) &
+        & call messages_input_error(namespace, 'LinearMediumBoxShape')
 
     select case(this%box_shape)
     case (MEDIUM_PARALLELEPIPED)
@@ -179,14 +174,11 @@ contains
 
       if(parse_block(namespace, 'LinearMediumBoxSize', blk) == 0) then
         call messages_print_stress(stdout, trim('Linear Medium box center and size:'))
-        calc_medium_box = .true.
 
         nlines = parse_block_n(blk)
         if (nlines /=  1) then
           call messages_input_error(namespace, 'LinearMediumBoxSize', 'should consist of one line')
         end if
-        SAFE_ALLOCATE(this%center(1:3))
-        SAFE_ALLOCATE(this%lsize(1:3))
         ncols = parse_block_cols(blk, 0)
         if (ncols /= 6) then
           call messages_input_error(namespace, 'LinearMediumBoxSize', 'should consist of six columns')
@@ -203,8 +195,6 @@ contains
         call messages_info(3)
       call parse_block_end(blk)
 
-      call generate_medium_boxes(this, gr, nlines, namespace)
-
       call messages_print_stress(stdout)
     else
       message(1) = "For parallelepiped box shapes, you must provide a LinearMediumBoxSize block."
@@ -218,7 +208,7 @@ contains
     !%Description
     !% File in OFF format with the shape of the linear medium.
     !%End
-    if parse_is_defined(namespace, 'LinearMediumBoxFile') then
+    if (parse_is_defined(namespace, 'LinearMediumBoxFile')) then
       call parse_variable(namespace, 'LinearMediumBoxFile', 'mediumboxfile', this%filename)
     else
       message(1) = "When using box_file as the box shape, you must provide a filename through the LinearMediumBoxFile variable."
@@ -241,22 +231,22 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if (checkmediumpoints) then
-      allocate(medium_box_aux, source=this)
-      SAFE_ALLOCATE(tmp(gr%mesh%np))
-      ip_in_max2 = 0
-      write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(this%filename), ":"
-      call messages_info(1)
-      call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
+    !if (checkmediumpoints) then
+    !  allocate(medium_box_aux, source=this)
+    !  AFE_ALLOCATE(tmp(gr%mesh%np))
+    !  ip_in_max2 = 0
+    !  write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(this%filename), ":"
+    !  call messages_info(1)
+    !  call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
 
-      write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', this%global_points_number
-      write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number
-      write(message(3), '(a)') ""
-      call messages_info(3)
+    !  write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', this%global_points_number
+    !  write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number
+    !  write(message(3), '(a)') ""
+    !  call messages_info(3)
 
-      deallocate(medium_box_aux)
-      SAFE_DEALLOCATE_A(tmp)
-    end if
+     ! deallocate(medium_box_aux)
+     ! AFE_DEALLOCATE_A(tmp)
+    !end if
 
     end select
 
@@ -277,8 +267,6 @@ contains
 
     if (parse_block(namespace, 'LinearMediumProperties', blk) == 0) then
 
-      calc_medium_box = .true.
-
       nlines = parse_block_n(blk)
       if (nlines /=  1) then
         call messages_input_error(namespace, 'LinearMediumProperties', 'should consist of one line', nlines)
@@ -298,8 +286,6 @@ contains
       write(message(5),'(a)') ""
       call messages_info(5)
       call parse_block_end(blk)
-
-      call generate_medium_boxes(this, gr, nlines, namespace)
 
       call messages_print_stress(stdout)
     else
@@ -327,6 +313,7 @@ contains
     end if
     call messages_info(1)
 
+    !call generate_medium_boxes(this, gr, 1, namespace)
 
     call profiling_out(prof)
 
@@ -418,11 +405,6 @@ contains
     class(system_linear_medium_t), intent(inout) :: this
 
     PUSH_SUB(system_linear_medium_output_finish)
-
-    if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_end(this%output_handle(1))
-      call write_iter_end(this%output_handle(2))
-    end if
 
     POP_SUB(system_linear_medium_output_finish)
   end subroutine system_linear_medium_output_finish
@@ -530,19 +512,21 @@ contains
   subroutine system_linear_medium_finalize(this)
     type(system_linear_medium_t), intent(inout) :: this
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(system_linear_medium_finalize)
 
     call profiling_in(prof, 'MEDIUM_BOX_END')
 
-    SAFE_DEALLOCATE_A(medium_box%points_map)
-    SAFE_DEALLOCATE_A(medium_box%bdry_map)
-    SAFE_DEALLOCATE_A(medium_box%aux_ep)
-    SAFE_DEALLOCATE_A(medium_box%aux_mu)
-    SAFE_DEALLOCATE_A(medium_box%c)
-    SAFE_DEALLOCATE_A(medium_box%ep)
-    SAFE_DEALLOCATE_A(medium_box%mu)
-    SAFE_DEALLOCATE_A(medium_box%sigma_e)
-    SAFE_DEALLOCATE_A(medium_box%sigma_m)
+    SAFE_DEALLOCATE_A(this%points_map)
+    SAFE_DEALLOCATE_A(this%bdry_map)
+    SAFE_DEALLOCATE_A(this%aux_ep)
+    SAFE_DEALLOCATE_A(this%aux_mu)
+    SAFE_DEALLOCATE_A(this%c)
+    SAFE_DEALLOCATE_A(this%ep)
+    SAFE_DEALLOCATE_A(this%mu)
+    SAFE_DEALLOCATE_A(this%sigma_e)
+    SAFE_DEALLOCATE_A(this%sigma_m)
 
     call profiling_out(prof)
 
@@ -555,13 +539,13 @@ contains
   ! Specific routines for this type:
 
   ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(medium_box, gr, namespace)
-    type(medium_box_t),  intent(inout)      :: medium_box
+  subroutine generate_medium_boxes(this, gr, namespace)
+    type(system_linear_medium_t),  intent(inout)      :: this
     type(grid_t),        intent(in)         :: gr
     type(namespace_t),   intent(in)         :: namespace
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:,:)
+    integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     logical :: inside
@@ -581,22 +565,22 @@ contains
     ip_in_max = 0
     ip_bd_max = 0
 
-    if (allocated(medium_box%filename)) then
+    if (this%box_shape == MEDIUM_BOX_FILE) then
 
-      call get_points_map_from_file(medium_box, ip_in_max, gr%mesh, tmp_points_map)
+      call get_points_map_from_file(this, ip_in_max, gr%mesh, tmp_points_map)
 
-      SAFE_ALLOCATE(medium_box%points_map(ip_in_max))
+      SAFE_ALLOCATE(this%points_map(ip_in_max))
 
-      medium_box%points_map = 0
-      medium_box%bdry_map = 0
+      this%points_map = 0
+      this%bdry_map = 0
 
-      medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
+      this%points_map(:) = tmp_points_map(1:ip_in_max)
 
     else
 
       do idim = 1, 3
-        bounds(1,idim) = medium_box%center(idim) - medium_box%lsize(idim)/M_TWO
-        bounds(2,idim) = medium_box%center(idim) + medium_box%lsize(idim)/M_TWO
+        bounds(1,idim) = this%center(idim) - this%lsize(idim)/M_TWO
+        bounds(2,idim) = this%center(idim) + this%lsize(idim)/M_TWO
       end do
       ip_in = 0
       ip_bd = 0
@@ -614,93 +598,93 @@ contains
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
       if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      medium_box%points_number = ip_in
-      medium_box%bdry_number = ip_bd
+      this%points_number = ip_in
+      this%bdry_number = ip_bd
 
-      SAFE_ALLOCATE(medium_box%points_map(ip_in_max))
-      SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max))
+      SAFE_ALLOCATE(this%points_map(ip_in_max))
+      SAFE_ALLOCATE(this%bdry_map(ip_bd_max))
 
-      medium_box%points_map = 0
-      medium_box%bdry_map = 0
-      medium_box%points_map = tmp_points_map(1:ip_in_max)
-      medium_box%bdry_map = tmp_bdry_map(1:ip_bd_max)
+      this%points_map = 0
+      this%bdry_map = 0
+      this%points_map = tmp_points_map(1:ip_in_max)
+      this%bdry_map = tmp_bdry_map(1:ip_bd_max)
 
     end if
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     ! TODO: add some check that medium boxes do not overlap, like this:
-    !do ip_in = 1, medium_box%points_number - 1
-    !  if (any(medium_box%points_map(ip_in+1:) == medium_box%points_map(ip_in)) .or. &
-    !      any(medium_box%points_map(:, il+1:) == medium_box%points_map(ip_in, il))) then
+    !do ip_in = 1, this%points_number - 1
+    !  if (any(this%points_map(ip_in+1:) == this%points_map(ip_in)) .or. &
+    !      any(this%points_map(:, il+1:) == this%points_map(ip_in, il))) then
     !    message(1) = 'Linear medium boxes overlap.'
     !    call messages_fatal(1, namespace=namespace)
     !  end if
     !end do
 
-    SAFE_ALLOCATE(medium_box%aux_ep(ip_in_max,1:3))
-    SAFE_ALLOCATE(medium_box%aux_mu(ip_in_max,1:3))
-    SAFE_ALLOCATE(medium_box%c(ip_in_max))
-    SAFE_ALLOCATE(medium_box%ep(ip_in_max))
-    SAFE_ALLOCATE(medium_box%mu(ip_in_max))
-    SAFE_ALLOCATE(medium_box%sigma_e(ip_in_max))
-    SAFE_ALLOCATE(medium_box%sigma_m(ip_in_max))
+    SAFE_ALLOCATE(this%aux_ep(ip_in_max,1:3))
+    SAFE_ALLOCATE(this%aux_mu(ip_in_max,1:3))
+    SAFE_ALLOCATE(this%c(ip_in_max))
+    SAFE_ALLOCATE(this%ep(ip_in_max))
+    SAFE_ALLOCATE(this%mu(ip_in_max))
+    SAFE_ALLOCATE(this%sigma_e(ip_in_max))
+    SAFE_ALLOCATE(this%sigma_m(ip_in_max))
 
 
-    do ip_in = 1, medium_box%points_number
-      ip = medium_box%points_map(ip_in)
-      if (medium_box%edge_profile == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+    do ip_in = 1, this%points_number
+      ip = this%points_map(ip_in)
+      if (this%edge_profile == OPTION__LINEARMEDIUMBOX__SMOOTH) then
         xx(1:3) = gr%mesh%x(ip,1:3)
         dd_min = M_HUGE
 
-        do ip_bd = 1, medium_box%bdry_number
-          ipp = medium_box%bdry_map(ip_bd)
+        do ip_bd = 1, this%bdry_number
+          ipp = this%bdry_map(ip_bd)
           xxp(1:3) = gr%mesh%x(ipp,1:3)
           dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
           if (dd < dd_min) dd_min = dd
         end do
 
-        medium_box%ep(ip_in) = P_ep + ((P_ep * medium_box%ep_factor - P_ep)  &
+        this%ep(ip_in) = P_ep + ((P_ep * this%ep_factor - P_ep)  &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-        medium_box%mu(ip_in) = P_mu + ((P_mu * medium_box%mu_factor - P_mu) &
+        this%mu(ip_in) = P_mu + ((P_mu * this%mu_factor - P_mu) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-        medium_box%c(ip_in) = M_ONE/sqrt(medium_box%ep(ip_in)*medium_box%mu(ip_in))
-        medium_box%sigma_e(ip_in) = medium_box%sigma_e_factor &
+        this%c(ip_in) = M_ONE/sqrt(this%ep(ip_in)*this%mu(ip_in))
+        this%sigma_e(ip_in) = this%sigma_e_factor &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-        medium_box%sigma_m(ip_in) = medium_box%sigma_m_factor &
+        this%sigma_m(ip_in) = this%sigma_m_factor &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
-      else if (medium_box%edge_profile == OPTION__LINEARMEDIUMBOX__EDGED) then
+      else if (this%edge_profile == OPTION__LINEARMEDIUMBOX__EDGED) then
 
-        medium_box%ep(ip_in) = P_ep * medium_box%ep_factor
-        medium_box%mu(ip_in) = P_mu * medium_box%mu_factor
-        medium_box%c(ip_in) = M_ONE/sqrt(medium_box%ep(ip_in)*medium_box%mu(ip_in))
-        medium_box%sigma_e(ip_in) = medium_box%sigma_e_factor
-        medium_box%sigma_m(ip_in) = medium_box%sigma_m_factor
+        this%ep(ip_in) = P_ep * this%ep_factor
+        this%mu(ip_in) = P_mu * this%mu_factor
+        this%c(ip_in) = M_ONE/sqrt(this%ep(ip_in)*this%mu(ip_in))
+        this%sigma_e(ip_in) = this%sigma_e_factor
+        this%sigma_m(ip_in) = this%sigma_m_factor
 
       end if
     end do
 
     tmp(:) = P_ep
-    do  ip_in = 1, medium_box%points_number
-      ip = medium_box%points_map(ip_in)
-      tmp(ip)= medium_box%ep(ip_in)
+    do  ip_in = 1, this%points_number
+      ip = this%points_map(ip_in)
+      tmp(ip)= this%ep(ip_in)
     end do
     call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-    do ip_in = 1, medium_box%points_number
-      ip = medium_box%points_map(ip_in)
-      medium_box%aux_ep(ip_in, :) = tmp_grad(ip, :)/(M_FOUR * medium_box%ep(ip_in))
+    do ip_in = 1, this%points_number
+      ip = this%points_map(ip_in)
+      this%aux_ep(ip_in, :) = tmp_grad(ip, :)/(M_FOUR * this%ep(ip_in))
     end do
 
     tmp(:) = P_mu
-    do ip_in = 1, medium_box%points_number
-      ip = medium_box%points_map(ip_in)
-      tmp(ip) = medium_box%mu(ip_in)
+    do ip_in = 1, this%points_number
+      ip = this%points_map(ip_in)
+      tmp(ip) = this%mu(ip_in)
     end do
     call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-    do ip_in = 1, medium_box%points_number
-      ip = medium_box%points_map(ip_in)
-      medium_box%aux_mu(ip_in, :) = tmp_grad(ip, :)/(M_FOUR * medium_box%mu(ip_in))
+    do ip_in = 1, this%points_number
+      ip = this%points_map(ip_in)
+      this%aux_mu(ip_in, :) = tmp_grad(ip, :)/(M_FOUR * this%mu(ip_in))
     end do
 
     !TODO: add print information about the medium box
@@ -753,8 +737,8 @@ contains
 
   ! ----------------------------------------------------------
   !> Populate list of point indices for points inside the polyhedron
-  subroutine get_points_map_from_file(medium_box, ip_in_max, mesh, tmp_map, scale_factor)
-    type(medium_box_t),       intent(inout) :: medium_box
+  subroutine get_points_map_from_file(this, ip_in_max, mesh, tmp_map, scale_factor)
+    type(system_linear_medium_t),       intent(inout) :: this
     integer,                  intent(inout) :: ip_in_max
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(inout) :: tmp_map(:)
@@ -769,7 +753,7 @@ contains
 
     call profiling_in(prof, 'GET_POINTS_MAP_FROM_FILE')
 
-    call cgal_polyhedron_init(cgal_poly, trim(medium_box%filename), verbose = .false.)
+    call cgal_polyhedron_init(cgal_poly, trim(this%filename), verbose = .false.)
 
     ip_in = 0
     do ip = 1, mesh%np
@@ -784,14 +768,14 @@ contains
       end if
     end do
     if (ip_in > ip_in_max) ip_in_max = ip_in
-    medium_box%points_number = ip_in
+    this%points_number = ip_in
     call cgal_polyhedron_end(cgal_poly)
 
 #ifdef HAVE_MPI
-    call MPI_Allreduce(ip_in, medium_box%global_points_number, 1, &
+    call MPI_Allreduce(ip_in, this%global_points_number, 1, &
         MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
 #else
-    medium_box%global_points_number = medium_box%points_number
+    this%global_points_number = this%points_number
 #endif
 
     call profiling_out(prof)
