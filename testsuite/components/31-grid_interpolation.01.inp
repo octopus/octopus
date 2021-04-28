@@ -1,0 +1,13 @@
+CalculationMode = test
+
+TestMode = grid_interpolation
+
+BoxShape = parallelepiped
+
+Lsize = 8
+
+%Coordinates
+"H" | 0 | 0 | 0
+%
+
+StatesPack = yes

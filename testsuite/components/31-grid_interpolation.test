@@ -1,0 +1,12 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test grid interpolation
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 31-grid_interpolation.01.inp
+match ; Interpolation test ; GREPFIELD(out, 'Interpolation test', 5)  ; 0.140382E-01
+match ; Restriction test ; GREPFIELD(out, 'Restriction test', 5)  ; 0.197509E-01
+

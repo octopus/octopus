@@ -110,6 +110,8 @@ dist_share_DATA =                                  \
         29-linear_solver.01-real.inp               \
         29-linear_solver.test                      \
         30-eigensolver.01.inp                      \
-        30-eigensolver.test
+        30-eigensolver.test                        \
+        31-grid_interpolation.01.inp               \
+        31-grid_interpolation.test
 
 CLEANFILES = *~ *.bak
