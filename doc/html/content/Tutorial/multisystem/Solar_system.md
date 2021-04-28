@@ -1,5 +1,6 @@
 ---
 Title: "Example: Celestial dynamics"
+tutorials: "Multisystem"
 weight: 2
 ---
 

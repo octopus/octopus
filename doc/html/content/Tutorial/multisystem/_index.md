@@ -4,6 +4,6 @@ weight: 40
 ---
 
 
+{{< tutorial-series "Multisystem" >}}
 
-* Lesson 1: {{% tutorial "multisystem/Introduction" "Multisystem introduction" %}}
-* Lesson 2: {{% tutorial "multisystem/Solar_system" "Example: celestial dynamics" %}}
+

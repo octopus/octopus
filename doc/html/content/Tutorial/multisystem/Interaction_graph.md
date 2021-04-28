@@ -1,5 +1,6 @@
 ---
 Title: "Interaction graph"
+tutorials: "Multisystem"
 weight: 3
 ---
 

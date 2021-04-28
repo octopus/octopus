@@ -1,5 +1,6 @@
 ---
 Title: "Multisystem introduction"
+tutorials: "Multisystem"
 weight: 1
 ---
 
