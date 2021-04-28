@@ -560,11 +560,10 @@ contains
 
     Nreplica = product(supercell(1:geo%space%dim))
 
-    offset = M_ZERO
     ! The corner of the cell is always (0,0,0) to XCrySDen
     ! so the offset is applied to the atomic coordinates.
     ! Offset in periodic directions:
-    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
+    offset(1:geo%space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, geo%space%dim))
     offset(1:3) = offset(1:3) + centers(1:3,1)
     ! Offset in aperiodic directions:
     do idir = geo%space%periodic_dim + 1, 3

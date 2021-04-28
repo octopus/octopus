@@ -2076,7 +2076,6 @@ contains
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     SAFE_ALLOCATE(cf(1:Nreplica))
     do irep = 1, Nreplica
-      call cube_function_null(cf(irep))
       call X(cube_function_alloc_RS) (cube, cf(irep))
       call X(mesh_to_cube) (mesh, ff(:,irep), cube, cf(irep))
     end do

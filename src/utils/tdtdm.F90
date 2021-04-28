@@ -323,11 +323,11 @@ program tdtdm
   call messages_info(1)
 
   !At the moment the supercell is given by the number of k-points.
-  supercell(1:3) = sys%kpoints%nik_axis(1:3)
+  supercell(1:sys%space%dim) = sys%kpoints%nik_axis(1:sys%space%dim)
   Nreplica = product(supercell(1:sys%space%dim))
 
   ! The center of each replica of the unit cell
-  SAFE_ALLOCATE(centers(1:3, 1:Nreplica))
+  SAFE_ALLOCATE(centers(1:sys%space%dim, 1:Nreplica))
   irep = 1
   do ii = 0, supercell(1)-1
     do jj = 0, supercell(2)-1
@@ -335,8 +335,7 @@ program tdtdm
         centers(1, irep) = -floor((supercell(1)-1)/M_TWO)+ii
         centers(2, irep) = -floor((supercell(2)-1)/M_TWO)+jj
         centers(3, irep) = -floor((supercell(3)-1)/M_TWO)+kk
-        centers(1:sys%space%dim, irep) = matmul(sys%gr%sb%latt%rlattice(1:sys%space%dim, &
-                                             1:sys%space%dim), centers(1:sys%space%dim, irep))
+        centers(:, irep) = matmul(sys%gr%sb%latt%rlattice, centers(:, irep))
         irep = irep + 1
       end do
     end do
@@ -349,13 +348,13 @@ program tdtdm
     do ik = kpt_start, kpt_end
       ikpoint = gs_st%d%get_kpoint_index(ik)
       kpoint(1:sys%space%dim) = sys%kpoints%get_point(ikpoint)
-      phase(ik, irep) = exp(-M_zI*sum(kpoint(1:sys%space%dim)*centers(1:sys%space%dim, irep)))
+      phase(ik, irep) = exp(-M_zI*sum(kpoint(1:sys%space%dim)*centers(:, irep)))
     end do
   end do
 
   ! Position of the hole, here assumed to be on top of the first atom
   ! To be obtained from the input file
-  if(sys%gr%mesh%sb%dim > 1) then
+  if(sys%space%dim > 1) then
     call tdtdm_get_hole_position(pos_h, ip_h)
   end if
 
@@ -384,7 +383,7 @@ program tdtdm
     SAFE_ALLOCATE(upsi_sym(1:sys%gr%mesh%np, 1:st%d%dim))
   end if
 
-  select case(sys%gr%mesh%sb%dim)
+  select case(sys%space%dim)
   case(2,3)
     SAFE_ALLOCATE(tdm(1:sys%gr%mesh%np, 1:Nreplica))
   case(1)
@@ -396,7 +395,7 @@ program tdtdm
     write(message(1), '(a, f6.4, a)') "oct-tdtdm: Constructing the two-particle wavefunction at ", omega(ifreq), " Ha."
     call messages_info(1)
 
-    select case(sys%gr%mesh%sb%dim)
+    select case(sys%space%dim)
     case(2,3)
       tdm = M_z0
     case(1)
@@ -458,7 +457,7 @@ program tdtdm
             ! We now compute the single mode TDTDM
             ! See Eq. (5) of Williams et al., JCTC 17, 1795 (2021)
             ! We take here the complex conjugate of the 2-body wavefunction
-            select case(sys%gr%mesh%sb%dim)
+            select case(sys%space%dim)
             case(2,3)
               do irep = 1, Nreplica 
                 call lalg_axpy(sys%gr%mesh%np, phase(ik, irep) * weight &
@@ -492,7 +491,7 @@ program tdtdm
 
 #if defined(HAVE_MPI)        
     if(gs_st%d%kpt%parallel) then
-      if(sys%gr%mesh%sb%dim > 1) then
+      if(sys%space%dim > 1) then
         call comm_allreduce(gs_st%d%kpt%mpi_grp, tdm)
       else
         call comm_allreduce(gs_st%d%kpt%mpi_grp, tdm_1D)
@@ -600,7 +599,7 @@ program tdtdm
       PUSH_SUB(tdtdm_output_density)
   
       ! We compute the TDM density 
-      select case(sys%gr%mesh%sb%dim)
+      select case(sys%space%dim)
       case(2,3)
         SAFE_ALLOCATE(den(1:sys%gr%mesh%np, 1:Nreplica))
         do irep = 1, Nreplica
@@ -627,9 +626,9 @@ program tdtdm
         end do
       end select
        
-      fn_unit = units_out%length**(-sys%gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-sys%space%dim)
 
-      select case(sys%gr%mesh%sb%dim)
+      select case(sys%space%dim)
       case(2,3)
         write(fname, '(a, f0.4)') 'tdm_density-0', omega(ifreq)
         call io_function_output_supercell(io_function_fill_how("XCrySDen"), "td.general", fname, sys%gr%mesh, &
@@ -662,11 +661,11 @@ program tdtdm
 
         do irep_h = 1, Nreplica
           do ip_h = 1, sys%gr%mesh%np
-            xx_h = units_from_atomic(units_out%length, mesh_x_global(sys%gr%mesh, ip_h) + centers(1:sys%gr%mesh%sb%dim, irep_h))
+            xx_h = units_from_atomic(units_out%length, mesh_x_global(sys%gr%mesh, ip_h) + centers(1:sys%space%dim, irep_h))
 
             do irep = 1, Nreplica
               do ii = 1, sys%gr%mesh%np
-                xx = units_from_atomic(units_out%length, mesh_x_global(sys%gr%mesh, ii) + centers(1:sys%gr%mesh%sb%dim, irep))
+                xx = units_from_atomic(units_out%length, mesh_x_global(sys%gr%mesh, ii) + centers(1:sys%space%dim, irep))
                 write(iunit, '(5es23.14E3)', iostat=ierr) xx(1), xx_h(1), &
                               TOFLOAT(units_from_atomic(fn_unit, tdm_1D(ii, ip_h, irep, irep_h))) ,&
                               aimag(units_from_atomic(fn_unit, tdm_1D(ii, ip_h, irep, irep_h))), &
