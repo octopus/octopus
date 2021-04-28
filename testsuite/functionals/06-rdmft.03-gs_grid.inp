@@ -17,3 +17,6 @@ RDMConvEner = 1e-6
 
 MixField = density
 StatesPack = yes
+
+Debug = trace
+DebugTrapSignals = no

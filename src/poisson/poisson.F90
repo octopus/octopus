@@ -31,6 +31,7 @@ module poisson_oct_m
   use index_oct_m
   use io_oct_m
   use io_function_oct_m
+  use lattice_vectors_oct_m
   use loct_math_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
@@ -46,7 +47,6 @@ module poisson_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use partition_oct_m
-  use periodic_copy_oct_m
   use photon_mode_oct_m
   use poisson_cg_oct_m
   use poisson_corrections_oct_m
@@ -270,7 +270,7 @@ contains
 
     if (space%dim == 3 .and. .not. space%is_periodic()) default_solver = POISSON_ISF
 
-    if (space%dim > 3) default_solver = POISSON_CG_CORRECTED
+    if (space%dim > 3) default_solver = POISSON_NO ! Kernel for higher dimensions is not implemented.
 
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
@@ -322,6 +322,10 @@ contains
       end select
       write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
       call messages_info(1)
+    end if
+
+    if (space%dim > 3 .and. this%method /= POISSON_NO) then
+      call messages_input_error(namespace, 'PoissonSolver', 'Currently no Poisson solver is available for Dimensions > 3')
     end if
 
     if(this%method /= POISSON_FFT) then
@@ -924,8 +928,6 @@ contains
       end if
 
     case(POISSON_POKE)
-      call cube_function_null(crho)
-      call cube_function_null(cpot)
       call dcube_function_alloc_RS(this%cube, crho)
       call dcube_function_alloc_RS(this%cube, cpot)
       call dmesh_to_cube(der%mesh, rho, this%cube, crho)
@@ -1064,7 +1066,7 @@ contains
     FLOAT :: total_charge
     integer :: ip, ierr, iunit, nn, n_gaussians, itime, icell
     FLOAT :: threshold
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
 
     PUSH_SUB(poisson_test)
 
@@ -1134,17 +1136,17 @@ contains
 
     ! This builds analytically its potential
     vh_exact = M_ZERO
+    latt_iter = lattice_iterator_t(mesh%sb%latt, M_ONE/threshold)
     do nn = 1, n_gaussians
       ! sum over all periodic copies for each Gaussian
-      call periodic_copy_init(pp, space, mesh%sb%latt, mesh%sb%lsize, xx(:, nn), range=M_ONE/threshold)
-      write(message(1), '(a,i2,a,i9,a)') 'Computing Gaussian ', nn, ' for ', periodic_copy_num(pp), ' periodic copies.'
+      write(message(1), '(a,i2,a,i9,a)') 'Computing Gaussian ', nn, ' for ', latt_iter%n_cells, ' periodic copies.'
       call messages_info(1)
 
-      do icell = 1, periodic_copy_num(pp)
-        xx_per(1:space%dim) = periodic_copy_position(pp, space, mesh%sb%latt, mesh%sb%lsize, icell)
+      do icell = 1, latt_iter%n_cells
+        xx_per = xx(:, nn) + latt_iter%get(icell)
         !$omp parallel do private(rr, ralpha)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin=xx_per(1:space%dim))
+          call mesh_r(mesh, ip, rr, origin=xx_per)
           select case(space%dim)
           case(3)
             if(rr > R_SMALL) then
@@ -1164,7 +1166,6 @@ contains
           end select
         end do
       end do
-     call periodic_copy_end(pp)
     end do
 
     ! This calculates the numerical potential

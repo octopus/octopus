@@ -852,12 +852,15 @@ subroutine X(em_resp_calc_eigenvalues)(space, mesh, sb, st, dl_eig)
 
   integer :: ik, ist, ip, idim, idir
   R_TYPE, allocatable :: psi(:,:)
-  CMPLX, allocatable :: integrand(:)
+  FLOAT, allocatable :: integrand(:)
 #ifdef HAVE_MPI
   FLOAT, allocatable :: dl_eig_temp(:,:,:)
 #endif
 
   PUSH_SUB(X(em_resp_calc_eigenvalues))
+
+  ! The code bellow does not seem correct for non-orthogonal cells, so we add an assertion here.
+  ASSERT(.not. sb%latt%nonorthogonal)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(integrand(1:mesh%np))
@@ -872,9 +875,10 @@ subroutine X(em_resp_calc_eigenvalues)(space, mesh, sb, st, dl_eig)
       do idir = 1, space%periodic_dim
         do idim = 1, st%d%dim
           do ip = 1, mesh%np
-            integrand(ip) = exp(M_zI*(M_PI/sb%lsize(idir))*mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+            integrand(ip) = sin(M_TWO*M_PI/norm2(sb%latt%rlattice(:,idir))*mesh%x(ip, idir)) * abs(psi(ip, idim))**2
           end do
-          dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + (sb%lsize(idir)/M_PI) * aimag(zmf_integrate(mesh, integrand))
+          dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
+            norm2(sb%latt%rlattice(:,idir))/(M_TWO*M_PI) * dmf_integrate(mesh, integrand)
         end do
       end do
     end do

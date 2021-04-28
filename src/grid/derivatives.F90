@@ -60,7 +60,6 @@ module derivatives_oct_m
   private
   public ::                             &
     derivatives_t,                      &
-    derivatives_nullify,                &
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
@@ -112,30 +111,30 @@ module derivatives_oct_m
   type derivatives_t
     ! Components are public by default
     type(boundaries_t)    :: boundaries
-    type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
-    integer               :: dim           !< dimensionality of the space (space%dim)
-    integer               :: order         !< order of the discretization (value depends on stencil)
-    integer               :: stencil_type  !< type of discretization
+    type(mesh_t), pointer :: mesh => NULL()   !< pointer to the underlying mesh
+    integer               :: dim = 0          !< dimensionality of the space (space%dim)
+    integer               :: order = 0        !< order of the discretization (value depends on stencil)
+    integer               :: stencil_type = 0 !< type of discretization
 
-    FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
+    FLOAT                 :: masses(MAX_DIM) = M_ZERO !< we can have different weights (masses) per space direction
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT, private :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff = M_ZERO
 
     type(nl_operator_t), allocatable, private :: op(:)  !< op(1:conf%dim) => gradient
                                                         !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl                !< these are just shortcuts for op
-    type(nl_operator_t), pointer :: grad(:)
+    type(nl_operator_t), pointer :: lapl => NULL()      !< these are just shortcuts for op
+    type(nl_operator_t), pointer :: grad(:) => NULL()
 
-    integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
+    integer                      :: n_ghost(MAX_DIM) = 0   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer, private             :: comm_method 
+    integer, private             :: comm_method = 0
 #endif
-    type(derivatives_t),    pointer :: finer
-    type(derivatives_t),    pointer :: coarser
-    type(transfer_table_t), pointer :: to_finer
-    type(transfer_table_t), pointer :: to_coarser
+    type(derivatives_t),    pointer :: finer  => NULL()
+    type(derivatives_t),    pointer :: coarser => NULL()
+    type(transfer_table_t), pointer :: to_finer => NULL()
+    type(transfer_table_t), pointer :: to_coarser => NULL()
   end type derivatives_t
 
   type derivatives_handle_batch_t
@@ -155,27 +154,6 @@ module derivatives_oct_m
   type(accel_kernel_t) :: kernel_uvw_xyz, kernel_dcurl, kernel_zcurl
 
 contains
-
-  ! ---------------------------------------------------------
-  elemental subroutine derivatives_nullify(this)
-    type(derivatives_t), intent(out) :: this
-
-    call boundaries_nullify(this%boundaries)
-    nullify(this%mesh)
-    this%dim = 0
-    this%order = 0
-    this%stencil_type = 0
-    this%masses = M_ZERO
-    this%lapl_cutoff = M_ZERO
-    nullify(this%lapl, this%grad)
-    this%n_ghost = 0
-#if defined(HAVE_MPI)
-    this%comm_method = 0
-#endif
-    nullify(this%finer, this%coarser)
-    nullify(this%to_finer, this%to_coarser)
-
-  end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
   subroutine derivatives_init(der, namespace, space, sb, use_curvilinear, order)

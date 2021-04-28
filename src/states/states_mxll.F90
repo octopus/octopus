@@ -57,7 +57,6 @@ module states_mxll_oct_m
     states_mxll_t,                    &
     states_mxll_init,                 &
     states_mxll_allocate,             &
-    states_mxll_null,                 &
     states_mxll_end,                  &
     build_rs_element,                 &
     build_rs_vector,                  &
@@ -83,8 +82,8 @@ module states_mxll_oct_m
     integer                      :: dim         !< Space dimension
     integer                      :: rs_sign
     logical                      :: pack_states
-    logical                      :: parallel_in_states !< Am I parallel in states?
-    type(type_t), public         :: wfs_type         !< complex (TYPE_CMPLX)
+    logical                      :: parallel_in_states = .false. !< Am I parallel in states?
+    type(type_t), public         :: wfs_type     !< should always be complex (TYPE_CMPLX)
     integer, public              :: nst          !< Number of RS states, currently set to 1, we keep it for future uses
     logical, public              :: packed
 
@@ -194,20 +193,6 @@ module states_mxll_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_mxll_null(st)
-    class(states_mxll_t), intent(inout) :: st
-
-    PUSH_SUB(states_mxll_null)
-
-    call distributed_nullify(st%dist)
-    st%wfs_type = TYPE_CMPLX
-    st%parallel_in_states = .false.
-
-    POP_SUB(states_mxll_null)
-  end subroutine states_mxll_null
-
-
-  ! ---------------------------------------------------------
   subroutine states_mxll_init(st, namespace, gr)
     type(states_mxll_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
@@ -224,8 +209,8 @@ contains
 
     call profiling_in(prof, 'STATES_MXLL_INIT')
 
+    st%wfs_type = TYPE_CMPLX
     st%fromScratch = .true. ! this will be reset if restart_read is called
-    call states_mxll_null(st)
 
     ASSERT(MAX_DIM >= gr%sb%dim)
     ASSERT(gr%sb%dim == 3)

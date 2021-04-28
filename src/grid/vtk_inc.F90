@@ -62,7 +62,6 @@ subroutine X(vtk_out_cf)(filename, namespace, fieldname, ierr, cf_in, cube, spac
   call io_close(iunit)
 
 
-  call cube_function_null(cf_out)
   call X(cube_function_alloc_RS) (cube, cf_out)
 
   do i3 = 1, cube%rs_n_global(3)
@@ -253,7 +252,6 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
 #endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
-    call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
     do i3 = 1, cube%rs_n_global(3)
@@ -308,7 +306,6 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
-    call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
     do i3 = 1, cube%rs_n_global(3)

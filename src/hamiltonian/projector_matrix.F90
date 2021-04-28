@@ -29,7 +29,6 @@ module projector_matrix_oct_m
 
   public ::                     &
     projector_matrix_t,         &
-    projector_matrix_nullify,   &
     projector_matrix_allocate,  &
     projector_matrix_deallocate
 
@@ -44,20 +43,12 @@ module projector_matrix_oct_m
     integer              :: nprojs
     FLOAT,   allocatable :: dmix(:, :)
     CMPLX,   allocatable :: zmix(:, :, :)
-    logical              :: is_cmplx
+    logical              :: is_cmplx = .false.
   end type projector_matrix_t
 
 contains
 
-  elemental subroutine projector_matrix_nullify(this)
-    type(projector_matrix_t), intent(out) :: this
-
-    this%is_cmplx = .false.
-
-  end subroutine projector_matrix_nullify
-  
   ! -------------------------------------------------
-
   subroutine projector_matrix_allocate(this, npoints, nprojs, has_mix_matrix, is_cmplx)
     type(projector_matrix_t), intent(out) :: this
     integer,                  intent(in)  :: npoints

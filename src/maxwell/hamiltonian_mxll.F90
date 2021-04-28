@@ -49,7 +49,6 @@ module hamiltonian_mxll_oct_m
   private
   public ::                                     &
     hamiltonian_mxll_t,                         &
-    hamiltonian_mxll_null,                      &
     hamiltonian_mxll_init,                      &
     hamiltonian_mxll_end,                       &
     dhamiltonian_mxll_apply,                    &
@@ -70,7 +69,7 @@ module hamiltonian_mxll_oct_m
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     integer                        :: dim
     !> absorbing boundaries
-    logical :: adjoint
+    logical :: adjoint = .false.
 
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
@@ -158,22 +157,6 @@ module hamiltonian_mxll_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_null(hm)
-    type(hamiltonian_mxll_t), intent(inout) :: hm
-
-    PUSH_SUB(hamiltonian_mxll_null)
- 
-    hm%adjoint = .false.
-    
-    hm%current_density_ext_flag = .false.
-
-    call energy_mxll_nullify(hm%energy)
-
-    POP_SUB(hamiltonian_mxll_null)
-  end subroutine hamiltonian_mxll_null
-
-
-  ! ---------------------------------------------------------
   !> Initializing the Maxwell Hamiltonian
   subroutine hamiltonian_mxll_init(hm, namespace, gr, st)
     type(hamiltonian_mxll_t),                   intent(inout) :: hm
@@ -187,8 +170,6 @@ contains
     PUSH_SUB(hamiltonian_mxll_init)
 
     call profiling_in(prof, 'HAMILTONIAN_INIT')
-
-    call hamiltonian_mxll_null(hm)
 
     hm%dim = st%dim
     hm%st => st

@@ -418,7 +418,7 @@ contains
       call v_ks_calculate_current(ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb%latt%rcell_volume, st%qtot)
+      call gauge_field_init_vec_pot(hm%ep%gfield, geo%latt%rcell_volume, st%qtot)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 
@@ -842,12 +842,26 @@ contains
     if (freeze_hxc) then
       write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
       call messages_info(1)
+
+      if (.not. from_scratch) then
+
+        call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
+        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
+        call states_elec_transform(st, namespace, restart_frozen, gr, hm%kpoints)
+        call restart_end(restart_frozen)
+
+        call density_calc(st, gr, st%rho)
+        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+
+        call restart_init(restart_frozen, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, iter=td%iter, label = ": td")
+        call restart_end(restart_frozen)
+        call propagator_elec_run_zero_iter(hm, gr, td%tr)
+
+      end if
+
       call v_ks_freeze_hxc(ks)
 
-      !In this case we should reload GS wavefunctions
-      if (.not. from_scratch) then
-        call messages_not_implemented("TDFreezeHXC with FromScratch=no", namespace=namespace)
-      end if
     end if
 
     x = minval(st%eigenval(st%st_start, :))

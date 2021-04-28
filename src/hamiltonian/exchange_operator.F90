@@ -28,6 +28,7 @@ module exchange_operator_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use mesh_batch_oct_m
@@ -57,7 +58,6 @@ module exchange_operator_oct_m
   private
   public ::                          &
     exchange_operator_t,             &
-    exchange_operator_nullify,       &
     exchange_operator_init,          &
     exchange_operator_reinit,        &
     exchange_operator_end,           &
@@ -83,45 +83,27 @@ module exchange_operator_oct_m
   end type ACE_t
 
   type exchange_operator_t
-    type(states_elec_t), public, pointer :: st
-    FLOAT :: cam_omega
-    FLOAT :: cam_alpha
-    FLOAT :: cam_beta
+    type(states_elec_t), public, pointer :: st => NULL()
+    FLOAT :: cam_omega = M_ZERO
+    FLOAT :: cam_alpha = M_ZERO
+    FLOAT :: cam_beta = M_ZERO
 
     type(poisson_t) :: psolver      !< Poisson solver
 
     type(singularity_t) :: singul !< Coulomb singularity
 
-    logical       :: useACE
+    logical       :: useACE = .false.
     type(ACE_t)   :: ace
-    type(states_elec_t) :: xst !< The states after the application of the Fock operator
-                               !! This is needed to construct the ACE operator
   end type exchange_operator_t
  
 contains
 
-  subroutine exchange_operator_nullify(this)
-    type(exchange_operator_t), intent(out) :: this
-
-    PUSH_SUB(exchange_operator_nullify)
-
-    nullify(this%st)
-
-    this%cam_omega = M_ZERO
-    this%cam_alpha = M_ZERO
-    this%cam_beta  = M_ZERO
-
-    this%useACE = .false.
-
-    POP_SUB(exchange_operator_nullify)
-  end subroutine exchange_operator_nullify
- 
-  subroutine exchange_operator_init(this, namespace, space, st, sb, der, mc, kpoints, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, space, st, latt, der, mc, kpoints, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
-    type(namespace_t),          intent(in)    :: namespace
+    type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
-    type(simul_box_t),         intent(in)    :: sb
+    type(lattice_vectors_t),   intent(in)    :: latt
     type(derivatives_t),       intent(in)    :: der
     type(multicomm_t),         intent(in)    :: mc
     type(kpoints_t),           intent(in)    :: kpoints
@@ -145,11 +127,7 @@ contains
     call parse_variable(namespace, 'AdaptivelyCompressedExchange', .false., this%useACE)
     if(this%useACE) call messages_experimental('AdaptivelyCompressedExchange')
 
-    if(this%useACE) then
-      call this%xst%nullify()
-    end if
-
-    call singularity_init(this%singul, namespace, st, sb, kpoints)
+    call singularity_init(this%singul, namespace, space, st, latt, kpoints)
     if(states_are_real(st)) then
       call poisson_init(this%psolver, namespace, space, der, mc, st%qtot, &
              force_serial = .true., verbose = .false.)
@@ -161,14 +139,16 @@ contains
     POP_SUB(exchange_operator_init)
   end subroutine exchange_operator_init
 
-  subroutine exchange_operator_reinit(this, st, omega, alpha, beta)
-    type(exchange_operator_t), intent(inout) :: this
-    type(states_elec_t), target, intent(in)  :: st
-    FLOAT,                     intent(in)    :: omega, alpha, beta
+  subroutine exchange_operator_reinit(this, omega, alpha, beta, st)
+    type(exchange_operator_t),           intent(inout) :: this
+    FLOAT,                               intent(in)    :: omega, alpha, beta
+    type(states_elec_t), target, optional, intent(in)  :: st
 
     PUSH_SUB(exchange_operator_reinit)
 
-    this%st => st
+    if(present(st)) then
+      this%st => st
+    end if
 
     this%cam_omega = omega
     this%cam_alpha = alpha
@@ -189,12 +169,9 @@ contains
     end if
     nullify(this%st)
 
-    if(this%useACE) then
-      call states_elec_end(this%xst)
-      this%ace%nst = 0
-      SAFE_DEALLOCATE_A(this%ace%dchi)
-      SAFE_DEALLOCATE_A(this%ace%zchi)
-    end if
+    this%ace%nst = 0
+    SAFE_DEALLOCATE_A(this%ace%dchi)
+    SAFE_DEALLOCATE_A(this%ace%zchi)
 
     call singularity_end(this%singul)
     call poisson_end(this%psolver)

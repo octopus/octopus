@@ -257,8 +257,6 @@ contains
     case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
-      call valconf_null(ps%conf)
-
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_init(ps_cpi, trim(filename), namespace)
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
@@ -332,8 +330,6 @@ contains
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
       ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
-      
-      call valconf_null(ps%conf)
       
       ps%z      = z
       ps%conf%z = nint(z)

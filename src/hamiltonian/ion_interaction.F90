@@ -31,7 +31,6 @@ module ion_interaction_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use space_oct_m
@@ -176,10 +175,11 @@ contains
       spci => atom(1)%species
       ! This depends on the area, but we should check if it is fully consistent.        
       if( species_type(spci) == SPECIES_JELLIUM_SLAB ) then
+        ! Note that this is only allowed if periodic dim = 2. In that case the lattice volume is in fact an area.
         energy = energy + &
-          M_PI*species_zval(spci)**2/(M_FOUR*lsize(1)*lsize(2))*(lsize(3) - species_jthick(spci)/M_THREE)
+          M_PI*species_zval(spci)**2/latt%rcell_volume*(lsize(3) - species_jthick(spci)/M_THREE)
       else
-        call ion_interaction_periodic(this, space, latt, atom, natoms, lsize, energy, force, energy_components, force_components)
+        call ion_interaction_periodic(this, space, latt, atom, natoms, energy, force, energy_components, force_components)
       end if
 
     else
@@ -255,13 +255,12 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, lsize, energy, force, energy_components, force_components)
+  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, energy, force, energy_components, force_components)
     type(ion_interaction_t),   intent(in)    :: this
     type(space_t),             intent(in)    :: space
     type(lattice_vectors_t),   intent(in)    :: latt
     type(atom_t),              intent(in)    :: atom(:)
     integer,                   intent(in)    :: natoms
-    FLOAT,                     intent(in)    :: lsize(:)
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< (space%dim, natoms)
     FLOAT, optional,           intent(out)   :: energy_components(:)
@@ -269,7 +268,7 @@ contains
 
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
     integer :: iatom, jatom, icopy
-    type(periodic_copy_t) :: pc
+    type(lattice_iterator_t) :: latt_iter
     FLOAT   :: charge
     type(profile_t), save :: prof_short, prof_long
     type(ps_t), pointer :: spec_ps
@@ -286,22 +285,23 @@ contains
     rcut = CNST(6.0)/this%alpha
 
     call profiling_in(prof_short, "EWALD_SHORT")
-    
+
+    latt_iter = lattice_iterator_t(latt, rcut)
+
     ! the short-range part is calculated directly
     do iatom = this%dist%start, this%dist%end
       if (.not. species_represents_real_atom(atom(iatom)%species)) cycle
       zi = species_zval(atom(iatom)%species)
 
-      call periodic_copy_init(pc, space, latt, lsize, atom(iatom)%x, rcut)
-      
-      do icopy = 1, periodic_copy_num(pc)
-        xi(1:space%dim) = periodic_copy_position(pc, space, latt, lsize, icopy)
+      do icopy = 1, latt_iter%n_cells
+        xi(1:space%dim) = atom(iatom)%x(1:space%dim) + latt_iter%get(icopy)
         
         do jatom = 1,  natoms
           zj = species_zval(atom(jatom)%species)
           rr = sqrt( sum( (xi(1:space%dim) - atom(jatom)%x(1:space%dim))**2 ) )
           
           if(rr < CNST(1e-5)) cycle
+          if(rr > rcut) cycle
           
           erfc = M_ONE - loct_erf(this%alpha*rr)
 
@@ -316,7 +316,6 @@ contains
 
       end do
       
-      call periodic_copy_end(pc)
     end do
 
     call comm_allreduce(this%dist%mpi_grp, ereal)

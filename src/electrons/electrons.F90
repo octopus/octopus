@@ -76,7 +76,7 @@ module electrons_oct_m
 
   type, extends(system_t) :: electrons_t
     ! Components are public by default
-    type(geometry_t)             :: geo
+    type(geometry_t), pointer    :: geo => NULL()
     type(grid_t)                 :: gr    !< the mesh
     type(states_elec_t)          :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
@@ -120,6 +120,7 @@ contains
     type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: generate_epot
 
+    integer :: iatom
     type(profile_t), save :: prof
 
     PUSH_SUB(electrons_constructor)
@@ -137,22 +138,33 @@ contains
       call messages_experimental('Support for mixed periodicity systems')
     end if
 
-    call geometry_init(sys%geo, sys%namespace, sys%space)
+    sys%geo => geometry_t(sys%namespace, sys%space)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
     if (sys%space%is_periodic()) then
-      call sys%gr%sb%latt%write_info(stdout)
+      call sys%geo%latt%write_info(stdout)
     end if
 
-    ! we need k-points for periodic systems
-    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, &
-             sys%space%periodic_dim, sys%gr%sb%latt)
+    ! Sanity check for atomic coordinates
+    do iatom = 1, sys%geo%natoms
+      if (.not. sys%gr%sb%contains_point(sys%geo%atom(iatom)%x)) then
+        if (sys%space%periodic_dim /= sys%space%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because contains_point is too strict with atoms close to
+          ! the upper boundary to the cell.
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
+          call messages_warning(1, namespace=sys%namespace)
+        end if
+      end if
+    end do
 
-    call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo, sys%kpoints)
+    ! we need k-points for periodic systems
+    call kpoints_init(sys%kpoints, sys%namespace, sys%gr%symm, sys%space%dim, sys%space%periodic_dim, sys%geo%latt)
+
+    call states_elec_init(sys%st, sys%namespace, sys%space, sys%geo%val_charge(), sys%kpoints)
     call sys%st%write_info(sys%namespace)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
-    call v_ks_nullify(sys%ks)
     call elf_init(sys%namespace)
 
     sys%generate_epot = optional_default(generate_epot, .true.)
@@ -200,7 +212,7 @@ contains
     call multicomm_init(this%mc, this%namespace, this%grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
       mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call geometry_partition(this%geo, this%mc)
+    call this%geo%partition(this%mc)
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
     call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)
@@ -526,7 +538,7 @@ contains
 
     call states_elec_end(sys%st)
 
-    call geometry_end(sys%geo)
+    SAFE_DEALLOCATE_P(sys%geo)
 
     call kpoints_end(sys%kpoints)
 

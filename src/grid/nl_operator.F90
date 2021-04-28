@@ -67,7 +67,7 @@ module nl_operator_oct_m
 
   type nl_operator_index_t
     private
-    integer              :: nri
+    integer              :: nri = 0
     integer, allocatable :: imin(:)
     integer, allocatable :: imax(:)
     integer, allocatable :: ri(:, :)
@@ -76,25 +76,25 @@ module nl_operator_oct_m
   type nl_operator_t
     private
     type(stencil_t),   public :: stencil
-    type(mesh_t), pointer     :: mesh      !< pointer to the underlying mesh
+    type(mesh_t), pointer     :: mesh => NULL()  !< pointer to the underlying mesh
     integer,      allocatable :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
-    integer,          public :: np        !< number of points in mesh
+    integer,          public :: np = 0     !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
     integer, allocatable, public :: index(:,:)    !< index of the points. Unique on each parallel process.
     FLOAT,   allocatable, public :: w(:,:)        !< weights. Unique on each parallel process.
 
-    logical,          public :: const_w   !< are the weights independent of index i
+    logical,          public :: const_w = .true.   !< are the weights independent of index i
 
     character(len=40) :: label
 
     !> the compressed index of grid points
-    integer, public :: nri
+    integer, public :: nri = 0
     integer, allocatable, public :: ri(:,:)
     integer, allocatable, public :: rimap(:)
     integer, allocatable, public :: rimap_inv(:)
 
-    integer                   :: ninner
-    integer                   :: nouter
+    integer                   :: ninner = 0
+    integer                   :: nouter = 0
 
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
@@ -269,23 +269,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, label)
-    type(nl_operator_t), intent(out) :: op
-    character(len=*),    intent(in)  :: label
+    type(nl_operator_t), intent(inout) :: op
+    character(len=*),    intent(in)    :: label
 
     PUSH_SUB(nl_operator_init)
 
     op%label = label
-
-    call accel_mem_nullify(op%buff_imin)
-    call accel_mem_nullify(op%buff_imax)
-    call accel_mem_nullify(op%buff_ri)
-    call accel_mem_nullify(op%buff_map)
-    call accel_mem_nullify(op%buff_all)
-    call accel_mem_nullify(op%buff_inner)
-    call accel_mem_nullify(op%buff_outer)
-    call accel_mem_nullify(op%buff_stencil)
-    call accel_mem_nullify(op%buff_ip_to_xyz)
-    call accel_mem_nullify(op%buff_xyz_to_ip)
 
     POP_SUB(nl_operator_init)
   end subroutine nl_operator_init
@@ -293,14 +282,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_copy(opo, opi)
-    type(nl_operator_t),         intent(out) :: opo
-    type(nl_operator_t), target, intent(in)  :: opi
+    type(nl_operator_t),         intent(inout) :: opo
+    type(nl_operator_t), target, intent(in)    :: opi
 
     PUSH_SUB(nl_operator_copy)
 
     ! We cannot currently copy the GPU kernel for the nl_operator
     ASSERT(.not. accel_is_enabled())
 
+    call nl_operator_end(opo)
     call nl_operator_init(opo, opi%label)
 
     call stencil_copy(opi%stencil, opo%stencil)
@@ -814,11 +804,12 @@ contains
   !! reallocating w and i.
   !! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
-    type(nl_operator_t), target, intent(in)  :: op
-    type(nl_operator_t),         intent(out) :: opg
+    type(nl_operator_t), target, intent(in)    :: op
+    type(nl_operator_t),         intent(inout) :: opg
 
     PUSH_SUB(nl_operator_common_copy)
 
+    call nl_operator_end(opg)
     call nl_operator_init(opg, op%label)
 
     call stencil_copy(op%stencil, opg%stencil)
@@ -875,14 +866,12 @@ contains
       end select
     end if
 
-    if(op%mesh%parallel_in_domains) then
-      SAFE_DEALLOCATE_A(op%inner%imin)
-      SAFE_DEALLOCATE_A(op%inner%imax)
-      SAFE_DEALLOCATE_A(op%inner%ri)
-      SAFE_DEALLOCATE_A(op%outer%imin)
-      SAFE_DEALLOCATE_A(op%outer%imax)
-      SAFE_DEALLOCATE_A(op%outer%ri)
-    end if
+    SAFE_DEALLOCATE_A(op%inner%imin)
+    SAFE_DEALLOCATE_A(op%inner%imax)
+    SAFE_DEALLOCATE_A(op%inner%ri)
+    SAFE_DEALLOCATE_A(op%outer%imin)
+    SAFE_DEALLOCATE_A(op%outer%imax)
+    SAFE_DEALLOCATE_A(op%outer%ri)
 
     SAFE_DEALLOCATE_A(op%index)
     SAFE_DEALLOCATE_A(op%w)

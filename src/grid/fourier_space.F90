@@ -45,7 +45,6 @@ module fourier_space_oct_m
     dcube_function_fs2rs,       &
     zcube_function_fs2rs,       &
     fourier_space_op_t,         &
-    fourier_space_op_nullify,   &
     dfourier_space_op_init,     &
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
@@ -56,37 +55,19 @@ module fourier_space_oct_m
     private
     FLOAT, allocatable :: dop(:, :, :)
     CMPLX, allocatable :: zop(:, :, :)
-    logical :: in_device_memory
+    logical :: in_device_memory = .false.
     type(accel_mem_t) :: op_buffer
     logical :: real_op
 
     !Parameters used to generate this kernel
-    FLOAT, public :: qq(1:MAX_DIM)
-    FLOAT, public :: singularity
-    FLOAT, public :: mu !< Range separation for the exchange operator
+    FLOAT, public :: qq(1:MAX_DIM) = CNST(1e-5) !We just set a very large q to guaranty that the kernel is always
+    FLOAT, public :: singularity = M_ZERO
+    FLOAT, public :: mu = M_ZERO !< Range separation for the exchange operator
   end type fourier_space_op_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fourier_space_op_nullify(this)
-    type(fourier_space_op_t), intent(inout) :: this
-
-    PUSH_SUB(fourier_space_op_end)
-
-    this%in_device_memory = .false.
- 
-    !We just set a very large q to guaranty that the kernel is always
-    this%qq = CNST(1e5)  
-    this%singularity = M_ZERO
-    this%mu = M_ZERO
-
-    POP_SUB(fourier_space_op_end)
-
-  end subroutine fourier_space_op_nullify
-
-  ! ---------------------------------------------------------
-
   !> Allocates locally the Fourier space grid, if PFFT library is not used.
   !! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
   !! via pointer.

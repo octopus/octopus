@@ -31,6 +31,7 @@ SUBDIRS = \
 	linear_response  \
 	lda_u            \
 	maxwell          \
+	modelmb          \
 	multisystem      \
 	optimal_control  \
 	periodic_systems \

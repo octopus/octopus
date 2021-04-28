@@ -64,7 +64,6 @@ module accel_oct_m
     accel_init,                   &
     accel_end,                    &
     accel_padded_size,            &
-    accel_mem_nullify,            &
     accel_kernel_start_call,      &
     accel_kernel_build,           &
     accel_create_buffer,          &
@@ -149,10 +148,10 @@ module accel_oct_m
 #else
     type(c_ptr)            :: mem
 #endif
-    integer(SIZEOF_SIZE_T) :: size
+    integer(SIZEOF_SIZE_T) :: size = 0
     type(type_t)           :: type
-    integer                :: flags
-    logical                :: allocated
+    integer                :: flags = 0
+    logical                :: allocated = .false.
   end type accel_mem_t
 
   type accel_kernel_t
@@ -949,18 +948,6 @@ contains
 
     POP_SUB(accel_end)
   end subroutine accel_end
-
-  ! ------------------------------------------
-
-  elemental subroutine accel_mem_nullify(this)
-    type(accel_mem_t), intent(out) :: this
-
-    !> To be implemented.
-    this%size = 0
-    this%flags = 0
-    this%allocated = .false.
-    
-  end subroutine accel_mem_nullify
 
   ! ------------------------------------------
 

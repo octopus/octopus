@@ -48,7 +48,6 @@ module scissor_oct_m
 
   public ::                  &
        scissor_t,            &
-       scissor_nullify,      &
        scissor_init,         &
        dscissor_apply,       &
        zscissor_apply,       &
@@ -57,7 +56,7 @@ module scissor_oct_m
 
   type scissor_t
     private
-    logical, public         :: apply
+    logical, public         :: apply = .false.
     FLOAT                   :: gap
     type(states_elec_t)     :: gs_st
   end type scissor_t
@@ -149,18 +148,15 @@ contains
   POP_SUB(scissor_init)
  end subroutine scissor_init
 
-
- subroutine scissor_nullify(this)
-   type(scissor_t), intent(out) :: this
-   
-   this%apply = .false.
- end subroutine scissor_nullify
-
  subroutine scissor_end(this)
    type(scissor_t), intent(inout) :: this
-  
+
+   PUSH_SUB(scissor_end)
+
    this%apply = .false.
    call states_elec_end(this%gs_st)
+
+   POP_SUB(scissor_end)
  end subroutine scissor_end
 
 #include "undef.F90"

@@ -29,7 +29,6 @@
     use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
-    use simul_box_oct_m
     use space_oct_m
     use spectrum_oct_m
     use species_oct_m
@@ -45,9 +44,8 @@
     FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :)
     FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:)
     CMPLX, allocatable :: invdielectric(:, :)
-    type(geometry_t)  :: geo 
+    type(geometry_t), pointer :: geo 
     type(space_t)     :: space
-    type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
     type(block_t)     :: blk
     type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
@@ -110,12 +108,11 @@
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
-    call simul_box_init(sb, global_namespace, geo, space)
+    geo => geometry_t(global_namespace, space)
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
-    qtot = -(geometry_val_charge(geo) + excess_charge)
+    qtot = -(geo%val_charge() + excess_charge)
 
     if(from_forces) then
 
@@ -317,19 +314,20 @@
        do ii = 1, geo%natoms
          do jj = 1, space%dim
            velcm(jj) = velcm(jj) + velocities(ivel, iter)/TOFLOAT(geo%natoms)
-           current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
+           current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/geo%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
            ivel = ivel + 1
          end do
        end do
         
-       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/sb%latt%rcell_volume + current(1))
-       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*qtot/sb%latt%rcell_volume - total_current(1, iter)/sb%latt%rcell_volume)
+       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/geo%latt%rcell_volume + current(1))
+       integral(2) = integral(2) + &
+         deltat/vel0(1)*(vel0(1)*qtot/geo%latt%rcell_volume - total_current(1, iter)/geo%latt%rcell_volume)
 
-       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/sb%latt%rcell_volume + current(1:space%dim)
+       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/geo%latt%rcell_volume + current(1:space%dim)
        
      else
-       curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%latt%rcell_volume
-       heatcurr(iter,1:space%dim) = heat_current(1:space%dim, iter)/sb%latt%rcell_volume
+       curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/geo%latt%rcell_volume
+       heatcurr(iter,1:space%dim) = heat_current(1:space%dim, iter)/geo%latt%rcell_volume
      end if
         
      if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim)
@@ -494,8 +492,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     
-    call simul_box_end(sb)
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
 
     SAFE_DEALLOCATE_A(time)
 

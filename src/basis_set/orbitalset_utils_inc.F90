@@ -19,17 +19,15 @@
 
   !At the present time this routine can only return atomic orbitals, but this could be generalized
   subroutine X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, normalize)
-    type(orbitalset_t),   intent(inout) :: os
-    type(geometry_t),        intent(in) :: geo
-    type(mesh_t),            intent(in) :: mesh
-    logical,                 intent(in) :: use_mesh
-    logical,                 intent(in) :: normalize
+    type(orbitalset_t),      intent(inout) :: os
+    type(geometry_t),        intent(in)    :: geo
+    type(mesh_t),            intent(in)    :: mesh
+    logical,                 intent(in)    :: use_mesh
+    logical,                 intent(in)    :: normalize
 
     integer :: iorb
 
     PUSH_SUB(X(orbitalset_utils_getorbitals))
-
-    call submesh_null(os%sphere)
 
     do iorb = 1, os%norbs
       if (debug%info) then

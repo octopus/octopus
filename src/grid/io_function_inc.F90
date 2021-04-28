@@ -133,11 +133,8 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       ierr = 2
     else
       call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-      call cube_function_null(cf)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
-      call cube_function_null(re)
-      call cube_function_null(im)
       call dcube_function_alloc_RS(cube, re)
       call dcube_function_alloc_RS(cube, im)
       call read_netcdf()
@@ -187,7 +184,6 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     end if 
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
     call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
@@ -568,7 +564,6 @@ contains
     SAFE_ALLOCATE(cf(1:vector_dim))
 
     do ivd = 1, vector_dim
-      call cube_function_null(cf(ivd))
       call X(cube_function_alloc_RS)(cube, cf(ivd))
       call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
@@ -1162,7 +1157,7 @@ contains
   !> Writes real and imaginary parts
   subroutine out_dx()
     integer :: ix, iy, iz, idir
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     character(len=40) :: nitems
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1171,17 +1166,16 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
-
-    do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
+    ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
+    ! our origin is at the center of the cell instead of being at the corner.
+    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
+    do idir = mesh%sb%periodic_dim + 1, 3
+      offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
+    offset = units_from_atomic(units_out%length, offset)
 
     ! just for nice formatting of the output
     write(nitems,*) cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
@@ -1231,7 +1225,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
-    FLOAT   :: offset(MAX_DIM)
+    FLOAT   :: offset(3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=8) :: fmt
@@ -1242,15 +1236,13 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    ! the offset is different in periodic directions
-    offset = M_ZERO
-    offset(1:3) = -matmul(mesh%sb%latt%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
-
-    do idir = mesh%sb%periodic_dim+1, 3
+    ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
+    ! our origin is at the center of the cell instead of being at the corner.
+    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
+    do idir = mesh%sb%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
@@ -1305,7 +1297,7 @@ contains
     logical, intent(in) :: write_real
 
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
-    FLOAT :: lattice_vectors(3,3)
+    FLOAT :: lattice_vectors(3,mesh%sb%dim)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
@@ -1330,7 +1322,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1343,8 +1334,9 @@ contains
     if(mesh%sb%dim == 2) my_n(3) = 1
 
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
-    do idir = 1, 3
-      do idir2 = 1, 3
+    lattice_vectors = M_ZERO
+    do idir = 1, mesh%sb%dim
+      do idir2 = 1, mesh%sb%dim
         lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
       end do
     end do
@@ -1424,7 +1416,6 @@ contains
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1460,7 +1451,6 @@ contains
     end do
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
-    call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 

@@ -116,7 +116,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   this%norbsets = norb
   SAFE_ALLOCATE(this%orbsets(1:norb))
   do iorbset = 1, this%norbsets
-    call orbitalset_nullify(this%orbsets(iorbset))
+    call orbitalset_init(this%orbsets(iorbset))
   end do
 
   iorbset = 0
@@ -355,7 +355,7 @@ subroutine X(orbitalbasis_build_empty)(this, mesh, kpt, ndim, nstates, verbose)
 
   this%norbsets = 1
   SAFE_ALLOCATE(this%orbsets(1:1))
-  call orbitalset_nullify(this%orbsets(1))
+  call orbitalset_init(this%orbsets(1))
   os => this%orbsets(1)
   os%ii = -1
   os%radius = M_ZERO

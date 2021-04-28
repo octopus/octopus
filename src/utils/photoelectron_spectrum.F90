@@ -22,7 +22,6 @@ program photoelectron_spectrum
   use command_line_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use kpoints_oct_m
   use io_function_oct_m
   use io_oct_m
@@ -70,10 +69,10 @@ program photoelectron_spectrum
   type(block_t)        :: blk  
   
   type(space_t)        :: space
-  type(geometry_t)     :: geo
+  type(geometry_t), pointer :: geo
   type(simul_box_t)    :: sb
   type(states_elec_t)  :: st
-  type(grid_t)         :: gr
+  type(symmetries_t)   :: symm
   type(kpoints_t)      :: kpoints
   type(restart_t)      :: restart
   
@@ -114,14 +113,13 @@ program photoelectron_spectrum
   call unit_system_init(global_namespace)
   
   call space_init(space, global_namespace)
-  call geometry_init(geo, global_namespace, space)
+  geo => geometry_t(global_namespace, space)
   call simul_box_init(sb, global_namespace, geo, space)
-  gr%sb = sb
-  call symmetries_init(gr%symm, global_namespace, geo, space, sb%latt)
+  call symmetries_init(symm, global_namespace, geo, space)
 
   ! we need k-points for periodic systems
-  call kpoints_init(kpoints, global_namespace, gr%symm, space%dim, space%periodic_dim, sb%latt)
-  call states_elec_init(st, global_namespace, gr, geo, kpoints)
+  call kpoints_init(kpoints, global_namespace, symm, space%dim, space%periodic_dim, geo%latt)
+  call states_elec_init(st, global_namespace, space, geo%val_charge(), kpoints)
   !*
 
   !Initialize variables
@@ -472,7 +470,7 @@ program photoelectron_spectrum
 
   call states_elec_end(st)
 
-  call geometry_end(geo)
+  SAFE_DEALLOCATE_P(geo)
   call kpoints_end(kpoints)
   call simul_box_end(sb)
 

@@ -37,7 +37,7 @@
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvaf, nvel, ivel
     FLOAT, allocatable :: vaf(:), time(:), velocities(:, :), ftvaf(:)
-    type(geometry_t)  :: geo 
+    type(geometry_t), pointer :: geo 
     type(space_t)     :: space
     type(spectrum_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
@@ -83,7 +83,7 @@
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space, global_namespace)
-    call geometry_init(geo, global_namespace, space)
+    geo => geometry_t(global_namespace, space)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', global_namespace, action='read')
@@ -251,7 +251,7 @@
 
     SAFE_DEALLOCATE_A(ftvaf)
 
-    call geometry_end(geo)
+    SAFE_DEALLOCATE_P(geo)
 
     SAFE_DEALLOCATE_A(time)
 

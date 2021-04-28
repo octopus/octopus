@@ -336,8 +336,6 @@ contains
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_RMMDIIS/))) then
       call preconditioner_init(eigens%pre, namespace, gr, mc, space)
-    else
-      call preconditioner_null(eigens%pre)
     end if
 
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
@@ -450,9 +448,9 @@ contains
      if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
 
       if (states_are_real(st)) then
-        call deigensolver_run(eigens, namespace, gr, st, hm, iter, ik)
+        call deigensolver_run(eigens, namespace, gr%mesh, st, hm, iter, ik)
       else
-        call zeigensolver_run(eigens, namespace, gr, st, hm, iter, ik)
+        call zeigensolver_run(eigens, namespace, gr%mesh, st, hm, iter, ik)
       end if
 
       if(st%calc_eigenval .and. .not. eigens%folded_spectrum) then

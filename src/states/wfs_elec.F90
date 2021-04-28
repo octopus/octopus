@@ -56,11 +56,12 @@ module wfs_elec_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine wfs_elec_clone_to(this, dest, pack, copy_data)
+  subroutine wfs_elec_clone_to(this, dest, pack, copy_data, new_np)
     class(wfs_elec_t),           intent(in)    :: this
     class(batch_t), allocatable, intent(out)   :: dest
     logical,        optional,    intent(in)    :: pack
     logical,        optional,    intent(in)    :: copy_data
+    integer,        optional,    intent(in)    :: new_np
 
     PUSH_SUB(wfs_elec_clone_to)
 
@@ -73,7 +74,7 @@ contains
 
     select type (dest)
     class is (wfs_elec_t)
-      call this%copy_to(dest, pack, copy_data)
+      call this%copy_to(dest, pack, copy_data, new_np)
     class default
       message(1) = "Internal error: imcompatible batches in wfs_elec_clone_to."
       call messages_fatal(1)
@@ -115,11 +116,12 @@ contains
   end subroutine wfs_elec_clone_to_array
 
   !--------------------------------------------------------------
-  subroutine wfs_elec_copy_to(this, dest, pack, copy_data)
+  subroutine wfs_elec_copy_to(this, dest, pack, copy_data, new_np)
     class(wfs_elec_t),  intent(in)    :: this
     class(batch_t),     intent(out)   :: dest
     logical,  optional, intent(in)    :: pack
     logical, optional,  intent(in)    :: copy_data
+    integer, optional,  intent(in)    :: new_np
 
     PUSH_SUB(wfs_elec_copy_to)
 
@@ -127,7 +129,7 @@ contains
     class is (wfs_elec_t)
       dest%ik = this%ik
       dest%has_phase = this%has_phase
-      call this%batch_t%copy_to(dest%batch_t, pack, copy_data)
+      call this%batch_t%copy_to(dest%batch_t, pack, copy_data, new_np)
     class default
       message(1) = "Internal error: imcompatible batches in wfs_elec_copy_to."
       call messages_fatal(1)

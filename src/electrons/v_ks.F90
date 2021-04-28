@@ -36,6 +36,7 @@ module v_ks_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use libvdwxc_oct_m
@@ -76,7 +77,6 @@ module v_ks_oct_m
   private
   public ::             &
     v_ks_t,             &
-    v_ks_nullify,       &
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
@@ -118,48 +118,28 @@ module v_ks_oct_m
 
   type v_ks_t
     private
-    integer,                  public :: theory_level
+    integer,                  public :: theory_level = -1
 
-    logical,                  public :: frozen_hxc !< For RPA and SAE calculations.
+    logical,                  public :: frozen_hxc = .false. !< For RPA and SAE calculations.
 
-    integer,                  public :: xc_family  !< the XC stuff
-    integer,                  public :: xc_flags   !< the XC flags
-    integer,                  public :: sic_type   !< what kind of self-interaction correction to apply
+    integer,                  public :: xc_family = 0  !< the XC stuff
+    integer,                  public :: xc_flags = 0  !< the XC flags
+    integer,                  public :: sic_type = -1  !< what kind of self-interaction correction to apply
     type(xc_t),               public :: xc
     type(xc_OEP_t),           public :: oep
     type(xc_ks_inversion_t),  public :: ks_inversion
     type(grid_t), pointer,    public :: gr
     type(v_ks_calc_t)                :: calc
-    logical                          :: calculate_current
+    logical                          :: calculate_current = .false.
     type(current_t)                  :: current_calculator
-    integer,                  public :: vdw_correction
-    logical                          :: vdw_self_consistent
+    integer,                  public :: vdw_correction = -1
+    logical                          :: vdw_self_consistent = .false.
     type(vdw_ts_t),           public :: vdw_ts
     type(dftd3_calc)                 :: vdw_d3
-    logical                          :: include_td_field
+    logical                          :: include_td_field = .false.
   end type v_ks_t
 
 contains
- 
-  ! ---------------------------------------------------------
-  subroutine v_ks_nullify(ks)
-    type(v_ks_t),            intent(inout) :: ks
-
-    PUSH_SUB(v_ks_nullify)
-
-    ks%theory_level = -1
-    ks%frozen_hxc = .false.
-    ks%xc_family = 0
-    ks%xc_flags = 0
-    ks%sic_type = -1
-    ks%calculate_current = .false.
-    ks%vdw_correction = -1
-    ks%vdw_self_consistent = .false.
-    ks%include_td_field = .false.
-
-    POP_SUB(v_ks_nullify)
-  end subroutine v_ks_nullify
-  
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space, kpoints)
@@ -1003,7 +983,7 @@ contains
       integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
       FLOAT, allocatable :: coords(:, :)
-      FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
+      FLOAT :: vdw_stress(1:3, 1:3)
       integer, allocatable :: atnum(:)
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
@@ -1051,9 +1031,11 @@ contains
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
-              call  dxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  dslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
+                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             else
-              call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  zslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
+                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
           else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
             if (states_are_real(st)) then
@@ -1065,11 +1047,11 @@ contains
           else
 
             if (states_are_real(st)) then
-              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
+              ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             else
-              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
+              ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
 
             if (ks%oep%has_photons) then
@@ -1096,8 +1078,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
-            ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 
@@ -1110,8 +1091,8 @@ contains
           end do
           
           if (space%is_periodic()) then
-            latvec(1:3, 1:3) = ks%gr%sb%latt%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, geo%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
+              vdw_stress)
           else
             call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
           end if
@@ -1185,6 +1166,8 @@ contains
     type(space_t),            intent(in)    :: space
 
     integer                           :: ip, ispin
+    type(states_elec_t) :: xst !< The states after the application of the Fock operator
+                               !! This is needed to construct the ACE operator
 
     PUSH_SUB(v_ks_calc_finish)
 
@@ -1300,30 +1283,42 @@ contains
         !This should be changed and the CAM parameters should also be obtained from the restart information
         !Maybe the parameters should be mixed too.
         if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
+          call xst%nullify()
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
-            call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
+                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
+            call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%gr%sb, ks%calc%hf_st, hm%kpoints)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
+                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
-              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, &
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
             else
-              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st)
+              call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
             end if
           end if
+          call states_elec_end(xst)
         end if
 
         select case(ks%theory_level)
         case(HARTREE_FOCK)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+          call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)
         case(HARTREE)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, M_ZERO, M_ONE, M_ZERO, ks%calc%hf_st)
         case(RDMFT)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, M_ZERO, M_ONE, M_ZERO, ks%calc%hf_st)
         end select
       end if
 
+    end if
+
+    ! Because of the intent(in) in v_ks_calc_start, we need to update the parameters of hybrids for OEP 
+    ! here
+    if(ks%theory_level == KOHN_SHAM_DFT .and. bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER .and. ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_FBE) then
+        call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+      end if
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then

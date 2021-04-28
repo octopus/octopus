@@ -28,7 +28,6 @@ module lookup_oct_m
   private
   public ::                &
     lookup_t,              &
-    lookup_nullify,        &
     lookup_init,           &
     lookup_end,            &
     lookup_copy,           &
@@ -36,26 +35,18 @@ module lookup_oct_m
     
   type lookup_t
     private
-    integer            :: nobjs
-    integer            :: dim
+    integer            :: nobjs = 0
+    integer            :: dim = 0
     FLOAT, allocatable :: pos(:, :)
   end type lookup_t
   
 contains
 
-  elemental subroutine lookup_nullify(this)
-    type(lookup_t), intent(out) :: this
-
-    this%nobjs = 0
-    this%dim = 0
-
-  end subroutine lookup_nullify
-  
   subroutine lookup_init(this, dim, nobjs, pos)
-    type(lookup_t), intent(out) :: this
-    integer,        intent(in)  :: dim
-    integer,        intent(in)  :: nobjs
-    FLOAT,          intent(in)  :: pos(:, :)
+    type(lookup_t), intent(inout) :: this
+    integer,        intent(in)    :: dim
+    integer,        intent(in)    :: nobjs
+    FLOAT,          intent(in)    :: pos(:, :)
     
     PUSH_SUB(lookup_init)
 
@@ -79,13 +70,13 @@ contains
   end subroutine lookup_end
 
   ! -----------------------------------------
-
   subroutine lookup_copy(cin, cout)
-    type(lookup_t), intent(in) :: cin
-    type(lookup_t), intent(out) :: cout
+    type(lookup_t), intent(in)    :: cin
+    type(lookup_t), intent(inout) :: cout
 
     PUSH_SUB(lookup_copy)
 
+    call lookup_end(cout)
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
     SAFE_ALLOCATE_SOURCE_A(cout%pos, cin%pos)

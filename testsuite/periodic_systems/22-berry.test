@@ -13,22 +13,23 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 3.85e-08
-match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -31.312819155
+
+Precision: 1.98e-07
+match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -31.31281905
 Precision: 3.14e-14
 match ;   Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
-Precision: 5.e-08
-match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.35979202
-Precision: 3.85e-08
-match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.4894303349999998
-Precision: 1.65e-08
-match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.250688565
+Precision: 1.16e-07
+match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.359791925
+Precision: 1.26e-07
+match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.489430305
+Precision: 4.40e-08
+match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.25068855
 Precision: 1.51e-15
 match ;   Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.50838602
-Precision: 4.95e-08
-match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 12.986714895
-Precision: 7.70e-08
-match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -5.598687160000001
+Precision: 1.43e-07
+match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 12.98671487
+Precision: 2.26e-07
+match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -5.598687115
 
 
 Input      : 22-berry.02-cubic_Si.inp

@@ -156,11 +156,11 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), namespace, x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), namespace, c_id, ndim, nel, isp)
+      call xc_functl_init(xcs%functional(FUNC_X, isp), namespace, x_id, ndim, nel, isp)
+      call xc_functl_init(xcs%functional(FUNC_C, isp), namespace, c_id, ndim, nel, isp)
 
-      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), namespace, xk_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), namespace, ck_id, ndim, nel, isp)
+      call xc_functl_init(xcs%kernel(FUNC_X, isp), namespace, xk_id, ndim, nel, isp)
+      call xc_functl_init(xcs%kernel(FUNC_C, isp), namespace, ck_id, ndim, nel, isp)
 
     end do
 
@@ -208,7 +208,9 @@ contains
       ! reset certain variables
       xcs%functional(FUNC_X,1)%family = XC_FAMILY_OEP
       xcs%functional(FUNC_X,1)%id     = XC_OEP_X
-      xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+      if(.not. hartree_fock) then
+        xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+      end if
     end if
 
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &

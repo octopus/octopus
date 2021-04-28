@@ -267,7 +267,7 @@ contains
     FLOAT,     optional, intent(in)    :: dt
 
     integer :: j, iatom, idir
-    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
+    FLOAT :: x(MAX_DIM), time, global_force(geo%space%dim)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
     FLOAT, allocatable :: force_nlcc(: ,:)
     FLOAT, allocatable :: force_scf(:, :)
@@ -295,7 +295,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
     ! if we use vdw TS, we need to compute it now
     if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
-      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, st, st%rho)
     end if
 
     do iatom = 1, geo%natoms
@@ -305,12 +305,12 @@ contains
     end do
 
     if(present(t)) then
-      call geometry_global_force(geo, time, global_force)
+      global_force = geo%global_force(time)
 
       ! the ion-ion term is already calculated
       do iatom = 1, geo%natoms
-        geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) + global_force(1:geo%space%dim)
-        geo%atom(iatom)%f_ii(1:geo%space%dim) = geo%atom(iatom)%f_ii(1:geo%space%dim) + global_force(1:geo%space%dim)
+        geo%atom(iatom)%f(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim) + global_force
+        geo%atom(iatom)%f_ii(1:geo%space%dim) = geo%atom(iatom)%f_ii(1:geo%space%dim) + global_force
       end do
     end if
 

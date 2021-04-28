@@ -44,6 +44,10 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
 
   PUSH_SUB(X(output_modelmb))
 
+  if (st%parallel_in_states) then
+    call messages_not_implemented("Model MB output parallel in states")
+  end if
+
   ! make sure directory exists
   call io_mkdir(trim(dir), namespace)
   ! all model mb stuff should be in this directory

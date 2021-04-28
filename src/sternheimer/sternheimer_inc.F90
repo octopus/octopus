@@ -221,7 +221,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
           end do
           call wfs_elec_init(rhsb, st%d%dim, sst, est, rhs, ik)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, namespace, hm, gr, st, dlpsib, rhsb, &
+          call X(linear_solver_solve_HXeY_batch)(this%solver, namespace, hm, gr%mesh, st, dlpsib, rhsb, &
             -st%eigenval(sst:est, ik) + omega_sigma, tol, residue(sigma, sst:est), conv_iters(sigma, sst:est), &
             occ_response = this%occ_response)
 

@@ -216,7 +216,7 @@ contains
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
     call messages_info(1)
-    call geometry_write_xyz(g_opt%geo, './min', g_opt%syst%namespace)
+    call g_opt%geo%write_xyz('./min', g_opt%syst%namespace)
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -552,7 +552,7 @@ contains
         if(.not. does_exist) fromScratch = .true.
       end if
 
-      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last', sys%namespace)
+      if(.not. fromScratch) call g_opt%geo%read_xyz('./last', sys%namespace)
       
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
@@ -613,13 +613,26 @@ contains
     call from_coords(g_opt, coords)
 
     if(g_opt%fixed_atom /= 0) then
-      call geometry_translate(g_opt%geo, geometry_center(g_opt%geo))
+      call g_opt%geo%translate(g_opt%geo%center())
     end if
 
-    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
-      warn_if_not = .false., die_if_not = .true.)
+    ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
+    call g_opt%geo%fold_atoms_into_cell()
 
-    call geometry_write_xyz(g_opt%geo, './work-geom', g_opt%syst%namespace, append = .true.)
+    ! Some atoms might have moved outside the simulation box. We stop if this happens.
+    do iatom = 1, g_opt%geo%natoms
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%geo%atom(iatom)%x)) then
+        if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
+          ! FIXME: This could fail for partial periodicity systems
+          ! because contains_point is too strict with atoms close to
+          ! the upper boundary to the cell.
+          write(message(1), '(a,i5,a)') "Atom ", iatom, " has moved outside the box during the geometry optimization."
+          call messages_fatal(1, namespace=g_opt%syst%namespace)
+        end if
+      end if
+    end do
+
+    call g_opt%geo%write_xyz('./work-geom', g_opt%syst%namespace, append = .true.)
 
     call scf_mix_clear(g_opt%scfv)
 
@@ -693,8 +706,8 @@ contains
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
     call io_mkdir('geom', g_opt%syst%namespace)
-    call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
-    call geometry_write_xyz(g_opt%geo, './last', g_opt%syst%namespace)
+    call g_opt%geo%write_xyz('geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
+    call g_opt%geo%write_xyz('./last', g_opt%syst%namespace)
 
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter

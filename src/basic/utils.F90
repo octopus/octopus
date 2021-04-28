@@ -255,7 +255,7 @@ contains
 
   character(len=256) function get_config_opts()
 
-    write(get_config_opts, '(a, i1)') 'max-dim=', MAX_DIM
+    write(get_config_opts, '(a, i1)') 'maxdim', MAX_DIM
 #ifdef HAVE_OPENMP
     get_config_opts = trim(get_config_opts)//' openmp'
 #endif

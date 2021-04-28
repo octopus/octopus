@@ -27,7 +27,6 @@ module states_elec_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use kpoints_oct_m
@@ -48,6 +47,7 @@ module states_elec_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_group_oct_m
   use states_elec_dim_oct_m
@@ -147,7 +147,7 @@ module states_elec_oct_m
     FLOAT,   allocatable :: mmb_proj(:)        !< projection of the state onto the chosen Young diagram
 
     !> This is stuff needed for the parallelization in states.
-    logical                     :: parallel_in_states !< Am I parallel in states?
+    logical                     :: parallel_in_states = .false. !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
     type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domains-states "plane".
     type(mpi_grp_t)             :: st_kpt_mpi_grp     !< The MPI group related to the states-kpoints "plane".
@@ -203,16 +203,7 @@ contains
 
     PUSH_SUB(states_elec_null)
 
-    call states_elec_dim_null(st%d)
-    call states_elec_group_null(st%group)
-    call distributed_nullify(st%dist)
-    
-    st%d%orth_method = 0
-    call modelmb_particles_nullify(st%modelmbparticles)
-
     st%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
-
-    st%parallel_in_states = .false.
 
     st%packed = .false.
 
@@ -221,11 +212,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_init(st, namespace, gr, geo, kpoints)
+  subroutine states_elec_init(st, namespace, space, valence_charge, kpoints)
     type(states_elec_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
-    type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
+    type(space_t),               intent(in)    :: space
+    FLOAT,                       intent(in)    :: valence_charge
     type(kpoints_t),             intent(in)    :: kpoints
 
     FLOAT :: excess_charge
@@ -374,7 +365,7 @@ contains
     ! For non-periodic systems this should just return the Gamma point
     call states_elec_choose_kpoints(st%d, kpoints, namespace)
 
-    st%val_charge = geometry_val_charge(geo)
+    st%val_charge = valence_charge
 
     st%qtot = -(st%val_charge + excess_charge)
 
@@ -518,7 +509,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init(st%modelmbparticles, namespace, gr)
+    call modelmb_particles_init(st%modelmbparticles, namespace, space)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))

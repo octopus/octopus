@@ -531,7 +531,7 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT :: ionic_dipole(MAX_DIM), center(MAX_DIM)
+    FLOAT :: ionic_dipole(geo%space%dim), center(MAX_DIM)
     FLOAT, allocatable :: multipole(:,:)
     logical :: use_ionic_dipole
 
@@ -593,7 +593,7 @@ contains
       call write_iter_flush(out_multip%handle)
     end if
 
-    center = geometry_center_of_mass(geo, mask=ions_mask)
+    center(1:geo%space%dim) = geo%center_of_mass(mask=ions_mask)
 
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     multipole = M_ZERO
@@ -619,7 +619,8 @@ contains
     call parse_variable(namespace, 'LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
       ! Calculate ionic dipole, setting the center of mass as reference, as that is needed for non-neutral systems.
-      ionic_dipole = geometry_dipole(geo, mask=ions_mask) + P_PROTON_CHARGE*geometry_val_charge(geo, mask=ions_mask)*center
+      ionic_dipole(1:geo%space%dim) = geo%dipole(mask=ions_mask) + &
+        P_PROTON_CHARGE*geo%val_charge(mask=ions_mask)*center(1:geo%space%dim)
 
       do is = 1, st%d%nspin
         multipole(2:geo%space%dim+1, is) = -ionic_dipole(1:geo%space%dim)/st%d%nspin - multipole(2:geo%space%dim+1, is)

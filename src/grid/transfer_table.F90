@@ -24,35 +24,18 @@ module transfer_table_oct_m
 
   private
   public ::                         &
-    transfer_table_t,               &
-    transfer_table_nullify
-
+    transfer_table_t
 
   type transfer_table_t
     ! Components are public by default
-    integer              ::  n_coarse
+    integer              ::  n_coarse = 0
     integer, allocatable :: to_coarse(:)
 
-    integer              ::  n_fine
-    integer              ::  n_fine1,       n_fine2,       n_fine4,       n_fine8
+    integer              ::  n_fine = 0
+    integer              ::  n_fine1 = 0,  n_fine2 = 0,   n_fine4 = 0,   n_fine8 = 0
     integer, allocatable :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
     integer, allocatable :: fine_i(:)
   end type transfer_table_t
-
-contains
-
-  ! ---------------------------------------------------------
-  elemental subroutine transfer_table_nullify(this)
-    type(transfer_table_t), intent(out) :: this
-
-    this%n_coarse = 0
-    this%n_fine = 0
-    this%n_fine1 = 0
-    this%n_fine2 = 0
-    this%n_fine4 = 0
-    this%n_fine8 = 0
-
-  end subroutine transfer_table_nullify
 
 end module transfer_table_oct_m
 

@@ -276,9 +276,6 @@ contains
     end if
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
-    do ia = 1, geo%natoms
-      call projector_null(ep%proj(ia))
-    end do
 
     ep%natoms = geo%natoms
     ep%non_local = .false.
@@ -289,8 +286,6 @@ contains
 
     SAFE_ALLOCATE(ep%vdw_forces(1:geo%space%dim, 1:geo%natoms))
     ep%vdw_forces = M_ZERO
-
-    call gauge_field_nullify(ep%gfield)
 
     ep%local_potential_precalculated = .false.
     
@@ -387,7 +382,7 @@ contains
     ep%vpsl = M_ZERO
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(geo%ion_interaction, geo%space, sb%latt, geo%atom, geo%natoms, geo%catom, geo%ncatoms, &
+    call ion_interaction_calculate(geo%ion_interaction, geo%space, geo%latt, geo%atom, geo%natoms, geo%catom, geo%ncatoms, &
       sb%lsize, ep%eii, ep%fii)
 
     ! the pseudopotential part.

@@ -87,9 +87,7 @@ contains
 
     call simul_box_init(gr%sb, namespace, geo, space)
 
-    call symmetries_init(gr%symm, namespace, geo, space, gr%sb%latt)
-
-    call check_ions_compatible_with_symmetries(gr%sb, gr%symm, geo, space%dim, namespace)
+    call symmetries_init(gr%symm, namespace, geo, space)
 
 
     !%Variable UseFineMesh
@@ -109,7 +107,7 @@ contains
 
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
-    call geometry_grid_defaults(geo, def_h, def_rsize)
+    call geo%grid_defaults(def_h, def_rsize)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -167,7 +165,7 @@ contains
 
     if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
-        call geometry_grid_defaults_info(geo)
+        call geo%grid_defaults_info()
         do idir = 1, space%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
@@ -203,7 +201,6 @@ contains
     call curvilinear_init(gr%cv, namespace, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
-    call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
@@ -269,7 +266,6 @@ contains
 
         call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
-        call derivatives_nullify(gr%fine%der)
         call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
         call mesh_init_stage_3(gr%fine%mesh, namespace, space, gr%stencil, mc)

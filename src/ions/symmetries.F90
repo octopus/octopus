@@ -92,15 +92,14 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, namespace, geo, space, latt)
+  subroutine symmetries_init(this, namespace, geo, space)
     type(symmetries_t),     intent(out) :: this
     type(namespace_t),      intent(in)  :: namespace
     type(geometry_t),       intent(in)  :: geo
     type(space_t),          intent(in)  :: space
-    type(lattice_vectors_t),intent(in)  :: latt
 
     integer :: max_size, dim4syms
-    integer :: idir, iatom, iop, verbosity, point_group
+    integer :: idir, iatom, iatom_symm, iop, verbosity, point_group
     FLOAT   :: lattice(1:3, 1:3)
     FLOAT, allocatable :: position(:, :)
     integer, allocatable :: typs(:)
@@ -113,6 +112,7 @@ contains
     FLOAT,   allocatable     :: translation(:, :)
     character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
     logical :: def_sym_comp
+    FLOAT :: ratom(space%dim)
     
     PUSH_SUB(symmetries_init)
 
@@ -198,13 +198,8 @@ contains
       do iatom = 1, geo%natoms
         position(1:3,iatom) = M_ZERO
 
-        if(.not. geo%reduced_coordinates) then
-          ! Transform atomic positions to reduced coordinates
-          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms), &
-                                           latt%klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
-        else
-          position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
-        end if
+        ! Transform atomic positions to reduced coordinates
+        position(1:dim4syms,iatom) = geo%latt%cart_to_red(geo%atom(iatom)%x(1:dim4syms))
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
         do idir = 1, dim4syms
           position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
@@ -217,7 +212,7 @@ contains
       lattice = M_ZERO
       !NOTE: Why "inverse matrix" ? (NTD)
       ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:space%dim, 1:space%dim) = latt%rlattice(1:space%dim, 1:space%dim)
+      lattice(1:space%dim, 1:space%dim) = geo%latt%rlattice(1:space%dim, 1:space%dim)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
@@ -324,8 +319,8 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), latt%rlattice(1:dim4syms,1:dim4syms), &
-                              latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), geo%latt%rlattice(1:dim4syms,1:dim4syms), &
+                              geo%latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
                               TOFLOAT(translation(1:3, iop)))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
@@ -342,6 +337,41 @@ contains
 
     end if
 
+
+    ! Checks if that the atomic coordinates are compatible with the symmetries
+    !
+    ! We want to use for instance that
+    !
+    ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+    !
+    ! and that the operator R should map the position of atom
+    ! iatom to the position of some other atom iatom_symm, so that
+    !
+    ! V_iatom(R*r) = V_iatom_symm(r)
+    !
+    do iop = 1, symmetries_number(this)
+      if(iop == symmetries_identity_index(this)) cycle
+
+      do iatom = 1, geo%natoms
+        ratom(1:geo%space%dim) = symm_op_apply_cart(this%ops(iop), geo%atom(iatom)%x)
+
+        ratom(1:geo%space%dim) = geo%latt%fold_into_cell(ratom(1:geo%space%dim))
+
+        ! find iatom_symm
+        do iatom_symm = 1, geo%natoms
+          if(all(abs(ratom(1:geo%space%dim) - geo%atom(iatom_symm)%x(1:geo%space%dim)) < CNST(1.0e-5))) exit
+        end do
+
+        if (iatom_symm > geo%natoms) then
+          write(message(1),'(a,i6)') 'Internal error: could not find symetric partner for atom number', iatom
+          write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
+          call messages_fatal(2, namespace=namespace)
+        end if
+
+      end do
+    end do
+
+
     call symmetries_write_info(this, namespace, space%dim, space%periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
@@ -355,7 +385,7 @@ contains
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  latt%rlattice, latt%klattice, dim4syms)
+                  geo%latt%rlattice, geo%latt%klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       
@@ -385,12 +415,14 @@ contains
 
   ! -------------------------------------------------------------------------------
   subroutine symmetries_copy(inp, outp)
-    type(symmetries_t),  intent(in)  :: inp
-    type(symmetries_t),  intent(out) :: outp
+    type(symmetries_t),  intent(in)    :: inp
+    type(symmetries_t),  intent(inout) :: outp
 
     integer :: iop
 
     PUSH_SUB(symmetries_copy)
+
+    call symmetries_end(outp)
 
     outp%nops = inp%nops
     outp%breakdir = inp%breakdir

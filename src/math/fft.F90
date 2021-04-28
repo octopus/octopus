@@ -92,7 +92,7 @@ module fft_oct_m
   
   type fft_t
     private
-    integer         :: slot    !< in which slot do we have this fft
+    integer         :: slot = 0 !< in which slot do we have this fft
 
     integer, public :: type    !< is the fft real or complex
     integer, public :: library !< what library are we using
@@ -933,17 +933,21 @@ contains
         fft_refs(ii) = FFT_NULL
       end if
     end if
+    this%slot = 0
 
     POP_SUB(fft_end)
   end subroutine fft_end
 
   ! ---------------------------------------------------------
   subroutine fft_copy(fft_i, fft_o)
-    type(fft_t), intent(in)  :: fft_i
-    type(fft_t), intent(out) :: fft_o
+    type(fft_t), intent(in)    :: fft_i
+    type(fft_t), intent(inout) :: fft_o
 
     PUSH_SUB(fft_copy)
 
+    if (fft_o%slot > 0) then
+      call fft_end(fft_o)
+    end if
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
 

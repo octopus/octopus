@@ -69,6 +69,7 @@ module td_write_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use utils_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use write_iter_oct_m
@@ -408,17 +409,11 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
-    rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) then 
-      if (space%is_periodic()) then
-        rmin = minval(gr%sb%lsize(1:space%periodic_dim))
-      else
-        rmin = CNST(100.0)
-      end if
-    end if
+    rmin = geo%min_distance()
 
     ! This variable is documented in scf/scf.F90
-    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', min(M_HALF*rmin, CNST(100.0)), writ%lmm_r, &
+      unit=units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
@@ -1364,14 +1359,17 @@ contains
     type(mpi_grp_t), optional, intent(in) :: mpi_grp   
     
 
-    integer :: is, ll, mm, add_lm
+    integer :: is, idir, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT :: ionic_dipole(MAX_DIM)
+    FLOAT :: ionic_dipole(geo%space%dim)
     FLOAT, allocatable :: multipole(:,:)
     type(mpi_grp_t)    :: mpi_grp_
 
     PUSH_SUB(td_write_multipole_r)
-    
+
+    ! We cannot output multipoles beyond the dipole for higher dimensions
+    ASSERT(.not. (lmax > 1 .and. gr%sb%dim > 3))
+
     mpi_grp_ = mpi_world 
     if (present(mpi_grp)) mpi_grp_ = mpi_grp
 
@@ -1392,10 +1390,11 @@ contains
 
       do is = 1, st%d%nspin
         write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip, aux)
-        if(lmax>0) then
-          write(aux, '(a3,a1,i1,a1)') '<x>', '(', is,')'; call write_iter_header(out_multip, aux)
-          write(aux, '(a3,a1,i1,a1)') '<y>', '(', is,')'; call write_iter_header(out_multip, aux)
-          write(aux, '(a3,a1,i1,a1)') '<z>', '(', is,')'; call write_iter_header(out_multip, aux)
+        if (lmax > 0) then
+          do idir = 1, gr%sb%dim
+            write(aux, '(4a1,i1,a1)') '<', index2axis(idir), '>', '(', is,')'
+            call write_iter_header(out_multip, aux)
+          end do
         end if
         do ll = 2, lmax
           do mm = -ll, ll
@@ -1411,17 +1410,16 @@ contains
       call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       do is = 1, st%d%nspin
-        do ll = 0, lmax
+        call write_iter_header(out_multip, 'Electrons')
+        if (lmax > 0) then
+          do idir = 1, gr%sb%dim
+            call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%length)) // ']')
+          end do
+        end if
+        do ll = 2, lmax
           do mm = -ll, ll
-            select case(ll)
-            case(0)
-              call write_iter_header(out_multip, 'Electrons')
-            case(1)
-              call write_iter_header(out_multip, '[' // trim(units_abbrev(units_out%length)) // ']')
-            case default
-              write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", ll
-              call write_iter_header(out_multip, '[' // trim(aux) // ']')
-            end select
+            write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", ll
+            call write_iter_header(out_multip, '[' // trim(aux) // ']')
           end do
         end do
       end do
@@ -1430,16 +1428,20 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
-    ionic_dipole(:) = M_ZERO
-    multipole   (:,:) = M_ZERO
+    if (gr%sb%dim > 3 .and. lmax == 1) then
+      ! For higher dimensions we can only have up to the dipole
+      SAFE_ALLOCATE(multipole(1:gr%sb%dim+1, 1:st%d%nspin))
+    else
+      SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
+    end if
+    multipole(:,:) = M_ZERO
 
     do is = 1, st%d%nspin
       call dmf_multipoles(gr%mesh, rho(:,is), lmax, multipole(:,is))
     end do
 
     if (lmax > 0) then
-      ionic_dipole = geometry_dipole(geo)
+      ionic_dipole = geo%dipole()
       do is = 1, st%d%nspin
         multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
@@ -1448,8 +1450,14 @@ contains
     if(mpi_grp_is_root(mpi_grp_)) then
       call write_iter_start(out_multip)
       do is = 1, st%d%nspin
-        add_lm = 1
-        do ll = 0, lmax
+        call write_iter_double(out_multip, units_from_atomic(units_out%length**0, multipole(1, is)), 1)
+        if (lmax > 0) then
+          do idir = 1, gr%sb%dim
+            call write_iter_double(out_multip, units_from_atomic(units_out%length, multipole(1+idir, is)), 1)
+          end do
+        end if
+        add_lm = gr%sb%dim + 2
+        do ll = 2, lmax
           do mm = -ll, ll
             call write_iter_double(out_multip, units_from_atomic(units_out%length**ll, multipole(add_lm, is)), 1)
             add_lm = add_lm + 1
@@ -2131,29 +2139,10 @@ contains
 
     integer             :: ii, is
     character(len=68)   :: buf
-    FLOAT, allocatable  :: eigs(:,:)
-#if defined(HAVE_MPI) 
-    integer :: outcount, ik
-#endif
 
     PUSH_SUB(td_write_eigs)
-
-    SAFE_ALLOCATE(eigs(1:st%nst,1:st%d%kpt%nglobal)) 
-           
-    eigs(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
-      st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
-
-#if defined(HAVE_MPI) 
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      call lmpi_gen_allgatherv(st%lnst, st%eigenval(st%st_start:st%st_end,ik), outcount, &
-                             eigs(:, ik), st%mpi_grp)
-    end do
-
-#endif
   
     if(.not.mpi_grp_is_root(mpi_world)) then 
-      SAFE_DEALLOCATE_A(eigs)
       POP_SUB(td_write_eigs)
       return ! only first node outputs        
     end if
@@ -2195,12 +2184,10 @@ contains
     call write_iter_start(out_eigs)
     do is = 1, st%d%kpt%nglobal
       do ii =1 , st%nst
-        call write_iter_double(out_eigs, units_from_atomic(units_out%energy, eigs(ii,is)), 1)
+        call write_iter_double(out_eigs, units_from_atomic(units_out%energy, st%eigenval(ii,is)), 1)
       end do
     end do
     call write_iter_nl(out_eigs)
-
-    SAFE_DEALLOCATE_A(eigs)
 
     POP_SUB(td_write_eigs)
   end subroutine td_write_eigs
@@ -2428,7 +2415,7 @@ contains
       integer, intent(in) :: dir
 
       integer :: uist, ist, ik, idim
-      FLOAT   :: n_dip(MAX_DIM)
+      FLOAT   :: n_dip(space%dim)
       CMPLX, allocatable :: xpsi(:,:)
       CMPLX, allocatable :: psi(:, :), gspsi(:, :)
       
@@ -2460,11 +2447,11 @@ contains
       call comm_allreduce(st%dom_st_kpt_mpi_grp, projections)
 
       ! n_dip is not defined for more than space%dim
-      n_dip = geometry_dipole(geo)
+      n_dip = geo%dipole()
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
-            projections(ist, uist, ik) = projections(ist, uist, ik)-n_dip(dir)
+            projections(ist, uist, ik) = projections(ist, uist, ik) - n_dip(dir)
           end do
         end do
       end do

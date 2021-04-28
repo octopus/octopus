@@ -75,6 +75,7 @@ module hamiltonian_elec_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
   use xc_f03_lib_m
+  use xc_functl_oct_m
 
   implicit none
 
@@ -281,9 +282,6 @@ contains
     hm%hm_base%kinetic => gr%der%lapl
 
     SAFE_ALLOCATE(hm%energy)
-    call energy_nullify(hm%energy)
-
-    call oct_exchange_nullify(hm%oct_exchange)
 
     !Keep pointers to derivatives, geometry and xc
     hm%der => gr%der
@@ -438,7 +436,6 @@ contains
     !%End
     call parse_variable(namespace, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
-    call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
@@ -489,14 +486,23 @@ contains
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
-    call scissor_nullify(hm%scissor)
-
     !Cam parameters are irrelevant here and are updated later
-    call exchange_operator_nullify(hm%exxop)
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
-          .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb, gr%der, mc, hm%kpoints, M_ONE, M_ZERO, M_ZERO)
+          .or. hm%theory_level == RDMFT .or. need_exchange_ .or. &
+           hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER &
+          .or. bitand(hm%xc%family, XC_FAMILY_OEP) /= 0) then
+      !We test Slater before OEP, as Slater is treated as OEP for the moment....
+      if(hm%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
+                 M_ZERO, M_ONE, M_ZERO)
+      else if(bitand(hm%xc%family, XC_FAMILY_OEP) /= 0 .or. hm%theory_level == RDMFT) then
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
+                 hm%xc%cam_omega, hm%xc%cam_alpha, hm%xc%cam_beta)
+      else
+        call exchange_operator_init(hm%exxop, namespace, space, st, gr%sb%latt, gr%der, mc, hm%kpoints, &
+                                     M_ONE, M_ZERO, M_ZERO)
+      end if
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then

@@ -128,10 +128,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine logrid_copy(grid_in, grid_out)
-    type(logrid_t), intent(in)  :: grid_in
-    type(logrid_t), intent(out) :: grid_out
+    type(logrid_t), intent(in)    :: grid_in
+    type(logrid_t), intent(inout) :: grid_out
 
     PUSH_SUB(logrid_copy)
+
+    call logrid_end(grid_out)
 
     grid_out%flavor = grid_in%flavor
     grid_out%a      = grid_in%a

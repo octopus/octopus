@@ -24,6 +24,7 @@ module lattice_vectors_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use profiling_oct_m
   use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -33,46 +34,115 @@ module lattice_vectors_oct_m
   private
 
   public ::                   &
-    lattice_vectors_t
+    lattice_vectors_t,        &
+    lattice_iterator_t
 
   type lattice_vectors_t
     ! Components are public by default
     type(space_t), private :: space
-    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
-    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
-    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
-    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
+    FLOAT, allocatable :: rlattice_primitive(:,:)  !< lattice primitive vectors
+    FLOAT, allocatable :: rlattice          (:,:)  !< lattice vectors
+    FLOAT, allocatable :: klattice_primitive(:,:)  !< reciprocal-lattice primitive vectors
+    FLOAT, allocatable :: klattice          (:,:)  !< reciprocal-lattice vectors
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal = .false.
+    ! Some notes:
+    !  rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
+    !  klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
+    !  klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
+    !  The F matrix of Chelikowski is matmul(transpose(latt%klattice_primitive), latt%klattice_primitive)
   contains
     procedure :: copy => lattice_vectors_copy
     generic   :: assignment(=) => copy
     procedure :: scale => lattice_vectors_scale
     procedure :: write_info => lattice_vectors_write_info
     procedure :: short_info => lattice_vectors_short_info
+    procedure :: cart_to_red => lattice_vectors_cart_to_red
+    procedure :: red_to_cart => lattice_vectors_red_to_cart
+    procedure :: fold_into_cell => lattice_vectors_fold_into_cell
+    final :: lattice_vectors_finalize
   end type lattice_vectors_t
 
   interface lattice_vectors_t
-    module procedure lattice_vectors_constructor
+    module procedure lattice_vectors_constructor_from_input, lattice_vectors_constructor_from_rlattice
   end interface lattice_vectors_t
+
+  !> The following class implements a lattice iterator. It allows one to loop
+  !> over all cells that are within a certain range. At the moment this range is
+  !> determined using a norm-1.
+  type lattice_iterator_t
+    private
+    integer, public :: n_cells = 0
+    integer, allocatable :: icell(:,:)
+    type(lattice_vectors_t), pointer :: latt => NULL()
+  contains
+    procedure :: copy => lattice_iterator_copy
+    generic   :: assignment(=) => copy
+    procedure :: get => lattice_iterator_get
+    final :: lattice_iterator_finalize
+  end type lattice_iterator_t
+
+  interface lattice_iterator_t
+    module procedure lattice_iterator_constructor
+  end interface lattice_iterator_t
 
 contains
 
   !--------------------------------------------------------------
-  type(lattice_vectors_t) function lattice_vectors_constructor(namespace, space, variable_prefix) result(latt)
+  type(lattice_vectors_t) function lattice_vectors_constructor_from_rlattice(namespace, space, rlattice) result(latt)
+    type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
+    FLOAT,                       intent(in)    :: rlattice(space%dim, space%dim)
+
+    integer :: idir
+    FLOAT :: volume_element
+
+    PUSH_SUB(lattice_vectors_constructor_from_rlattice)
+
+    latt%space = space
+
+    SAFE_ALLOCATE(latt%rlattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
+
+    latt%rlattice = rlattice
+    do idir = 1, space%dim
+      latt%rlattice_primitive(:, idir) = latt%rlattice(:, idir) / norm2(latt%rlattice_primitive(:, idir))
+    end do
+
+    call reciprocal_lattice(latt%rlattice, latt%klattice, latt%rcell_volume, space%dim, namespace)
+    latt%klattice = latt%klattice * M_TWO*M_PI
+
+    call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
+
+    if (space%dim == 3) then
+      call angles_from_rlattice_primitive(latt%rlattice_primitive, latt%alpha, latt%beta, latt%gamma)
+    else
+      ! Angles should not be used, so set them to zero
+      latt%alpha = M_ZERO
+      latt%beta  = M_ZERO
+      latt%gamma = M_ZERO
+    end if
+
+    POP_SUB(lattice_vectors_constructor_from_rlattice)
+  end function lattice_vectors_constructor_from_rlattice
+
+  !--------------------------------------------------------------
+  type(lattice_vectors_t) function lattice_vectors_constructor_from_input(namespace, space, variable_prefix) result(latt)
     type(namespace_t),           intent(in)    :: namespace
     type(space_t),               intent(in)    :: space
     character(len=*),  optional, intent(in)    :: variable_prefix
 
     type(block_t) :: blk
-    FLOAT :: norm, lparams(3), volume_element, rlatt(MAX_DIM, MAX_DIM)
+    FLOAT :: norm, lparams(space%dim), volume_element
     integer :: idim, jdim, ncols
     logical :: has_angles
-    FLOAT :: angles(1:MAX_DIM)
+    FLOAT :: angles(1:space%dim)
     character(len=:), allocatable :: prefix
 
-    PUSH_SUB(lattice_vectors_constructor)
+    PUSH_SUB(lattice_vectors_constructor_from_input)
 
     if (present(variable_prefix)) then
       prefix = variable_prefix
@@ -81,6 +151,11 @@ contains
     end if
 
     latt%space = space
+
+    SAFE_ALLOCATE(latt%rlattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%rlattice(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice_primitive(1:space%dim, 1:space%dim))
+    SAFE_ALLOCATE(latt%klattice(1:space%dim, 1:space%dim))
 
     latt%alpha = CNST(90.0)
     latt%beta  = CNST(90.0)
@@ -214,20 +289,32 @@ contains
 
     call reciprocal_lattice(latt%rlattice_primitive, latt%klattice_primitive, volume_element, space%dim, namespace)
 
-    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
-    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
-    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
-    ! The F matrix of Chelikowski is matmul(transpose(latt%klattice_primitive), latt%klattice_primitive)
-    rlatt = matmul(transpose(latt%rlattice_primitive), latt%rlattice_primitive)
     if (.not. has_angles .and. space%dim == 3) then
       !We compute the angles from the lattice vectors
-      latt%alpha = acos(rlatt(2,3)/sqrt(rlatt(2,2)*rlatt(3,3)))/M_PI*CNST(180.0)
-      latt%beta  = acos(rlatt(1,3)/sqrt(rlatt(1,1)*rlatt(3,3)))/M_PI*CNST(180.0)
-      latt%gamma = acos(rlatt(1,2)/sqrt(rlatt(1,1)*rlatt(2,2)))/M_PI*CNST(180.0)
+      call angles_from_rlattice_primitive(latt%rlattice_primitive, latt%alpha, latt%beta, latt%gamma)
     end if
 
-    POP_SUB(lattice_vectors_constructor)
-  end function lattice_vectors_constructor
+    POP_SUB(lattice_vectors_constructor_from_input)
+  end function lattice_vectors_constructor_from_input
+
+  !--------------------------------------------------------------
+  subroutine angles_from_rlattice_primitive(rlattice_primitive, alpha, beta, gamma)
+    FLOAT, intent(in)  :: rlattice_primitive(1:3, 1:3)
+    FLOAT, intent(out) :: alpha
+    FLOAT, intent(out) :: beta
+    FLOAT, intent(out) :: gamma
+
+    FLOAT  :: rlatt(1:3, 1:3)
+
+    PUSH_SUB(angles_from_rlattice_primitive)
+
+    rlatt = matmul(transpose(rlattice_primitive), rlattice_primitive)
+    alpha = acos(rlatt(2, 3)/sqrt(rlatt(2, 2)*rlatt(3, 3)))/M_PI*CNST(180.0)
+    beta  = acos(rlatt(1, 3)/sqrt(rlatt(1, 1)*rlatt(3, 3)))/M_PI*CNST(180.0)
+    gamma = acos(rlatt(1, 2)/sqrt(rlatt(1, 1)*rlatt(2, 2)))/M_PI*CNST(180.0)
+
+    POP_SUB(angles_from_rlattice_primitive)
+  end subroutine angles_from_rlattice_primitive
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_copy(this, source)
@@ -237,10 +324,10 @@ contains
     PUSH_SUB(lattice_vectors_copy)
 
     this%space = source%space
-    this%rlattice_primitive = source%rlattice_primitive
-    this%rlattice = source%rlattice
-    this%klattice_primitive = source%klattice_primitive
-    this%klattice = source%klattice
+    SAFE_ALLOCATE_SOURCE_A(this%rlattice_primitive, source%rlattice_primitive)
+    SAFE_ALLOCATE_SOURCE_A(this%rlattice, source%rlattice)
+    SAFE_ALLOCATE_SOURCE_A(this%klattice_primitive, source%klattice_primitive)
+    SAFE_ALLOCATE_SOURCE_A(this%klattice, source%klattice)
     this%alpha = source%alpha
     this%beta = source%beta
     this%gamma = source%gamma
@@ -250,7 +337,22 @@ contains
     POP_SUB(lattice_vectors_copy)
   end subroutine lattice_vectors_copy
 
-    !--------------------------------------------------------------
+  !--------------------------------------------------------------
+  subroutine lattice_vectors_finalize(this)
+    type(lattice_vectors_t), intent(inout) :: this
+
+    PUSH_SUB(lattice_vectors_finalize)
+
+    SAFE_DEALLOCATE_A(this%rlattice_primitive)
+    SAFE_DEALLOCATE_A(this%rlattice)
+    SAFE_DEALLOCATE_A(this%klattice_primitive)
+    SAFE_DEALLOCATE_A(this%klattice)
+    this%nonorthogonal = .false.
+
+    POP_SUB(lattice_vectors_finalize)
+  end subroutine lattice_vectors_finalize
+
+  !--------------------------------------------------------------
   subroutine lattice_vectors_scale(this, factor)
     class(lattice_vectors_t), intent(inout) :: this
     FLOAT,                    intent(in)    :: factor(this%space%dim)
@@ -270,6 +372,64 @@ contains
     
     POP_SUB(lattice_vectors_scale)
   end subroutine lattice_vectors_scale
+
+  !--------------------------------------------------------------
+  pure function lattice_vectors_cart_to_red(this, xx_cart) result(xx_red)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx_cart(this%space%dim)
+    FLOAT :: xx_red(this%space%dim)
+
+    xx_red = matmul(xx_cart, this%klattice)/(M_TWO*M_PI)
+
+  end function lattice_vectors_cart_to_red
+
+  !--------------------------------------------------------------
+  pure function lattice_vectors_red_to_cart(this, xx_red) result(xx_cart)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx_red(this%space%dim)
+    FLOAT :: xx_cart(this%space%dim)
+
+    xx_cart = matmul(this%rlattice, xx_red)
+
+  end function lattice_vectors_red_to_cart
+
+  !--------------------------------------------------------------
+  function lattice_vectors_fold_into_cell(this, xx) result(new_xx)
+    class(lattice_vectors_t), intent(in) :: this
+    FLOAT,                    intent(in) :: xx(this%space%dim)
+    FLOAT :: new_xx(this%space%dim)
+
+    integer :: idir
+
+    if (this%space%is_periodic()) then
+      ! Convert the position to reduced coordinates
+      new_xx = this%cart_to_red(xx)
+
+      do idir = 1, this%space%periodic_dim
+        ! Change of origin
+        new_xx(idir) = new_xx(idir) + M_HALF
+
+        ! Fold into cell
+        new_xx(idir) = new_xx(idir) - anint(new_xx(idir))
+        if (new_xx(idir) < -CNST(1.0e-6)) then
+          new_xx(idir) = new_xx(idir) + M_ONE
+        end if
+
+        ! Sanity checks
+        ASSERT(new_xx(idir) >= -CNST(1.0e-6))
+        ASSERT(new_xx(idir) < CNST(1.0))
+
+        ! Change origin back
+        new_xx(idir) = new_xx(idir) - M_HALF
+      end do
+
+      ! Convert back to Cartesian coordinates
+      new_xx = this%red_to_cart(new_xx)
+    else
+      new_xx = xx
+    end if
+
+  end function lattice_vectors_fold_into_cell
 
   !--------------------------------------------------------------
   subroutine lattice_vectors_write_info(this, iunit)
@@ -387,18 +547,16 @@ contains
 
   !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume, dim, namespace)
-    FLOAT,             intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,             intent(in)  :: rv(:,:) !< (1:dim, 1:dim)
+    FLOAT,             intent(out) :: kv(:,:) !< (1:dim, 1:dim)
     FLOAT,             intent(out) :: volume
     integer,           intent(in)  :: dim
     type(namespace_t), optional, intent(in)  :: namespace
 
     integer :: ii
-    FLOAT :: cross(1:3), rv3(1:3, 1:3)
+    FLOAT :: cross(1:3)
 
     PUSH_SUB(reciprocal_lattice)
-
-    kv(:,:) = M_ZERO
 
     select case (dim)
     case (3)
@@ -409,14 +567,11 @@ contains
       kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
       kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
     case (2)
-      rv3(1:3, 1:3) = M_ZERO
-      rv3(1:2, 1:2) = rv(1:2, 1:2)
-      rv3(3, 3) = M_ONE
-      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2)) 
-      volume = dot_product(rv3(1:3, 3), cross(1:3))
-
-      kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
-      kv(1:3, 2) = dcross_product(rv3(:, 3), rv3(:, 1))/volume
+      volume = rv(1, 1)*rv(2, 2) - rv(2, 1)*rv(1, 2)
+      kv(1, 1) =  rv(2, 2)/volume
+      kv(2, 1) = -rv(1, 2)/volume
+      kv(1, 2) = -rv(2, 1)/volume
+      kv(2, 2) =  rv(1, 1)/volume
     case (1)
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
@@ -424,6 +579,7 @@ contains
       message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
       call messages_warning(1, namespace=namespace)
       volume = M_ONE
+      kv(:,:) = M_ZERO
       do ii = 1, dim
         kv(ii, ii) = M_ONE/rv(ii,ii)
         !  At least initialize the thing
@@ -438,6 +594,84 @@ contains
 
     POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
+
+  ! ---------------------------------------------------------
+  function lattice_iterator_constructor(latt, range) result(iter)
+    type(lattice_vectors_t),  target, intent(in)  :: latt
+    FLOAT,                            intent(in)  :: range
+    type(lattice_iterator_t) :: iter
+
+    integer :: ii, jj, idir
+    integer :: n_size(latt%space%periodic_dim)
+
+    PUSH_SUB(lattice_iterator_constructor)
+
+    iter%latt => latt
+
+    ! Determine number of cells
+    iter%n_cells = 1
+    do idir = 1, latt%space%periodic_dim
+      n_size(idir) = ceiling(range/norm2(latt%rlattice(:,idir)))
+      iter%n_cells = iter%n_cells*(2*n_size(idir) + 1)
+    end do
+
+    ! Indexes of the cells
+    SAFE_ALLOCATE(iter%icell(1:latt%space%dim, 1:iter%n_cells))
+
+    do ii = 1, iter%n_cells
+      jj = ii - 1
+      do idir = latt%space%periodic_dim, 1, -1
+        iter%icell(idir, ii) = mod(jj, 2*n_size(idir) + 1) - n_size(idir)
+        if (idir > 1) jj = jj/(2*n_size(idir) + 1)
+      end do
+      iter%icell(latt%space%periodic_dim + 1:latt%space%dim, ii) = 0
+    end do
+
+    POP_SUB(lattice_iterator_constructor)
+  end function lattice_iterator_constructor
+
+  !--------------------------------------------------------------
+  subroutine lattice_iterator_copy(this, source)
+    class(lattice_iterator_t), intent(out) :: this
+    class(lattice_iterator_t), intent(in)  :: source
+
+    PUSH_SUB(lattice_iterator_copy)
+
+    this%n_cells = source%n_cells
+    SAFE_ALLOCATE_SOURCE_A(this%icell, source%icell)
+    this%latt => source%latt
+
+    POP_SUB(lattice_iterator_copy)
+  end subroutine lattice_iterator_copy
+
+  !> ---------------------------------------------------------
+  !! This function returns the Cartesian coordinates of point 'ii'
+  function lattice_iterator_get(this, ii) result(coord)
+    class(lattice_iterator_t), intent(in) :: this
+    integer,                   intent(in) :: ii
+    FLOAT :: coord(1:this%latt%space%dim)
+
+    PUSH_SUB(lattice_iterator_get)
+
+    ASSERT(ii <= this%n_cells)
+
+    coord = matmul(this%latt%rlattice, this%icell(:, ii))
+
+    POP_SUB(lattice_iterator_get)
+  end function lattice_iterator_get
+
+  ! ---------------------------------------------------------
+  subroutine lattice_iterator_finalize(this)
+    type(lattice_iterator_t), intent(inout) :: this
+
+    PUSH_SUB(lattice_iterator_finalize)
+
+    SAFE_DEALLOCATE_A(this%icell)
+    this%n_cells = 0
+    nullify(this%latt)
+
+    POP_SUB(lattice_iterator_finalize)
+  end subroutine lattice_iterator_finalize
 
 end module lattice_vectors_oct_m
 

@@ -26,13 +26,13 @@ module submesh_oct_m
   use global_oct_m
   use index_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
   use sort_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mpi_oct_m
   use par_vec_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use space_oct_m
@@ -43,7 +43,6 @@ module submesh_oct_m
 
   public ::                      &
     submesh_t,                   &
-    submesh_null,                &
     submesh_init,                &
     submesh_merge,               &
     submesh_shift_center,        &
@@ -81,15 +80,15 @@ module submesh_oct_m
   type submesh_t
     ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
-    FLOAT                 :: radius
-    integer               :: np             !< number of points inside the submesh
+    FLOAT                 :: radius = M_ZERO
+    integer               :: np = -1        !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
     integer,  allocatable :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
     FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
-    type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
+    type(mesh_t), pointer :: mesh => NULL() !< pointer to the underlying mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
                                             !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
-    integer               :: np_global      !< total number of points in the entire mesh
+    integer               :: np_global = -1 !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
     integer,  allocatable :: global2local(:)
@@ -107,21 +106,6 @@ module submesh_oct_m
 
 contains
   
-  subroutine submesh_null(sm)
-    type(submesh_t), intent(inout) :: sm !< valgrind objects to intent(out) due to the initializations above
-
-    PUSH_SUB(submesh_null)
-
-    sm%np = -1
-    sm%radius = M_ZERO
-    nullify(sm%mesh)
-
-    sm%np_global = -1
-
-    POP_SUB(submesh_null)
-
-  end subroutine submesh_null
-
   ! -------------------------------------------------------------
 
   ! Multipliers for recursive formulation of n-ellipsoid volume 
@@ -143,18 +127,18 @@ contains
 ! -------------------------------------------------------------
 
   subroutine submesh_init(this, space, sb, mesh, center, rc)
-    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(submesh_t),      intent(inout)  :: this
     type(space_t),        intent(in)     :: space
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
-    FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
+    FLOAT :: r2, rc2, xx(space%dim), rc_norm_n
+    FLOAT, allocatable :: center_copies(:,:), xtmp(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
-    type(periodic_copy_t) :: pp
+    type(lattice_iterator_t) :: latt_iter
     integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
@@ -162,8 +146,6 @@ contains
     
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
-
-    call submesh_null(this)
 
     this%mesh => mesh
 
@@ -249,12 +231,11 @@ contains
 
       ! this requires some optimization
 
-      call periodic_copy_init(pp, space, sb%latt, sb%lsize, center(1:space%dim), rc)
-      
-      SAFE_ALLOCATE(center_copies(1:space%dim, 1:periodic_copy_num(pp)))
+      latt_iter = lattice_iterator_t(sb%latt, rc)
 
-      do icell = 1, periodic_copy_num(pp)
-        center_copies(1:space%dim, icell) = periodic_copy_position(pp, space, sb%latt, sb%lsize, icell)
+      SAFE_ALLOCATE(center_copies(1:space%dim, 1:latt_iter%n_cells))
+      do icell = 1, latt_iter%n_cells
+        center_copies(1:space%dim, icell) = center(1:space%dim) + latt_iter%get(icell)
       end do
 
       !Recursive formulation for the volume of n-ellipsoid 
@@ -268,14 +249,14 @@ contains
             
       is = 0
       do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:space%dim) = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
-          r2 = sum(xx(1:space%dim)**2)
+        do icell = 1, latt_iter%n_cells
+          xx = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
+          r2 = sum(xx**2)
           if(r2 > rc2) cycle
           is = is + 1
           map_temp(is) = ip
           xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:space%dim) = xx(1:space%dim)
+          xtmp(is, 1:space%dim) = xx
           ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
@@ -288,8 +269,6 @@ contains
 
       SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
-      
-      call periodic_copy_end(pp)
 
     end if
 
@@ -496,18 +475,17 @@ contains
     end if
 
     POP_SUB(submesh_end)
-
   end subroutine submesh_end
 
   ! --------------------------------------------------------------
 
   subroutine submesh_copy(sm_in, sm_out)
-    type(submesh_t), target,  intent(in)   :: sm_in
-    type(submesh_t),          intent(out)  :: sm_out
+    type(submesh_t), target,  intent(in)    :: sm_in
+    type(submesh_t),          intent(inout) :: sm_out
 
     PUSH_SUB(submesh_copy)
     
-    ASSERT(sm_out%np == -1)
+    call submesh_end(sm_out)
 
     sm_out%mesh => sm_in%mesh
 
@@ -524,7 +502,6 @@ contains
     sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)) = sm_in%x(1:sm_in%np_part, 0:ubound(sm_in%x, 2))
 
     POP_SUB(submesh_copy)
-
   end subroutine submesh_copy
 
   ! --------------------------------------------------------------

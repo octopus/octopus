@@ -69,7 +69,7 @@ module system_dftb_oct_m
     character(len=LABEL_LEN), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: scc_tolerance
-    type(geometry_t) :: geo
+    type(geometry_t), pointer :: geo => NULL()
     type(c_ptr) :: output_handle(2)
     type(ion_dynamics_t) :: ions
     class(lasers_t), pointer :: ext_lasers => null()
@@ -169,7 +169,7 @@ contains
       call messages_not_implemented('DFTB+ for Dimensions /= 3')
     end if
 
-    call geometry_init(this%geo, namespace, this%space)
+    this%geo => geometry_t(namespace, this%space)
     this%n_atom = this%geo%natoms
     SAFE_ALLOCATE(this%coords(3, this%n_atom))
     SAFE_ALLOCATE(this%acc(3, this%n_atom))
@@ -789,7 +789,7 @@ contains
     SAFE_DEALLOCATE_A(this%gradients)
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
-    call geometry_end(this%geo)
+    SAFE_DEALLOCATE_P(this%geo)
     call ion_dynamics_end(this%ions)
 
     ! No call to safe_deallocate macro here, as it gives an ICE with gfortran

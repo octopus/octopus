@@ -22,18 +22,17 @@
 !!  1 in 4D). Also calculate different densities on request.
 module modelmb_particles_oct_m
   use global_oct_m
-  use grid_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
 
   implicit none
 
   private
 
-  public :: modelmb_particles_nullify,   &
-            modelmb_particles_init,      &
+  public :: modelmb_particles_init,      &
             modelmb_particles_end,       &
             modelmb_particles_copy,      &
             modelmb_copy_masses,         &
@@ -51,7 +50,7 @@ module modelmb_particles_oct_m
                                          !!  modelmb in MAX_DIM dimensional space
     integer :: max_particles_per_type    !< max number of different particle
 
-    integer, public :: nparticle         !< number of particles 
+    integer, public :: nparticle = 0     !< number of particles 
 
     integer :: ndensities_to_calculate
 
@@ -89,25 +88,14 @@ module modelmb_particles_oct_m
   end type modelmb_particle_t
 
 contains
-
-  subroutine modelmb_particles_nullify(this)
-    type(modelmb_particle_t), intent(inout) :: this
-    
-    PUSH_SUB(modelmb_particles_nullify)
-    
-    this%nparticle = 0
-    
-    POP_SUB(modelmb_particles_nullify)
-  end subroutine modelmb_particles_nullify
-  
   
   !>==============================================================
   !!  initialization function for modelmb particles information
   !!==============================================================
-  subroutine modelmb_particles_init(this, namespace, gr)
+  subroutine modelmb_particles_init(this, namespace, space)
     type(modelmb_particle_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(in)    :: gr
+    type(space_t),            intent(in)    :: space
     
     integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
     type(block_t) :: blk
@@ -160,7 +148,7 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
     
-    if (this%ndim*this%nparticle /= gr%sb%dim) then
+    if (this%ndim*this%nparticle /= space%dim) then
       message(1) = ' Number of modelmb particles * dimension of modelmb space must be = Ndim'
       call messages_fatal(1, namespace=namespace)
     end if
@@ -286,11 +274,13 @@ contains
   end subroutine modelmb_particles_end
   
   subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
-    type(modelmb_particle_t), intent(in)  :: modelmb_in
-    type(modelmb_particle_t), intent(out) :: modelmb_out
+    type(modelmb_particle_t), intent(in)    :: modelmb_in
+    type(modelmb_particle_t), intent(inout) :: modelmb_out
     
     PUSH_SUB(modelmb_particles_copy)
     
+    call modelmb_particles_end(modelmb_out)
+
     modelmb_out%ndim = modelmb_in%ndim
     modelmb_out%ntype_of_particle = modelmb_in%ntype_of_particle
     modelmb_out%max_particles_per_type = modelmb_in%max_particles_per_type

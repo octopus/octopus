@@ -55,7 +55,6 @@ module preconditioners_oct_m
   public ::                            &
     preconditioner_t,                  &
     preconditioner_init,               &
-    preconditioner_null,               &
     preconditioner_end,                &
     dpreconditioner_apply,             &
     zpreconditioner_apply,             &
@@ -65,7 +64,7 @@ module preconditioners_oct_m
 
   type preconditioner_t
     private
-    integer :: which
+    integer :: which = PRE_NONE
 
     type(nl_operator_t), allocatable :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
     type(nl_operator_t), pointer, public :: op   !< pointer to access op_array(1) simply as op
@@ -74,6 +73,8 @@ module preconditioners_oct_m
     integer             :: npre, npost, nmiddle
 
     type(multigrid_t) :: mgrid  ! multigrid object
+
+    type(derivatives_t), pointer :: der => null()
   end type preconditioner_t
 
 contains
@@ -82,7 +83,7 @@ contains
   subroutine preconditioner_init(this, namespace, gr, mc, space)
     type(preconditioner_t), target, intent(out)    :: this
     type(namespace_t),              intent(in)     :: namespace
-    type(grid_t),                   intent(in)     :: gr
+    type(grid_t), target,           intent(in)     :: gr
     type(multicomm_t),              intent(in)     :: mc
     type(space_t),                  intent(in)     :: space
 
@@ -96,6 +97,8 @@ contains
 
     SAFE_ALLOCATE(this%op_array(1))
     this%op => this%op_array(1)
+
+    this%der => gr%der
 
     !%Variable Preconditioner
     !%Type integer
@@ -250,18 +253,6 @@ contains
     POP_SUB(preconditioner_init)
   end subroutine preconditioner_init
 
-
-  ! ---------------------------------------------------------
-  subroutine preconditioner_null(this)
-    type(preconditioner_t), intent(inout) :: this
-
-    PUSH_SUB(preconditioner_null)
-    this%which = PRE_NONE
-
-    POP_SUB(preconditioner_null)
-  end subroutine preconditioner_null
-
-
   ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
     type(preconditioner_t), intent(inout) :: this
@@ -284,7 +275,6 @@ contains
     nullify(this%op)
     SAFE_DEALLOCATE_A(this%op_array)
 
-    call preconditioner_null(this)
     POP_SUB(preconditioner_end)
   end subroutine preconditioner_end
 

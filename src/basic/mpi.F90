@@ -37,9 +37,9 @@ include "mpif.h"
   !> This is defined even when running serial
   type mpi_grp_t
     ! Components are public by default
-    integer :: comm !< copy of the mpi communicator
-    integer :: size !< size of comm (defined also in serial mode)
-    integer :: rank !< rank of comm (defined also in serial mode)
+    integer :: comm = -1 !< copy of the mpi communicator
+    integer :: size = 0  !< size of comm (defined also in serial mode)
+    integer :: rank = 0  !< rank of comm (defined also in serial mode)
   end type mpi_grp_t
  
   type(mpi_grp_t), public :: mpi_world

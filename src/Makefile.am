@@ -257,7 +257,6 @@ ions_f_srcs =                                 \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/multibox.F90                     \
-	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \
 	ions/spglib_f08.f90                   \
@@ -577,7 +576,6 @@ noinst_HEADERS +=                                  \
 	electrons/xc_oep_inc.F90                   \
 	electrons/xc_oep_qed_inc.F90               \
 	electrons/xc_oep_sic_inc.F90               \
-	electrons/xc_oep_x_inc.F90                 \
         electrons/xc_slater_inc.F90                \
         electrons/x_fbe_inc.F90
 

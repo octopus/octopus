@@ -193,6 +193,33 @@ program wannier90_interface
   !%End
   call parse_variable(global_namespace, 'Wannier90UseTD', .false., read_td_states)
 
+  !%Variable Wannier90UseSCDM
+  !%Type logical
+  !%Default no
+  !%Section Utilities::oct-wannier90
+  !%Description
+  !% By default oct-wannier90 uses the projection method to generate the .amn file.
+  !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
+  !%End
+  call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
+  if(w90_scdm) then
+    !%Variable SCDMsigma
+    !%Type float
+    !%Default 0.2
+    !%Section Utilities::oct-wannier90  
+    !%Description
+    !% Broadening of SCDM smearing function.
+    !%End
+    call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
+  
+    !%Variable SCDMmu
+    !%Type float
+    !%Section Utilities::oct-wannier90
+    !%Description
+    !% Energy range up to which states are considered for SCDM. 
+    !%End
+    call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
+  end if
 
   if(sys%kpoints%use_symmetries) then
     message(1) = 'oct-wannier90: k-points symmetries are not allowed'
@@ -218,7 +245,7 @@ program wannier90_interface
   ! create setup files
   select case(w90_mode) 
   case(OPTION__WANNIER90MODE__W90_SETUP)
-    call wannier90_setup(sys%gr%sb, sys%geo, sys%kpoints)
+    call wannier90_setup(sys%geo, sys%kpoints)
 
   ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
@@ -269,8 +296,7 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup(sb, geo, kpoints)
-    type(simul_box_t), intent(in) :: sb
+  subroutine wannier90_setup(geo, kpoints)
     type(geometry_t),  intent(in) :: geo
     type(kpoints_t),   intent(in) :: kpoints
 
@@ -290,15 +316,14 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim = 1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%latt%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, geo%latt%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a)') 'begin atoms_frac'
-    do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%latt%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+    do ia = 1, geo%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), geo%latt%cart_to_red(geo%atom(ia)%x(1:3))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -388,33 +413,7 @@ contains
     end if
     call restart_end(restart)
 
-    !%Variable Wannier90UseSCDM
-    !%Type logical
-    !%Default no
-    !%Section Utilities::oct-wannier90
-    !%Description
-    !% By default oct-wannier90 uses the projection method to generate the .amn file.
-    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
-    !%End
-    call parse_variable(global_namespace, 'Wannier90UseSCDM', .false., w90_scdm)
-
     if(w90_scdm) then
-      !%Variable SCDMsigma
-      !%Type float
-      !%Section Utilities::oct-wannier90  
-      !%Description
-      !% Broadening of SCDM smearing function
-      !%End
-      call parse_variable(global_namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
-
-      !%Variable SCDMmu
-      !%Type float
-      !%Section Utilities::oct-wannier90
-      !%Description
-      !% Energy range up to which states are considered for SCDM 
-      !%End
-      call parse_variable(global_namespace, 'SCDMmu', M_HUGE, scdm_mu)
-
       nik = w90_num_kpts
       SAFE_ALLOCATE(jpvt(1:sys%gr%mesh%np_global))
       SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -712,12 +711,14 @@ contains
           scdm_proj = .true.
           read(w90_nnkp, *) w90_nproj
           w90_num_wann = w90_nproj
+
           if(.not. w90_scdm) then
             message(1) = 'oct-wannier90: Found auto_projections block. Currently the only implemeted automatic way'
             message(2) = 'oct-wannier90: to compute projections is the SCDM method.'
-            message(3) = 'oct-wannier90: Please set Wannier90Mode = w90_scdm in the inp file.'
+            message(3) = 'oct-wannier90: Please set Wannier90UseSCDM = yes in the inp file.'
             call messages_fatal(3)
           end if
+
           if(w90_nproj /= w90_num_bands) then
             message(1) = 'oct-wannier90: In auto_projections block first row needs to be equal to num_bands.'
             call messages_fatal(1)
@@ -837,7 +838,7 @@ contains
          iknn = (iknn-1)*2 + w90_spin_channel
        end if
 
-       Gr(1:3) = matmul(G(1:3), sys%gr%sb%latt%klattice(1:3,1:3))
+       Gr(1:3) = matmul(G(1:3), sys%geo%latt%klattice(1:3,1:3))
 
        if(any(G(1:3) /= 0)) then
          do ip = 1, mesh%np
@@ -978,7 +979,6 @@ contains
     SAFE_ALLOCATE(psi(1:mesh%np))
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, global_namespace, need_partition=.not.mesh%parallel_in_domains)
-    call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf)
 
     do ik = 1, w90_num_kpts
@@ -1091,7 +1091,7 @@ contains
       SAFE_ALLOCATE(orbitals(1:w90_nproj))
       ! precompute orbitals
       do iw=1, w90_nproj
-        call orbitalset_nullify(orbitals(iw))
+        call orbitalset_init(orbitals(iw))
         call orbitalset_init(orbitals(iw))
       
         orbitals(iw)%norbs = 1
@@ -1100,7 +1100,7 @@ contains
         orbitals(iw)%submesh = .false.
       
         ! cartesian coordinate of orbital center
-        center(1:3) =  matmul(sb%latt%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
+        center(1:3) = sb%latt%red_to_cart(w90_proj_centers(iw,1:3))
         call submesh_init(orbitals(iw)%sphere, space, sb, mesh, center, orbitals(iw)%radius)
       
         ! make transpose table of submesh points for use in pwscf routine

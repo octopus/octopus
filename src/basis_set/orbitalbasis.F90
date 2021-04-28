@@ -41,7 +41,6 @@ module orbitalbasis_oct_m
 
   public ::                            &
        orbitalbasis_t,                 &
-       orbitalbasis_nullify,           &
        orbitalbasis_init,              &
        orbitalbasis_end,               &
        dorbitalbasis_build,            &
@@ -53,44 +52,24 @@ module orbitalbasis_oct_m
     private
     type(orbitalset_t), allocatable, public :: orbsets(:) !> All the orbital sets of the system
 
-    integer,            public :: norbsets           !> Number of orbital sets
-    integer,            public :: maxnorbs           !> Maximal number of orbitals for all the atoms
-    integer,            public :: max_np             !> Max. number of points in all orbitals submesh spheres
-    integer,            public :: size               !> Size of the full basis
+    integer,            public :: norbsets = 0       !> Number of orbital sets
+    integer,            public :: maxnorbs = 0       !> Maximal number of orbitals for all the atoms
+    integer,            public :: max_np   = 0       !> Max. number of points in all orbitals submesh spheres
+    integer,            public :: size     = 0       !> Size of the full basis
     integer, allocatable, public :: global2os(:,:)     !> Mapping functions
     integer, allocatable         :: os2global(:,:)
 
-    integer(8)                 :: truncation         !> Truncation method for the orbitals
-    FLOAT                      :: threshold          !> Threshold for orbital truncation
+    integer(8)                 :: truncation             !> Truncation method for the orbitals
+    FLOAT                      :: threshold = CNST(0.01) !> Threshold for orbital truncation
 
-    logical                    :: normalize          !> Do we normalize the orbitals
-    logical,            public :: submesh            !> Do we use or not submeshes for the orbitals
-    logical,            public :: orthogonalization  !> Orthogonalization of the basis
+    logical                    :: normalize = .true.  !> Do we normalize the orbitals
+    logical,            public :: submesh   = .false. !> Do we use or not submeshes for the orbitals
+    logical,            public :: orthogonalization = .false. !> Orthogonalization of the basis
 
     character(len=256), public :: debugdir !> For debug
   end type orbitalbasis_t
 
 contains
-
-subroutine orbitalbasis_nullify(this)
-  type(orbitalbasis_t),    intent(inout) :: this
-
-  PUSH_SUB(orbitalbasis_nullify)
-
-  this%normalize = .true.
-  this%submesh   = .false.
-  this%orthogonalization = .false.
-
-  this%norbsets = 0
-  this%maxnorbs = 0
-  this%max_np = 0
-  this%size = 0
-
-  this%threshold = CNST(0.01)
-
-  POP_SUB(orbitalbasis_nullify)
-
-end subroutine orbitalbasis_nullify
 
 subroutine orbitalbasis_init(this, namespace, periodic_dim)
   type(orbitalbasis_t),    intent(inout) :: this
@@ -98,8 +77,6 @@ subroutine orbitalbasis_init(this, namespace, periodic_dim)
   integer,                 intent(in)    :: periodic_dim
 
   PUSH_SUB(orbitalbasis_init)
-
-  call orbitalbasis_nullify(this)
 
   !%Variable AOTruncation
   !%Type flag
@@ -193,7 +170,6 @@ subroutine orbitalbasis_init(this, namespace, periodic_dim)
 
 
  subroutine orbitalbasis_end(this)
-   implicit none
    type(orbitalbasis_t), intent(inout) :: this
 
    integer :: ios

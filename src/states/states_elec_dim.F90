@@ -34,13 +34,12 @@ module states_elec_dim_oct_m
   private
 
   public ::                           &
-    states_elec_dim_t,                     &
-    states_elec_dim_null,                  &
-    states_elec_dim_copy,                  &
-    states_elec_dim_end,                   &
+    states_elec_dim_t,                &
+    states_elec_dim_copy,             &
+    states_elec_dim_end,              &
     is_spin_down,                     &
     is_spin_up,                       &
-    states_elec_choose_kpoints,            &
+    states_elec_choose_kpoints,       &
     kpoints_distribute
 
   !> Parameters...
@@ -64,7 +63,7 @@ module states_elec_dim_oct_m
     FLOAT, allocatable  :: kweights(:)   !< weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
-    integer :: orth_method
+    integer :: orth_method = 0
     logical :: pack_states
     FLOAT   :: cl_states_mem
   contains
@@ -75,23 +74,13 @@ module states_elec_dim_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_elec_dim_null(this)
-    type(states_elec_dim_t), intent(inout) :: this
-
-    PUSH_SUB(states_elec_dim_null)
-
-    call distributed_nullify(this%kpt)
-
-    POP_SUB(states_elec_dim_null)
-  end subroutine states_elec_dim_null
-
-
-  ! ---------------------------------------------------------
   subroutine states_elec_dim_copy(dout, din)
-    type(states_elec_dim_t), intent(out) :: dout
-    type(states_elec_dim_t), intent(in)  :: din
+    type(states_elec_dim_t), intent(inout) :: dout
+    type(states_elec_dim_t), intent(in)    :: din
 
     PUSH_SUB(states_elec_dim_copy)
+
+    call states_elec_dim_end(dout)
 
     dout%dim            = din%dim
     dout%nik            = din%nik

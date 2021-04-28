@@ -61,7 +61,6 @@ module output_oct_m
   use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -698,8 +697,10 @@ contains
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(geo%space%is_periodic())  call periodic_write_crystal(geo, gr%mesh%sb%latt, gr%mesh%sb%lsize, dir, namespace)
+        call geo%write_xyz(trim(dir)//'/geometry', namespace)
+        if(geo%space%is_periodic()) then
+          call geo%write_crystal(dir, namespace)
+        end if
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
@@ -1286,7 +1287,6 @@ contains
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1, namespace=namespace)
     end if
-    call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
     call cube_function_alloc_fs(cube, cf)
 
@@ -1413,9 +1413,9 @@ contains
     subroutine bgw_setup_header()
       PUSH_SUB(output_berkeleygw.bgw_setup_header)
 
-      adot(1:3, 1:3) = matmul(gr%sb%latt%rlattice(1:3, 1:3), gr%sb%latt%rlattice(1:3, 1:3))
-      bdot(1:3, 1:3) = matmul(gr%sb%latt%klattice(1:3, 1:3), gr%sb%latt%klattice(1:3, 1:3))
-      recvol = (M_TWO * M_PI)**3 / gr%sb%latt%rcell_volume
+      adot(1:3, 1:3) = matmul(geo%latt%rlattice(1:3, 1:3), geo%latt%rlattice(1:3, 1:3))
+      bdot(1:3, 1:3) = matmul(geo%latt%klattice(1:3, 1:3), geo%latt%klattice(1:3, 1:3))
+      recvol = (M_TWO * M_PI)**3 / geo%latt%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%symm)
@@ -1490,8 +1490,8 @@ contains
         symmetries_number(gr%symm), 0, geo%natoms, &
         hm%kpoints%reduced%npoints, st%nst, ngkmax, ecutrho * M_TWO,  &
         ecutwfc * M_TWO, FFTgrid, hm%kpoints%nik_axis, hm%kpoints%full%shifts, &
-        gr%sb%latt%rcell_volume, M_ONE, gr%sb%latt%rlattice, adot, recvol, &
-        M_ONE, gr%sb%latt%klattice, bdot, mtrx, tnp, atyp, &
+        geo%latt%rcell_volume, M_ONE, geo%latt%rlattice, adot, recvol, &
+        M_ONE, geo%latt%klattice, bdot, mtrx, tnp, atyp, &
         apos, ngk, weight, red_point, &
         ifmin, ifmax, energies, occupations, warn = .false.)
 

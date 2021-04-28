@@ -155,17 +155,19 @@ contains
     type(geometry_t),      intent(in)    :: geo
 
     integer :: ispin, idir
-    FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+    FLOAT :: e_dip(space%dim + 1, st%d%nspin), n_dip(space%dim), nquantumpol
 
     PUSH_SUB(calc_dipole)
 
-    dipole(1:MAX_DIM) = M_ZERO
+    ASSERT(.not. geo%latt%nonorthogonal)
+
+    dipole(1:space%dim) = M_ZERO
 
     do ispin = 1, st%d%nspin
       call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
     end do
 
-    n_dip = geometry_dipole(geo)
+    n_dip = geo%dipole()
 
     do idir = 1, space%dim
       ! in periodic directions use single-point Berry`s phase calculation
@@ -173,8 +175,8 @@ contains
         dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
         ! use quantum of polarization to reduce to smallest possible magnitude
-        nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-        dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
+        nquantumpol = nint(dipole(idir)/norm2(geo%latt%rlattice(:, idir)))
+        dipole(idir) = dipole(idir) - nquantumpol * norm2(geo%latt%rlattice(:, idir))
        ! in aperiodic directions use normal dipole formula
 
       else
@@ -218,7 +220,7 @@ contains
       dipole = dipole + aimag(log(det))
     end do
 
-    dipole = -(mesh%sb%lsize(dir) / M_PI) * dipole
+    dipole = -(norm2(mesh%sb%latt%rlattice(:,dir)) / (M_TWO*M_PI)) * dipole
 
     POP_SUB(berry_dipole)
   end function berry_dipole
@@ -287,6 +289,7 @@ contains
     PUSH_SUB(berry_phase_matrix)
 
     ASSERT(.not. st%parallel_in_states)
+    ASSERT(.not. mesh%sb%latt%nonorthogonal)
 
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
@@ -297,8 +300,7 @@ contains
     do idir = 1, mesh%sb%dim
       if(gvector(idir) == 0) cycle
       do ip = 1, mesh%np
-        phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_PI/mesh%sb%lsize(idir))*mesh%x(ip, idir))
-        ! factor of two removed from exp since actual lattice vector is 2*lsize
+        phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_TWO*M_PI/norm2(mesh%sb%latt%rlattice(:,idir)))*mesh%x(ip, idir))
       end do
     end do
 
@@ -363,7 +365,7 @@ contains
           ! calculate the ip-independent part first
           det = berry_phase_det(st, mesh, idir, ispin)
           if(abs(det) > M_EPSILON) then
-            factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) / det
+            factor = E_field(idir) * (norm2(mesh%sb%latt%rlattice(:,idir)) / (M_TWO*M_PI)) / det
           else
             ! If det = 0, mu = -infinity, so this condition should never be reached
             ! if things are working properly.
@@ -371,7 +373,7 @@ contains
             call messages_fatal(1, namespace=namespace)
           end if
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
-            aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))
+            aimag(factor * exp(M_TWO * M_PI * M_zI * mesh%x(1:mesh%np, idir) / norm2(mesh%sb%latt%rlattice(:,idir))))
         end if
       end do
     end do
