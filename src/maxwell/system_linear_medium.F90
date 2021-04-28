@@ -147,14 +147,14 @@ contains
 
     !%Variable LinearMediumBoxShape
     !%Type integer
-    !%Section
+    !%Section Maxwell
     !%Description
     !% This variable defines the shape of the linear medium box.
-    !% The default is <tt>parallelepiped</tt>.
-    !%Option parallelepiped 1
+    !% The default is <tt>medium_parallelepiped</tt>.
+    !%Option medium_parallelepiped 1
     !% The medium box will be a parallelepiped whose center and dimensions are taken from
     !% the variable <tt>LinearMediumLsize</tt>.
-    !%Option box_file 2
+    !%Option medium_box_file 2
     !% The simulation box will be read from an external file in OFF format, defined by the variable <tt>LinearMediumBoxFile</tt>.
     !%End
     call parse_variable(namespace, 'LinearMediumBoxShape', MEDIUM_PARALLELEPIPED, this%box_shape)
@@ -217,8 +217,9 @@ contains
     !%Section Maxwell
     !%Description
     !% File in OFF format with the shape of the linear medium.
+    !%End
     if parse_is_defined(namespace, 'LinearMediumBoxFile') then
-      call parse_variable(namespace, 'LinearMediumBoxFile', this%filename)
+      call parse_variable(namespace, 'LinearMediumBoxFile', 'mediumboxfile', this%filename)
     else
       message(1) = "When using box_file as the box shape, you must provide a filename through the LinearMediumBoxFile variable."
       call messages_fatal(1, namespace=namespace)
@@ -272,7 +273,6 @@ contains
     !% <br>%</tt>
     !%
     !% Permittivity factor, permeability factor, electric conductivity and magnetic conductivity of the medium box.
-    !.
     !%End
 
     if (parse_block(namespace, 'LinearMediumProperties', blk) == 0) then
