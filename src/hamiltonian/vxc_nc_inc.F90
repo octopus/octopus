@@ -355,7 +355,7 @@ contains
     integer, intent(in)  :: np
     integer, intent(out) :: nblock
 
-    CMPLX :: tmp(MAX_DIM), tmp_sum
+    CMPLX :: tmp(der%mesh%sb%dim), tmp_sum
 
     PUSH_SUB(xc_get_nc_vxc.space_loop_init)
 
@@ -786,8 +786,8 @@ end subroutine xc_get_nc_vxc
     end do !is
   
     l_dedd(1:4) = l_dedd(1:4)*M_HALF
-    l_vsigma(1:4) = l_vsigma(1:4) * gamma / CNST(12.0)
-    l_dedldens(1:4) = l_dedldens(1:4) / CNST(12.0)
+    l_vsigma(1:4) = l_vsigma(1:4) * gamma / CNST(6.0)
+    l_dedldens(1:4) = l_dedldens(1:4) / CNST(6.0)
     
     ! Derivative of the energy wrt the kinetic energy
     l_dedtau(1:4) = -M_TWO * gamma * l_dedldens(1:4)
