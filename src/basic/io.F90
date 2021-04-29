@@ -176,7 +176,7 @@ contains
       call loct_rm('messages.stderr')
     end if
 
-    if (debug%info .or. debug%interaction_graph) then
+    if (debug%info .or. debug%interaction_graph .or. debug%propagation_graph) then
       call io_mkdir('debug', global_namespace)
     end if
 
