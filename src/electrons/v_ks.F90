@@ -1146,7 +1146,7 @@ contains
             ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
           else
             ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
-            ks%calc%energy%int_dft_u   = TOFLOAT(ctmp)
+            ks%calc%energy%int_dft_u = TOFLOAT(ctmp)
           end if
         end if
 

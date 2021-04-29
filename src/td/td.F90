@@ -424,10 +424,10 @@ contains
 
     call td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, fromScratch)
 
-    if (td%iter >= td%max_iter) then
+    if (td%iter > td%max_iter) then
       call states_elec_deallocate_wfns(st)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
-      POP_SUB(td_run)
+      POP_SUB(td_init_run)
       return
     end if
 
