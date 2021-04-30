@@ -1,0 +1,23 @@
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+"He" | 0 | 0 | 0
+%
+PseudopotentialSet = hgh_lda
+
+spacing = 0.5
+radius = 5.0
+
+XCFunctional = mgga_x_nc_br
+
+SpinComponents = spinors
+XCUseGaugeIndependentKED = no
+
+ConvRelDens = 4e-6
+
+FilterPotentials = filter_none
+
+ExperimentalFeatures = yes
+
+TheoryLevel = kohn_sham

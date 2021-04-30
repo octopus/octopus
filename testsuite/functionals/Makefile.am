@@ -156,6 +156,7 @@ dist_share_DATA =                                  \
         18-mgga.01-br89.inp                        \
         18-mgga.02-br89_oep.inp                    \
         18-mgga.03-ncbr.inp                        \
+        18-mgga.04-ncbr_oep.inp                    \
         18-mgga.test
 
 CLEANFILES = *~ *.bak

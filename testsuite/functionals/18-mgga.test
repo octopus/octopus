@@ -48,6 +48,7 @@ match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -20.
 Precision: 1.53e-15
 match ;  Eigenvalue     [1]  ; GREPFIELD(static/info, '1   --', 3) ; -1.529796
 
+#These values are copied from the 01 test
 Input: 18-mgga.03-ncbr.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
@@ -62,4 +63,20 @@ match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  10.84
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -20.05849838
 
 match ; Eigenvalue     [1] ; GREPFIELD(static/info, '1   --', 3) ; -1.499313
+
+#These values are copied from the 02 test
+Input: 18-mgga.04-ncbr_oep.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -6.74798013
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.0
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.05959183
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 4.68907156
+match ;  Int[n*v_xc]         ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -3.20096224
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.20027898
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; 0.0
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 10.97367777
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -20.21079648
+
+match ;  Eigenvalue     [1]  ; GREPFIELD(static/info, '1   --', 3) ; -1.529796
 
