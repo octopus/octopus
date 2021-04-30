@@ -153,7 +153,7 @@ contains
     type(kpoints_t),         intent(in)    :: kpoints
 
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
-    logical :: parsed_theory_level
+    logical :: parsed_theory_level, using_hartree_fock
     type(dftd3_input) :: d3_input
     character(len=20) :: d3func_def, d3func
     integer :: pseudo_x_functional, pseudo_c_functional
@@ -179,18 +179,21 @@ contains
     !%Option hartree 1
     !% Calculation within the Hartree method (experimental). Note that, contrary to popular
     !% belief, the Hartree potential is self-interaction-free. Therefore, this run 
-    !% mode will not yield the same result as <tt>dft</tt> without exchange-correlation.
+    !% mode will not yield the same result as <tt>kohn-sham</tt> without exchange-correlation.
     !%Option hartree_fock 3
     !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme, it is fully
-    !% self-interaction-free. This mode is extremely slow. It is often more convenient
-    !% to use <tt>dft</tt> within the OEP scheme to get similar (but not the same) results.
+    !% self-interaction-free.  
+    !%Option kohn_sham 4
+    !% This is the default density-functional theory scheme. Note that you can also use 
+    !% hybrid functionals in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, 
+    !% solving the OEP equation.
+    !%Option generalized_kohn_sham 5
+    !% This is similar to the <tt>kohn-sham</tt> scheme, except that this allows for nonlocal operators.
+    !% This is the default mode to run hybrid functionals, meta-GGA functionals, or DFT+U. 
+    !% It can be more convenient to use <tt>kohn-sham</tt> DFT within the OEP scheme to get similar (but not the same) results.
     !% Note that within this scheme you can use a correlation functional, or a hybrid
     !% functional (see <tt>XCFunctional</tt>). In the latter case, you will be following the
     !% quantum-chemistry recipe to use hybrids.
-    !%Option dft 4
-    !% This is the default density-functional theory scheme. Note that you can also use 
-    !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
-    !% OEP equation.
     !%Option rdmft 7 
     !% (Experimental) Reduced Density Matrix functional theory.
     !%End
@@ -215,7 +218,7 @@ contains
 
     call get_functional_from_pseudos(pseudo_x_functional, pseudo_c_functional)
 
-    if(ks%theory_level == KOHN_SHAM_DFT) then
+    if(ks%theory_level == KOHN_SHAM_DFT .or. ks%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
       if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
         default = pseudo_x_functional
       else
@@ -229,7 +232,7 @@ contains
     
     ASSERT(default >= 0)
 
-    if(ks%theory_level == KOHN_SHAM_DFT) then
+    if(ks%theory_level == KOHN_SHAM_DFT .or. ks%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
       if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
         default = default + 1000*pseudo_c_functional
       else
@@ -301,8 +304,10 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
+    using_hartree_fock = (ks%theory_level == HARTREE_FOCK) &
+        .or. (ks%theory_level == GENERALIZED_KOHN_SHAM_DFT .and. family_is_hybrid(ks%xc))
     call xc_init(ks%xc, namespace, space%dim, space%periodic_dim, st%qtot, &
-      x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
+      x_id, c_id, xk_id, ck_id, hartree_fock = using_hartree_fock)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
       call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, namespace, gr%mesh)
@@ -315,8 +320,11 @@ contains
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default
-      if(bitand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
-        default = HARTREE_FOCK
+      if(family_is_hybrid(ks%xc)) then
+        default = GENERALIZED_KOHN_SHAM_DFT
+      end if
+      if(family_is_mgga_with_exc(ks%xc)) then
+        default = GENERALIZED_KOHN_SHAM_DFT
       end if
 
       ! In principle we do not need to parse. However we do it for consistency
@@ -332,13 +340,15 @@ contains
         !At the moment this combination produces wrong results
         call messages_not_implemented("MGGA with energy functionals and CUDA+MPI")
       end if
+
+      if(ks%theory_level == KOHN_SHAM_DFT) then
+        call messages_experimental("MGGA within the Kohn-Sham scheme")
+      end if 
     end if
 
     call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable(namespace, 'HartreeFock', 'TheoryLevel')
 
-    if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
-    
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
       ks%sic_type = SIC_NONE
@@ -350,10 +360,21 @@ contains
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
-      if(kpoints%full%npoints > 1) &
+      if(kpoints%full%npoints > 1) then
         call messages_experimental("Hartree-Fock with k-points")
+      end if
       
       ks%sic_type = SIC_NONE
+
+    case(GENERALIZED_KOHN_SHAM_DFT)
+      if(kpoints%full%npoints > 1 .and. family_is_hybrid(ks%xc)) then
+        call messages_experimental("Hybrid functionals with k-points")
+      end if
+
+      ks%sic_type = SIC_NONE
+
+    case(RDMFT) 
+      call messages_experimental('RDMFT theory level')
 
     case(KOHN_SHAM_DFT)
 
@@ -620,7 +641,7 @@ contains
         call xc_oep_end(ks%oep)
       end if
       call xc_end(ks%xc)
-    case(HARTREE_FOCK)      
+    case(HARTREE_FOCK, GENERALIZED_KOHN_SHAM_DFT)      
       call xc_end(ks%xc)
     end select
 
@@ -643,7 +664,7 @@ contains
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
 
     select case(ks%theory_level)
-    case(HARTREE_FOCK)
+    case(HARTREE_FOCK, GENERALIZED_KOHN_SHAM_DFT)
       write(iunit, '(1x)')
       call xc_write_info(ks%xc, iunit, namespace)
 
@@ -837,13 +858,15 @@ contains
     end if
 
     nullify(ks%calc%hf_st)
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK &
+         .or. ks%theory_level == RDMFT .or. (ks%theory_level == GENERALIZED_KOHN_SHAM_DFT &
+         .and. family_is_hybrid(ks%xc))) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_elec_copy(ks%calc%hf_st, st)
 
       if(st%parallel_in_states) then
         if(accel_is_enabled()) then
-          call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
+          call messages_write('State parallelization of Hartree-Fock exchange is not supported')
           call messages_new_line()
           call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
           call messages_new_line()
@@ -1027,7 +1050,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .or. family_is_mgga_with_exc(ks%xc)) then
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
@@ -1053,9 +1076,10 @@ contains
               call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%mesh, ks%gr%sb, &
               ks%gr%fine, hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
-
-            if (ks%oep%has_photons) then
-              ks%calc%energy%photon_exchange = ks%oep%pt%ex
+            if( bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+              if (ks%oep%has_photons) then
+                ks%calc%energy%photon_exchange = ks%oep%pt%ex
+              end if
             end if
           end if
 
@@ -1134,11 +1158,15 @@ contains
         end do
         if(ks%gr%mesh%parallel_in_domains) call ks%gr%mesh%allreduce(ks%calc%energy%intnvxc)
 
-        ! MGGA vtau contribution
-        if (states_are_real(st)) then
-          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
-        else
-          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        if(ks%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
+          ! MGGA vtau contribution
+          if (states_are_real(st)) then
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc &
+                     + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+          else
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc &
+                     + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+         end if
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
@@ -1149,7 +1177,6 @@ contains
             ks%calc%energy%int_dft_u = TOFLOAT(ctmp)
           end if
         end if
-
       end if
 
       call profiling_out(prof)
@@ -1269,7 +1296,8 @@ contains
 
 
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
-      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK &
+           .or. ks%theory_level == RDMFT .or. ks%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
 
         ! swap the states object
         if(associated(hm%exxop%st)) then
@@ -1282,7 +1310,9 @@ contains
         !exchange operator.
         !This should be changed and the CAM parameters should also be obtained from the restart information
         !Maybe the parameters should be mixed too.
-        if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
+        if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT &
+       .or. (ks%theory_level == GENERALIZED_KOHN_SHAM_DFT &
+              .and. family_is_hybrid(ks%xc))) .and. hm%exxop%useACE) then
           call xst%nullify()
           if(states_are_real(ks%calc%hf_st)) then
             call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
@@ -1302,6 +1332,10 @@ contains
         end if
 
         select case(ks%theory_level)
+        case(GENERALIZED_KOHN_SHAM_DFT)
+          if(family_is_hybrid(ks%xc)) then
+            call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)
+          end if
         case(HARTREE_FOCK)
           call exchange_operator_reinit(hm%exxop, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta, ks%calc%hf_st)
         case(HARTREE)

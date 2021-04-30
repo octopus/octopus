@@ -78,7 +78,8 @@ contains
 
     hm%energy%eigenvalues = states_elec_eigenvalues_sum(st)
 
-    if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+    if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK &
+        .or. hm%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern_local = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
@@ -114,10 +115,12 @@ contains
     case(HARTREE)
       hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
       
-    case(HARTREE_FOCK)
+    case(HARTREE_FOCK, GENERALIZED_KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + &
-        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) &
-        + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic
+        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc &
+                - hm%energy%int_dft_u) &
+        + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic &
+        + hm%energy%dft_u
 
       ! FIXME: pcm terms are only added to total energy in DFT case
       

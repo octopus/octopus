@@ -1110,8 +1110,9 @@ contains
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
 
-    if(parse_is_defined(namespace, 'GuessMagnetDensity') .and. hm%theory_level == HARTREE_FOCK) then
-      message(1) = "GuessMagnetDensity cannot be used for Hartree-Fock and hybrids calculation."
+    if(parse_is_defined(namespace, 'GuessMagnetDensity') .and. (hm%theory_level == HARTREE_FOCK &
+        .or. hm%theory_level == GENERALIZED_KOHN_SHAM_DFT)) then
+      message(1) = "GuessMagnetDensity cannot be used for Hartree-Fock and generalized Kohn-Sham calculation."
       message(2) = "Please perform a LDA or GGA calculation first and restart from this calculation."
       call messages_fatal(2)
     end if

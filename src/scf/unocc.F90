@@ -195,7 +195,8 @@ contains
     end do
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
-      (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
+      (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)) &
+     .or. (sys%ks%theory_level == GENERALIZED_KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
 
     if(is_orbital_dependent) then
       message(1) = "Be sure your gs run is well converged since you have an orbital-dependent functional."

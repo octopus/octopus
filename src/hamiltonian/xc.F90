@@ -58,7 +58,8 @@ module xc_oct_m
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
     family_is_mgga,     &
-    family_is_mgga_with_exc   
+    family_is_mgga_with_exc, &
+    family_is_hybrid
 
 
   type xc_t
@@ -180,8 +181,7 @@ contains
 
     ll =  (hartree_fock) &
       .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
-      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
-      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
+      .or. family_is_hybrid(xcs)
     if(ll) then
       if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
@@ -193,8 +193,7 @@ contains
         call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
-      if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
+      if(family_is_hybrid(xcs)) then
         call xc_f03_hyb_cam_coef(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
                                      xcs%cam_alpha, xcs%cam_beta)
 
@@ -392,6 +391,22 @@ contains
 
     POP_SUB(family_is_mgga_with_exc)
   end function family_is_mgga_with_exc
+
+  logical function family_is_hybrid(xcs)
+    type(xc_t), intent(in) :: xcs
+
+    integer :: ixc
+
+    PUSH_SUB(family_is_hybrid)
+
+    family_is_hybrid = .false.
+    do ixc = 1, 2
+      if ((bitand(xcs%functional(ixc, 1)%family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0)) &
+        family_is_hybrid = .true.
+    end do
+
+    POP_SUB(family_is_hybrid)
+  end function family_is_hybrid
 
 #include "vxc_inc.F90"
 #include "fxc_inc.F90"
