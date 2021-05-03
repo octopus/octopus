@@ -96,8 +96,8 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_elec_epot_generate(sys%hm, global_namespace, gr, sys%ions, st, time=M_ZERO)
-  call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
+  call hamiltonian_elec_epot_generate(sys%hm, global_namespace, sys%space, gr, sys%ions, st, time=M_ZERO)
+  call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, sys%space, time = M_ZERO)
 
   call states_elec_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
@@ -107,7 +107,7 @@ program oct_floquet
 
      ! initialize the vector field and update the hamiltonian     
      call gauge_field_init_vec_pot(sys%hm%ep%gfield, sys%ions%latt%rcell_volume, st%qtot)
-     call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
+     call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, sys%space, time = M_ZERO)
   end if
 
   call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -119,7 +119,7 @@ program oct_floquet
 
   call density_calc(st, gr, st%rho)
   call v_ks_calc(sys%ks, global_namespace, sys%space, sys%hm, st, sys%ions, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
+  call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, sys%space, time = M_ZERO)
 
   call floquet_init()
 
@@ -217,7 +217,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time=Tcycle+it*dt)
+      call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, sys%space, time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_elec_apply_all(sys%hm, global_namespace, gr%mesh, st, hm_st)
 
@@ -366,7 +366,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time=M_ZERO)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, sys%space, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

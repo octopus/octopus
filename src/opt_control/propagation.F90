@@ -178,7 +178,7 @@ contains
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, time = M_ZERO)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     if(ion_dynamics_ions_move(td%ions_dyn)) then
-      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace,  sys%gr, sys%ions, psi, time = M_ZERO)
+      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace,  sys%space, sys%gr, sys%ions, psi, time = M_ZERO)
       call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
@@ -416,7 +416,7 @@ contains
     do i = 1, td%max_iter
       call update_field(i, par, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_elec_chi(i, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%ions, psi2)
-      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = (i - 1)*td%dt)
+      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space, time = (i - 1)*td%dt)
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, &
         td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       if(aux_fwd_propagation) then
@@ -425,7 +425,7 @@ contains
           td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       end if
       call update_hamiltonian_elec_psi(i, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
-      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = (i - 1)*td%dt)
+      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space, time = (i - 1)*td%dt)
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, &
         td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%ions, psi, i, td%max_iter) 
@@ -511,7 +511,7 @@ contains
 
     call density_calc(psi, sys%gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
 
@@ -526,7 +526,7 @@ contains
       call oct_prop_check(prop_psi, sys%namespace, psi, sys%gr, sys%kpoints, i)
       call update_field(i, par_chi, sys%gr, sys%hm, sys%ions, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_elec_chi(i-1, sys%namespace, sys%gr, sys%ks, sys%hm, td, tg, par_chi, sys%ions, psi)
-      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = abs(i*td%dt))
+      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, &
         i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
       call oct_prop_dump_states(prop_chi, i-1, chi, sys%gr, sys%kpoints, ierr)
@@ -535,7 +535,7 @@ contains
         call messages_warning(1)
       end if
       call update_hamiltonian_elec_psi(i-1, sys%namespace, sys%space, sys%gr, sys%ks, sys%hm, td, tg, par, psi, sys%ions)
-      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, time = abs(i*td%dt))
+      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%space, sys%hm, sys%gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, &
         i-1, td%ions_dyn, sys%ions, sys%outp, move_ions = ion_dynamics_ions_move(td%ions_dyn))
     end do
@@ -544,7 +544,7 @@ contains
 
     call density_calc(psi, sys%gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
 
     call controlfunction_to_basis(par_chi)
     call states_elec_end(psi)
@@ -620,7 +620,7 @@ contains
 
     call density_calc(psi, sys%gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, td%tr)
     call propagator_elec_run_zero_iter(sys%hm, sys%gr, tr_chi)
     td%dt = -td%dt
@@ -693,7 +693,7 @@ contains
         if(ion_dynamics_ions_move(td%ions_dyn)) then
           call ion_dynamics_save_state(td%ions_dyn, sys%ions, ions_state_final)
           call sys%ions%set_positions(qinitial)
-          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
         end if
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
@@ -715,7 +715,7 @@ contains
 
         if(ion_dynamics_ions_move(td%ions_dyn)) then
           call ion_dynamics_restore_state(td%ions_dyn, sys%ions, ions_state_final)
-          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, psi, time = abs((i-1)*td%dt))
           call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
           call forces_costate_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, psi, chi, fnew, q)
           call ion_dynamics_verlet_step2(sys%ions, p, fold, fnew, td%dt)
@@ -752,7 +752,7 @@ contains
 
     call density_calc(psi, sys%gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
 
     call propagator_elec_end(tr_chi)
 
@@ -900,7 +900,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, namespace, space, hm, st, ions)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, space)
     end if
 
     POP_SUB(update_hamiltonian_elec_psi)

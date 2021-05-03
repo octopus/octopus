@@ -304,7 +304,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, global_namespace, sys%gr%sb, sys%kpoints, sys%st%d%ispin)
+    call kick_init(kick, global_namespace, sys%space, sys%kpoints, sys%st%d%ispin)
     do id = 1, nd
       call local_write_init(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, 0, dt)
     end do

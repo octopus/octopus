@@ -332,9 +332,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output_kick(outp, namespace, dir, mesh, ions, kick)
+  subroutine output_kick(outp, namespace, space, dir, mesh, ions, kick)
     type(output_t),    intent(in) :: outp
     type(namespace_t), intent(in) :: namespace
+    type(space_t),     intent(in) :: space
     character(len=*),  intent(in) :: dir
     type(mesh_t),      intent(in) :: mesh
     type(ions_t),      intent(in) :: ions
@@ -347,7 +348,7 @@
 
     if(bitand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-      call kick_function_get(mesh, kick, kick_function, 1)
+      call kick_function_get(space, mesh, kick, kick_function, 1)
       call zio_function_output(outp%how, dir, "kick_function", namespace, mesh, kick_function(:), &
         units_out%energy, err, ions = ions)
       SAFE_DEALLOCATE_A(kick_function)

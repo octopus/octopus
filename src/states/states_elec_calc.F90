@@ -123,16 +123,17 @@ contains
 
   ! -----------------------------------------------------------------------------
 
-  subroutine states_elec_calc_momentum(st, der, kpoints, momentum)
+  subroutine states_elec_calc_momentum(st, space, der, kpoints, momentum)
     type(states_elec_t), intent(in)  :: st
+    type(space_t),       intent(in)  :: space
     type(derivatives_t), intent(in)  :: der
     type(kpoints_t),     intent(in)  :: kpoints
     FLOAT,               intent(out) :: momentum(:,:,:)
 
     if (states_are_real(st)) then
-      call dstates_elec_calc_momentum(st, der, kpoints, momentum)
+      call dstates_elec_calc_momentum(st, space, der, kpoints, momentum)
     else
-      call zstates_elec_calc_momentum(st, der, kpoints, momentum)
+      call zstates_elec_calc_momentum(st, space, der, kpoints, momentum)
     end if
   end subroutine states_elec_calc_momentum
 

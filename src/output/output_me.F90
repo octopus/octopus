@@ -220,7 +220,7 @@ contains
 
     if(bitand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
-      call output_me_out_momentum(fname, st, gr, namespace, hm%kpoints)
+      call output_me_out_momentum(fname, st, space, gr, namespace, hm%kpoints)
     end if
 
     if(bitand(this%what, output_me_ang_momentum) /= 0) then
@@ -417,9 +417,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_momentum(fname, st, gr, namespace, kpoints)
+  subroutine output_me_out_momentum(fname, st, space, gr, namespace, kpoints)
     character(len=*),    intent(in)    :: fname
     type(states_elec_t), intent(inout) :: st
+    type(space_t),       intent(in)    :: space
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
     type(kpoints_t),     intent(in)    :: kpoints
@@ -431,9 +432,9 @@ contains
 
     PUSH_SUB(output_me_out_momentum)
 
-    SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(momentum(1:space%dim, 1:st%nst, 1:st%d%nik))
 
-    call states_elec_calc_momentum(st, gr%der, kpoints, momentum)
+    call states_elec_calc_momentum(st, space, gr%der, kpoints, momentum)
 
     iunit = io_open(fname, namespace, action='write')
 
@@ -449,14 +450,14 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
+      kpoint(1:space%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           write(str_tmp, '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
           message(1) = trim(message(1)) // trim(str_tmp)
-          if(idir == gr%sb%dim) then
+          if(idir == space%dim) then
             message(1) = trim(message(1)) // ")"
           else
             message(1) = trim(message(1)) // ","
@@ -466,7 +467,7 @@ contains
       end if
 
       write(message(1), '(a4,1x,a5)') '#st',' Spin'
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         write(str_tmp, '(a,a1,a)') '        <p', index2axis(idir), '>'
         message(1) = trim(message(1)) // trim(str_tmp)
       end do
@@ -482,7 +483,7 @@ contains
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
           
           write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(str_tmp, '(f12.6)') momentum(idir, ist, ik+is)
             message(1) = trim(message(1)) // trim(str_tmp)
           end do

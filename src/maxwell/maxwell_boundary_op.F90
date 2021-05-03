@@ -43,6 +43,7 @@ module maxwell_boundary_op_oct_m
   use unit_system_oct_m
   use simul_box_oct_m
   use varinfo_oct_m
+  use space_oct_m
   use states_mxll_oct_m
 
   implicit none
@@ -144,9 +145,10 @@ module maxwell_boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_init(bc, namespace, gr, st, sb, dt)
+  subroutine bc_mxll_init(bc, namespace, space, gr, st, sb, dt)
     type(bc_mxll_t),          intent(inout) :: bc
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(simul_box_t),        intent(in)    :: sb
@@ -260,12 +262,12 @@ contains
       select type (box => gr%sb%box)
       type is (box_sphere_t)
         ab_shape_dim = 1
-        if (sb%periodic_dim /= 0) then
+        if (space%is_periodic()) then
           message(1) = "Sphere box shape can only work for non-periodic systems"
           call messages_fatal(1, namespace=namespace)
         end if
       type is (box_parallelepiped_t)
-        ab_shape_dim = sb%dim
+        ab_shape_dim = space%dim
         ab_bounds(1, idim) = bounds(1, idim)
         ab_bounds(2, idim) = bounds(1, idim)
       class default
@@ -1065,7 +1067,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_pml(pml, gr, bounds, dt)
-    type(pml_t),    intent(inout)     :: pml
+    type(pml_t),        intent(inout) :: pml
     type(grid_t),       intent(in)    :: gr
     FLOAT,              intent(in)    :: bounds(:,:)
     FLOAT, optional,    intent(in)    :: dt
@@ -1708,7 +1710,7 @@ contains
   ! ---------------------------------------------------------
   subroutine inner_and_outer_points_mapping(mesh, st, bounds)
     type(mesh_t),        intent(in)    :: mesh
-    type(states_mxll_t),      intent(inout) :: st
+    type(states_mxll_t), intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
 
     integer :: ip, ip_in, ip_bd, point_info
@@ -1723,7 +1725,7 @@ contains
     ip_in = 0
     ip_bd = 0
     do ip = 1, mesh%np
-      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
+      xx = mesh%x(ip, :)
       if (abs(xx(1)) <= bounds(2,1) .and. abs(xx(2)) <= bounds(2,2) .and. abs(xx(3)) <= bounds(2,3)) then
         if (abs(xx(1)) > bounds(1,1) .or. abs(xx(2)) > bounds(1,2) .or. abs(xx(3)) > bounds(1,3)) then
           point_info = 1
@@ -1752,7 +1754,7 @@ contains
     ip_in = 0
     ip_bd = 0
     do ip = 1, mesh%np
-      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
+      xx = mesh%x(ip, :)
       if (abs(xx(1)) <= bounds(2,1) .and. abs(xx(2)) <= bounds(2,2) .and. abs(xx(3)) <= bounds(2,3)) then
         if (abs(xx(1)) > bounds(1,1) .or. abs(xx(2)) > bounds(1,2) .or. abs(xx(3)) > bounds(1,3)) then
           point_info = 1

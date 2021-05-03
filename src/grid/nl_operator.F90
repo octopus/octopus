@@ -36,6 +36,7 @@ module nl_operator_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use stencil_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -329,7 +330,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(mesh, op, np, const_w)
+  subroutine nl_operator_build(space, mesh, op, np, const_w)
+    type(space_t),        intent(in)    :: space
     type(mesh_t), target, intent(in)    :: mesh
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       !< Number of (local) points.
@@ -395,7 +397,7 @@ contains
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
           ! has to have the positions right
-          if(ii > 1 .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then
+          if(ii > 1 .and. compact_boundaries .and. mesh_compact_boundaries(mesh) .and. .not. space%is_periodic()) then
             st1(jj) = min(st1(jj), mesh%np + 1)
           end if
           ASSERT(st1(jj) > 0)
@@ -409,7 +411,7 @@ contains
         !have boundary points as neighbours to one that has
         force_change = any(st1 + ii > mesh%np) .and. all(st2 + ii - 1 <= mesh%np) 
 
-        if(change .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then 
+        if(change .and. compact_boundaries .and. mesh_compact_boundaries(mesh) .and. .not. space%is_periodic()) then 
           !try to repair it by changing the boundary points
           do jj = 1, op%stencil%size
             if(st1(jj) + ii > mesh%np .and. st2(jj) + ii - 1 > mesh%np .and. st2(jj) + ii <= mesh%np_part) then

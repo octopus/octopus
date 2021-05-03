@@ -288,9 +288,9 @@ contains
     mix_type = TYPE_FLOAT
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, namespace, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, space, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, namespace, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, space, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
     !If we use LDA+U, we also have do mix it
@@ -569,7 +569,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_elec_update(hm, gr%mesh, namespace)
+          call hamiltonian_elec_update(hm, gr%mesh, namespace, space)
           if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
             if (ks%oep%level == XC_OEP_FULL) then
               do is = 1, st%d%nspin

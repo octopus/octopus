@@ -126,9 +126,10 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, ions, psolver, ispin, xc_family, mc, kpoints)
+  subroutine epot_init(ep, namespace, space, gr, ions, psolver, ispin, xc_family, mc, kpoints)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
+    type(space_t),                      intent(in)    :: space
     type(grid_t),                       intent(in)    :: gr
     type(ions_t),                       intent(inout) :: ions
     type(poisson_t),  target,           intent(in)    :: psolver
@@ -215,7 +216,7 @@ contains
       end if
     end if
 
-    call kick_init(ep%kick, namespace, gr%sb, kpoints, ispin)
+    call kick_init(ep%kick, namespace, space, kpoints, ispin)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
@@ -281,7 +282,7 @@ contains
     ep%non_local = .false.
 
     ep%eii = M_ZERO
-    SAFE_ALLOCATE(ep%fii(1:gr%sb%dim, 1:ions%natoms))
+    SAFE_ALLOCATE(ep%fii(1:ions%space%dim, 1:ions%natoms))
     ep%fii = M_ZERO
 
     SAFE_ALLOCATE(ep%vdw_forces(1:ions%space%dim, 1:ions%natoms))

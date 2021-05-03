@@ -32,6 +32,7 @@ module mix_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
   use stencil_cube_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -142,9 +143,10 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, namespace, der, d1, d2, d3, def_, func_type_, prefix_)
+  subroutine mix_init(smix, namespace, space, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
     type(namespace_t),             intent(in)  :: namespace
+    type(space_t),                 intent(in)  :: space
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
@@ -331,7 +333,7 @@ contains
       
       call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
       call stencil_cube_get_lapl(smix%preconditioner%stencil, der%dim, 1)
-      call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+      call nl_operator_build(space, der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
       
       ns = smix%preconditioner%stencil%size
 

@@ -161,12 +161,12 @@ contains
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
-    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
+    call hamiltonian_elec_update2(hm, gr%mesh, space, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     ! propagate by dt/2 
     call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
-    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
+    call hamiltonian_elec_update2(hm, gr%mesh, space, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     ! propagate by dt/2
     !TODO: fuse this with density calc
     call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)

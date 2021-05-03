@@ -33,8 +33,9 @@ module propagator_qoct_oct_m
   use parser_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
-  use states_elec_oct_m
   use propagation_ops_elec_oct_m
+  use space_oct_m
+  use states_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -48,9 +49,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions_dyn, ions)
+  subroutine td_qoct_tddft_propagator(hm, namespace, space, gr, st, tr, time, dt, ions_dyn, ions)
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(states_elec_t),      intent(inout) :: st
     type(propagator_base_t),  intent(inout) :: tr
@@ -76,10 +78,10 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, ions, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time-dt/M_TWO)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time-dt/M_TWO)
 
     call exponential_apply_all(tr%te, namespace, gr%mesh, hm, st, dt)
 

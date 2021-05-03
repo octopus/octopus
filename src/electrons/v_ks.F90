@@ -1087,7 +1087,7 @@ contains
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, namespace, ks%gr, hm, st, vxc = ks%calc%vxc, &
+          call xc_ks_inversion_calc(ks%ks_inversion, namespace, space, ks%gr, hm, st, vxc = ks%calc%vxc, &
             time = ks%calc%time)
         end if
       end if
@@ -1261,7 +1261,7 @@ contains
       end if
 
       hm%energy%hartree = M_ZERO
-      call v_ks_hartree(ks, hm)
+      call v_ks_hartree(ks, space, hm)
 
 
       ! Build Hartree + XC potential
@@ -1363,7 +1363,7 @@ contains
     end if
 
     if(ks%calc%time_present .or. hm%time_zero) then
-      call hamiltonian_elec_update(hm, ks%gr%mesh, namespace, time = ks%calc%time)
+      call hamiltonian_elec_update(hm, ks%gr%mesh, namespace, space, time = ks%calc%time)
     else
       call hamiltonian_elec_update_pot(hm, ks%gr%mesh, accel_copy=.true.)
     end if
@@ -1384,8 +1384,9 @@ contains
   !! designed to be used by v_ks_calc_finish and it cannot be called
   !! directly.
   !
-  subroutine v_ks_hartree(ks, hm)
-    type(v_ks_t),                intent(inout) :: ks
+  subroutine v_ks_hartree(ks, space, hm)
+    type(v_ks_t),                     intent(inout) :: ks
+    type(space_t),                    intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
 
     FLOAT, pointer :: pot(:)
@@ -1445,7 +1446,7 @@ contains
           kick_real = M_ZERO
           kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
+            call kick_function_get(space, ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = TOFLOAT(kick)
           end if
@@ -1469,7 +1470,7 @@ contains
           kick_real = M_ZERO
           kick_time =((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
+            call kick_function_get(space, ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = TOFLOAT(kick)
           end if

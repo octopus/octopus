@@ -271,7 +271,7 @@ contains
     if (this%generate_epot) then
       message(1) = "Info: Generating external potential"
       call messages_info(1)
-      call hamiltonian_elec_epot_generate(this%hm, this%namespace, this%gr, this%ions, this%st)
+      call hamiltonian_elec_epot_generate(this%hm, this%namespace, this%space, this%gr, this%ions, this%st)
       message(1) = "      done."
       call messages_info(1)
     end if

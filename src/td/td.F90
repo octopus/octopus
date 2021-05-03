@@ -419,7 +419,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(hm%ep%gfield, ions%latt%rcell_volume, st%qtot)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time = td%dt*td%iter)
     end if
 
     call td_init_wfs(td, namespace, space, mc, gr, ions, st, ks, hm, fromScratch)
@@ -435,7 +435,7 @@ contains
     if (ion_dynamics_ions_move(td%ions_dyn)) then
       if (td%iter > 0) then
         call td_read_coordinates(td, namespace, gr, ions)
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = td%iter*td%dt)
+        call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = td%iter*td%dt)
       end if
 
       call forces_calculate(gr, namespace, ions, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
@@ -548,11 +548,11 @@ contains
       if (iter > 1) then
         if (((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time)) then
           if (.not. hm%pcm%localf) then
-            call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
+            call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
           else
-            call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
+            call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
           end if
-          call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, ions, iter)
+          call td_write_kick(outp, namespace, space, gr%mesh, hm%ep%kick, ions, iter)
           !We activate the sprial BC only after the kick,
           !to be sure that the first iteration corresponds to the ground state
           if (gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
@@ -659,7 +659,7 @@ contains
         call states_elec_deallocate_wfns(st)
         call electrons_ground_state_run(namespace, mc, gr, ions, st, ks, hm, outp, space, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-        call td_load(td%restart_load, namespace, gr, st, hm, td, ierr)
+        call td_load(td%restart_load, namespace, space, gr, st, hm, td, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to load TD states."
           call messages_fatal(1, namespace=namespace)
@@ -734,7 +734,7 @@ contains
 
       call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
       if(ierr == 0) &
-        call td_load(restart, namespace, gr, st, hm, td, ierr)
+        call td_load(restart, namespace, space, gr, st, hm, td, ierr)
       if(ierr /= 0) then
         from_scratch = .true.
         td%iter = 0
@@ -946,11 +946,11 @@ contains
     ! dipole matrix elements in write_proj are wrong
     if (abs(hm%ep%kick%time)  <=  M_EPSILON) then
       if (.not. hm%pcm%localf ) then
-        call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
+        call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
       else
-        call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
+        call kick_apply(space, gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
       end if
-      call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, ions, 0)
+      call td_write_kick(outp, namespace, space, gr%mesh, hm%ep%kick, ions, 0)
 
       !We activate the sprial BC only after the kick
       if (gr%der%boundaries%spiralBC) then
@@ -1082,9 +1082,10 @@ contains
   end subroutine td_dump
 
   ! ---------------------------------------------------------
-  subroutine td_load(restart, namespace, gr, st, hm, td, ierr)
+  subroutine td_load(restart, namespace, space, gr, st, hm, td, ierr)
     type(restart_t),     intent(in)    :: restart
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -1130,7 +1131,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time = td%dt*td%iter)
       end if
     end if
 

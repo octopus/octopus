@@ -384,7 +384,7 @@ contains
     call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     ! Initialize external potential
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, sys%st)
 
     call sys%st%group%psib(1, 1)%copy_to(epsib)
 
@@ -551,7 +551,7 @@ contains
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 
@@ -689,7 +689,7 @@ contains
 
     ! Initialize external potential
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 
@@ -737,7 +737,7 @@ contains
     call test_batch_set_gaussian(sys%st%group%psib(1, 1), sys%gr%mesh)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%ions, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%space, sys%gr, sys%ions, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions)
 

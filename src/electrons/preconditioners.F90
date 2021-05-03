@@ -136,7 +136,7 @@ contains
     case(PRE_FILTER)
       ! the smoothing is performed uing the same stencil as the Laplacian
       name = "Preconditioner"
-      call derivatives_get_lapl(gr%der, this%op_array, name, 1)
+      call derivatives_get_lapl(gr%der, this%op_array, space, name, 1)
 
       !%Variable PreconditionerFilterFactor
       !%Type float

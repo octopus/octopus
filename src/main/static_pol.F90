@@ -223,7 +223,7 @@ contains
     ! now calculate the dipole without field
 
     sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np)
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
 
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
@@ -271,7 +271,7 @@ contains
         ! except that we treat electrons as positive
 
         sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) + (-1)**isign * sys%gr%mesh%x(1:sys%gr%mesh%np, ii) * e_field
-        call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+        call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
 
         if(isign == 1) then
           sign_char = '+'
@@ -353,7 +353,7 @@ contains
   
       sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) &
         - (sys%gr%mesh%x(1:sys%gr%mesh%np, 2) + sys%gr%mesh%x(1:sys%gr%mesh%np, 3)) * e_field
-      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+      call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
   
       if(isign == 1) then
         sign_char = '+'

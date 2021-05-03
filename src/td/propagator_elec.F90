@@ -505,23 +505,23 @@ contains
         call td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
       end if
     case(PROP_AETRS)
-      call td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+      call td_aetrs(namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
     case(PROP_CAETRS)
       call td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+      call exponential_midpoint(hm, namespace, space, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
     case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions_dyn, ions, .false.)
+      call td_crank_nicolson(hm, namespace, space, gr, st, tr, time, dt, ions_dyn, ions, .false.)
     case(PROP_RUNGE_KUTTA4)
       call td_runge_kutta4(ks, namespace, space, hm, gr, st, tr, time, dt, ions_dyn, ions)
     case(PROP_RUNGE_KUTTA2)
       call td_runge_kutta2(ks, namespace, space, hm, gr, st, tr, time, dt, ions_dyn, ions)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions_dyn, ions, .true.)
+      call td_crank_nicolson(hm, namespace, space, gr, st, tr, time, dt, ions_dyn, ions, .true.)
     case(PROP_MAGNUS)
       call td_magnus(hm, gr, st, tr, namespace, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions_dyn, ions)
+      call td_qoct_tddft_propagator(hm, namespace, space, gr, st, tr, time, dt, ions_dyn, ions)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
         call td_explicit_runge_kutta4(ks, namespace, space, hm, gr, st, time, dt, ions_dyn, ions, qcchi)
@@ -545,7 +545,7 @@ contains
     end if
 
     if(generate .or. ions%has_time_dependent_species()) then
-      call hamiltonian_elec_epot_generate(hm, namespace,  gr, ions, st, time = abs(nt*dt))
+      call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, st, time = abs(nt*dt))
     end if
 
     call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval = update_energy_, time = abs(nt*dt), &
@@ -556,7 +556,7 @@ contains
     if(move_ions_ .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, namespace, ions, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions_dyn, ions, atoms_moved = generate)
-      if(generate) call hamiltonian_elec_epot_generate(hm, namespace,  gr, ions, st, time = abs(nt*dt))
+      if(generate) call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = abs(nt*dt))
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
@@ -626,7 +626,7 @@ contains
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions_dyn, ions, iter*dt, dt, namespace)
-    call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
@@ -640,7 +640,7 @@ contains
       call messages_not_implemented("DFT+U with propagator_elec_dt_bo", namespace=namespace)
     end if
 
-    call hamiltonian_elec_epot_generate(hm, namespace,  gr, ions, st, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
     call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
@@ -649,7 +649,7 @@ contains
     call energy_calc_total(namespace, space, hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions_dyn, ions)
-    call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = iter*dt)
      ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

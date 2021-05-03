@@ -169,9 +169,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick(outp, namespace, mesh, kick, ions, iter)
+  subroutine td_write_kick(outp, namespace, space, mesh, kick, ions, iter)
     type(output_t),    intent(in) :: outp
     type(namespace_t), intent(in) :: namespace
+    type(space_t),     intent(in) :: space
     type(mesh_t),      intent(in) :: mesh
     type(kick_t),      intent(in) :: kick
     type(ions_t),      intent(in) :: ions
@@ -181,7 +182,7 @@ contains
     PUSH_SUB(td_write_kick)
 
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call output_kick(outp, namespace, filename, mesh, ions, kick)
+    call output_kick(outp, namespace, space, filename, mesh, ions, kick)
 
     POP_SUB(td_write_kick)
   end subroutine td_write_kick
@@ -913,7 +914,7 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(namespace, hm, gr, st, iter)
+      call td_write_floquet(namespace, space, hm, gr, st, iter)
     end if
 
     if (writ%out(OUT_KP_PROJ)%write) then
@@ -2717,8 +2718,9 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(namespace, hm, gr, st, iter)
+  subroutine td_write_floquet(namespace, space, hm, gr, st, iter)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st !< at iter=0 this is the groundstate
@@ -2826,7 +2828,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, st, hm_st)
 
@@ -2974,7 +2976,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_elec_update(hm, gr%mesh, namespace, time=M_ZERO)
+    call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

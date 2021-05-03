@@ -196,7 +196,7 @@ contains
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true.)
         call energy_calc_total (namespace, space, hm, gr, st)
@@ -212,7 +212,7 @@ contains
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true.)
         call energy_calc_total(namespace, space, hm, gr, st)
