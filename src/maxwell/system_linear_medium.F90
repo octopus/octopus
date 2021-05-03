@@ -379,11 +379,11 @@ contains
 
     PUSH_SUB(system_linear_medium_iteration_info)
 
-    write(message(1),'(2X,A,1X,A)') "Linar medium system:", trim(this%namespace%get())
+    write(message(1),'(2X,A,1X,A)') "Linear medium system:", trim(this%namespace%get())
 
-    write(message(5),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
-    write(message(6),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
-    call messages_info(6)
+    write(message(2),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
+    write(message(3),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
+    call messages_info(3)
 
     POP_SUB(system_linear_medium_iteration_info)
   end subroutine system_linear_medium_iteration_info
