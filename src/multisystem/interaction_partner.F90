@@ -26,6 +26,7 @@ module interaction_partner_oct_m
   use messages_oct_m
   use namespace_oct_m
   use quantity_oct_m
+  use space_oct_m
   implicit none
 
   private
@@ -41,6 +42,7 @@ module interaction_partner_oct_m
     private
     type(namespace_t), public :: namespace
     type(clock_t),     public :: clock
+    type(space_t),     public :: space
 
     type(integer_list_t), public :: supported_interactions_as_partner
 

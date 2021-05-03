@@ -56,8 +56,6 @@ module system_oct_m
 
   type, extends(interaction_partner_t), abstract :: system_t
     private
-    type(space_t), public :: space
-
     class(propagator_t), pointer, public :: prop => null()
 
     integer :: accumulated_loop_ticks
