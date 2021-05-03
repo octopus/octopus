@@ -46,7 +46,7 @@ module multisystem_debug_oct_m
     event_marker_t,                    &
     event_handle_t
 
-  integer, parameter, public :: MAX_INFO_LEN = 128
+  integer, parameter, public :: MAX_INFO_LEN = 256
 
 
   !-------------------------------------------------------------------

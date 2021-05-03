@@ -50,7 +50,8 @@ match ; Moon  pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coo
 match ; Moon  vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 6) ;  5.001258383296e+03
 match ; Moon  vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 7) ; -2.960231945802e+04
 match ; Moon  vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 8) ;  8.484571535205e+01
-
+match ; propagation_graph multisystem_propagation_start ; GREPCOUNT(debug/multisystem_propagation.log, 'multisystem_propagation_start' ) ; 3
+match ; propagation_graph clock_update ;                  GREPCOUNT(debug/multisystem_propagation.log, 'type: clock_update' ) ; 4914
 
 Input: 01-nested_systems.03-four_levels.inp
 

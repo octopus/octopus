@@ -57,3 +57,5 @@ days = 3
 seconds_per_day = 24*3600
 TDTimeStep = seconds_per_day/sampling
 TDPropagationTime = days*seconds_per_day
+
+Debug = propagation_graph
