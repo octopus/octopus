@@ -136,7 +136,9 @@ module td_write_oct_m
     OUT_E_FIELD_SURFACE_Z       = 6, &
     OUT_B_FIELD_SURFACE_X       = 7, &
     OUT_B_FIELD_SURFACE_Y       = 8, &
-    OUT_B_FIELD_SURFACE_Z       = 9, &
+    OUT_B_FIELD_SURFACE_Z       = 9
+
+    integer, parameter, public ::   &
     OUT_MAXWELL_MAX             = 9
 
   type td_write_prop_t

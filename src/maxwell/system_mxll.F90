@@ -624,8 +624,10 @@ contains
   subroutine system_mxll_output_write(this)
     class(system_mxll_t), intent(inout) :: this
 
-    logical :: stopping
+    logical :: stopping, reached_output_interval
     type(profile_t), save :: prof
+
+    integer :: iout
 
     PUSH_SUB(system_mxll_output_write)
 
@@ -635,8 +637,17 @@ contains
 
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
 
-    ! MFT: TODO: which output interval should be passed here?
-    if ((this%outp%output_interval(1) > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval(1)) == 0) .or. stopping) then
+    reached_output_interval = .false.
+    do iout = 1, OUT_MAXWELL_MAX
+      if(this%outp%output_interval(iout) > 0) then
+        if(mod(this%clock%get_tick(), this%outp%output_interval(iout)) == 0) then
+          reached_output_interval = .true.
+          exit
+        end if
+      end if
+    end do
+
+    if(reached_output_interval .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%space, this%gr, this%st, this%hm, this%ions, &
         this%outp, this%clock)
     end if
