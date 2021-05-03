@@ -26,5 +26,13 @@ The benefits of OOP design are:
 
 ### What is an object?
 
-An object 
+An object refers to a data-structure, which is bundled with the functions (methods) acting on that data. Usually, it is good practice to declare the data as private, 
+and allow access only through so-called access functions (getters and setters). This is called encapsulation, and allows later to change details of the implementation
+without affecting the rest of the code.
+
+Objects are instances of classes, which define the data structures and the methods for its objects.
+
+
+
+
 

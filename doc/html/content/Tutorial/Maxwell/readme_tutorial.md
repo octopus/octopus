@@ -1,5 +1,6 @@
 ---
 Title: "Maxwell overview"
+tutorials: "Maxwell"
 weight: 1
 ---
 

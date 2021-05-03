@@ -1,5 +1,6 @@
 ---
 Title: "Maxwell input file"
+tutorials: "Maxwell"
 weight: 4
 ---
 

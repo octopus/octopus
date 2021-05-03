@@ -1,5 +1,6 @@
 ---
 Title: "Simulation box"
+tutorials: "Maxwell"
 Weight: 10
 ---
 
