@@ -132,6 +132,10 @@ contains
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
+    if(sys%hm%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
+      call messages_not_implemented('k.p with generalized Kohn-Sham DFT')
+    end if
+
 
     if (sys%kpoints%use_symmetries) then
       call messages_experimental("KPoints symmetries with CalculationMode = kdotp")

@@ -261,6 +261,9 @@ contains
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented("Casida for Hartree-Fock")
     end if
+    if(sys%hm%theory_level == GENERALIZED_KOHN_SHAM_DFT) then
+      call messages_not_implemented("Casida for generalized Kohn-Sham")
+    end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)

@@ -97,9 +97,8 @@ contains
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
     end if
 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
-      (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
-      write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
+    if(.not.(ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) /= 0)) then
+      write(message(1),'(a)') 'The stress tensor is currently only properly computed at the Kohn-Sham DFT at the LDA level'
       call messages_fatal(1, namespace=namespace)
     end if
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then

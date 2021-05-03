@@ -424,10 +424,10 @@ contains
 
     call td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, fromScratch)
 
-    if (td%iter >= td%max_iter) then
+    if (td%iter > td%max_iter) then
       call states_elec_deallocate_wfns(st)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
-      POP_SUB(td_run)
+      POP_SUB(td_init_run)
       return
     end if
 
@@ -548,9 +548,9 @@ contains
       if (iter > 1) then
         if (((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time)) then
           if (.not. hm%pcm%localf) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints)
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, pcm = hm%pcm)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
           end if
           call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, geo, iter)
           !We activate the sprial BC only after the kick,
@@ -946,9 +946,9 @@ contains
     ! dipole matrix elements in write_proj are wrong
     if (abs(hm%ep%kick%time)  <=  M_EPSILON) then
       if (.not. hm%pcm%localf ) then
-        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver)
+        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints)
       else
-        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, pcm = hm%pcm)
+        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
       end if
       call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, geo, 0)
 

@@ -151,7 +151,7 @@
       if(sys%hm%theory_level /= KOHN_SHAM_DFT) then
         write(message(1), '(a)') 'In optimal control theory mode, you can only use either independent'
         write(message(2), '(a)') 'particles "TheoryLevel = independent_particles", or Kohn-Sham DFT'
-        write(message(3), '(a)') '"TheoryLevel = dft".'
+        write(message(3), '(a)') '"TheoryLevel = kohn_sham".'
         call messages_fatal(3)
       end if
       if( (tr%method /= PROP_QOCT_TDDFT_PROPAGATOR) .and. &

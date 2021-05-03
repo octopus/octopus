@@ -13,7 +13,7 @@ ExcessCharge = 1
 
 Spacing = 0.5
 
-TheoryLevel = dft
+TheoryLevel = kohn_sham
 
 XCFunctional = hyb_gga_xc_pbeh
 
