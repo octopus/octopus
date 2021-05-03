@@ -780,7 +780,7 @@ contains
 
       kick_present = epot_have_kick(hm%ep)
 
-      call pcm_init(hm%pcm, namespace, ions, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+      call pcm_init(hm%pcm, namespace, space, ions, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
       if (hm%pcm%run_pcm) then
         if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= kohn_sham", namespace=namespace)
         if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
