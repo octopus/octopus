@@ -1046,8 +1046,10 @@ contains
       iunit = io_open(trim(dirname)//'/photon_coord_q', namespace, action='write')
       write(iunit, '(a)') 'Photon coordinate Q [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit, '(a)') '                 Re                Im'
-      write(iunit, '(f20.6,f20.6)') units_from_atomic(units_out%energy, real(sh%zphoton_coord_q)), &
-                                    units_from_atomic(units_out%energy, aimag(sh%zphoton_coord_q))
+      do idir = 1, gr%sb%dim
+        write(iunit, '(f20.6,f20.6)') units_from_atomic(units_out%energy, sum(real(sh%zphoton_coord_q(:, idir)))), &
+                                      units_from_atomic(units_out%energy, sum(aimag(sh%zphoton_coord_q(:, idir))))
+      end do
       call io_close(iunit)
     end if
 

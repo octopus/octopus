@@ -318,13 +318,13 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           call X(sternheimer_solve)(sh, namespace, gr, kpoints, st, hm, xc, mc, geo, &
             em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
             em_vars%perturbation, restart_dump, em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-            em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
+            em_wfs_tag(idir, ifactor), idir=idir, have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
         else
           call X(sternheimer_solve)(sh, namespace, gr, kpoints, st, hm, xc, mc, geo, &
             em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
             em_vars%perturbation, restart_dump, &
             em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, ipert = PE), &
-            em_wfs_tag(idir, ifactor), have_restart_rho=.true., have_exact_freq = exact_freq(idir))
+            em_wfs_tag(idir, ifactor), idir=idir, have_restart_rho=.true., have_exact_freq = exact_freq(idir))
         end if
   
         if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then

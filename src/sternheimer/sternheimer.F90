@@ -118,8 +118,8 @@ module sternheimer_oct_m
      logical, public       :: enable_el_pt_coupling  !< switch on photoncoupling
      FLOAT                 :: domega          !< current frequency for which we solve the freq.-dep. equation
      CMPLX                 :: zomega          !< current frequency for which we solve the freq.-dep. equation
-     FLOAT, allocatable, public  :: dphoton_coord_q(:) !< canonical photon coordinate
-     CMPLX, allocatable, public  :: zphoton_coord_q(:) !< canonical photon coordinate
+     FLOAT, allocatable, public  :: dphoton_coord_q(:, :) !< canonical photon coordinate
+     CMPLX, allocatable, public  :: zphoton_coord_q(:, :) !< canonical photon coordinate
      FLOAT                 :: el_pt_eta      !< broadening for photonic subsystem
      FLOAT, allocatable :: omg2_lmda_r(:)
      FLOAT, allocatable :: lambda_dot_r(:)
@@ -277,7 +277,7 @@ contains
       call io_mkdir(EM_RESP_PHOTONS_DIR, namespace)
       iunit = io_open(EM_RESP_PHOTONS_DIR // 'photon_modes', namespace, action='write')
       call photon_mode_write_info(this%pt_modes, iunit)
-      SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes))
+      SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes, 1:space%dim))
 
       nm = this%pt_modes%nmodes
       SAFE_ALLOCATE(this%omg2_lmda_r(1:gr%mesh%np))
@@ -500,13 +500,14 @@ contains
   end subroutine sternheimer_obsolete_variables
   
   !--------------------------------------------------------------
-  subroutine calc_hvar_photons(this, mesh, st, lr_rho, nsigma, hvar)
+  subroutine calc_hvar_photons(this, mesh, st, lr_rho, nsigma, hvar, idir)
     type(sternheimer_t),    intent(inout) :: this
     type(mesh_t),           intent(in)    :: mesh
     type(states_elec_t),    intent(in)    :: st
     integer,                intent(in)    :: nsigma
     CMPLX,                  intent(in)    :: lr_rho(:,:)
     CMPLX,                  intent(inout) :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+    integer,      optional, intent(in)    :: idir
 
     CMPLX, allocatable :: s_lr_rho(:), vp_dip_self_ener(:), vp_bilinear_el_pt(:)
     CMPLX, allocatable :: first_moments(:)
@@ -535,13 +536,13 @@ contains
     do ii = 1, nm
       first_moments(ii) = zmf_integrate(mesh, this%omg2_lmda_r(1:mesh%np)*s_lr_rho(1:mesh%np))
 
-      this%zphoton_coord_q(ii) = (M_ONE/(M_TWO*(this%pt_modes%omega(ii))**2)) * &
+      this%zphoton_coord_q(ii, idir) = (M_ONE/(M_TWO*(this%pt_modes%omega(ii))**2)) * &
         ((M_ONE/(this%zomega - this%pt_modes%omega(ii) + M_zI*this%el_pt_eta)) -  &
         (M_ONE/(this%zomega + this%pt_modes%omega(ii) + M_zI*this%el_pt_eta))) * &
         first_moments(ii)
 
       vp_bilinear_el_pt = vp_bilinear_el_pt - &
-        this%pt_modes%omega(ii)*this%lambda_dot_r(1:mesh%np)*this%zphoton_coord_q(ii)
+        this%pt_modes%omega(ii)*this%lambda_dot_r(1:mesh%np)*this%zphoton_coord_q(ii, idir)
     end do
 
     ! Compute potential with dipole-self energy contribution

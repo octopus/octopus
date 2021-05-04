@@ -20,7 +20,7 @@
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, geo, lr, nsigma, omega, perturbation, restart, &
-  rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
+  rho_tag, wfs_tag, idir, have_restart_rho, have_exact_freq)
   type(sternheimer_t),         intent(inout) :: this
   type(namespace_t),           intent(in)    :: namespace
   type(grid_t),       target,  intent(in)    :: gr
@@ -37,6 +37,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
   type(restart_t),             intent(inout) :: restart
   character(len=*),            intent(in)    :: rho_tag
   character(len=*),            intent(in)    :: wfs_tag
+  integer,           optional, intent(in)    :: idir
   logical,           optional, intent(in)    :: have_restart_rho
   logical,           optional, intent(in)    :: have_exact_freq
 
@@ -140,7 +141,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
       call lalg_copy(gr%mesh%np, st%d%nspin, lr(1)%X(dl_rho)(:, :), dl_rhoin(:, :, 1))
 
       this%X(omega) = omega
-      call X(sternheimer_calc_hvar)(this, gr%mesh, st, hm, xc, lr, nsigma, hvar)
+      call X(sternheimer_calc_hvar)(this, gr%mesh, st, hm, xc, lr, nsigma, hvar, idir=idir)
     end if
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
@@ -492,7 +493,7 @@ end subroutine X(sternheimer_add_occ)
 
 
 !--------------------------------------------------------------
-subroutine X(sternheimer_calc_hvar)(this, mesh, st, hm, xc, lr, nsigma, hvar)
+subroutine X(sternheimer_calc_hvar)(this, mesh, st, hm, xc, lr, nsigma, hvar, idir)
   type(sternheimer_t),      intent(inout) :: this
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(in)    :: st
@@ -501,13 +502,14 @@ subroutine X(sternheimer_calc_hvar)(this, mesh, st, hm, xc, lr, nsigma, hvar)
   type(lr_t),               intent(inout) :: lr(:) 
   integer,                  intent(in)    :: nsigma 
   R_TYPE,                   intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+  integer,        optional, intent(in)    :: idir
 
   PUSH_SUB(X(sternheimer_calc_hvar))
 
   if(this%add_fxc) then
-    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
+    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc, idir=idir)
   else
-    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar)
+    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, idir=idir)
   end if
   if (this%enable_el_pt_coupling) then
 #ifdef R_TCOMPLEX    
