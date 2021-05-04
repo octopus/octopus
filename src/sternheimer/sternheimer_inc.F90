@@ -507,13 +507,13 @@ subroutine X(sternheimer_calc_hvar)(this, mesh, st, hm, xc, lr, nsigma, hvar, id
   PUSH_SUB(X(sternheimer_calc_hvar))
 
   if(this%add_fxc) then
-    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc, idir=idir)
+    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
   else
-    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar, idir=idir)
+    call X(calc_hvar)(this%add_hartree, mesh, st, hm, xc, lr(1)%X(dl_rho), nsigma, hvar)
   end if
   if (this%enable_el_pt_coupling) then
 #ifdef R_TCOMPLEX    
-    call calc_hvar_photons(this, mesh, st, lr(1)%zdl_rho, nsigma, hvar)
+    call calc_hvar_photons(this, mesh, st, lr(1)%zdl_rho, nsigma, hvar, idir=idir)
 #else
     ! Photons only available with complex states
     ASSERT(.false.)

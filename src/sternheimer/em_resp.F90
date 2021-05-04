@@ -1028,7 +1028,7 @@ contains
     integer,                  intent(in)    :: iomega
     integer,                  intent(in)    :: ifactor
     
-    integer :: iunit
+    integer :: iunit, idir
     character(len=80) :: dirname, str_tmp
     logical :: use_kdotp
     CMPLX :: epsilon(MAX_DIM, MAX_DIM) 
