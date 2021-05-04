@@ -27,6 +27,7 @@ module system_linear_medium_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use iso_c_binding
+  use linear_medium_em_field_oct_m
   use messages_oct_m
   use comm_oct_m
   use grid_oct_m
@@ -86,8 +87,6 @@ module system_linear_medium_oct_m
     procedure :: update_quantity => system_linear_medium_update_quantity
     procedure :: update_exposed_quantity => system_linear_medium_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => system_linear_medium_copy_quantities_to_interaction
-    procedure :: update_interactions_start => system_linear_medium_update_interactions_start
-    procedure :: update_interactions_finish => system_linear_medium_update_interactions_finish
     final :: system_linear_medium_finalize
   end type system_linear_medium_t
 
@@ -315,6 +314,8 @@ contains
 
     !call generate_medium_boxes(this, gr, 1, namespace)
 
+    call this%supported_interactions_as_partner%add(LINEAR_MEDIUM_EM_FIELD)
+
     call profiling_out(prof)
 
     POP_SUB(system_linear_medium_init)
@@ -471,6 +472,11 @@ contains
     PUSH_SUB(system_linear_medium_copy_quantities_to_interaction)
 
     select type (interaction)
+    type is (linear_medium_em_field_t)
+      interaction%partner_ep(:) = partner%ep(:)
+      interaction%partner_mu(:) = partner%mu(:)
+      interaction%partner_sigma_e(:) = partner%sigma_e(:)
+      interaction%partner_sigma_m(:) = partner%sigma_m(:)
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -479,34 +485,6 @@ contains
     POP_SUB(system_linear_medium_copy_quantities_to_interaction)
   end subroutine system_linear_medium_copy_quantities_to_interaction
 
-  ! ---------------------------------------------------------
-  subroutine system_linear_medium_update_interactions_start(this)
-    class(system_linear_medium_t), intent(inout) :: this
-
-    PUSH_SUB(system_linear_medium_update_interactions_start)
-
-    POP_SUB(system_linear_medium_update_interactions_start)
-  end subroutine system_linear_medium_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine system_linear_medium_update_interactions_finish(this)
-    class(system_linear_medium_t), intent(inout) :: this
-
-    type(interaction_iterator_t) :: iter
-
-    PUSH_SUB(system_linear_medium_update_interactions_finish)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      select type (interaction => iter%get_next())
-      class default
-        message(1) = "Interactions not implemented for linear medium systems."
-        call messages_fatal(1)
-      end select
-    end do
-
-    POP_SUB(system_linear_medium_update_interactions_finish)
-  end subroutine system_linear_medium_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine system_linear_medium_finalize(this)

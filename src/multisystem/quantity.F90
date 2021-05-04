@@ -37,7 +37,11 @@ module quantity_oct_m
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
     CHARGE                       = 10,  &
-    MAX_QUANTITIES               = 10
+    PERMITTIVITY                 = 11,  &
+    PERMEABILITY                 = 12,  &
+    E_CONDUCTIVITY               = 13,  &
+    M_CONDUCTIVITY               = 14,  &
+    MAX_QUANTITIES               = 14
 
   character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &
     "position        ", &
@@ -49,7 +53,11 @@ module quantity_oct_m
     "E field         ", &
     "B field         ", &
     "mass            ", &
-    "charge          "  &
+    "charge          ", &
+    "permittivity    ", &
+    "permeability    ", &
+    "e_conductivity  ", &
+    "m_conductivity  "  &
     /)
 
   !> Systems can expose quantities that can be used to calculate interactions

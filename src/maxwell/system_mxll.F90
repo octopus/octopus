@@ -35,6 +35,7 @@ module system_mxll_oct_m
   use lattice_vectors_oct_m
   use loct_oct_m
   use lorentz_force_oct_m
+  use linear_medium_em_field_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -188,8 +189,9 @@ contains
     PUSH_SUB(system_mxll_init_interaction)
 
     select type (interaction)
+    type is (linear_medium_em_field_t)
+      call interaction%init()
     class default
-      ! Currently Maxwell system does not know any type of interaction
       message(1) = "Trying to initialize an unsupported interaction by Maxwell."
       call messages_fatal(1)
     end select

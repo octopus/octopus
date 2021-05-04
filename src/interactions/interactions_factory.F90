@@ -23,6 +23,7 @@ module interactions_factory_oct_m
   use interaction_oct_m
   use coulomb_force_oct_m
   use gravity_oct_m
+  use linear_medium_em_field_oct_m
   use lorentz_force_oct_m
   use interaction_partner_oct_m
   use interactions_factory_abst_oct_m
@@ -35,7 +36,8 @@ module interactions_factory_oct_m
   integer, parameter, public :: &
     GRAVITY          = 1,       &
     LORENTZ_FORCE    = 2,       &
-    COULOMB_FORCE    = 3
+    COULOMB_FORCE    = 3,       &
+    LINEAR_MEDIUM_EM_FIELD = 4
 
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
@@ -108,6 +110,9 @@ contains
     !%Option coulomb_force 3
     !%  (interaction type)
     !% Coulomb force between two charged particles.
+    !%Option linear_medium_em_field 3
+    !%  (interaction type)
+    !% Linear medium for propagation of EM fields.
     !%End
     select case (type)
     case (GRAVITY)
@@ -116,6 +121,8 @@ contains
       interaction => coulomb_force_t(partner)
     case (LORENTZ_FORCE)
       interaction => lorentz_force_t(partner)
+    case (LINEAR_MEDIUM_EM_FIELD)
+      interaction => linear_medium_em_field_t(partner)
     case default
       ! This should never happen, as this is handled in
       ! interactions_factory_abst_create_interactions
@@ -137,6 +144,8 @@ contains
     case (COULOMB_FORCE)
       mode = ALL_PARTNERS
     case (LORENTZ_FORCE)
+      mode = ALL_PARTNERS
+    case (LINEAR_MEDIUM_EM_FIELD)
       mode = ALL_PARTNERS
     case default
       message(1) = "Unknown interaction type"
