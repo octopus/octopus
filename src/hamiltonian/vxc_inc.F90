@@ -163,7 +163,7 @@ subroutine xc_get_vxc(der, xcs, st, kpoints, psolver, namespace, rho, ispin, vxc
  density_gradient = gdens, density_laplacian = ldens)
     end if
 
-    if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
+    if(functl(FUNC_X)%id == XC_MGGA_X_TB09) then
       call calc_tb09_c()
     end if
 
