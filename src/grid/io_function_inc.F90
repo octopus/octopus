@@ -602,7 +602,6 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
   integer,          optional, intent(in)  :: root !< which process is going to write the data
 
   integer :: ivd
-  integer(8) :: how_seq
   character(len=MAX_PATH_LEN) :: full_fname
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root
@@ -643,14 +642,11 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
   end if
 
   if(i_am_root) then
-
-    how_seq = how
-
-    if(how_seq /= 0) then !perhaps there is nothing left to do
+    if(how /= 0) then !perhaps there is nothing left to do
       do ivd = 1, space%dim
         full_fname = trim(fname)//'-'//index2axis(ivd)
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, kpoints, &
+        call X(io_function_output_global_BZ)(how, dir, full_fname, namespace, kpoints, &
           ff_global(:, ivd), unit, ierr)
       end do
     end if
