@@ -2494,7 +2494,7 @@ contains
 
     CMPLX, allocatable :: projections(:,:)
     character(len=80) :: aux, dir
-    integer :: ik, ikpt, ist, uist, err, output_i
+    integer :: ik, ikpt, ist, uist, err
     FLOAT :: Nex, weight
     integer :: gs_nst
     FLOAT, allocatable :: Nex_kpt(:)
@@ -2578,13 +2578,11 @@ contains
  
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
-  ! MFT: TODO: which how should be passed here?
-  do output_i = 1, size(outp%how)
-    if(outp%how(output_i) /= 0) then
-      call io_function_output_global_BZ(0_8, dir, "n_excited_el_kpt", namespace, &
-        kpoints, Nex_kpt, unit_one, err) 
-    end if
-  end do
+
+  call io_function_output_global_BZ(outp%how(OPTION__OUTPUT__CURRENT_KPT) &
+    + outp%how(OPTION__OUTPUT__DENSITY_KPT), dir, "n_excited_el_kpt", namespace, &
+    kpoints, Nex_kpt, unit_one, err) 
+
  
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(Nex_kpt)

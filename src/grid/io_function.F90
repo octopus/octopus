@@ -268,7 +268,21 @@ contains
     !% Outputs the electron-photon correlation function. The output file is
     !% called <tt>photon_correlator</tt>.
     !%Option J_flow 32
-    !% MFT: TODO: document!
+    !% todo: document J_flow option!
+    !%Option current_kpt 33
+    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+    !%Option density_kpt 34
+    !% Outputs the electronic density resolved in momentum space. 
+    !% The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !%Option xc_torque 40
     !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
     !%End

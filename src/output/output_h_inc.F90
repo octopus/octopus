@@ -206,7 +206,7 @@
       endif
     end if
    
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+    if(outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
 
       if(states_are_complex(st)) then
       
@@ -259,7 +259,7 @@
       endif
     end if
     
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
+    if(outp%what(OPTION__OUTPUT__DENSITY_KPT)) then
       SAFE_ALLOCATE(density_kpt(1:st%d%nik, 1:st%d%nspin))
       density_kpt(1:st%d%nik, 1:st%d%nspin) = M_ZERO
 
@@ -288,8 +288,7 @@
         else
           write(fname, '(a,i1)') 'density_kpt-sp', is
         end if
-        !MFT TODO: which how should be passed?
-        call io_function_output_global_BZ(0_8, dir, fname, namespace, &
+        call io_function_output_global_BZ(outp%how(OPTION__OUTPUT__DENSITY_KPT), dir, fname, namespace, &
           hm%kpoints, density_kpt(:, is), unit_one, err)
       end do
       SAFE_DEALLOCATE_A(density_tmp)

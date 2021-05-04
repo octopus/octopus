@@ -132,7 +132,6 @@ module output_oct_m
     private
     !> General output variables:
     logical, public    :: what(MAX_OUTPUT_TYPES)             !< what to output
-    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
     integer(8), public :: what_lda_u          !< what to output for the LDA+U part
     integer(8), public :: how(MAX_OUTPUT_TYPES)              !< how to output
 
@@ -443,34 +442,7 @@ contains
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
 
-    !%Variable Output_KPT
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>current_kpt</tt>
-    !%Option current_kpt  bit(0)
-    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
-    !%Option density_kpt bit(1)
-    !% Outputs the electronic density resolved in momentum space. 
-    !%End
-    call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
-
-    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error(namespace, 'Output_KPT')
-    end if
-
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+    if(outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
      call v_ks_calculate_current(ks, .true.) 
     end if
 
@@ -486,18 +458,10 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
-    if((any(outp%what) .or. (outp%whatBZ + outp%what_lda_u /= 0)) .and. any(outp%output_interval > 0)) then
+    if((any(outp%what) .or. (outp%what_lda_u /= 0)) .and. any(outp%output_interval > 0)) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
-
-    !MFT TODO: confirm this
-    ! we are using a what that has a how.
-    ! if(outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-    !   call io_function_read_what_how_when(sb, namespace, outp%how)
-    ! else
-    !   outp%how = 0
-    ! end if
 
     ! At this point, we don`t know whether the states will be real or complex.
     ! We therefore pass .false. to states_are_real, and need to check for real states later.
@@ -532,7 +496,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(any(outp%what) .or. outp%whatBZ + outp%what_lda_u /= 0) then
+    if(any(outp%what) .or. outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
@@ -1484,7 +1448,7 @@ contains
 
     if(outp%what(OPTION__OUTPUT__CURRENT) &
      .or. outp%what(OPTION__OUTPUT__HEAT_CURRENT) &
-     .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+     .or. outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
       if(.not. states_are_real) then
         output_needs_current = .true.
       else
