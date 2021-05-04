@@ -31,7 +31,10 @@ DFTUDoubleCounting = dft_u_amf
 SCFCalculateForces = no
 AOLoewdin = yes
 UseAllAtomicOrbitals = yes
-OutputLDA_U = occ_matrices + effectiveU
+%Output
+  occ_matrices
+  effectiveU
+%
 StatesPack = yes
 
 LCAOStart = lcao_full

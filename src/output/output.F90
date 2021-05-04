@@ -132,7 +132,6 @@ module output_oct_m
     private
     !> General output variables:
     logical, public    :: what(MAX_OUTPUT_TYPES)             !< what to output
-    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
     integer(8), public :: how(MAX_OUTPUT_TYPES)              !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
@@ -164,7 +163,6 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how_u
 
     PUSH_SUB(output_init)
     outp%what = .false.
@@ -360,40 +358,6 @@ contains
       call output_berkeleygw_init(nst, namespace, outp%bgw, space%periodic_dim)
     end if
 
-    !%Variable OutputLDA_U
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print, related to LDA+U. 
-    !% The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>occ_matrices + effectiveU</tt>
-    !%Option occ_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U
-    !%Option effectiveU bit(1)
-    !% Outputs the value of the effectiveU for each atoms 
-    !%Option magnetization bit(2)
-    !% Outputs file containing structure and magnetization of the localized subspace 
-    !% on the atoms as a vector associated with each atom, which can be visualized.
-    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
-    !%Option local_orbitals bit(3)
-    !% Outputs the localized orbitals that form the correlated subspace
-    !%Option kanamoriU bit(4)
-    !% Outputs the Kanamori interaction parameters U, U`, and J.
-    !% These parameters are not determined self-consistently, but are taken from the 
-    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
-    !%End
-    call parse_variable(namespace, 'OutputLDA_U', 0_8, outp%what_lda_u)
-
     !%Variable OutputInterval
     !%Type integer
     !%Default 50
@@ -438,10 +402,6 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
-    ! these kinds of Output do not have a how
-    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
-      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
-
     if(outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
      call v_ks_calculate_current(ks, .true.) 
     end if
@@ -458,7 +418,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
-    if((any(outp%what) .or. (outp%what_lda_u /= 0)) .and. any(outp%output_interval > 0)) then
+    if(any(outp%what) .and. any(outp%output_interval > 0)) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
@@ -496,7 +456,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(any(outp%what) .or. outp%what_lda_u /= 0) then
+    if(any(outp%what)) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
@@ -556,19 +516,19 @@ contains
     call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+      if(outp%what(OPTION__OUTPUT__OCC_MATRICES))&
         call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+      if(outp%what(OPTION__OUTPUT__EFFECTIVEU))&
         call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+      if(outp%what(OPTION__OUTPUT__MAGNETIZATION))&
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
+      if(outp%what(OPTION__OUTPUT__LOCAL_ORBITALS))&
+        call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, associated(hm%hm_base%phase))
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+      if(outp%what(OPTION__OUTPUT__KANAMORIU))&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     

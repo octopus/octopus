@@ -118,10 +118,9 @@ contains
     character(len=*), optional, intent(in):: output_interval_tag_in
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
-    integer(8) :: what_i
     type(block_t) :: blk
-    integer :: ncols, nrows, iout, column_index
-    integer(8) :: what_no_how(6)       !> these kinds of Output do not have a how
+    integer :: ncols, nrows, iout, column_index, what_i
+    integer(8) :: what_no_how(10)       !> these kinds of Output do not have a how
     character(len=80) :: what_tag
     character(len=80) :: how_tag
     character(len=80) :: output_interval_tag
@@ -136,6 +135,8 @@ contains
     output_interval_tag = optional_default(output_interval_tag_in, 'OutputInterval')
     
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
+    call messages_obsolete_variable(namespace, 'Output_KPT', 'Output')
+    call messages_obsolete_variable(namespace, 'OutputLDA_U' , 'Output')
     
     !%Variable Output
     !%Type integer
@@ -273,16 +274,20 @@ contains
     !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
     !%Option density_kpt 34
     !% Outputs the electronic density resolved in momentum space. 
-    !% The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !%Option occ_matrices 35
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU 36
+    !% Outputs the value of the effectiveU for each atoms 
+    !%Option magnetization 37
+    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% on the atoms as a vector associated with each atom, which can be visualized.
+    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+    !%Option local_orbitals 38
+    !% Outputs the localized orbitals that form the correlated subspace
+    !%Option kanamoriU 39
+    !% Outputs the Kanamori interaction parameters U, U`, and J.
+    !% These parameters are not determined self-consistently, but are taken from the 
+    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%Option xc_torque 40
     !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
     !%End
@@ -381,7 +386,8 @@ contains
 
 
     what_no_how = (/ OPTION__OUTPUT__MATRIX_ELEMENTS, OPTION__OUTPUT__BERKELEYGW, OPTION__OUTPUT__DOS, &
-      OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW /)
+      OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW, OPTION__OUTPUT__OCC_MATRICES, &
+      OPTION__OUTPUT__EFFECTIVEU, OPTION__OUTPUT__MAGNETIZATION, OPTION__OUTPUT__KANAMORIU /)
 
     if(parse_block(namespace, what_tag, blk) == 0) then
       nrows = parse_block_n(blk)
@@ -496,7 +502,6 @@ contains
       !MFT TODO: how should I say use the block format?
       call messages_obsolete_variable(namespace, what_tag, 'block')
     endif
-
 
     if(what_tag == 'Output') then
       do what_i = 1, size(what)

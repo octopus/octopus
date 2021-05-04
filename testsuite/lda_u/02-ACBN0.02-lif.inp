@@ -44,7 +44,11 @@ UseAllAtomicOrbitals = yes
 AOTruncation = ao_full
 AOThreshold = 0.05
 AONormalize = no
-OutputLDA_U = occ_matrices + effectiveU + kanamoriU
+%Output
+  occ_matrices
+  effectiveU
+  kanamoriU
+%
 ACBN0Screening = 0.5
 
 DFTUPoissonSolver = dft_u_poisson_fft

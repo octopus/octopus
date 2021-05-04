@@ -862,8 +862,7 @@ contains
         exit
       end if
 
-      if(any(outp%what) .and. (outp%what_lda_u)/=0 .and. outp%duringscf &
-        .and. gs_run_) then
+      if(any(outp%what) .and. outp%duringscf .and. gs_run_) then
           do what_i = 1, size(outp%what) 
             if (outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
               write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter

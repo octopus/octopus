@@ -42,6 +42,9 @@ SmearingFunction = fermi_dirac
 FromScratch = yes
 
 ExtraStates = 3
-OutputLDA_U = occ_matrices + effectiveU
+%Output
+  occ_matrices
+  effectiveU
+%
 StatesPack = yes
 
