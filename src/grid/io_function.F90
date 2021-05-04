@@ -111,8 +111,8 @@ contains
     type(namespace_t), intent(in)  :: namespace
     type(space_t),     intent(in)  :: space
     logical,           intent(inout) :: what(MAX_OUTPUT_TYPES)
-    integer(8),        intent(out) :: how(MAX_OUTPUT_TYPES)
-    integer,           intent(out) :: output_interval(MAX_OUTPUT_TYPES) 
+    integer(8),        intent(out) :: how(0:MAX_OUTPUT_TYPES)
+    integer,           intent(out) :: output_interval(0:MAX_OUTPUT_TYPES) 
     character(len=*), optional, intent(in):: what_tag_in
     character(len=*), optional, intent(in):: how_tag_in
     character(len=*), optional, intent(in):: output_interval_tag_in
@@ -499,12 +499,18 @@ contains
       end if
       call parse_block_end(blk)
     else
+
       !MFT TODO: how should I say use the block format?
       call messages_obsolete_variable(namespace, what_tag, 'block')
+
+      ! Output block does not exist but we may have OutputHow/OutputInterval 
+      call parse_variable(namespace, how_tag, 0, how(0))
+      call parse_variable(namespace, output_interval_tag, 50, output_interval(0))
     endif
 
-    if(what_tag == 'Output') then
-      do what_i = 1, size(what)
+    
+    do what_i = 0, size(what)
+      if(what_tag == 'Output') then
         if(what(what_i) .and. (.not. any(what_no_how == what_i))) then
           if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
             call messages_input_error(namespace, how_tag)
@@ -582,13 +588,14 @@ contains
   #endif
 
 
-          if(output_interval(what_i) < 0) then
-            message(1) = "OutputInterval must be >= 0."
-            call messages_fatal(1, namespace=namespace)
-          end if
         end if
-      end do
-    end if
+      end if
+
+      if(output_interval(what_i) < 0) then
+        message(1) = "OutputInterval must be >= 0."
+        call messages_fatal(1, namespace=namespace)
+      end if
+    end do
     POP_SUB(io_function_read_what_how_when)
   end subroutine io_function_read_what_how_when
 

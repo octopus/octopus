@@ -132,12 +132,12 @@ module output_oct_m
     private
     !> General output variables:
     logical, public    :: what(MAX_OUTPUT_TYPES)             !< what to output
-    integer(8), public :: how(MAX_OUTPUT_TYPES)              !< how to output
+    integer(8), public :: how(0:MAX_OUTPUT_TYPES)              !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer, public :: output_interval(MAX_OUTPUT_TYPES)     !< output every iter
+    integer, public :: output_interval(0:MAX_OUTPUT_TYPES)     !< output every iter
     integer, public :: restart_write_interval
     logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
@@ -166,8 +166,6 @@ contains
 
     PUSH_SUB(output_init)
     outp%what = .false.
-    outp%how = 0_8
-    outp%output_interval = 0
     
     call io_function_read_what_how_when(sb, namespace, outp%what, outp%how, outp%output_interval)
 

@@ -1221,8 +1221,8 @@ contains
     integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
     logical :: what(MAX_OUTPUT_TYPES)
-    integer(8) :: how(MAX_OUTPUT_TYPES)
-    integer :: output_interval(MAX_OUTPUT_TYPES) 
+    integer(8) :: how(0:MAX_OUTPUT_TYPES)
+    integer :: output_interval(0:MAX_OUTPUT_TYPES) 
     FLOAT, allocatable :: centers(:,:), dwn(:)
     CMPLX, allocatable :: Umnk(:,:,:)
     CMPLX, allocatable :: zwn(:), psi(:,:)
@@ -1344,8 +1344,7 @@ contains
       do ip = 1, mesh%np
         dwn(ip) = TOFLOAT(zwn(ip))
       end do
-        !MFT: TODO: which how should be passed here?
-      call dio_function_output(0_8, 'wannier', trim(fname), global_namespace, space, mesh, &
+      call dio_function_output(how(0), 'wannier', trim(fname), global_namespace, space, mesh, &
           dwn, unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 

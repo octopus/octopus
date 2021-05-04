@@ -213,8 +213,8 @@ contains
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     logical :: output_options(MAX_OUTPUT_TYPES)
-    integer :: output_interval(MAX_OUTPUT_TYPES)
-    integer(8) :: how(MAX_OUTPUT_TYPES)
+    integer :: output_interval(0:MAX_OUTPUT_TYPES)
+    integer(8) :: how(0:MAX_OUTPUT_TYPES)
     type(block_t) :: blk
     character(len=MAX_PATH_LEN) :: filename
     type(restart_t) :: restart_gs

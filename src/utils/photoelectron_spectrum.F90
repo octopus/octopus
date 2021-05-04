@@ -50,8 +50,8 @@ program photoelectron_spectrum
 
   type pesoutput_t
     logical              :: what(MAX_OUTPUT_TYPES)
-    integer(8)           :: how(MAX_OUTPUT_TYPES)
-    integer              :: output_interval(MAX_OUTPUT_TYPES)   
+    integer(8)           :: how(0:MAX_OUTPUT_TYPES)
+    integer              :: output_interval(0:MAX_OUTPUT_TYPES)   
     FLOAT       :: pol(3)
     FLOAT       :: pvec(3)        
   end type pesoutput_t  

@@ -86,8 +86,8 @@ contains
     type(states_elec_t), intent(in)  :: st
     integer,             intent(in)  :: nst
 
-    integer(8) :: how(MAX_OUTPUT_TYPES)
-    integer :: output_interval(MAX_OUTPUT_TYPES)
+    integer(8) :: how(0:MAX_OUTPUT_TYPES)
+    integer :: output_interval(0:MAX_OUTPUT_TYPES)
 
     PUSH_SUB(output_me_init)
 
@@ -125,7 +125,6 @@ contains
     !% Not yet supported for spinors.
     !%End
 
-    ! MFT: TODO: should I ignore the errors?
     this%what = .false.
     call io_function_read_what_how_when(sb, namespace, this%what, how, output_interval, &
     'OutputMatrixElements')
