@@ -97,6 +97,10 @@ contains
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
     end if
 
+    if (geo%space%periodic_dim /= 3) then
+      call messages_not_implemented("Stress tensors for periodicity different from 3D", namespace=namespace)
+    end if
+
     if(.not.(ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) /= 0)) then
       write(message(1),'(a)') 'The stress tensor is currently only properly computed at the Kohn-Sham DFT at the LDA level'
       call messages_fatal(1, namespace=namespace)
