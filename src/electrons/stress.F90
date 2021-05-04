@@ -274,10 +274,8 @@ contains
       type(fourier_space_op_t), pointer    :: coulb
       integer :: db(3)
       integer :: ix,iy,iz, ixx(3)
-      FLOAT :: gg(3), modg2, temp(3), qq(1:MAX_DIM)
+      FLOAT :: gg(3), modg2, temp(3)
 
-      qq(1:MAX_DIM) = M_ZERO
- 
       cube => this%cube
       coulb => this%fft_solver%coulb
 
@@ -303,7 +301,7 @@ contains
                do iz = 1, cube%rs_n_global(3)
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
-                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, qq, gg, modg2)
+                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, gg, modg2)
 
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
@@ -747,26 +745,17 @@ contains
   end subroutine epot_local_pseudopotential_SR
 
   ! -------------------------------------------------------
-  subroutine poisson_fft_gg_transform_l(gg_in, temp, sb, qq, gg, modg2)
+  subroutine poisson_fft_gg_transform_l(gg_in, temp, sb, gg, modg2)
     integer,           intent(in)    :: gg_in(:)
     FLOAT,             intent(in)    :: temp(:)
     type(simul_box_t), intent(in)    :: sb
-    FLOAT,             intent(in)    :: qq(:)
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
-!    integer :: idir
-
     ! no PUSH_SUB, called too frequently
 
-    gg(1:3) = gg_in(1:3)
-    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
-    gg(1:3) = gg(1:3) * temp(1:3)
+    gg(1:3) = gg_in(1:3) * temp(1:3)
     gg(1:3) = matmul(sb%latt%klattice_primitive(1:3,1:3),gg(1:3))
-! MJV 27 jan 2015 this should not be necessary
-!    do idir = 1, 3
-!      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
-!    end do
 
     modg2 = sum(gg(1:3)**2)
 
