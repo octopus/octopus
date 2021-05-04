@@ -1044,7 +1044,7 @@ contains
         call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_REAL, &
                        need_partition=.not.der%mesh%parallel_in_domains)
       end if
-      call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel)
+      call poisson_fft_init(this%fft_solver, namespace, space, this%der%mesh, this%cube, this%kernel)
     end select
 
     POP_SUB(poisson_init_sm)
@@ -1436,7 +1436,7 @@ contains
         coulb%qq(1:space%periodic_dim) = qq(1:space%periodic_dim)
         !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
         coulb%singularity = optional_default(singul, M_ZERO)
-        call poisson_fft_get_kernel(namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+        call poisson_fft_get_kernel(namespace, space, this%der%mesh, this%cube, coulb, this%kernel, &
           this%poisson_soft_coulomb_param)
       end if
     case default

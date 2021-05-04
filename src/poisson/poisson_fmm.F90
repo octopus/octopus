@@ -46,6 +46,7 @@ module poisson_fmm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use stencil_star_oct_m
 
 #ifdef HAVE_LIBFM
@@ -88,8 +89,9 @@ contains
   ! ---------------------------------------------------------
   !> Initialises the FMM parameters and vectors. Also it calls to 
   !! the library initialisation.
-  subroutine poisson_fmm_init(this, der, all_nodes_comm)
+  subroutine poisson_fmm_init(this, space, der, all_nodes_comm)
     type(poisson_fmm_t),         intent(out)   :: this
+    type(space_t),               intent(in)    :: space
     type(derivatives_t), target, intent(in)    :: der
     integer,                     intent(in)    :: all_nodes_comm
 
@@ -228,7 +230,7 @@ contains
 
     mesh => der%mesh
 
-    if(mesh%sb%periodic_dim /= 0) then
+    if (space%is_periodic()) then
       select type (box => mesh%sb%box)
       type is (box_parallelepiped_t)
         if (.not. all(box%half_length == box%half_length(1))) then

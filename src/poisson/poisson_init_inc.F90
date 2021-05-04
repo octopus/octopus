@@ -131,7 +131,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
 
   select case(this%method)
   case(POISSON_FMM)
-    call poisson_fmm_init(this%params_fmm, this%der, all_nodes_comm)
+    call poisson_fmm_init(this%params_fmm, space, this%der, all_nodes_comm)
 
   case(POISSON_CG)
     call parse_variable(namespace, 'PoissonSolverMaxMultipole', 4, maxl)
@@ -180,7 +180,7 @@ subroutine poisson_kernel_init(this, namespace, space, all_nodes_comm)
     
   case(POISSON_FFT)
 
-    call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
+    call poisson_fft_init(this%fft_solver, namespace, space, this%der%mesh, this%cube, this%kernel, &
       soft_coulb_param = this%poisson_soft_coulomb_param)
     ! soft parameter has no effect unless in 1D
 

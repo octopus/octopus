@@ -97,7 +97,7 @@ contains
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
     end if
 
-    if (geo%space%periodic_dim /= 3) then
+    if (ions%space%periodic_dim /= 3) then
       call messages_not_implemented("Stress tensors for periodicity different from 3D", namespace=namespace)
     end if
 
