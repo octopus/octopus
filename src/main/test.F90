@@ -1356,9 +1356,19 @@ contains
     FLOAT, allocatable :: guess0(:), res0(:), guess1(:)
     type(mesh_t), pointer :: mesh0, mesh1
     FLOAT :: delta, xx(3,2), alpha, beta, rr
-    integer :: nn, ip, ierr
+    integer :: nn, ip, ierr, order
 
     PUSH_SUB(test_derivatives)
+
+    !%Variable InterpolationTestOrder
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-test
+    !%Description
+    !% This variable controls the order of the grid interpolation 
+    !% used in the corresponding unit test.
+    !%End
+    call parse_variable(global_namespace, 'InterpolationTestOrder', 1, order)
 
     sys => electrons_t(global_namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
@@ -1412,7 +1422,7 @@ contains
     ! move to level  1
     call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, INJECTION)
     ! back to level 0
-    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0)
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_result", global_namespace, &
       mesh0, res0, unit_one, ierr)
@@ -1430,7 +1440,7 @@ contains
     ! move to level  1
     call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, FULLWEIGHT)
     ! back to level 0
-    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0)
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "restriction_result", global_namespace, &
       mesh0, res0, unit_one, ierr)
