@@ -38,6 +38,7 @@ module states_elec_restart_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_calc_oct_m
   use states_elec_oct_m
@@ -66,9 +67,10 @@ module states_elec_restart_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_elec_look_and_load(restart, namespace, st, gr, kpoints, is_complex)
+  subroutine states_elec_look_and_load(restart, namespace, space, st, gr, kpoints, is_complex)
     type(restart_t),             intent(in)    :: restart
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(states_elec_t), target, intent(inout) :: st
     type(grid_t),                intent(in)    :: gr
     type(kpoints_t),             intent(in)    :: kpoints
@@ -131,7 +133,7 @@ contains
     end if
 
     ! load wavefunctions
-    call states_elec_load(restart, namespace, st, gr, kpoints, ierr)
+    call states_elec_load(restart, namespace, space, st, gr, kpoints, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1, namespace=namespace)
@@ -142,8 +144,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_dump(restart, st, gr, kpoints, ierr, iter, lr, st_start_writing, verbose)
+  subroutine states_elec_dump(restart, space, st, gr, kpoints, ierr, iter, lr, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
+    type(space_t),        intent(in)  :: space
     type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     type(kpoints_t),      intent(in)  :: kpoints
@@ -231,7 +234,7 @@ contains
     err2 = 0
     do ik = 1, st%d%nik
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = &
+      kpoint(1:space%dim) = &
         kpoints%get_point(st%d%get_kpoint_index(ik), absolute_coordinates = .true.)
 
       do ist = 1, st%nst
@@ -245,7 +248,7 @@ contains
 
           write(lines(1), '(e21.14,a,e21.14)') st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
           write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', CNST(0.0)
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', kpoint(idir)
           end do
           write(lines(1), '(a,a,e21.14,a,i10.10,3(a,i8))') trim(lines(1)), &
@@ -263,10 +266,10 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_elec_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err, root = root)
+                  call drestart_write_mesh_function(restart, space, filename, gr%mesh, dpsi, err, root = root)
                 else
                   call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
+                  call zrestart_write_mesh_function(restart, space, filename, gr%mesh, zpsi, err, root = root)
                 end if
               else
                 err = 0
@@ -274,10 +277,10 @@ contains
             else
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, &
+                  call drestart_write_mesh_function(restart, space, filename, gr%mesh, &
                     lr%ddl_psi(:, idim, ist, ik), err, root = root)
                 else
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, &
+                  call zrestart_write_mesh_function(restart, space, filename, gr%mesh, &
                     lr%zdl_psi(:, idim, ist, ik), err, root = root)
                 end if
               else
@@ -331,9 +334,10 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_elec_load(restart, namespace, st, gr, kpoints, ierr, iter, lr, lowest_missing, label, verbose, skip)
+  subroutine states_elec_load(restart, namespace, space, st, gr, kpoints, ierr, iter, lr, lowest_missing, label, verbose, skip)
     type(restart_t),            intent(in)    :: restart
     type(namespace_t),          intent(in)    :: namespace
+    type(space_t),              intent(in)    :: space
     type(states_elec_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     type(kpoints_t),            intent(in)    :: kpoints
@@ -545,7 +549,7 @@ contains
 
         if (err == 0) then
           read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
-               (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
+               (read_kpoint(idir), char, idir = 1, space%dim), my_kweight
           ! we do not want to read the k-weights, we have already set them appropriately
         else
           ! There is a problem with this states information, so we skip it.
@@ -553,15 +557,15 @@ contains
           cycle
         end if
 
-        kpoint(1:gr%sb%dim) = &
+        kpoint(1:space%dim) = &
           kpoints%get_point(st%d%get_kpoint_index(ik), absolute_coordinates = .true.)
         ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
-        if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
+        if (any(abs(kpoint(1:space%dim) - read_kpoint(1:space%dim)) > CNST(1e-12))) then
           ! write only once for each k-point so as not to be too verbose
           if (ist == 1) then
             write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
-            write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
-            write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
+            write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:space%dim)
+            write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:space%dim)
             call messages_warning(3, namespace=namespace)
           end if
           restart_file_present(idim, ist, ik) = .false.
@@ -624,9 +628,9 @@ contains
           end if
 
           if (states_are_real(st)) then
-            call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
+            call drestart_read_mesh_function(restart, space, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
           else
-            call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+            call zrestart_read_mesh_function(restart, space, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
           end if
 
           if(states_are_real(st)) then
@@ -764,8 +768,9 @@ contains
   end subroutine states_elec_load
 
 
-  subroutine states_elec_dump_rho(restart, st, gr, ierr, iter)
+  subroutine states_elec_dump_rho(restart, space, st, gr, ierr, iter)
     type(restart_t),      intent(in)    :: restart
+    type(space_t),        intent(in)    :: space
     type(states_elec_t),  intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -818,9 +823,9 @@ contains
       if(gr%have_fine_mesh)then
         rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
         call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
-        call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
+        call drestart_write_mesh_function(restart, space, filename, gr%mesh, rho, err)
       else
-        call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+        call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
       end if
       if (err /= 0) err2(2) = err2(2) + 1
 
@@ -855,8 +860,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_load_rho(restart, st, gr, ierr)
+  subroutine states_elec_load_rho(restart, space, st, gr, ierr)
     type(restart_t),      intent(in)    :: restart
+    type(space_t),        intent(in)    :: space
     type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -902,10 +908,10 @@ contains
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
 !      end if
       if(gr%have_fine_mesh)then
-        call drestart_read_mesh_function(restart, filename, gr%mesh, rho_coarse, err)
+        call drestart_read_mesh_function(restart, space, filename, gr%mesh, rho_coarse, err)
         call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
       else
-        call drestart_read_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+        call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
       end if
       if (err /= 0) err2 = err2 + 1
 
@@ -924,8 +930,9 @@ contains
     POP_SUB(states_elec_load_rho)
   end subroutine states_elec_load_rho
 
-  subroutine states_elec_dump_frozen(restart, st, gr, ierr)
+  subroutine states_elec_dump_frozen(restart, space, st, gr, ierr)
     type(restart_t),      intent(in)    :: restart
+    type(space_t),        intent(in)    :: space
     type(states_elec_t),  intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -959,7 +966,7 @@ contains
         write(filename, fmt='(a,i1)') 'frozen_rho-sp', isp
       end if
 
-      call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
+      call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
       if (allocated(st%frozen_tau)) then 
@@ -968,18 +975,18 @@ contains
         else
           write(filename, fmt='(a,i1)') 'frozen_tau-sp', isp
         end if
-        call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_tau(:,isp), err)
+        call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%frozen_tau(:,isp), err)
         if (err /= 0) err2 = err2 + 1
       end if
 
       if (allocated(st%frozen_gdens)) then
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
           else
             write(filename, fmt='(a,i1,a,i1)') 'frozen_tau-dir', idir, '-', isp
           end if
-          call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
+          call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
           if (err /= 0) err2 = err2 + 1
         end do
       end if
@@ -990,7 +997,7 @@ contains
         else
           write(filename, fmt='(a,i1)') 'frozen_ldens-sp', isp
         end if
-        call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_ldens(:,isp), err)
+        call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%frozen_ldens(:,isp), err)
         if (err /= 0) err2 = err2 + 1
       end if
 
@@ -1010,8 +1017,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_load_frozen(restart, st, gr, ierr)
+  subroutine states_elec_load_frozen(restart, space, st, gr, ierr)
     type(restart_t),      intent(in)    :: restart
+    type(space_t),        intent(in)    :: space
     type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
@@ -1043,7 +1051,7 @@ contains
       else
         write(filename, fmt='(a,i1)') 'frozen_rho-sp', isp
       end if
-      call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
+      call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
       if (allocated(st%frozen_tau)) then
@@ -1052,18 +1060,18 @@ contains
         else
           write(filename, fmt='(a,i1)') 'frozen_tau-sp', isp
         end if
-        call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_tau(:,isp), err)
+        call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%frozen_tau(:,isp), err)
         if (err /= 0) err2 = err2 + 1
       end if
       
       if (allocated(st%frozen_gdens)) then
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           if(st%d%nspin==1) then
             write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
           else
             write(filename, fmt='(a,i1,a,i1)') 'frozen_tau-dir', idir, '-', isp
           end if
-          call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
+          call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
           if (err /= 0) err2 = err2 + 1
         end do
       end if
@@ -1074,7 +1082,7 @@ contains
         else
           write(filename, fmt='(a,i1)') 'frozen_ldens-sp', isp
         end if
-        call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_ldens(:,isp), err)
+        call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%frozen_ldens(:,isp), err)
         if (err /= 0) err2 = err2 + 1
       end if
 
@@ -1093,15 +1101,16 @@ contains
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions
   !! from the input file and fills the respective orbitals
-  subroutine states_elec_read_user_def_orbitals(mesh, namespace, st)
+  subroutine states_elec_read_user_def_orbitals(mesh, namespace, space, st)
     type(mesh_t),        intent(in)    :: mesh
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(states_elec_t), intent(inout) :: st
 
     type(block_t) :: blk
     integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
     integer :: ib, idim, inst, inik, normalize
-    FLOAT :: xx(1:mesh%sb%dim), rr, psi_re, psi_im
+    FLOAT :: xx(space%dim), rr, psi_re, psi_im
     character(len=150) :: filename
     CMPLX, allocatable :: zpsi(:, :)
 
@@ -1217,7 +1226,7 @@ contains
                   rr = sqrt(sum(xx**2))
 
                   ! parse user-defined expressions
-                  call parse_expression(psi_re, psi_im, mesh%sb%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))
+                  call parse_expression(psi_re, psi_im, space%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))
                   ! fill state
                   zpsi(ip, 1) = psi_re + M_zI * psi_im
                 end do
@@ -1234,7 +1243,7 @@ contains
                 call messages_info(3, all_nodes=.true.)
 
                 ! finally read the state
-                call zio_function_input(filename, namespace, mesh, zpsi(:, 1), ierr)
+                call zio_function_input(filename, namespace, space, mesh, zpsi(:, 1), ierr)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -1408,9 +1417,10 @@ contains
   end subroutine states_elec_load_spin
 
   ! ---------------------------------------------------------
-  subroutine states_elec_transform(st, namespace, restart, gr, kpoints, prefix)
+  subroutine states_elec_transform(st, namespace, space, restart, gr, kpoints, prefix)
     type(states_elec_t),        intent(inout) :: st
     type(namespace_t),          intent(in)    :: namespace
+    type(space_t),              intent(in)    :: space
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
     type(kpoints_t),            intent(in)    :: kpoints
@@ -1460,7 +1470,7 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
         call states_elec_copy(stin, st, exclude_wfns = .true.)
-        call states_elec_look_and_load(restart, namespace, stin, gr, kpoints)
+        call states_elec_look_and_load(restart, namespace, space, stin, gr, kpoints)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))

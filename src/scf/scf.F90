@@ -301,7 +301,7 @@ contains
     call mix_get_field(scf%smix, scf%mixfield)
 
     if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
-      call lda_u_loadbasis(hm%lda_u, namespace, st, gr%mesh, mc, ierr)
+      call lda_u_loadbasis(hm%lda_u, namespace, space, st, gr%mesh, mc, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
@@ -548,7 +548,7 @@ contains
     if (present(restart_load)) then
       if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
-        call states_elec_load_rho(restart_load, st, gr, ierr)
+        call states_elec_load_rho(restart_load, space, st, gr, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
@@ -564,7 +564,7 @@ contains
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
-        call hamiltonian_elec_load_vhxc(restart_load, hm, gr%mesh, ierr)
+        call hamiltonian_elec_load_vhxc(restart_load, hm, space, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
@@ -584,9 +584,9 @@ contains
       if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
         select case (scf%mix_field)
         case (OPTION__MIXFIELD__DENSITY)
-          call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
+          call mix_load(restart_load, scf%smix, space, gr%fine%mesh, ierr)
         case (OPTION__MIXFIELD__POTENTIAL)
-          call mix_load(restart_load, scf%smix, gr%mesh, ierr)
+          call mix_load(restart_load, scf%smix, space, gr%mesh, ierr)
         end select
         if (ierr /= 0) then
           message(1) = "Unable to read mixing information. Mixing will start from scratch."
@@ -813,13 +813,13 @@ contains
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
-          call states_elec_dump(restart_dump, st, gr, hm%kpoints, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, space, st, gr, hm%kpoints, ierr, iter=iter) 
           if (ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
 
-          call states_elec_dump_rho(restart_dump, st, gr, ierr, iter=iter)
+          call states_elec_dump_rho(restart_dump, space, st, gr, ierr, iter=iter)
           if (ierr /= 0) then
             message(1) = 'Unable to write density.'
             call messages_warning(1)
@@ -835,19 +835,19 @@ contains
 
           select case (scf%mix_field)
           case (OPTION__MIXFIELD__DENSITY)
-            call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
+            call mix_dump(restart_dump, scf%smix, space, gr%fine%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
             end if
           case (OPTION__MIXFIELD__POTENTIAL)
-            call hamiltonian_elec_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
+            call hamiltonian_elec_dump_vhxc(restart_dump, hm, space, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write Vhxc.'
               call messages_warning(1)
             end if
 
-            call mix_dump(restart_dump, scf%smix, gr%mesh, ierr)
+            call mix_dump(restart_dump, scf%smix, space, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write mixing information.'
               call messages_warning(1)

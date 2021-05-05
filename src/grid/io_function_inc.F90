@@ -39,9 +39,10 @@
 !!             -4 : function in file is complex, dp. \n
 ! ---------------------------------------------------------
 
-subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
+subroutine X(io_function_input)(filename, namespace, space, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
   type(namespace_t), intent(in)    :: namespace
+  type(space_t),     intent(in)    :: space
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -60,7 +61,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(io_function_input_global)(filename, namespace, mesh, ff_global, ierr, map)
+      call X(io_function_input_global)(filename, namespace, space, mesh, ff_global, ierr, map)
     end if
     if(debug%info) call messages_debug_newlines(2)
 
@@ -79,7 +80,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
 
     SAFE_DEALLOCATE_A(ff_global)
   else
-    call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
+    call X(io_function_input_global)(filename, namespace, space, mesh, ff, ierr, map)
   end if
 
   POP_SUB(X(io_function_input))
@@ -88,9 +89,10 @@ end subroutine X(io_function_input)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
+subroutine X(io_function_input_global)(filename, namespace, space, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
   type(namespace_t), intent(in)    :: namespace
+  type(space_t),     intent(in)    :: space
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -132,7 +134,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     if(status /= NF90_NOERR) then
       ierr = 2
     else
-      call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+      call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
       call dcube_function_alloc_RS(cube, re)
@@ -186,7 +188,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       call messages_fatal(1)
     end select
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
     call X(cube_function_alloc_RS)(cube, cf)
     
     call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
@@ -208,7 +210,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       call messages_fatal(1)
     end if
 
-    if(mesh%sb%dim == 1) then
+    if (space%dim == 1) then
       SAFE_ALLOCATE(x_in(1:dims(1), 1:1))
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
@@ -221,14 +223,14 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
         x_out(ii,1) = TOFLOAT(ii-1)
       end do
         
-! TODO: find out why this was called with ndim 2 as a first argument, in the mesh%sb%dim 1 case
+      ! TODO: find out why this was called with ndim 2 as a first argument, in the space%dim 1 case
       call X(mf_interpolate_points)(1, int(dims(1), FC_INTEGER_SIZE), x_in(:,:),&
         read_ff, cube%rs_n_global(1), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
       
-    else if(mesh%sb%dim == 2) then
+    else if (space%dim == 2) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)), 1:2))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)), 1:2))
       
@@ -250,7 +252,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
-    else if(mesh%sb%dim == 3) then
+    else if (space%dim == 3) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)*dims(3)), 1:3))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)), 1:3))
       
@@ -379,7 +381,7 @@ contains
     SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      select case(mesh%sb%dim)
+      select case (space%dim)
       case(1)
         status = nf90_get_var (ncid, data_id, xx(1, 1, :))
       case(2)
@@ -392,7 +394,7 @@ contains
     end if
     if(file_kind<0) then
       if(status == NF90_NOERR) then
-        select case(mesh%sb%dim)
+        select case(space%dim)
         case(1)
           status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
         case(2)
@@ -408,7 +410,7 @@ contains
     end if
 #else
     if(status == NF90_NOERR) then
-      select case(mesh%sb%dim)
+      select case (space%dim)
       case(1)
         status = nf90_get_var (ncid, data_id, xx(1, 1, :))
       case(2)
@@ -432,22 +434,21 @@ end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, vector_dim, unit, ierr, &
-  ions, grp, root, is_global, vector_dim_labels)
+subroutine X(io_function_output_vector)(how, dir, fname, namespace, space, mesh, ff, unit, ierr, &
+  ions, grp, root, is_global)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
+  type(space_t),              intent(in)  :: space
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:, :)
-  integer,                    intent(in)  :: vector_dim
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
   type(ions_t),     optional, intent(in)  :: ions
   type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
   integer,          optional, intent(in)  :: root !< which process is going to write the data
   logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
-  character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
   integer :: ivd
   integer(8) :: how_seq
@@ -458,11 +459,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
 
   PUSH_SUB(X(io_function_output_vector))
 
-  if(present(vector_dim_labels)) then
-    ASSERT(ubound(vector_dim_labels, dim = 1) >= vector_dim)
-  end if
-
-  ASSERT(vector_dim < 10)
+  ASSERT(space%dim < 10)
 
   ierr = 0
   is_global_ = optional_default(is_global, .false.)
@@ -487,10 +484,10 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
     if (.not. is_global_) then
       if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
         call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
-        SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:vector_dim))
+        SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:space%dim))
         ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
       else
-        SAFE_ALLOCATE(ff_global(1:mesh%np_global, 1:vector_dim))
+        SAFE_ALLOCATE(ff_global(1:mesh%np_global, 1:space%dim))
       end if
 
       !note: here we are gathering data that we won`t write if grp is
@@ -498,7 +495,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
       !processes are members of the domain line where the root of grp
       !lives
 
-      do ivd = 1, vector_dim
+      do ivd = 1, space%dim
         call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
       end do
       
@@ -522,14 +519,10 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
     how_seq = bitand(how_seq, not(OPTION__OUTPUTFORMAT__VTK)) ! remove from the list of formats
 
     if(how_seq /= 0) then !perhaps there is nothing left to do
-      do ivd = 1, vector_dim
-        if(present(vector_dim_labels)) then
-          full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
-        else
-          write(full_fname, '(2a,i1)') trim(fname), '-', ivd
-        end if
+      do ivd = 1, space%dim
+        full_fname = trim(fname)//'-'//index2axis(ivd)
         
-        call X(io_function_output_global)(how_seq, dir, full_fname, namespace, mesh, &
+        call X(io_function_output_global)(how_seq, dir, full_fname, namespace, space, mesh, &
           ff_global(:, ivd), unit, ierr, ions)
       end do
     end if
@@ -562,11 +555,11 @@ contains
 
     PUSH_SUB(X(io_function_output_vector).out_vtk)
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
 
-    SAFE_ALLOCATE(cf(1:vector_dim))
+    SAFE_ALLOCATE(cf(1:space%dim))
 
-    do ivd = 1, vector_dim
+    do ivd = 1, space%dim
       call X(cube_function_alloc_RS)(cube, cf(ivd))
       call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
@@ -577,9 +570,9 @@ contains
       dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
     end do
 
-    call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
+    call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, space%dim, cube, dk, unit)
 
-    do ivd = 1, vector_dim
+    do ivd = 1, space%dim
       call X(cube_function_free_RS)(cube, cf(ivd))
     end do
 
@@ -593,21 +586,20 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoints, ff, vector_dim, &
-    unit, ierr, grp, root, vector_dim_labels)
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kpt, kpoints, ff, &
+    unit, ierr, grp, root)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
+  type(space_t),              intent(in)  :: space
   type(distributed_t),        intent(in)  :: kpt
   type(kpoints_t),            intent(in)  :: kpoints
   R_TYPE,           target,   intent(in)  :: ff(:, :)
-  integer,                    intent(in)  :: vector_dim
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
   type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
   integer,          optional, intent(in)  :: root !< which process is going to write the data
-  character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
   integer :: ivd
   integer(8) :: how_seq
@@ -619,11 +611,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoi
 
   PUSH_SUB(X(io_function_output_vector_BZ))
 
-  if(present(vector_dim_labels)) then
-    ASSERT(ubound(vector_dim_labels, dim = 1) >= vector_dim)
-  end if
-
-  ASSERT(vector_dim < 10)
+  ASSERT(space%dim < 10)
 
   ierr = 0
   ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
@@ -643,10 +631,10 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoi
   i_am_root = grp%rank == root_
 
   if(kpt%parallel) then
-    SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:vector_dim))
-    ff_global(1:kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
+    SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:space%dim))
+    ff_global(1:kpoints%reduced%npoints, 1:space%dim) = R_TOTYPE(M_ZERO)   
  
-    do ivd = 1, vector_dim
+    do ivd = 1, space%dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
     call comm_allreduce(grp_, ff_global)
@@ -659,12 +647,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, kpt, kpoi
     how_seq = how
 
     if(how_seq /= 0) then !perhaps there is nothing left to do
-      do ivd = 1, vector_dim
-        if(present(vector_dim_labels)) then
-          full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
-        else
-          write(full_fname, '(2a,i1)') trim(fname), '-', ivd
-        end if
+      do ivd = 1, space%dim
+        full_fname = trim(fname)//'-'//index2axis(ivd)
         
         call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, kpoints, &
           ff_global(:, ivd), unit, ierr)
@@ -691,11 +675,12 @@ end subroutine X(io_function_output_vector_BZ)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ierr, ions, grp, root, is_global)
+subroutine X(io_function_output) (how, dir, fname, namespace, space, mesh, ff, unit, ierr, ions, grp, root, is_global)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(namespace_t),          intent(in)  :: namespace
+  type(space_t),              intent(in)  :: space
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:)
   type(unit_t),               intent(in)  :: unit
@@ -756,7 +741,7 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   end if
 
   if(i_am_root) then
-    call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff_global, unit, ierr, ions = ions)
+    call X(io_function_output_global)(how, dir, fname, namespace, space, mesh, ff_global, unit, ierr, ions = ions)
   end if
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
@@ -773,7 +758,7 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
 
   ! serial mode
   ASSERT(.not. mesh%parallel_in_domains)
-  call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff, unit, ierr, ions = ions)
+  call X(io_function_output_global)(how, dir, fname, namespace, space, mesh, ff, unit, ierr, ions = ions)
 
 #endif
 
@@ -782,10 +767,11 @@ end subroutine X(io_function_output)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, unit, ierr, ions)
+subroutine X(io_function_output_global) (how, dir, fname, namespace, space, mesh, ff, unit, ierr, ions)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(namespace_t),          intent(in)  :: namespace
+  type(space_t),              intent(in)  :: space
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
   type(unit_t),               intent(in)  :: unit
@@ -890,7 +876,7 @@ contains
     integer, intent(in) :: d1, d2, d3
     
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:mesh%sb%dim)
+    FLOAT   :: xx(space%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_axis)
@@ -921,7 +907,7 @@ contains
     integer :: ix, iy, iz, jdim
     integer :: ixvect(MAX_DIM)
     integer :: ixvect_test(MAX_DIM)
-    FLOAT   :: xx(1:mesh%sb%dim)
+    FLOAT   :: xx(space%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_plane)
@@ -935,9 +921,9 @@ contains
 ! and d3, to get a plane. Do the same as for ix, but with all the other
 ! dimensions.
 
-    ixvect=1
-    do jdim=1,mesh%sb%dim
-      if (jdim==d2 .or. jdim==d3) cycle
+    ixvect = 1
+    do jdim = 1, space%dim
+      if (jdim == d2 .or. jdim == d3) cycle
 
       do ix = mesh%idx%nr(1, jdim), mesh%idx%nr(2, jdim)
 ! NOTE: MJV: how could this return anything but ix=0? Answ: if there is a shift in origin
@@ -983,7 +969,7 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:mesh%sb%dim), zz
+    FLOAT   :: xx(space%dim), zz
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_integrate_plane)
@@ -1036,7 +1022,7 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
-    FLOAT :: xx(1:mesh%sb%dim)
+    FLOAT :: xx(space%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_matlab)
@@ -1124,7 +1110,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
-    FLOAT :: xx(1:mesh%sb%dim)
+    FLOAT :: xx(space%dim)
     R_TYPE :: fu
 
     integer :: idir
@@ -1168,14 +1154,14 @@ contains
     PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
     ! our origin is at the center of the cell instead of being at the corner.
-    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
-    do idir = mesh%sb%periodic_dim + 1, 3
+    offset(1:space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, space%dim))
+    do idir = space%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
     offset = units_from_atomic(units_out%length, offset)
@@ -1238,14 +1224,14 @@ contains
     ASSERT(present(ions))
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
     ! our origin is at the center of the cell instead of being at the corner.
-    offset(1:mesh%sb%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, mesh%sb%dim))
-    do idir = mesh%sb%periodic_dim + 1, 3
+    offset(1:space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, space%dim))
+    do idir = space%periodic_dim + 1, 3
       offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
@@ -1300,7 +1286,7 @@ contains
     logical, intent(in) :: write_real
 
     integer :: ix, iy, iz, idir2, ix2, iy2, iz2, my_n(3)
-    FLOAT :: lattice_vectors(3,mesh%sb%dim)
+    FLOAT :: lattice_vectors(3,space%dim)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
@@ -1317,14 +1303,14 @@ contains
     fname_ext = trim(fname)
 #endif
 
-    if(mesh%sb%dim /= 3 .and. mesh%sb%dim /= 2) then
+    if (space%dim /= 3 .and. space%dim /= 2) then
       write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 2D or 3D.'
       call messages_warning(1)
       return
     end if
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1332,14 +1318,14 @@ contains
     ! mesh%idx%ll is "general" in aperiodic directions,
     ! but "periodic" in periodic directions.
     ! Making this assignment, the output grid is entirely "general"
-    my_n(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim) + 1
-    my_n(mesh%sb%periodic_dim + 1:mesh%sb%dim) = mesh%idx%ll(mesh%sb%periodic_dim + 1:mesh%sb%dim)
-    if(mesh%sb%dim == 2) my_n(3) = 1
+    my_n(1:space%periodic_dim) = mesh%idx%ll(1:space%periodic_dim) + 1
+    my_n(space%periodic_dim + 1:space%dim) = mesh%idx%ll(space%periodic_dim + 1:space%dim)
+    if (space%dim == 2) my_n(3) = 1
 
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     lattice_vectors = M_ZERO
-    do idir = 1, mesh%sb%dim
-      do idir2 = 1, mesh%sb%dim
+    do idir = 1, space%dim
+      do idir2 = 1, space%dim
         lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%latt%rlattice_primitive(idir2, idir)
       end do
     end do
@@ -1349,14 +1335,14 @@ contains
     ASSERT(present(ions))
     call write_xsf_geometry(iunit, ions, mesh)
 
-    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', space%dim, 'D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
-    write(iunit, '(a,i1,a)') 'BEGIN_DATAGRID_', mesh%sb%dim, 'D_function'
-    write(iunit, '(3i7)') my_n(1:mesh%sb%dim)
+    write(iunit, '(a,i1,a)') 'BEGIN_DATAGRID_', space%dim, 'D_function'
+    write(iunit, '(3i7)') my_n(1:space%dim)
     write(iunit, '(a)') '0.0 0.0 0.0'
 
-    do idir = 1, mesh%sb%dim
+    do idir = 1, space%dim
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
         lattice_vectors(idir2, idir)), idir2 = 1, 3)
     end do
@@ -1396,8 +1382,8 @@ contains
       end do
     end do
 
-    write(iunit, '(a,i1,a)') 'END_DATAGRID_', mesh%sb%dim, 'D'
-    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_DATAGRID_', space%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID_', space%dim, 'D'
 
     call io_close(iunit)
 
@@ -1418,15 +1404,14 @@ contains
     PUSH_SUB(X(io_function_output_global).out_netcdf)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", namespace)
 
      
-    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
-      units_from_atomic(units_out%length, mesh%spacing), .true., unit)
+    call X(out_cf_netcdf)(filename, ierr, cf, cube, space, units_from_atomic(units_out%length, mesh%spacing), .true., unit)
 
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
@@ -1453,7 +1438,7 @@ contains
       dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
     end do
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space, spacing = dk)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1580,12 +1565,12 @@ end subroutine X(io_function_output_global_BZ)
   ! --------------------------------------------------------- 
   !>  Writes a cube_function in netcdf format
   ! ---------------------------------------------------------
-  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose, unit)
+  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, space, spacing, transpose, unit)
     character(len=*),      intent(in) :: filename        !< the file name
     integer,               intent(out):: ierr            !< error message   
     type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
     type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
-    integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
+    type(space_t),         intent(in) :: space           !< the spatial dimensions
     FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
     logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
     type(unit_t),          intent(in) :: unit            !< unit of data in cf
@@ -1637,7 +1622,7 @@ end subroutine X(io_function_output_global_BZ)
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
-    dim_min = 3 - sb_dim + 1
+    dim_min = 3 - space%dim + 1
 
     if(status == NF90_NOERR) then
       status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
@@ -1680,9 +1665,9 @@ end subroutine X(io_function_output_global_BZ)
     ! FIXME: needs explicit casts to single-precision. Why single-precision anyway?
     ! data
     pos(:,:) = M_ZERO
-    pos(1, 1:sb_dim) = &
-      real( - (cube%rs_n_global(1:sb_dim) - 1)/2*spacing(1:sb_dim), 4)
-    pos(2, 1:sb_dim) = real(spacing(1:sb_dim), 4)
+    pos(1, 1:space%dim) = &
+      real( - (cube%rs_n_global(1:space%dim) - 1)/2*spacing(1:space%dim), 4)
+    pos(2, 1:space%dim) = real(spacing(1:space%dim), 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))
@@ -1698,7 +1683,7 @@ end subroutine X(io_function_output_global_BZ)
         xx = TOFLOAT(cf%X(RS))
       end if
       xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
+      call write_variable(ncid, data_id, status, space, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
@@ -1708,7 +1693,7 @@ end subroutine X(io_function_output_global_BZ)
         xx = aimag(cf%X(RS))
       end if
       xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_im_id, status, sb_dim, xx)
+      call write_variable(ncid, data_im_id, status, space, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
@@ -1719,7 +1704,7 @@ end subroutine X(io_function_output_global_BZ)
         xx=cf%X(RS)
       end if
       xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
+      call write_variable(ncid, data_id, status, space, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
@@ -1733,15 +1718,15 @@ end subroutine X(io_function_output_global_BZ)
     contains
 
       ! ---------------------------------------------------------
-      subroutine write_variable(ncid, data_id, status, sb_dim, xx)
-        integer, intent(in)  :: ncid, data_id
-        integer, intent(out) :: status
-        integer, intent(in)  :: sb_dim
-        FLOAT,   intent(in)  :: xx(:,:,:)
+      subroutine write_variable(ncid, data_id, status, space, xx)
+        integer,       intent(in)  :: ncid, data_id
+        integer,       intent(out) :: status
+        type(space_t), intent(in)  :: space
+        FLOAT,         intent(in)  :: xx(:,:,:)
 
         PUSH_SUB(X(out_cf_netcdf).write_variable)
 
-        select case(sb_dim)
+        select case(space%dim)
         case(1)
           status = nf90_put_var (ncid, data_id, xx(1,1,:))
         case(2)

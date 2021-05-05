@@ -464,9 +464,9 @@ contains
 
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
-        call dio_function_output(io_function_fill_how("AxisX"), ".", "vhxc"//fname, namespace, &
+        call dio_function_output(io_function_fill_how("AxisX"), ".", "vhxc"//fname, namespace, space, &
           gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
-        call dio_function_output(io_function_fill_how("AxisX"), ".", "rho"//fname, namespace, &
+        call dio_function_output(io_function_fill_how("AxisX"), ".", "rho"//fname, namespace, space, &
           gr%mesh, st%rho(:,1), units_out%length**(-space%dim), ierr)
       end if
 

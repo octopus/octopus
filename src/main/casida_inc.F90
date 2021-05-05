@@ -302,7 +302,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, ions = sys%ions)
+        sys%namespace, sys%space, sys%gr%mesh, n0I, fn_unit, ierr, ions = sys%ions)
     end if
   end do
 
@@ -976,7 +976,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     do idir = 1, mesh%sb%dim
       
       if(ierr == 0) &
-        call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, restart_vib, phn_rho_tag(iatom, idir), ierr)      
+        call X(lr_load_rho)(X(dl_rho), sys%space, sys%gr%mesh, st%d%nspin, restart_vib, phn_rho_tag(iatom, idir), ierr)
       if(ierr /= 0) then
         message(1) = "Could not read vib_modes density; previous vib_modes calculation required."
         call messages_fatal(1)

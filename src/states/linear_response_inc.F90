@@ -286,8 +286,9 @@ end subroutine X(lr_swap_sigma)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
+subroutine X(lr_dump_rho)(lr, space, mesh, nspin, restart, rho_tag, ierr)
   type(lr_t),        intent(in)  :: lr
+  type(space_t),     intent(in)  :: space
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: nspin
   type(restart_t),   intent(in)  :: restart
@@ -313,7 +314,7 @@ subroutine X(lr_dump_rho)(lr, mesh, nspin, restart, rho_tag, ierr)
   err2 = 0
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_mesh_function)(restart, fname, mesh, lr%X(dl_rho)(:, is), err)
+    call X(restart_write_mesh_function)(restart, space, fname, mesh, lr%X(dl_rho)(:, is), err)
     if (err /= 0) err2 = err2 + 1
   end do
   if (err2 /= 0) ierr = ierr + 1
@@ -328,8 +329,9 @@ end subroutine X(lr_dump_rho)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
+subroutine X(lr_load_rho)(dl_rho, space, mesh, nspin, restart, rho_tag, ierr)
   R_TYPE,            intent(inout) :: dl_rho(:,:) !< (mesh%np, nspin)
+  type(space_t),     intent(in)    :: space
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nspin
   type(restart_t),   intent(in)    :: restart
@@ -360,7 +362,7 @@ subroutine X(lr_load_rho)(dl_rho, mesh, nspin, restart, rho_tag, ierr)
   err2 = 0
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
-    call X(restart_read_mesh_function)(restart, fname, mesh, dl_rho(:, is), err)
+    call X(restart_read_mesh_function)(restart, space, fname, mesh, dl_rho(:, is), err)
     if (err /= 0) err2 = err2 + 1
   end do
   if (err2 /= 0) ierr = ierr + 1

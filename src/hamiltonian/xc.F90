@@ -39,6 +39,7 @@ module xc_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use unit_system_oct_m

@@ -29,6 +29,7 @@ module linear_response_oct_m
   use profiling_oct_m
   use restart_oct_m
   use smear_oct_m
+  use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m

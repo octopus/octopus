@@ -35,6 +35,7 @@ module vdw_ts_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
+  use space_oct_m
   use species_oct_m
   use states_elec_oct_m
   use unit_oct_m
@@ -158,9 +159,10 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, namespace, ions, der, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, space, ions, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(ions_t),        intent(in)    :: ions
     type(derivatives_t), intent(in)    :: der
     type(states_elec_t), intent(in)    :: st
@@ -297,7 +299,7 @@ contains
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", namespace, der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, ions%space, der%mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)

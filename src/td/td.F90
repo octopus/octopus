@@ -645,7 +645,7 @@ contains
     if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
       !if(iter == td%max_iter) outp%iter = ii - 1
       call td_write_data(td%write_handler)
-      call td_dump(td%restart_dump, namespace, gr, st, hm, td, iter, ierr)
+      call td_dump(td%restart_dump, namespace, space, gr, st, hm, td, iter, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write time-dependent restart information."
         call messages_warning(1, namespace=namespace)
@@ -755,7 +755,7 @@ contains
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
 
       if(.not. st%only_userdef_istates) then
-        if (ierr == 0) call states_elec_load(restart, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
+        if (ierr == 0) call states_elec_load(restart, namespace, space, st, gr, hm%kpoints, ierr, label = ": gs")
         if (ierr /= 0) then
           message(1) = 'Unable to read ground-state wavefunctions.'
           call messages_fatal(1, namespace=namespace)
@@ -766,10 +766,10 @@ contains
       ! according to the settings in the input file the routine
       ! overwrites orbitals that were read from restart/gs
       if (parse_is_defined(namespace, 'UserDefinedStates')) then
-        call states_elec_read_user_def_orbitals(gr%mesh, namespace, st)
+        call states_elec_read_user_def_orbitals(gr%mesh, namespace, space, st)
       end if
 
-      call states_elec_transform(st, namespace, restart, gr, hm%kpoints)
+      call states_elec_transform(st, namespace, space, restart, gr, hm%kpoints)
       call restart_end(restart)
     end if
 
@@ -797,7 +797,7 @@ contains
       else
         call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         if (ierr == 0) &
-          call td_load_frozen(restart, gr, st, hm, ierr)
+          call td_load_frozen(restart, space, gr, st, hm, ierr)
         if (ierr /= 0) then
           td%iter = 0
           message(1) = "Unable to read frozen restart information."
@@ -846,15 +846,15 @@ contains
       if (.not. from_scratch) then
 
         call restart_init(restart_frozen, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
-        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, label = ": gs")
-        call states_elec_transform(st, namespace, restart_frozen, gr, hm%kpoints)
+        call states_elec_load(restart_frozen, namespace, space, st, gr, hm%kpoints, ierr, label = ": gs")
+        call states_elec_transform(st, namespace, space, restart_frozen, gr, hm%kpoints)
         call restart_end(restart_frozen)
 
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
 
         call restart_init(restart_frozen, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
-        call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, iter=td%iter, label = ": td")
+        call states_elec_load(restart_frozen, namespace, space, st, gr, hm%kpoints, ierr, iter=td%iter, label = ": td")
         call restart_end(restart_frozen)
         call propagator_elec_run_zero_iter(hm, gr, td%tr)
 
@@ -1015,9 +1015,10 @@ contains
   end subroutine td_read_coordinates
 
   ! ---------------------------------------------------------
-  subroutine td_dump(restart, namespace, gr, st, hm, td, iter, ierr)
+  subroutine td_dump(restart, namespace, space, gr, st, hm, td, iter, ierr)
     type(restart_t),          intent(in)  :: restart
     type(namespace_t),        intent(in)  :: namespace
+    type(space_t),            intent(in)  :: space
     type(grid_t),             intent(in)  :: gr
     type(states_elec_t),      intent(in)  :: st
     type(hamiltonian_elec_t), intent(in)  :: hm
@@ -1042,10 +1043,10 @@ contains
     end if
 
     ! first write resume file
-    call states_elec_dump(restart, st, gr, hm%kpoints, err, iter=iter)
+    call states_elec_dump(restart, space, st, gr, hm%kpoints, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
 
-    call states_elec_dump_rho(restart, st, gr, ierr, iter=iter)
+    call states_elec_dump_rho(restart, space, st, gr, ierr, iter=iter)
     if (err /= 0) ierr = ierr + 1 
 
     if(hm%lda_u_level /= DFT_U_NONE) then
@@ -1053,7 +1054,7 @@ contains
       if (err /= 0) ierr = ierr + 1
     end if
 
-    call potential_interpolation_dump(td%tr%vksold, restart, gr, st%d%nspin, err2)
+    call potential_interpolation_dump(td%tr%vksold, space, restart, gr, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
 
     call pes_dump(td%pesv, namespace, restart, st, gr%mesh, err)
@@ -1070,7 +1071,7 @@ contains
     end if
 
     if (allocated(st%frozen_rho)) then
-      call states_elec_dump_frozen(restart, st, gr, ierr)
+      call states_elec_dump_frozen(restart, space, st, gr, ierr)
     end if
 
     if (debug%info) then
@@ -1109,13 +1110,13 @@ contains
     end if
 
     ! Read states
-    call states_elec_load(restart, namespace, st, gr, hm%kpoints, err, iter=td%iter, label = ": td")
+    call states_elec_load(restart, namespace, space, st, gr, hm%kpoints, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if
 
     ! read potential from previous interactions
-    call potential_interpolation_load(td%tr%vksold, namespace, restart, gr, st%d%nspin, err2)
+    call potential_interpolation_load(td%tr%vksold, namespace, space, restart, gr, st%d%nspin, err2)
 
     if (err2 /= 0) ierr = ierr + 2
 
@@ -1151,12 +1152,13 @@ contains
   end subroutine td_load
 
   ! ---------------------------------------------------------
-  subroutine td_load_frozen(restart, gr, st, hm, ierr)
-    type(restart_t),     intent(in)    :: restart
-    type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(inout) :: st
+  subroutine td_load_frozen(restart, space, gr, st, hm, ierr)
+    type(restart_t),          intent(in)    :: restart
+    type(space_t),            intent(in)    :: space
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    integer,             intent(out)   :: ierr
+    integer,                  intent(out)   :: ierr
 
     PUSH_SUB(td_load_frozen)
 
@@ -1176,11 +1178,11 @@ contains
     SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np,1:st%d%nspin))
     if(family_is_mgga(hm%xc%family)) then
       SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np,1:st%d%nspin))
-      SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np,1:gr%sb%dim,1:st%d%nspin))
+      SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:space%dim, 1:st%d%nspin))
       SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np,1:st%d%nspin))
     end if
 
-    call states_elec_load_frozen(restart, st, gr, ierr)
+    call states_elec_load_frozen(restart, space, st, gr, ierr)
 
     if (debug%info) then
       message(1) = "Debug: Reading td frozen restart done."

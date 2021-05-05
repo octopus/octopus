@@ -45,6 +45,7 @@ module io_function_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m

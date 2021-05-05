@@ -1774,7 +1774,7 @@ contains
       call messages_info()
       
       ! Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm", pcm%namespace, &
+      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm", pcm%namespace, pcm%space, &
         mesh, rho, unit_one, ierr)
     end if  
 
@@ -1820,7 +1820,7 @@ contains
     
     if (debug%info) then  
       !   Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm", pcm%namespace, &
+      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm", pcm%namespace, pcm%space, &
         mesh, v_pcm, unit_one, ierr)
     end if
 

@@ -433,13 +433,13 @@ contains
     mask%ll(1:3) = mesh%idx%ll(1:3)    
     
     !Enlarge the cube region
-    mask%ll(1:sb%dim) = int(mask%ll(1:sb%dim) * mask%enlarge(1:sb%dim))
+    mask%ll(1:sb%dim) = int(mask%ll(1:space%dim) * mask%enlarge(1:space%dim))
     
     select case(mask%pw_map_how)
       
     case(PW_MAP_PFFT)
       ASSERT(mask%mesh%parallel_in_domains)
-      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, space, &
         fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll, &
         mpi_grp = mask%mesh%mpi_grp, need_partition=.true., spacing = mesh%spacing)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
@@ -462,9 +462,8 @@ contains
       end if
       
     case(PW_MAP_FFT)
-      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
-        fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll, &
-        spacing = mesh%spacing )
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, space, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, &
+        nn_out = ll, spacing = mesh%spacing)
       mask%ll = ll 
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global 
@@ -474,12 +473,11 @@ contains
       
       !NFFT initialization
       ! we just add 2 points for the enlarged region
-      if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_2p(1) /= 1) mask%ll(1:space%dim) = mask%ll(1:space%dim) + 2 
 
-      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
-        fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
-        spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p )
-                     
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, space,  fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, &
+        nn_out = ll, spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p)
+
       mask%ll = ll 
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global       
@@ -487,14 +485,12 @@ contains
       
     case(PW_MAP_PNFFT)  
     
-      if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_2p(1) /= 1) mask%ll(1:space%dim) = mask%ll(1:space%dim) + 2 
 
-      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
-        fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
-        spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, space, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, &
+        nn_out = ll, spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
         mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
-                     
-                     
+
       mask%ll(1:3) = mask%cube%fs_n(1:3) 
 
       mask%fft = mask%cube%fft
@@ -647,12 +643,12 @@ contains
       call parse_block_string(blk, 0, 2, user_def_expr)
       do ip = 1, mask%np
         xx = M_ZERO
-        xx(1:sb%dim) = mesh%x(ip, 1:sb%dim)
-        r = units_from_atomic(units_inp%length, sqrt(sum(xx(1:sb%dim)**2)))
-        do idim = 1, sb%dim
+        xx(1:space%dim) = mesh%x(ip, 1:space%dim)
+        r = units_from_atomic(units_inp%length, sqrt(sum(xx(1:space%dim)**2)))
+        do idim = 1, space%dim
           xx(idim) = units_from_atomic(units_inp%length, xx(idim))
         end do
-        call parse_expression(ufn_re, ufn_im, sb%dim, xx, r, M_ZERO, user_def_expr)
+        call parse_expression(ufn_re, ufn_im, space%dim, xx, r, M_ZERO, user_def_expr)
         mask%ufn(ip) = ufn_re
       end do
       message(1) = "Input: using user-defined mask function from expression:"
@@ -727,8 +723,8 @@ contains
     !% The maximum energy for the PES spectrum.
     !%End
     MaxE = M_EPSILON
-    do idim = 1, mesh%sb%dim
-      tmp = maxval(mask%Lk(1:mask%ll(idim),1:mesh%sb%dim))**M_TWO/M_TWO
+    do idim = 1, space%dim
+      tmp = maxval(mask%Lk(1:mask%ll(idim),1:space%dim))**M_TWO/M_TWO
       if (tmp > MaxE) MaxE = tmp
     end do
     call parse_variable(namespace, 'PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
@@ -740,7 +736,7 @@ contains
     !%Description
     !% The PES spectrum energy step.
     !%End
-    DeltaE = minval(mask%Lk(2,1:mesh%sb%dim)-mask%Lk(1,1:mesh%sb%dim))**M_TWO/M_TWO
+    DeltaE = minval(mask%Lk(2,1:space%dim) - mask%Lk(1,1:space%dim))**M_TWO/M_TWO
     call parse_variable(namespace, 'PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     

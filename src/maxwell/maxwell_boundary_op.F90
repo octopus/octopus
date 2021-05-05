@@ -395,7 +395,7 @@ contains
 
     !call bc_generate_zero(bc, gr%mesh, ab_bounds)
 
-    if(debug%info) call bc_mxll_write_info(bc, gr%mesh, namespace)
+    if(debug%info) call bc_mxll_write_info(bc, gr%mesh, namespace, space)
 
     if (ab_mask_check .or. ab_pml_check) then
       call messages_print_stress(stdout, namespace=namespace)
@@ -621,10 +621,11 @@ contains
   end subroutine bc_mxll_pml_init
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_write_info(bc, mesh, namespace)
+  subroutine bc_mxll_write_info(bc, mesh, namespace, space)
     type(bc_mxll_t),       intent(in) :: bc
     type(mesh_t),          intent(in) :: mesh
     type(namespace_t),     intent(in) :: namespace
+    type(space_t),         intent(in) :: space
 
     integer :: err, idim
     FLOAT, allocatable :: tmp(:)
@@ -772,13 +773,20 @@ contains
       character(len=*), intent(in) :: filename
       FLOAT,            intent(in) :: tmp(:)
 
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", trim(filename), namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", trim(filename), namespace, space, mesh, tmp, &
+        unit_one, err)
     end subroutine write_files
 
   end subroutine bc_mxll_write_info

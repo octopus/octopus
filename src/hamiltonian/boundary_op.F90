@@ -277,7 +277,7 @@ contains
         this%mf(:) = abheight * mf(:)
       end select
       
-      if(debug%info) call bc_write_info(this, mesh, namespace)
+      if(debug%info) call bc_write_info(this, mesh, namespace, space)
       
       call messages_print_stress(stdout)
       
@@ -300,28 +300,29 @@ contains
   end subroutine bc_end
 
   ! ---------------------------------------------------------
-  subroutine bc_write_info(this, mesh, namespace)
+  subroutine bc_write_info(this, mesh, namespace, space)
     type(bc_t),               intent(in) :: this
     type(mesh_t),             intent(in) :: mesh
     type(namespace_t),        intent(in) :: namespace
+    type(space_t),           intent(in) :: space
 
     integer :: err
 
     PUSH_SUB(bc_write_info)
 
     if(this%abtype == MASK_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     else if(this%abtype == IMAGINARY_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", "cap", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", "cap", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", "cap", namespace, mesh, &
+      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", "cap", namespace, space, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     end if
 

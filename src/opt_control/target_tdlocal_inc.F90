@@ -72,9 +72,10 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_tdlocal(tg, namespace, gr, dir, ions, outp)
+  subroutine target_output_tdlocal(tg, namespace, space, gr, dir, ions, outp)
     type(target_t),    intent(inout) :: tg
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(grid_t),      intent(in)    :: gr
     character(len=*),  intent(in)    :: dir
     type(ions_t),      intent(in)    :: ions
@@ -86,8 +87,8 @@
     call io_mkdir(trim(dir), namespace)
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', namespace, gr%mesh, &
-        tg%rho, units_out%length**(-gr%sb%dim), ierr, ions = ions)
+      call dio_function_output(outp%how, trim(dir), 'td_local_target', namespace, space, gr%mesh, &
+        tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
 
     POP_SUB(target_output_tdlocal)

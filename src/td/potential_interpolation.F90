@@ -27,6 +27,7 @@ module potential_interpolation_oct_m
   use namespace_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -253,9 +254,10 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_dump(potential_interpolation, restart, gr, nspin, err2)
+  subroutine potential_interpolation_dump(potential_interpolation, space, restart, gr, nspin, err2)
     type(potential_interpolation_t), intent(in)    :: potential_interpolation
     type(restart_t),   intent(in)    :: restart
+    type(space_t),     intent(in)    :: space
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: nspin
     integer,           intent(out)   :: err2
@@ -270,7 +272,7 @@ contains
     do ii = 1, 2
       do is = 1, nspin
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
-        call drestart_write_mesh_function(restart, filename, gr%mesh, &
+        call drestart_write_mesh_function(restart, space, filename, gr%mesh, &
           potential_interpolation%v_old(1:gr%mesh%np, is, ii), err)
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity
@@ -284,7 +286,7 @@ contains
       do ii = 1, 2
         do is = 1, nspin
           write(filename,'(a6,i2.2,i3.3)') 'vtauprev_', ii, is
-          call drestart_write_mesh_function(restart, filename, gr%mesh, &
+          call drestart_write_mesh_function(restart, space, filename, gr%mesh, &
             potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
@@ -298,9 +300,10 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_load(potential_interpolation, namespace, restart, gr, nspin, err2)
+  subroutine potential_interpolation_load(potential_interpolation, namespace, space, restart, gr, nspin, err2)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(restart_t),   intent(in)    :: restart
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: nspin
@@ -315,7 +318,7 @@ contains
     do ii = 1, interpolation_steps - 1
       do is = 1, nspin
         write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
-        call drestart_read_mesh_function(restart, trim(filename), gr%mesh, &
+        call drestart_read_mesh_function(restart, space, trim(filename), gr%mesh, &
           potential_interpolation%v_old(1:gr%mesh%np, is, ii), err)
         if (err /= 0) then
           err2 = err2 + 1
@@ -330,7 +333,7 @@ contains
       do ii = 1, interpolation_steps - 1
         do is = 1, nspin
           write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
-          call drestart_read_mesh_function(restart, trim(filename), gr%mesh, &
+          call drestart_read_mesh_function(restart, space, trim(filename), gr%mesh, &
             potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
           if (err /= 0) then
             err2 = err2 + 1

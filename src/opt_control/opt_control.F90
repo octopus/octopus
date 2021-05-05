@@ -172,7 +172,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, initial_st)
-    call target_init(sys%gr, sys%kpoints, sys%namespace, sys%ions, initial_st, td, &
+    call target_init(sys%gr, sys%kpoints, sys%namespace, sys%space, sys%ions, initial_st, td, &
                controlfunction_w0(par), oct_target, oct, sys%hm%ep, sys%mc)
 
     ! Sanity checks.
@@ -181,8 +181,8 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(sys%outp, sys%namespace, OCT_DIR//'initial', psi, sys%gr, sys%ions, sys%hm)
-    call target_output(oct_target, sys%namespace, sys%gr, OCT_DIR//'target', sys%ions, sys%hm, sys%outp)
+    call output_states(sys%outp, sys%namespace, sys%space, OCT_DIR//'initial', psi, sys%gr, sys%ions, sys%hm)
+    call target_output(oct_target, sys%namespace, sys%space, sys%gr, OCT_DIR//'target', sys%ions, sys%hm, sys%outp)
     call states_elec_end(psi)
 
 

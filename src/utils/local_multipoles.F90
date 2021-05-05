@@ -315,7 +315,7 @@ contains
       !TODO: check for domains & mesh compatibility 
       call restart_init(restart_ld, global_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
-      call local_restart_read(sys%gr%mesh, sys%ions, nd, loc_domains, restart_ld)
+      call local_restart_read(sys%space, sys%gr%mesh, sys%ions, nd, loc_domains, restart_ld)
       call restart_end(restart_ld)
     end if
 
@@ -358,7 +358,7 @@ contains
       ! FIXME: why only real functions? Please generalize.
       ! TODO: up to know the local_multipoles utlity acts over density functions, which are real.
       if (err == 0) then
-        call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err)
+        call drestart_read_mesh_function(restart, sys%space, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err)
       end if
       if (err /= 0 ) then
         write(message(1),*) 'While reading density: "', trim(filename), '", error code:', err
@@ -367,8 +367,8 @@ contains
 
       ! Look for the mesh points inside local domains
       if ((iter == l_start .and. .not. ldrestart) .or. ldupdate) then
-        call local_inside_domain(sys%gr%mesh, sys%ions, nd, loc_domains, global_namespace, sys%st%rho(:,1))
-        call local_restart_write(global_namespace, sys%gr%mesh, sys%mc, nd, loc_domains)
+        call local_inside_domain(sys%space, sys%gr%mesh, sys%ions, nd, loc_domains, global_namespace, sys%st%rho(:,1))
+        call local_restart_write(global_namespace, sys%space, sys%gr%mesh, sys%mc, nd, loc_domains)
       end if
 
       do id = 1, nd
@@ -580,8 +580,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Write restart files for local domains
-  subroutine local_restart_write(namespace, mesh, mc, nd, loc_domains)
+  subroutine local_restart_write(namespace, space, mesh, mc, nd, loc_domains)
     type(namespace_t),    intent(in) :: namespace
+    type(space_t),        intent(in) :: space
     type(mesh_t),         intent(in) :: mesh
     type(multicomm_t),    intent(in) :: mc
     integer,              intent(in) :: nd
@@ -619,7 +620,7 @@ contains
         if (loc_domains(id)%mesh_mask(ip)) ff(ip, 1) = ff(ip, 1) + 2**TOFLOAT(id)
       end do
     end do
-    call drestart_write_mesh_function(restart, "ldomains", mesh, ff(1:mesh%np, 1), ierr)
+    call drestart_write_mesh_function(restart, space, "ldomains", mesh, ff(1:mesh%np, 1), ierr)
     SAFE_DEALLOCATE_A(ff)
 
     call restart_end(restart)
@@ -628,7 +629,8 @@ contains
   end subroutine local_restart_write
 
   ! ---------------------------------------------------------
-  subroutine local_restart_read(mesh, ions, nd, loc_domains, restart)
+  subroutine local_restart_read(space, mesh, ions, nd, loc_domains, restart)
+    type(space_t),        intent(in)    :: space
     type(mesh_t),         intent(in)    :: mesh
     type(ions_t),         intent(in)    :: ions
     integer,              intent(in)    :: nd
@@ -652,7 +654,7 @@ contains
     read(line(1),'(a25,1x,i5)') tmp, ierr
     call restart_close(restart, iunit)
 
-    call drestart_read_mesh_function(restart, "ldomains", mesh, mask, ierr) 
+    call drestart_read_mesh_function(restart, space, "ldomains", mesh, mask, ierr) 
 
     do id = 1, nd
       loc_domains(id)%mesh_mask = .false.
@@ -670,7 +672,8 @@ contains
   end subroutine local_restart_read
 
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(mesh, ions, nd, loc_domains, namespace, ff)
+  subroutine local_inside_domain(space, mesh, ions, nd, loc_domains, namespace, ff)
+    type(space_t),          intent(in)    :: space
     type(mesh_t),           intent(in)    :: mesh
     type(ions_t),           intent(in)    :: ions
     integer,                intent(in)    :: nd
@@ -696,7 +699,7 @@ contains
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'
         call messages_fatal(1)
       end if
-      call create_basins(namespace, mesh, ions, ff, basins)
+      call create_basins(namespace, space, mesh, ions, ff, basins)
     end if
 
     do id = 1, nd
@@ -737,11 +740,12 @@ contains
         end do
 
         write(filename,'(a,a)') 'domain.', trim(loc_domains(id)%lab)
-        call dio_function_output(how, 'local.general', trim(filename), namespace, mesh, dble_domain_map, unit_one, ierr, &
+        call dio_function_output(how, 'local.general', trim(filename), namespace, space, mesh, dble_domain_map, unit_one, ierr, &
           ions = ions)
       end do
 
-      call dio_function_output(how, 'local.general', 'domain.mesh', namespace, mesh, domain_mesh, unit_one, ierr, ions = ions)
+      call dio_function_output(how, 'local.general', 'domain.mesh', namespace, space, mesh, domain_mesh, unit_one, ierr, &
+        ions = ions)
 
       SAFE_DEALLOCATE_A(dble_domain_map)
       SAFE_DEALLOCATE_A(domain_mesh)
@@ -751,8 +755,9 @@ contains
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine create_basins(namespace, mesh, ions, ff, basins)
+  subroutine create_basins(namespace, space, mesh, ions, ff, basins)
     type(namespace_t),  intent(in)    :: namespace
+    type(space_t),      intent(in)    :: space
     type(mesh_t),       intent(in)    :: mesh
     type(ions_t),       intent(in)    :: ions
     FLOAT,              intent(in)    :: ff(:)
@@ -800,9 +805,9 @@ contains
         call messages_input_error(namespace, 'LDOutputFormat')
       end if
 
-      call dio_function_output(how, 'local.general', 'basinsmap', namespace, mesh, TOFLOAT(basins%map(1:mesh%np)), unit_one, ierr, &
-        ions = ions)
-      call dio_function_output(how, 'local.general', 'dens_ff2', namespace, mesh, ff2(:,1), unit_one, ierr, ions = ions)
+      call dio_function_output(how, 'local.general', 'basinsmap', namespace, space, mesh, TOFLOAT(basins%map(1:mesh%np)), &
+        unit_one, ierr, ions = ions)
+      call dio_function_output(how, 'local.general', 'dens_ff2', namespace, space, mesh, ff2(:,1), unit_one, ierr, ions = ions)
     end if
     SAFE_DEALLOCATE_A(ff2)
 

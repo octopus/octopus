@@ -18,8 +18,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, root)
+subroutine X(restart_write_mesh_function)(restart, space, filename, mesh, ff, ierr, root)
   type(restart_t),   intent(in)  :: restart
+  type(space_t),     intent(in)  :: space
   character(len=*),  intent(in)  :: filename
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,  target,   intent(in)  :: ff(:)
@@ -70,7 +71,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   
   if (i_am_root) then
     call X(io_function_output_global)(restart%format, restart%pwd, filename, restart%namespace, &
-      mesh, ff_global, unit_one, ierr)
+      space, mesh, ff_global, unit_one, ierr)
     ! all restart files are in atomic units
 
     if (mesh%parallel_in_domains) then
@@ -98,8 +99,9 @@ end subroutine X(restart_write_mesh_function)
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
-subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
+subroutine X(restart_read_mesh_function)(restart, space, filename, mesh, ff, ierr)
   type(restart_t),            intent(in)    :: restart
+  type(space_t),              intent(in)    :: space
   character(len=*),           intent(in)    :: filename
   type(mesh_t),               intent(in)    :: mesh
   R_TYPE, target, contiguous, intent(inout) :: ff(:)
@@ -123,7 +125,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   
   if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(io_function_input) (full_filename, restart%namespace, mesh, ff(1:mesh%np), ierr, &
+    call X(io_function_input) (full_filename, restart%namespace, space, mesh, ff(1:mesh%np), ierr, &
                                map = restart%map)
 
     POP_SUB(X(restart_read_mesh_function))

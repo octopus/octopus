@@ -264,7 +264,7 @@ contains
     case(EXTERNAL_POT_FROM_FILE)
       ASSERT(allocated(this%pot))
 
-      call dio_function_input(trim(this%filename), namespace, mesh, this%pot, err)
+      call dio_function_input(trim(this%filename), namespace, this%space, mesh, this%pot, err)
       if(err /= 0) then
         write(message(1), '(a)')    'Error loading file '//trim(this%filename)//'.'
         write(message(2), '(a,i4)') 'Error code returned = ', err      

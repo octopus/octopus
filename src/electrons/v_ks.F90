@@ -310,7 +310,7 @@ contains
       x_id, c_id, xk_id, ck_id, hartree_fock = using_hartree_fock)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
-      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, namespace, gr%mesh)
+      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, namespace, space, gr%mesh)
     end if
 
     ks%xc_family = ks%xc%family
@@ -972,7 +972,7 @@ contains
           vxc_sic = M_ZERO
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, rho, st%d%ispin, vxc_sic)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, space, rho, st%d%ispin, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -1027,19 +1027,19 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, space, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
             vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, space, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, space, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, space, ks%calc%density, st%d%ispin, &
             ks%calc%vxc)
         end if
       end if
@@ -1102,7 +1102,8 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, ions, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, namespace, space, ions, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, &
+            ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 

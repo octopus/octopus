@@ -955,7 +955,7 @@ contains
 
         ASSERT(.not. space%is_periodic())
 
-        call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
+        call dio_function_input(trim(species_filename(species)), namespace, space, mesh, vl, err)
         if(err /= 0) then
           write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err

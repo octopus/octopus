@@ -1412,11 +1412,12 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine hamiltonian_elec_dump_vhxc(restart, hm, mesh, ierr)
-    type(restart_t),     intent(in)  :: restart
+  subroutine hamiltonian_elec_dump_vhxc(restart, hm, space, mesh, ierr)
+    type(restart_t),          intent(in)  :: restart
     type(hamiltonian_elec_t), intent(in)  :: hm
-    type(mesh_t),        intent(in)  :: mesh
-    integer,             intent(out) :: ierr
+    type(space_t),            intent(in)  :: space
+    type(mesh_t),             intent(in)  :: mesh
+    integer,                  intent(out) :: ierr
 
     integer :: iunit, err, err2(2), isp
     character(len=12) :: filename
@@ -1454,7 +1455,7 @@ contains
       call restart_write(restart, iunit, lines, 1, err)
       if (err /= 0) err2(1) = err2(1) + 1
 
-      call drestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
+      call drestart_write_mesh_function(restart, space, filename, mesh, hm%vhxc(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
     end do
@@ -1483,7 +1484,7 @@ contains
         call restart_write(restart, iunit, lines, 1, err)
         if (err /= 0) err2(1) = err2(1) + 16
 
-        call drestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
+        call drestart_write_mesh_function(restart, space, filename, mesh, hm%vtau(:,isp), err)
         if (err /= 0) err2(1) = err2(1) + 1
 
       end do
@@ -1507,11 +1508,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_load_vhxc(restart, hm, mesh, ierr)
-    type(restart_t),     intent(in)    :: restart
+  subroutine hamiltonian_elec_load_vhxc(restart, hm, space, mesh, ierr)
+    type(restart_t),          intent(in)    :: restart
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(mesh_t),        intent(in)    :: mesh
-    integer,             intent(out)   :: ierr
+    type(space_t),            intent(in)    :: space
+    type(mesh_t),             intent(in)    :: mesh
+    integer,                  intent(out)   :: ierr
 
     integer :: err, err2, isp
     character(len=12) :: filename
@@ -1539,7 +1541,7 @@ contains
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       end if
 
-      call drestart_read_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
+      call drestart_read_mesh_function(restart, space, filename, mesh, hm%vhxc(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
     end do
@@ -1555,7 +1557,7 @@ contains
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         end if
 
-        call drestart_read_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
+        call drestart_read_mesh_function(restart, space, filename, mesh, hm%vtau(:,isp), err)
         if (err /= 0) err2 = err2 + 1
 
       end do

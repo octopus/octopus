@@ -33,6 +33,7 @@ module lda_u_io_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -681,9 +682,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lda_u_loadbasis(lda_u, namespace, st, mesh, mc, ierr)
+  subroutine lda_u_loadbasis(lda_u, namespace, space, st, mesh, mc, ierr)
     type(lda_u_t),        intent(inout) :: lda_u
-    type(namespace_t),    intent(in)  :: namespace
+    type(namespace_t),    intent(in)    :: namespace
+    type(space_t),        intent(in)    :: space
     type(states_elec_t),  intent(in)    :: st
     type(mesh_t),         intent(in)    :: mesh
     type(multicomm_t),    intent(in)    :: mc
@@ -782,9 +784,9 @@ contains
         end if
 
         if (states_are_real(st)) then
-          call drestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, dpsi, err)
+          call drestart_read_mesh_function(restart_gs, space, restart_file(idim, ist), mesh, dpsi, err)
         else
-          call zrestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, zpsi, err)
+          call zrestart_read_mesh_function(restart_gs, space, restart_file(idim, ist), mesh, zpsi, err)
         end if
 
         if(states_are_real(st)) then

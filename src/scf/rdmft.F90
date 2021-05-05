@@ -417,7 +417,7 @@ contains
           end do
           call density_calc(states_save, gr, states_save%rho)
           ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
-          call states_elec_dump(restart_dump, states_save, gr, hm%kpoints, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, space, states_save, gr, hm%kpoints, ierr, iter=iter) 
 
           if (conv .or. iter == rdm%max_iter) then
             call states_elec_end(st)
@@ -429,7 +429,7 @@ contains
           SAFE_DEALLOCATE_A(dpsi)
           SAFE_DEALLOCATE_A(dpsi2)
         else
-          call states_elec_dump(restart_dump, st, gr, hm%kpoints, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, space, st, gr, hm%kpoints, ierr, iter=iter) 
           
           ! calculate maxFO for cg-solver 
           if (.not. rdm%hf) then

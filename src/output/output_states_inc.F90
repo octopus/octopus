@@ -17,9 +17,10 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
+subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
   type(output_t),           intent(in) :: outp
   type(namespace_t),        intent(in) :: namespace
+  type(space_t),            intent(in) :: space
   character(len=*),         intent(in) :: dir
   type(states_elec_t),      intent(in) :: st
   type(grid_t),             intent(in) :: gr
@@ -36,24 +37,24 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
   PUSH_SUB(output_states)
 
   if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
-    fn_unit = units_out%length**(-gr%sb%dim)
+    fn_unit = units_out%length**(-space%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'density'
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, namespace, space, gr%fine%mesh, &
         st%rho(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-    fn_unit = units_out%length**(1-gr%sb%dim)
-    SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
+    fn_unit = units_out%length**(1 - space%dim)
+    SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:space%dim))
 
     do is = 1, st%d%nspin
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         do ip = 1, gr%fine%mesh%np
           polarization(ip, idir) = st%rho(ip, is)*gr%fine%mesh%x(ip, idir)
         end do
@@ -64,15 +65,15 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
-      call io_function_output_vector(outp%how, dir, fname, namespace, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
-        ions = ions, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+      call io_function_output_vector(outp%how, dir, fname, namespace, space, gr%fine%mesh, polarization, fn_unit, ierr, &
+        ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(polarization)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
-    fn_unit = sqrt(units_out%length**(-gr%sb%dim))
+    fn_unit = sqrt(units_out%length**(-space%dim))
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
@@ -100,11 +101,11 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
 
             if (states_are_real(st)) then
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
-              call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp, &
+              call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, dtmp, &
                 fn_unit, ierr, ions = ions)
             else
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
-              call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, ztmp, &
+              call zio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, ztmp, &
                 fn_unit, ierr, ions = ions)
             end if
           end do
@@ -117,7 +118,7 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
-    fn_unit = units_out%length**(-gr%sb%dim)
+    fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
       SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
@@ -147,7 +148,7 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
-            call dio_function_output (outp%how, dir, fname, namespace, gr%mesh, &
+            call dio_function_output (outp%how, dir, fname, namespace, space, gr%mesh, &
               dtmp, fn_unit, ierr, ions = ions)
           end do
         end do
@@ -158,18 +159,18 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
-    fn_unit = units_out%energy * units_out%length**(-gr%sb%dim)
+    fn_unit = units_out%energy * units_out%length**(-space%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
-      call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+      call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
         elf(:,1), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'tau-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
           elf(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
@@ -187,9 +188,9 @@ subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
-      call doutput_modelmb(outp, namespace, trim(dir), gr, st, ions)
+      call doutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     else
-      call zoutput_modelmb(outp, namespace, trim(dir), gr, st, ions)
+      call zoutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     end if
   end if
 

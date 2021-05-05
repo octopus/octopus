@@ -494,7 +494,7 @@ contains
         
       end if
  
-      call states_elec_load(restart_gs, namespace, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
+      call states_elec_load(restart_gs, namespace, space, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -1059,9 +1059,9 @@ contains
 
     call output_all(outp, namespace, space, filename, gr, ions, st, hm, ks)
     if(present(dt)) then
-      call output_scalar_pot(outp, namespace, filename, gr, ions, hm, iter*dt)
+      call output_scalar_pot(outp, namespace, space, filename, gr, ions, hm, iter*dt)
     else
-      if(iter == 0) call output_scalar_pot(outp, namespace, filename, gr, ions, hm)
+      if(iter == 0) call output_scalar_pot(outp, namespace, space, filename, gr, ions, hm)
     end if
  
     call profiling_out(prof)
@@ -3484,11 +3484,12 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_dump_mxll(restart, gr, st, hm, iter, ierr, bc_plane_waves)
+  subroutine td_dump_mxll(restart, space, gr, st, hm, iter, ierr, bc_plane_waves)
     type(restart_t),            intent(in)  :: restart
+    type(space_t),              intent(in)  :: space
     type(grid_t),               intent(in)  :: gr
-    type(states_mxll_t),             intent(in)  :: st
-    type(hamiltonian_mxll_t),        intent(in)  :: hm
+    type(states_mxll_t),        intent(in)  :: st
+    type(hamiltonian_mxll_t),   intent(in)  :: hm
     integer,                    intent(in)  :: iter
     integer,                    intent(out) :: ierr
     logical,                    intent(in)  :: bc_plane_waves
@@ -3551,7 +3552,7 @@ contains
       end if
     end if
 
-    call states_mxll_dump(restart, st, gr, zff, zff_dim, err, iter)
+    call states_mxll_dump(restart, st, space, gr, zff, zff_dim, err, iter)
     if (err /= 0) ierr = ierr + 1
 
     if (debug%info) then
@@ -3964,9 +3965,10 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, ions, outp, clock)
+  subroutine td_write_mxll_free_data(writ, namespace, space, gr, st, hm, ions, outp, clock)
     type(td_write_t),         intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -3990,7 +3992,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", clock%get_tick()  ! name of directory
 
-    call output_mxll(outp, namespace, gr, st, hm, clock%time(), ions, filename)
+    call output_mxll(outp, namespace, space, gr, st, hm, clock%time(), ions, filename)
 
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)

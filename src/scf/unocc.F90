@@ -154,7 +154,7 @@ contains
         mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
-        call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart_load_unocc, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                   ierr, lowest_missing = lowest_missing)
         call restart_end(restart_load_unocc)
       end if
@@ -176,12 +176,13 @@ contains
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart_load_gs, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                ierr, lowest_missing = lowest_missing)
       end if
-      if(sys%hm%lda_u_level /= DFT_U_NONE) &
+      if (sys%hm%lda_u_level /= DFT_U_NONE) then
         call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, sys%hm%energy%dft_u, ierr)
-      call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
+      end if
+      call states_elec_load_rho(restart_load_gs, sys%space, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
     else
@@ -272,8 +273,9 @@ contains
       call restart_init(restart_dump, sys%namespace, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
-      if(write_density) &
-        call states_elec_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
+      if (write_density) then
+        call states_elec_dump_rho(restart_dump, sys%space, sys%st, sys%gr, ierr_rho)
+      end if
     end if
 
     message(1) = "Info: Starting calculation of unoccupied states."
@@ -321,7 +323,7 @@ contains
         ! write restart information.
         if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
                      .or. iter == max_iter .or. forced_finish) then
-          call states_elec_dump(restart_dump, sys%st, sys%gr, sys%kpoints, ierr, iter=iter)
+          call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr, sys%kpoints, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)

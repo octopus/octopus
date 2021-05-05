@@ -311,8 +311,8 @@ contains
       if (out_dens%write) then
         folder = 'local.general/densities/'//trim(lab)//'.densities/'
         write(out_name, '(a,a1,i0,a1,i7.7)') trim(lab), '.', is,'.', iter
-        call dio_function_output(how,  trim(folder), trim(out_name), namespace, mesh, tmp_rho(1:mesh%np), units_out%length, &
-          ierr, ions = ions)
+        call dio_function_output(how,  trim(folder), trim(out_name), namespace, space, mesh, tmp_rho(1:mesh%np), &
+          units_out%length, ierr, ions = ions)
       end if
 
       if (out_pot%write) then
@@ -321,7 +321,8 @@ contains
         call dpoisson_solve(hm%psolver, tmp_vh, tmp_rho)
         folder = 'local.general/potential/'//trim(lab)//'.potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'vh.', is, '.', iter
-        call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, tmp_vh, units_out%length, ierr, ions = ions)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, space, mesh, tmp_vh, units_out%length, ierr, &
+          ions = ions)
         !Computes XC potential
         where (mesh_mask)
           st%rho(:, is) = st_rho
@@ -331,7 +332,7 @@ contains
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'//trim(lab)//'.potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'vxc.', is, '.', iter
-        call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vxc(:,is), units_out%length, ierr, &
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, space, mesh, hm%vxc(:,is), units_out%length, ierr, &
           ions = ions)
         st%rho(:,is) = st_rho(:)
       end if
@@ -343,13 +344,13 @@ contains
         call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:mesh%np, is))
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'global-vh.', is, '.', iter
-        call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vhartree, units_out%length, ierr, &
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, space, mesh, hm%vhartree, units_out%length, ierr, &
           ions = ions)
         !Computes global XC potential
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'global-vxc.', is, '.', iter
-        call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, hm%vxc(:,is), units_out%length, ierr, &
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, space, mesh, hm%vxc(:,is), units_out%length, ierr, &
           ions = ions)
       end do
     end if

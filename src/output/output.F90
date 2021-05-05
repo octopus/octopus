@@ -680,16 +680,16 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
+        call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, gr%mesh%x(:,idir), &
           units_out%length, ierr, ions = ions)
       end do
     end if
     
-    call output_states(outp, namespace, dir, st, gr, ions, hm)
+    call output_states(outp, namespace, space, dir, st, gr, ions, hm)
     call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, st%st_kpt_mpi_grp)
-    call output_localization_funct(outp, namespace, dir, st, hm, gr, ions)
+    call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
     call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
@@ -727,7 +727,7 @@ contains
       call output_berkeleygw(outp%bgw, namespace, space, dir, st, gr, ks, hm, ions)
     end if
     
-    call output_energy_density(outp, namespace, dir, hm, ks, st, ions, gr)
+    call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
@@ -740,7 +740,7 @@ contains
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
@@ -752,7 +752,7 @@ contains
         if (ks%oep%has_photons) then
           if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
             write(fname, '(a)') 'photon_correlator'
-            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+            call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, ks%oep%pt%correlator(:,1), &
               units_out%length, ierr, ions = ions)
           end if
         end if
@@ -767,9 +767,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_localization_funct(outp, namespace, dir, st, hm, gr, ions)
+  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(in)    :: hm
@@ -793,21 +794,21 @@ contains
 
     ! First the ELF in real space
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-      ASSERT(gr%sb%dim /= 1)
+      ASSERT(space%dim /= 1)
 
       call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
-        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, ions = ions, grp = mpi_grp)
         ! this quantity is dimensionless
 
         if(st%d%ispin /= UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
-            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+            call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
               f_loc(:, is), unit_one, ierr, ions = ions, grp = mpi_grp)
             ! this quantity is dimensionless
           end do
@@ -827,8 +828,8 @@ contains
         else
           write(fname, '(a,i1)') 'bader-sp', is
         end if
-        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
-          f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
+          f_loc(:,is), units_out%length**(-2 - space%dim), ierr, &
           ions = ions, grp = mpi_grp)
 
         if(st%d%nspin == 1) then
@@ -843,7 +844,7 @@ contains
     ! Now the pressure
     if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call dio_function_output(outp%how, dir, "el_pressure", namespace, gr%mesh, &
+      call dio_function_output(outp%how, dir, "el_pressure", namespace, space, gr%mesh, &
         f_loc(:,1), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
     end if
@@ -867,7 +868,7 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
-      call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
+      call dio_function_output(outp%how, dir, trim(filename), namespace, space, gr%mesh, &
         TOFLOAT(basins%map), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
 
@@ -932,12 +933,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, ions, gr)
+  subroutine output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
     type(output_t),            intent(in) :: outp
     type(namespace_t),         intent(in) :: namespace
+    type(space_t),             intent(in) :: space
     character(len=*),          intent(in) :: dir
     type(hamiltonian_elec_t),  intent(in) :: hm
-    type(v_ks_t),           intent(inout) :: ks
+    type(v_ks_t),              intent(inout) :: ks
     type(states_elec_t),       intent(in) :: st
     type(ions_t),              intent(in) :: ions
     type(grid_t),              intent(in) :: gr
@@ -952,7 +954,7 @@ contains
     PUSH_SUB(output_energy_density)
    
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-gr%sb%dim)
+      fn_unit = units_out%energy*units_out%length**(-space%dim)
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
@@ -978,7 +980,7 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
       do is = 1, st%d%nspin
         do ip = 1, gr%fine%mesh%np
@@ -992,12 +994,12 @@ contains
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
           energy_density(:,1), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
       case(SPIN_POLARIZED, SPINORS)
         do is = 1, 2
           write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
+          call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
             energy_density(:, is), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
         end do
       end select
@@ -1270,7 +1272,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
@@ -1282,7 +1284,7 @@ contains
       call zbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     end if
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, space, &
       fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
@@ -1518,10 +1520,11 @@ contains
 
 
    ! ---------------------------------------------------------
-  subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, ions, has_phase)
+  subroutine output_dftu_orbitals(outp, dir, namespace, space, this, st, mesh, ions, has_phase)
     type(output_t),      intent(in) :: outp
     character(len=*),    intent(in) :: dir
     type(namespace_t),   intent(in) :: namespace
+    type(space_t),       intent(in) :: space
     type(lda_u_t),       intent(in) :: this
     type(states_elec_t), intent(in) :: st
     type(mesh_t),        intent(in) :: mesh
@@ -1537,7 +1540,7 @@ contains
 
     PUSH_SUB(output_dftu_orbitals)
 
-    fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
+    fn_unit = sqrt(units_out%length**(-space%dim))
 
     if(this%basis%submesh) then
       if(states_are_real(st)) then
@@ -1567,31 +1570,31 @@ contains
             end if
             if(has_phase) then
               if(.not. this%basis%submesh) then
-               call zio_function_output(outp%how, dir, fname, namespace, mesh, &
+               call zio_function_output(outp%how, dir, fname, namespace, space, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, ions = ions)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
-               call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, ions = ions)
+               call zio_function_output(outp%how, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
               end if
             else
               if(.not.this%basis%submesh) then
                 if (states_are_real(st)) then
-                  call dio_function_output(outp%how, dir, fname, namespace, mesh, &
+                  call dio_function_output(outp%how, dir, fname, namespace, space, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 else
-                  call zio_function_output(outp%how, dir, fname, namespace, mesh, &
+                  call zio_function_output(outp%how, dir, fname, namespace, space, mesh, &
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 end if
               else
                 if (states_are_real(st)) then
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                  call dio_function_output(outp%how, dir, fname, namespace, mesh, dtmp, fn_unit, ierr, ions = ions)
+                  call dio_function_output(outp%how, dir, fname, namespace, space, mesh, dtmp, fn_unit, ierr, ions = ions)
                 else
                   tmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                  call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, ions = ions)
+                  call zio_function_output(outp%how, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
                 end if
               end if
             end if

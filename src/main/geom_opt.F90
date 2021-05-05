@@ -142,7 +142,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
+      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."

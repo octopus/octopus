@@ -101,7 +101,9 @@ contains
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
       call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_elec_load(restart, sys%namespace, psi, sys%gr, sys%kpoints, ierr)
+      if(ierr == 0) then
+        call states_elec_load(restart, sys%namespace, sys%space, psi, sys%gr, sys%kpoints, ierr)
+      end if
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
         call messages_fatal(1)
@@ -143,7 +145,7 @@ contains
         call messages_fatal(1)
       end if
       
-      call states_elec_transform(psi, sys%namespace, restart, sys%gr, sys%kpoints, prefix = "OCTInitial")
+      call states_elec_transform(psi, sys%namespace, sys%space, restart, sys%gr, sys%kpoints, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 
