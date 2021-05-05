@@ -61,7 +61,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, gr, lr, idir, isigma, 
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-      fn_unit = units_out%length**(1 - gr%sb%dim)
+      fn_unit = units_out%length**(1 - space%dim)
       SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
         do idir2 = 1, space%dim
@@ -80,9 +80,9 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, gr, lr, idir, isigma, 
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
-        fn_unit = units_out%time**(-1) * units_out%length**(-gr%sb%dim)
+        fn_unit = units_out%time**(-1) * units_out%length**(-space%dim)
         do is = 1, st%d%nspin
-          do idir2 = 1, gr%sb%dim
+          do idir2 = 1, space%dim
             if(st%d%nspin == 1) then
               write(fname, '(4a)') 'lr_current-', index2axis(idir2), '-',  index2axis(idir)
             else
@@ -98,7 +98,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, gr, lr, idir, isigma, 
       end if
     end if
 
-    if(gr%sb%dim==3) then
+    if (space%dim==3) then
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) call lr_elf('lr_elf_D','lr_elf')
     end if
 

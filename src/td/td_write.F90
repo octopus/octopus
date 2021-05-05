@@ -3106,7 +3106,7 @@ contains
       ! first line: column names
       call write_iter_header_start(write_obj)
       
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         write(aux, '(a2,i1,a1)') 'Jh(', idir, ')'
         call write_iter_header(write_obj, aux)
       end do
@@ -3116,14 +3116,14 @@ contains
       call td_write_print_header_end(write_obj)
     end if
 
-    SAFE_ALLOCATE(heat_current(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))  
+    SAFE_ALLOCATE(heat_current(1:gr%mesh%np, 1:space%dim, 1:st%d%nspin))  
 
     call current_heat_calculate(space, gr%der, hm, st, heat_current)
     
     if(mpi_grp_is_root(mpi_world)) call write_iter_start(write_obj)
 
     total_current = CNST(0.0)
-    do idir = 1, gr%sb%dim
+    do idir = 1, space%dim
       do ispin = 1, st%d%spin_channels
         total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, heat_current(:, idir, ispin))
       end do
@@ -3132,7 +3132,7 @@ contains
 
     SAFE_DEALLOCATE_A(heat_current)
     
-    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%sb%dim)
+    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, space%dim)
   
     if(mpi_grp_is_root(mpi_world)) call write_iter_nl(write_obj)
       

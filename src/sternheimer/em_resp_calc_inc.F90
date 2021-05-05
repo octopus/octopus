@@ -269,7 +269,7 @@ subroutine X(calc_polarizability_periodic)(space, mesh, symm, st, em_lr, kdotp_l
   type(lr_t),                  intent(inout) :: em_lr(:,:)
   type(lr_t),                  intent(inout) :: kdotp_lr(:)
   integer,                     intent(in)    :: nsigma
-  CMPLX,                       intent(out)   :: zpol(:, :) !< (sb%dim, sb%dim)
+  CMPLX,                       intent(out)   :: zpol(:, :) !< (space%dim, space%dim)
   integer,           optional, intent(in)    :: ndir
   CMPLX,             optional, intent(out)   :: zpol_k(:, :, :)
 

@@ -60,7 +60,6 @@ module td_oct_m
   use restart_oct_m
   use scf_oct_m
   use scissor_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -224,7 +223,7 @@ contains
     !% However, you might need to adjust this value.
     !%End
 
-    spacing = minval(gr%mesh%spacing(1:gr%sb%dim))
+    spacing = minval(gr%mesh%spacing(1:space%dim))
     default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
     default_dt = default_dt*td%mu
 
@@ -870,7 +869,7 @@ contains
       call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
     end if
 #endif
-    call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
+    call hm%update_span(minval(gr%mesh%spacing(1:space%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
     call energy_calc_total(namespace, space, hm, gr, st)
@@ -997,15 +996,15 @@ contains
     read(iunit, '(28x)', advance='no') ! skip the time index.
 
     do iatom = 1, ions%natoms
-      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%x(1:gr%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%x(1:ions%space%dim)
       ions%atom(iatom)%x(:) = units_to_atomic(units_out%length, ions%atom(iatom)%x(:))
     end do
     do iatom = 1, ions%natoms
-      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%v(1:gr%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%v(1:ions%space%dim)
       ions%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, ions%atom(iatom)%v(:))
     end do
     do iatom = 1, ions%natoms
-      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%f(1:gr%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%f(1:ions%space%dim)
       ions%atom(iatom)%f(:) = units_to_atomic(units_out%force, ions%atom(iatom)%f(:))
     end do
 

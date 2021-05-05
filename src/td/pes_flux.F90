@@ -203,7 +203,7 @@ contains
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
     sdim   = st%d%dim
-    mdim   = mesh%sb%dim
+    mdim   = space%dim
     pdim   = space%periodic_dim
 
     this%surf_interp = .false.
@@ -483,7 +483,7 @@ contains
                           + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
       else 
         this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
-        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
+        if (space%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
       end if
       par_strategy = this%par_strategy
       call parse_variable(namespace, 'PES_Flux_Parallelization', par_strategy, this%par_strategy)
@@ -737,7 +737,7 @@ contains
 
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
-    mdim   = sb%dim
+    mdim   = space%dim
     pdim   = space%periodic_dim
 
     this%dim  = mdim
@@ -1491,7 +1491,7 @@ contains
       call parse_block_end(blk)
       
       write(message(1),'(a)') 'Momentum grid transformation matrix :'
-      do idir = 1, sb%dim
+      do idir = 1, space%dim
         write(message(1 + idir),'(9f12.6)') ( this%ktransf(idim, idir), idim = 1, mdim) 
       end do
       call messages_info(1 + mdim)
@@ -1516,9 +1516,9 @@ contains
       
         do ikpt = kptst, kptend + 1
           if (ikpt == kptend + 1) then
-            kpoint(1:sb%dim) = M_ZERO
+            kpoint(1:space%dim) = M_ZERO
           else
-            kpoint(1:sb%dim) = kpoints%get_point(ikpt)
+            kpoint(1:space%dim) = kpoints%get_point(ikpt)
           end if
 
           do ikp = 1, this%nkpnts
@@ -1602,7 +1602,7 @@ contains
       kptst  = st%d%kpt%start
       kptend = st%d%kpt%end
       sdim   = st%d%dim
-      mdim   = mesh%sb%dim
+      mdim   = space%dim
 
       SAFE_ALLOCATE(psi(1:mesh%np_part))
       SAFE_ALLOCATE(gpsi(1:mesh%np_part, 1:mdim))
@@ -1734,7 +1734,7 @@ contains
       kptend    = 1
     end if
 
-    mdim = mesh%sb%dim
+    mdim = space%dim
     pdim = space%periodic_dim
 
     ikp_start = this%nkpnts_start

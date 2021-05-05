@@ -30,7 +30,7 @@
 
     integer             :: ip, ist, jst, cstr_dim(space%dim), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
-    FLOAT               :: psi_re, psi_im, xx(gr%sb%dim), rr, fact, xend, xstart
+    FLOAT               :: psi_re, psi_im, xx(space%dim), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
     CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
     type(states_elec_t) :: tmp_st
@@ -305,7 +305,7 @@
             
         end do
           
-        do idim = 1, gr%sb%dim
+        do idim = 1, space%dim
           if(cstr_dim(idim) == 0) tmp_box(:,idim) = M_ONE
         end do
         tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:space%dim),2) 

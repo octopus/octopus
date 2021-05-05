@@ -434,7 +434,7 @@ subroutine X(total_force_from_potential)(space, gr, ions, ep, st, kpoints, x, ld
           !Here we recompute it, and moreover the vector potential is missing
 #ifdef R_TCOMPLEX
           do ip = 1, np_part
-            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:space%dim)))
+            phase = exp(-M_zI*sum(kpoint(1:space%dim)*gr%mesh%x(ip, 1:space%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
           end do
 #else
@@ -505,7 +505,7 @@ subroutine X(forces_derivative)(gr, namespace, space, ions, ep, st, kpoints, lr,
   type(kpoints_t),                intent(in)    :: kpoints
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
-  CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%sb%dim, ions%natoms)
+  CMPLX,                          intent(out)   :: force_deriv(:,:) !< (space%dim, ions%natoms)
   integer,                        intent(in)    :: lda_u_level
 
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
@@ -646,8 +646,8 @@ subroutine X(forces_born_charges)(gr, namespace, space, ions, ep, st, kpoints, l
   type(epot_t),                   intent(in)    :: ep
   type(states_elec_t),            intent(in)    :: st
   type(kpoints_t),                intent(in)    :: kpoints
-  type(lr_t),                     intent(in)    :: lr(:)  !< (gr%sb%dim)
-  type(lr_t),                     intent(in)    :: lr2(:) !< (gr%sb%dim)
+  type(lr_t),                     intent(in)    :: lr(:)  !< (space%dim)
+  type(lr_t),                     intent(in)    :: lr2(:) !< (space%dim)
   type(born_charges_t),           intent(inout) :: born_charges
   integer,                        intent(in)    :: lda_u_level
 

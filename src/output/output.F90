@@ -314,7 +314,7 @@ contains
 
     ! cannot calculate the ELF in 1D
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-       if(sb%dim /= 2 .and. sb%dim /= 3) then
+       if (space%dim /= 2 .and. space%dim /= 3) then
          outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1, namespace=namespace)
@@ -420,7 +420,7 @@ contains
       !%
       !%End
         
-      select case(sb%dim)
+      select case (space%dim)
       case(3)
 
         call parse_block_float(blk, 0, 0, outp%plane%origin(1), units_inp%length)

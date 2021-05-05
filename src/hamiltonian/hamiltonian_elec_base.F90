@@ -42,6 +42,7 @@ module hamiltonian_elec_base_oct_m
   use projector_matrix_oct_m
   use ps_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
@@ -364,8 +365,9 @@ contains
 
   !-----------------------------------------------------------------
     
-  subroutine hamiltonian_elec_base_build_proj(this, mesh, epot)
+  subroutine hamiltonian_elec_base_build_proj(this, space, mesh, epot)
     type(hamiltonian_elec_base_t), target, intent(inout) :: this
+    type(space_t),                         intent(in)    :: space
     type(mesh_t),                     intent(in)    :: mesh
     type(epot_t),             target, intent(in)    :: epot
 
@@ -414,7 +416,7 @@ contains
           do jatom = 1, region_count(nregion)
             katom = order(head(nregion) + jatom - 1)
             if(projector_is(epot%proj(katom), PROJ_NONE)) cycle
-            overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere)
+            overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere, space)
             if(overlap) exit
           end do
         end if
@@ -447,7 +449,7 @@ contains
         if(.not. projector_is(epot%proj(order(iatom)), PROJ_KB)) cycle
         do jatom = head(iregion), iatom - 1
           if(.not. projector_is(epot%proj(order(jatom)), PROJ_KB)) cycle
-          ASSERT(.not. submesh_overlap(epot%proj(order(iatom))%sphere, epot%proj(order(jatom))%sphere))
+          ASSERT(.not. submesh_overlap(epot%proj(order(iatom))%sphere, epot%proj(order(jatom))%sphere, space))
         end do
       end do
     end do

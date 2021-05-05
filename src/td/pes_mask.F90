@@ -198,7 +198,7 @@ contains
     integer :: defaultMask,k1,k2,st1,st2
     integer :: cols_pesmask_block, idim, ip
 
-    FLOAT :: xx(1:sb%dim), r
+    FLOAT :: xx(space%dim), r
     FLOAT :: ufn_re, ufn_im
     character(len=1024) :: user_def_expr
    
@@ -433,7 +433,7 @@ contains
     mask%ll(1:3) = mesh%idx%ll(1:3)    
     
     !Enlarge the cube region
-    mask%ll(1:sb%dim) = int(mask%ll(1:space%dim) * mask%enlarge(1:space%dim))
+    mask%ll(1:space%dim) = int(mask%ll(1:space%dim) * mask%enlarge(1:space%dim))
     
     select case(mask%pw_map_how)
       

@@ -478,7 +478,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:mesh%np))
-        call species_get_local(atom%species, space, mesh, namespace, atom%x(1:mesh%sb%dim), vl)
+        call species_get_local(atom%species, space, mesh, namespace, atom%x(1:space%dim), vl)
 
       end if
 

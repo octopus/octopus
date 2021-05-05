@@ -221,7 +221,7 @@ contains
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, ions%natoms
-          forces(jatom, 1:mesh%sb%dim) = ions%atom(jatom)%f(1:space%dim)
+          forces(jatom, 1:ions%space%dim) = ions%atom(jatom)%f(1:ions%space%dim)
         end do
 
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp

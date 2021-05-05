@@ -1360,7 +1360,7 @@ contains
       hm%ep%vdw_forces(1:space%dim, 1:ks%calc%ions%natoms) = ks%calc%vdw_forces(1:space%dim, 1:ks%calc%ions%natoms)
       SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
     else
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%ions%natoms) = CNST(0.0)      
+      hm%ep%vdw_forces(1:space%dim, 1:ks%calc%ions%natoms) = CNST(0.0)      
     end if
 
     if(ks%calc%time_present .or. hm%time_zero) then

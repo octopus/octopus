@@ -67,7 +67,7 @@ contains
 
     type(block_t)      :: blk
     integer            :: il, nlines, idim, ncols, ip, state_from, ierr, maxwell_field
-    FLOAT              :: xx(1:mesh%sb%dim), rr, e_value, dummy, b_value
+    FLOAT              :: xx(space%dim), rr, e_value, dummy, b_value
     FLOAT, allocatable :: e_field(:), b_field(:)
     FLOAT, allocatable :: total_efield(:,:), total_bfield(:,:)
     CMPLX, allocatable :: rs_state_add(:), rs_state(:,:)

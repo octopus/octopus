@@ -1314,7 +1314,7 @@ contains
       call lalg_copy(gr%mesh%np, this%nlcc%density(:,1), st%rho_core)
     end if
 
-    call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
+    call hamiltonian_elec_base_build_proj(this%hm_base, space, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, space, time)
 
     ! Check if projectors are still compatible with apply_packed on GPU

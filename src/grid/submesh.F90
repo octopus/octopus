@@ -524,18 +524,19 @@ contains
 
   ! --------------------------------------------------------------
 
-  logical function submesh_overlap(sm1, sm2) result(overlap)
+  logical function submesh_overlap(sm1, sm2, space) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
+    type(space_t),        intent(in)   :: space
     
     integer :: ii, jj, dd
     FLOAT :: distance
 
     !no PUSH_SUB, called too often
 
-    if (sm1%mesh%sb%periodic_dim == 0) then
+    if (.not. space%is_periodic()) then
       !first check the distance
-      distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
+      distance = sum((sm1%center(1:space%dim) - sm2%center(1:space%dim))**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
       
       ! if they are very far, no need to check in detail
