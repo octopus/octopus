@@ -177,8 +177,6 @@ contains
     if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
     this%level = level
 
-    call lda_u_write_info(this, stdout)
-
     !%Variable DFTUBasisFromStates
     !%Type logical
     !%Default no
@@ -213,12 +211,14 @@ contains
 
     !%Variable DFTUPoissonSolver
     !%Type integer
-    !%Default dft_u_poisson_direct
     !%Section Hamiltonian::DFT+U
     !%Description
     !% This variable selects which Poisson solver
     !% is used to compute the Coulomb integrals over a submesh.
     !% These are non-periodic Poisson solvers.
+    !% If the domain parallelization is activated, the default is the direct sum.
+    !% Otherwise, the FFT Poisson solver is used by default.
+    !%
     !%Option dft_u_poisson_direct 0
     !% (Default) Direct Poisson solver. Slow.
     !%Option dft_u_poisson_isf 1
@@ -229,21 +229,25 @@ contains
     !% This does not work for non-orthogonal cells nor domain parallelization.
     !% Requires the PSolver external library.
     !%Option dft_u_poisson_fft 3
-    !% (Experimental) FFT Poisson solver on a submesh.
+    !% FFT Poisson solver on a submesh.
     !% This uses the 0D periodic version of the FFT kernels.
-    !% This does not work for domain parallelization.
+    !% This is not implemented for domain parallelization.
     !%End
-    call parse_variable(namespace, 'DFTUPoissonSolver', SM_POISSON_DIRECT, this%sm_poisson)
+    if(gr%mesh%parallel_in_domains) then
+      call parse_variable(namespace, 'DFTUPoissonSolver', SM_POISSON_DIRECT, this%sm_poisson)
+    else
+      call parse_variable(namespace, 'DFTUPoissonSolver', SM_POISSON_FFT, this%sm_poisson)
+    end if
     call messages_print_var_option(stdout,  'DFTUPoissonSolver', this%sm_poisson)
-    if(this%sm_poisson /= SM_POISSON_DIRECT) then
-      call messages_experimental("DFTUPoissonSolver different from dft_u_poisson_direct")
+    if(this%sm_poisson /= SM_POISSON_DIRECT .and. this%sm_poisson /= SM_POISSON_FFT) then
+      call messages_experimental("DFTUPoissonSolver different from dft_u_poisson_direct and dft_u_poisson_fft")
     end if
     if(this%sm_poisson == SM_POISSON_ISF) then
       if(gr%mesh%parallel_in_domains) then
-        call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
+        call messages_not_implemented("DFTUPoissonSolver=dft_u_poisson_isf with domain parallelization")
       end if
       if (ions%latt%nonorthogonal) then
-        call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
+        call messages_not_implemented("DFTUPoissonSolver=dft_u_poisson_isf with non-orthogonal cells")
       end if
     end if
     if(this%sm_poisson == SM_POISSON_PSOLVER) then
@@ -252,15 +256,15 @@ contains
       call messages_fatal(1)
 #endif
       if(gr%mesh%parallel_in_domains) then
-        call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
+        call messages_not_implemented("DFTUPoissonSolver=dft_u_poisson_psolver with domain parallelization")
       end if
       if (ions%latt%nonorthogonal) then
-        call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
+        call messages_not_implemented("DFTUPoissonSolver=dft_u_poisson_psolver with non-orthogonal cells")
       end if
     end if
     if(this%sm_poisson == SM_POISSON_FFT) then
       if(gr%mesh%parallel_in_domains) then
-        call messages_not_implemented("FFT DFT+U Poisson solver with domain parallelization.")
+        call messages_not_implemented("DFTUPoissonSolver=dft_u_poisson_fft with domain parallelization.")
       end if
     end if
 
@@ -324,8 +328,8 @@ contains
       !% It is strongly recommended to set AOLoewdin=yes when using the option.
       !%End
       call parse_variable(namespace, 'ACBN0IntersiteInteraction', .false., this%intersite)
-      if(this%intersite) call messages_experimental("ACBN0IntersiteInteraction")
       call messages_print_var_value(stdout, 'ACBN0IntersiteInteraction', this%intersite)
+      if(this%intersite) call messages_experimental("ACBN0IntersiteInteraction")
 
       if(this%intersite) then
 
@@ -351,6 +355,8 @@ contains
       end if
 
     end if
+    
+    call lda_u_write_info(this, stdout)
 
     if(.not.this%basisfromstates) then
 
@@ -393,9 +399,9 @@ contains
           if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
         end do
 
-        call messages_info(1)
         if(.not. complex_coulomb_integrals) then
           write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
+          call messages_info(1)
           if (states_are_real(st)) then
             call dcompute_coulomb_integrals(this, namespace, space, gr%mesh, gr%der, psolver)
           else
@@ -404,8 +410,9 @@ contains
         else
           ASSERT(.not.states_are_real(st))
           write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
+          call messages_info(1)
           call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace, space)
-        end if
+        end if 
       end if
 
     else
@@ -817,9 +824,15 @@ contains
       write(message(2), '(a)') "  [1] Dudarev et al., Phys. Rev. B 57, 1505 (1998)"
       call messages_info(2, iunit)
     else
-      write(message(1), '(a)') "Method:"
-      write(message(2), '(a)') "  [1] Agapito et al., Phys. Rev. X 5, 011006 (2015)"
-      call messages_info(2, iunit)
+      if(.not. this%intersite) then
+        write(message(1), '(a)') "Method:"
+        write(message(2), '(a)') "  [1] Agapito et al., Phys. Rev. X 5, 011006 (2015)"
+        call messages_info(2, iunit)
+      else
+        write(message(1), '(a)') "Method:"
+        write(message(2), '(a)') "  [1] Tancogne-Dejean, and Rubio, Phys. Rev. B 102, 155117 (2020)"
+        call messages_info(2, iunit)    
+      end if
     end if
     write(message(1), '(a)') "Implementation:"
     write(message(2), '(a)') "  [1] Tancogne-Dejean, Oliveira, and Rubio, Phys. Rev. B 69, 245133 (2017)"
