@@ -69,12 +69,17 @@
            iorb2 = basis%global2os(2, ind2)
            os2 => basis%orbsets(ios2)
            ns = os2%sphere%np
+
+           if (os%sphere%mesh%sb%periodic_dim > 0) then
+ #ifdef R_TCOMPLEX
           ! if(abs(overlap(ind2, ind)) < CNST(1e-6)) cycle
-           do is = 1, ns
-             os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
-                      = os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
+             do is = 1, ns
+               os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
+                     = os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
                       + overlap(ind2, ind)*os2%zorb(is, idim, iorb2)*os2%phase(is, ik)
-           end do
+             end do
+#endif
+           end if
          end do
        end do
      end do
@@ -109,9 +114,7 @@
 
   integer :: ios, ios2, iorb, iorb2
   integer :: ind, ind2
-#ifdef R_TCOMPLEX
   integer :: idim
-#endif
   type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))
@@ -136,7 +139,15 @@
         end do
  #endif
       else
-        call messages_not_implemented("Lowdin orthogonalization with submeshes")
+        if(os%submesh) then
+          call messages_not_implemented("Lowdin orthogonalization with submeshes")
+        else
+          overlap(ind,ind2) = M_Z0
+          do idim = 1, os%ndim
+            overlap(ind, ind2) = overlap(ind, ind2) + X(mf_dotp)(os%sphere%mesh, &
+                        os%X(orb)(:, idim, iorb), os2%X(orb)(:, idim, iorb2))
+          end do
+        end if
       end if
     end do !ind2
   end do !ind

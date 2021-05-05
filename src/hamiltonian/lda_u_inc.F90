@@ -1,4 +1,4 @@
-!! Copyright (C) 2016-2019 N. Tancogne-Dejean, X. Andrade
+!! Copyright (C) 2016-2019 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -109,16 +109,16 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
             do imp = 1, this%orbsets(ios2)%norbs
               if(d%ispin /= SPINORS) then
                 reduced(im, ibatch, ios) = reduced(im, ibatch, ios) - dot(1, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, ispin, ios, inn))*weight
+                         *this%X(n_ij)(im, imp, ispin, ios, inn)*weight
               else ! Spinors
                 reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(1, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, 1, ios, inn))*weight
+                         *this%X(n_ij)(im, imp, 1, ios, inn)*weight
                 reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(2, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, 4, ios, inn))*weight
+                         *this%X(n_ij)(im, imp, 3, ios, inn)*weight
                 reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(1, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, 3, ios, inn))*weight
+                         *this%X(n_ij)(im, imp, 4, ios, inn)*weight
                 reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(2, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, 2, ios, inn))*weight
+                         *this%X(n_ij)(im, imp, 2, ios, inn)*weight
               end if
             end do !imp
           end do !im
@@ -158,6 +158,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight, renorm_weight
+  R_TYPE  :: weight_phase, renorm_weight_phase
   type(orbitalset_t), pointer :: os, os2
   type(profile_t), save :: prof
   integer :: spec_ind, spec_ind2
@@ -205,7 +206,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
         !We first compute the matrix elemets <orb_m |\psi>
         !taking into account phase correction if needed 
         call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
-                          dot(1:st%d%dim,1:os%norbs,ios))
+                          dot(1:st%d%dim, 1:os%norbs, ios))
       end do !ios
 
       !We compute the on-site occupation of the site, if needed 
@@ -233,19 +234,19 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
       end if
 
 
-      if(st%d%ispin /= SPINORS) then !Collinear case
+      !We can compute the (renormalized) occupation matrices
+      do ios = 1, this%norbsets
+        os => this%orbsets(ios)
+        if(this%basisfromstates) then
+          spec_ind = 1
+        else
+          spec_ind = species_index(os%spec)
+        end if
+        norbs = os%norbs
 
-        !We can compute the (renormalized) occupation matrices
-        do ios = 1, this%norbsets
-          os => this%orbsets(ios)
-          if(this%basisfromstates) then
-            spec_ind = 1
-          else
-            spec_ind = species_index(os%spec)
-          end if
-          norbs = os%norbs
-
-          do im = 1, norbs
+        do im = 1, norbs
+        
+          if(st%d%ispin /= SPINORS) then !Collinear case
             this%X(n)(1:norbs, im, ispin, ios) = this%X(n)(1:norbs, im, ispin, ios) &
               + weight * dot(1, im, ios) * R_CONJ(dot(1, 1:norbs, ios))
             !We compute the renomalized occupation matrices
@@ -267,81 +268,65 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
                     spec_ind2 = species_index(os2%spec)
                   end if
                   
-                  if(spec_ind /= spec_ind2) then
-                    renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + & 
-                                     this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik) ) * weight
-                  else
-                    renorm_weight = this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) * weight
+                  renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + & 
+                                   this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik)) * weight
+                  if(spec_ind == spec_ind2) then 
+                    renorm_weight = M_HALF* renorm_weight
                   end if
                        
                   this%X(n_alt_ii)(1, im, ispin, ios, inn) = this%X(n_alt_ii)(1, im, ispin, ios, inn) &
                     + renorm_weight * dot(1, im, ios) * R_CONJ(dot(1, im, ios))
 
-                  do im2 = 1, os2%norbs
+                  weight_phase = weight
+                  renorm_weight_phase = renorm_weight
+                  if(present(phase)) then
+#ifdef R_TCOMPLEX
+                    weight_phase = weight_phase * os%phase_shift(inn, ik)
+                    renorm_weight_phase = renorm_weight_phase * os%phase_shift(inn, ik)
+#else
+                    ! Phase can only by applied when having complex wavefunctions
+                    ASSERT(.false.)
+#endif
+                  end if
 
+
+                  do im2 = 1, os2%norbs
               
                     if(im == 1) then
                        this%X(n_alt_ii)(2, im2, ispin, ios, inn) = this%X(n_alt_ii)(2, im2, ispin, ios, inn) &
                        + renorm_weight * dot(1, im2, ios2) * R_CONJ(dot(1, im2, ios2))
                     end if
 
-
-
-                    if(present(phase)) then
-#ifdef R_TCOMPLEX
-                      this%X(n_ij)(im, im2, ispin, ios, inn) = this%X(n_ij)(im, im2, ispin, ios, inn) &
-                             + weight*dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))*os%phase_shift(inn, ik)
-                      this%X(n_alt_ij)(im, im2, ispin, ios, inn) = this%X(n_alt_ij)(im, im2, ispin, ios, inn) &
-                             + renorm_weight * dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))*os%phase_shift(inn, ik)
-#else
-                      ! Phase can only be applied to complex wavefunctions
-                      ASSERT(.false.)
-#endif
-                    else
-                      this%X(n_ij)(im, im2, ispin, ios, inn) = this%X(n_ij)(im, im2, ispin, ios, inn) &
-                                    + weight*dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))
-                      this%X(n_alt_ij)(im, im2, ispin, ios, inn) = this%X(n_alt_ij)(im, im2, ispin, ios, inn) &
-                                    + renorm_weight * dot(1, im2, ios2) * R_CONJ(dot(1, im,ios))
-                    end if
+                    this%X(n_ij)(im, im2, ispin, ios, inn) = this%X(n_ij)(im, im2, ispin, ios, inn) &
+                           + weight_phase * dot(1, im2, ios2) * R_CONJ(dot(1, im, ios))
+                    this%X(n_alt_ij)(im, im2, ispin, ios, inn) = this%X(n_alt_ij)(im, im2, ispin, ios, inn) &
+                           + renorm_weight_phase * dot(1, im2, ios2) * R_CONJ(dot(1, im, ios))
                   end do !im2
                 end do !inn
               end if
             end if
-          end do !im
-        end do !ios
 
-      else !Noncollinear case
+          else !Noncollinear case
 
-        !We can compute the (renormalized) occupation matrices
-        do ios = 1, this%norbsets
-          os => this%orbsets(ios)
-          if(this%basisfromstates) then
-            spec_ind = 1
-          else
-            spec_ind = species_index(os%spec)
-          end if
-
-          norbs = os%norbs
-          do im = 1, norbs
             this%X(n)(1:norbs, im, 1, ios) = this%X(n)(1:norbs, im, 1, ios) &
-              + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+              + weight*dot(1, im, ios) * R_CONJ(dot(1, 1:norbs, ios))
             this%X(n)(1:norbs, im, 2, ios) = this%X(n)(1:norbs, im, 2, ios) &
-              + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+              + weight*dot(2, im, ios) * R_CONJ(dot(2, 1:norbs, ios))
             this%X(n)(1:norbs, im, 3, ios) = this%X(n)(1:norbs, im, 3, ios) &
-              + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+              + weight*dot(1, im, ios) * R_CONJ(dot(2, 1:norbs, ios))
             this%X(n)(1:norbs, im, 4, ios) = this%X(n)(1:norbs, im, 4, ios) &
-              + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+              + weight*dot(2, im, ios) * R_CONJ(dot(1, 1:norbs, ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
               renorm_weight = this%renorm_occ(spec_ind,os%nn,os%ll,ist,ik)*weight
-              this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
-                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-              this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
-                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-              this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs,im,3,ios) &
-                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-              this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
-                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+              this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs, im, 1, ios) &
+                            + renorm_weight * dot(1, im, ios) * R_CONJ(dot(1, 1:norbs, ios))
+              this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs, im, 2, ios) &
+                            + renorm_weight * dot(2, im, ios) * R_CONJ(dot(2, 1:norbs, ios))
+              this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs, im, 3, ios) &
+                            + renorm_weight * dot(1, im, ios) * R_CONJ(dot(2, 1:norbs, ios))
+              this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs, im, 4, ios) &
+                            + renorm_weight * dot(2, im, ios) * R_CONJ(dot(1, 1:norbs, ios))
 
               if(this%intersite) then
                 do inn = 1, os%nneighbors
@@ -354,65 +339,72 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
                     spec_ind2 = species_index(os2%spec)
                   end if
 
-                  if(spec_ind /= spec_ind2) then
-                    renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + &
-                                     this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik) ) * weight
-                  else
-                    renorm_weight = this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) * weight
+                  renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + &
+                                   this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik) ) * weight
+                  if(spec_ind == spec_ind2) then
+                    renorm_weight = M_HALF * renorm_weight
                   end if
 
-                  do im2 = 1, os2%norbs
-                    if(present(phase)) then
+                  weight_phase = weight
+                  renorm_weight_phase = renorm_weight
+                  if(present(phase)) then
 #ifdef R_TCOMPLEX
-                      this%zn_ij(im, im2, 1, ios, inn) = this%zn_ij(im, im2, 1, ios, inn) &
-                        + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
-                      this%zn_ij(im, im2, 2, ios, inn) = this%zn_ij(im, im2, 2, ios, inn) &
-                        + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
-                      this%zn_ij(im, im2, 3, ios, inn) = this%zn_ij(im, im2, 3, ios, inn) &
-                        + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
-                      this%zn_ij(im, im2, 4, ios, inn) = this%zn_ij(im, im2, 4, ios, inn) &
-                        + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
-                      
-
-                      this%zn_alt_ij(im, im2, 1, ios, inn) = this%zn_alt_ij(im, im2, 1, ios, inn) &
-                        + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
-                      this%zn_alt_ij(im, im2, 2, ios, inn) = this%zn_alt_ij(im, im2, 2, ios, inn) &
-                        + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
-                      this%zn_alt_ij(im, im2, 3, ios, inn) = this%zn_alt_ij(im, im2, 3, ios, inn) &
-                        + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
-                      this%zn_alt_ij(im, im2, 4, ios, inn) = this%zn_alt_ij(im, im2, 4, ios, inn) &
-                        + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+                    weight_phase = weight_phase * os%phase_shift(inn, ik)
+                    renorm_weight_phase = renorm_weight_phase * os%phase_shift(inn, ik)
 #else
-                      ! Phase can only by applied when having complex wavefunctions
-                      ASSERT(.false.)
+                    ! Phase can only by applied when having complex wavefunctions
+                    ASSERT(.false.)
 #endif
-                    else
-                      this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
-                             + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2))
-                      this%X(n_ij)(im, im2, 2, ios, inn) = this%X(n_ij)(im, im2, 2, ios, inn) &
-                             + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2))
-                      this%X(n_ij)(im, im2, 3, ios, inn) = this%X(n_ij)(im, im2, 3, ios, inn) &
-                             + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2))
-                      this%X(n_ij)(im, im2, 4, ios, inn) = this%X(n_ij)(im, im2, 4, ios, inn) &
-                             + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2))
+                  end if
 
+                  this%X(n_alt_ii)(1, im, 1, ios, inn) = this%X(n_alt_ii)(1, im, 1, ios, inn) &
+                    + renorm_weight * dot(1, im, ios) * R_CONJ(dot(1, im, ios))
+                  this%X(n_alt_ii)(1, im, 2, ios, inn) = this%X(n_alt_ii)(1, im, 2, ios, inn) &
+                    + renorm_weight * dot(2, im, ios) * R_CONJ(dot(2, im, ios))
+                  this%X(n_alt_ii)(1, im, 3, ios, inn) = this%X(n_alt_ii)(1, im, 3, ios, inn) &
+                    + renorm_weight * dot(1, im, ios) * R_CONJ(dot(2, im, ios))
+                  this%X(n_alt_ii)(1, im, 4, ios, inn) = this%X(n_alt_ii)(1, im, 4, ios, inn) &
+                    + renorm_weight * dot(2, im, ios) * R_CONJ(dot(1, im, ios))
 
-                      this%X(n_alt_ij)(im, im2, 1, ios, inn) = this%X(n_alt_ij)(im, im2, 1, ios, inn) &
-                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2))
-                      this%X(n_alt_ij)(im, im2, 2, ios, inn) = this%X(n_alt_ij)(im, im2, 2, ios, inn) &
-                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2))
-                      this%X(n_alt_ij)(im, im2, 3, ios, inn) = this%X(n_alt_ij)(im, im2, 3, ios, inn) &
-                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2))
-                      this%X(n_alt_ij)(im, im2, 4, ios, inn) = this%X(n_alt_ij)(im, im2, 4, ios, inn) &
-                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2))
+                  do im2 = 1, os2%norbs
+
+                    if(im == 1) then
+                      this%X(n_alt_ii)(2, im2, 1, ios, inn) = this%X(n_alt_ii)(2, im2, 1, ios, inn) &  
+                        + renorm_weight * dot(1, im2, ios2) * R_CONJ(dot(1, im2, ios2))
+                      this%X(n_alt_ii)(2, im2, 2, ios, inn) = this%X(n_alt_ii)(2, im2, 2, ios, inn) &
+                        + renorm_weight * dot(2, im2, ios2) * R_CONJ(dot(2, im2, ios2))
+                      this%X(n_alt_ii)(2, im2, 3, ios, inn) = this%X(n_alt_ii)(2, im2, 3, ios, inn) & 
+                        + renorm_weight * dot(1, im2, ios2) * R_CONJ(dot(2, im2, ios2))
+                      this%X(n_alt_ii)(2, im2, 4, ios, inn) = this%X(n_alt_ii)(2, im2, 4, ios, inn) &  
+                        + renorm_weight * dot(2, im2, ios2) * R_CONJ(dot(1, im2, ios2))
                     end if
+
+
+                    this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
+                           + weight_phase*dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))
+                    this%X(n_ij)(im, im2, 2, ios, inn) = this%X(n_ij)(im, im2, 2, ios, inn) &
+                           + weight_phase*dot(2, im2, ios2)*R_CONJ(dot(2, im, ios))
+                    this%X(n_ij)(im, im2, 3, ios, inn) = this%X(n_ij)(im, im2, 3, ios, inn) &
+                           + weight_phase*dot(1, im2, ios2)*R_CONJ(dot(2, im, ios))
+                    this%X(n_ij)(im, im2, 4, ios, inn) = this%X(n_ij)(im, im2, 4, ios, inn) &
+                           + weight_phase*dot(2, im2, ios2)*R_CONJ(dot(1, im, ios))
+
+
+                    this%X(n_alt_ij)(im, im2, 1, ios, inn) = this%X(n_alt_ij)(im, im2, 1, ios, inn) &
+                           + renorm_weight_phase * dot(1, im2, ios2) * R_CONJ(dot(1, im, ios))
+                    this%X(n_alt_ij)(im, im2, 2, ios, inn) = this%X(n_alt_ij)(im, im2, 2, ios, inn) &
+                           + renorm_weight_phase * dot(2, im2, ios2) * R_CONJ(dot(2, im, ios))
+                    this%X(n_alt_ij)(im, im2, 3, ios, inn) = this%X(n_alt_ij)(im, im2, 3, ios, inn) &
+                           + renorm_weight_phase * dot(1, im2, ios2) * R_CONJ(dot(2, im, ios))
+                    this%X(n_alt_ij)(im, im2, 4, ios, inn) = this%X(n_alt_ij)(im, im2, 4, ios, inn) &
+                           + renorm_weight_phase * dot(2, im2, ios2) * R_CONJ(dot(1, im, ios))
                    end do !im2
                  end do !inn
                end if
             end if
-          end do !im
-        end do !ios
-      end if !Spinors
+          end if !Spinors
+        end do !im
+      end do !ios
     end do
   end do
 
@@ -832,7 +824,7 @@ subroutine X(compute_ACBNO_V)(this, ios)
       do imp= 1, norbs2
         do ispin1 = 1, this%spin_channels
         do ispin2 = 1, this%spin_channels
-          numV = numV + R_REAL(this%X(n_alt_ii)(1,im,ispin1,ios,inn))*R_REAL(this%X(n_alt_ii)(2,imp,ispin2,ios2,inn))   &
+          numV = numV + R_REAL(this%X(n_alt_ii)(1,im,ispin1,ios,inn))*R_REAL(this%X(n_alt_ii)(2,imp,ispin2,ios,inn))   &
                        *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
           if(ispin1 == ispin2) then
             numV = numV - R_REAL(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)))&
@@ -845,27 +837,26 @@ subroutine X(compute_ACBNO_V)(this, ios)
                        +R_REAL(this%X(n_alt_ij)(im,imp,4,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,4,ios,inn)))) &
                         *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
         end if
-      end do
-    end do
+      end do !imp
 
-    do im = 1, norbs
-    do imp = 1,norbs2
-      ! We compute the term
-      ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
-      do ispin1 = 1, this%spin_channels
-      do ispin2 = 1, this%spin_channels 
-        denomV = denomV + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios2))
-        if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_ij)(im,imp,ispin1,ios,inn))**2
-      end do
-      end do
-      if(this%nspins>this%spin_channels) then !Spinors
-        denomV = denomV - abs(this%X(n_ij)(im,imp,3,ios,inn))**2 - abs(this%X(n_ij)(im,imp,4,ios,inn))**2
-      end if
-    end do
-    end do
+      do imp = 1,norbs2
+        ! We compute the term
+        ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
+        do ispin1 = 1, this%spin_channels
+        do ispin2 = 1, this%spin_channels 
+          denomV = denomV + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios2))
+          if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_ij)(im,imp,ispin1,ios,inn))**2
+        end do
+        end do
+        if(this%nspins>this%spin_channels) then !Spinors
+          denomV = denomV - abs(this%X(n_ij)(im,imp,3,ios,inn))**2 - abs(this%X(n_ij)(im,imp,4,ios,inn))**2
+        end if
+      end do !imp
+    end do !im
+
 
     this%orbsets(ios)%V_ij(inn,0) = numV/denomV*M_HALF
-  end do
+  end do !inn
 
   POP_SUB(compute_ACBNO_V)
 end subroutine X(compute_ACBNO_V)
