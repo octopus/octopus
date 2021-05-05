@@ -500,8 +500,7 @@ contains
       call parse_block_end(blk)
     else
 
-      !MFT TODO: how should I say use the block format?
-      call messages_obsolete_variable(namespace, what_tag, 'block')
+      call messages_variable_nowblock(namespace, what_tag)
 
       ! Output block does not exist but we may have OutputHow/OutputInterval 
       call parse_variable(namespace, how_tag, 0, how(0))
