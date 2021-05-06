@@ -159,10 +159,9 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, namespace, space, ions, der, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, ions, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
-    type(space_t),       intent(in)    :: space
     type(ions_t),        intent(in)    :: ions
     type(derivatives_t), intent(in)    :: der
     type(states_elec_t), intent(in)    :: st

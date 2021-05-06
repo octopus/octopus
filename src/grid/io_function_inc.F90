@@ -134,7 +134,7 @@ subroutine X(io_function_input_global)(filename, namespace, space, mesh, ff, ier
     if(status /= NF90_NOERR) then
       ierr = 2
     else
-      call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+      call cube_init(cube, mesh%idx%ll, namespace, space)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
       call dcube_function_alloc_RS(cube, re)
@@ -188,7 +188,7 @@ subroutine X(io_function_input_global)(filename, namespace, space, mesh, ff, ier
       call messages_fatal(1)
     end select
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
     call X(cube_function_alloc_RS)(cube, cf)
     
     call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
@@ -555,7 +555,7 @@ contains
 
     PUSH_SUB(X(io_function_output_vector).out_vtk)
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
 
     SAFE_ALLOCATE(cf(1:space%dim))
 
@@ -1154,7 +1154,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1224,7 +1224,7 @@ contains
     ASSERT(present(ions))
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1310,7 +1310,7 @@ contains
     end if
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1404,7 +1404,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_netcdf)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space)
+    call cube_init(cube, mesh%idx%ll, namespace, space)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
@@ -1438,7 +1438,7 @@ contains
       dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
     end do
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, space, spacing = dk)
+    call cube_init(cube, mesh%idx%ll, namespace, space, spacing = dk)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 

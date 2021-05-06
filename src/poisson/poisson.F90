@@ -617,7 +617,7 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, namespace, space, fft_type = fft_type, &
+      call cube_init(this%cube, box, namespace, space, fft_type = fft_type, &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
@@ -1005,8 +1005,7 @@ contains
       ASSERT(.not. der%mesh%parallel_in_domains)
       call submesh_get_cube_dim(sm, box, space%dim)
       call submesh_init_cube_map(sm, space%dim)
-      call cube_init(this%cube, box, der%mesh%sb, namespace, space, fft_type = FFT_NONE, &
-                     need_partition=.not.der%mesh%parallel_in_domains)
+      call cube_init(this%cube, box, namespace, space, fft_type = FFT_NONE, need_partition=.not.der%mesh%parallel_in_domains)
       call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
 
     case(POISSON_PSOLVER)
@@ -1019,8 +1018,7 @@ contains
       end if
       call submesh_get_cube_dim(sm, box, space%dim)
       call submesh_init_cube_map(sm, space%dim)
-      call cube_init(this%cube, box, der%mesh%sb, namespace, space, fft_type = FFT_NONE, &
-                     need_partition=.not.der%mesh%parallel_in_domains)
+      call cube_init(this%cube, box, namespace, space, fft_type = FFT_NONE, need_partition=.not.der%mesh%parallel_in_domains)
       qq = M_ZERO
       call poisson_psolver_init(this%psolver_solver, namespace, space, this%der%mesh, this%cube, M_ZERO, qq, force_isolated=.true.)
       call poisson_psolver_get_dims(this%psolver_solver, this%cube)
@@ -1038,11 +1036,9 @@ contains
         box(idir) = nint(M_TWO * (box(idir) - 1)) + 1
       end do
       if(optional_default(force_cmplx, .false.)) then
-        call cube_init(this%cube, box, der%mesh%sb, namespace, space, fft_type = FFT_COMPLEX, &
-                       need_partition=.not.der%mesh%parallel_in_domains)
+        call cube_init(this%cube, box, namespace, space, fft_type = FFT_COMPLEX, need_partition=.not.der%mesh%parallel_in_domains)
       else
-        call cube_init(this%cube, box, der%mesh%sb, namespace, space, fft_type = FFT_REAL, &
-                       need_partition=.not.der%mesh%parallel_in_domains)
+        call cube_init(this%cube, box, namespace, space, fft_type = FFT_REAL, need_partition=.not.der%mesh%parallel_in_domains)
       end if
       call poisson_fft_init(this%fft_solver, namespace, space, this%der%mesh, this%cube, this%kernel)
     end select

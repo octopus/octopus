@@ -23,7 +23,6 @@
 !!
 !! In addition, the module also contains the necessary procedures to manipulate these objects.
 module controlfunction_oct_m
-  use epot_oct_m
   use filter_oct_m
   use global_oct_m
   use io_oct_m
@@ -164,8 +163,7 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, ext_lasers, namespace, dt, max_iter, mode_fixed_fluence)
-    type(epot_t),                   intent(inout) :: ep
+  subroutine controlfunction_mod_init(ext_lasers, namespace, dt, max_iter, mode_fixed_fluence)
     type(lasers_t),                 intent(inout) :: ext_lasers
     type(namespace_t),              intent(in)    :: namespace
     FLOAT,                          intent(in)    :: dt

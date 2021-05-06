@@ -792,7 +792,7 @@ contains
 
   !----------------------------------------------------------
   subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, &
-    poisson_solver, time, field, transverse_field, vector_potential, ions)
+    poisson_solver, time, field, transverse_field, vector_potential)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
     type(hamiltonian_mxll_t),   intent(in)    :: hm_mxll
@@ -800,13 +800,11 @@ contains
     type(propagator_mxll_t),    intent(in)    :: tr_mxll
     type(hamiltonian_elec_t),   intent(in)    :: hm
     type(states_elec_t),        intent(in)    :: st
-!    type(propagator_base_t),    intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
     CMPLX,                      intent(inout) :: field(:,:)
     CMPLX,                      intent(inout) :: transverse_field(:,:)
     FLOAT,                      intent(inout) :: vector_potential(:,:)
-    type(ions_t),     optional, intent(in)    :: ions
 
     integer            :: np
 
@@ -848,11 +846,10 @@ contains
   end subroutine  get_vector_pot_and_transverse_field
 
   ! ---------------------------------------------------------
-  subroutine calculate_vector_potential(poisson_solver, gr, st, tr, field, vector_potential)
+  subroutine calculate_vector_potential(poisson_solver, gr, st, field, vector_potential)
     type(poisson_t),            intent(in)    :: poisson_solver
     type(grid_t),               intent(in)    :: gr
     type(states_mxll_t),        intent(in)    :: st
-    type(propagator_mxll_t),    intent(in)    :: tr
     CMPLX,                      intent(in)    :: field(:,:)
     FLOAT,                      intent(inout) :: vector_potential(:,:)
 
@@ -1289,7 +1286,7 @@ contains
       do istate = 1, hm%dim
         call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
       end do
-      call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
+      call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml)
       SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
 
@@ -1390,11 +1387,10 @@ contains
   end subroutine cpml_conv_function_update_via_riemann_silberstein
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
     CMPLX,               intent(in)         :: ff_rs_state_pml(:,:)
-    integer,             intent(in)         :: ff_dim
 
     integer :: ip, ip_in, np_part
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_partial_e(:), tmp_partial_b(:)

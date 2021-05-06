@@ -33,7 +33,6 @@ module pes_out_oct_m
 #endif    
   use profiling_oct_m
   use qshep_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use sort_oct_m
   use string_oct_m
@@ -64,7 +63,7 @@ module pes_out_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map(pesK, file, namespace, space, Lk, ll, how, sb, pmesh)
+  subroutine pes_out_velocity_map(pesK, file, namespace, space, Lk, ll, how, pmesh)
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
     type(namespace_t), intent(in) :: namespace
@@ -72,7 +71,6 @@ contains
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
     integer(8),        intent(in) :: how
-    type(simul_box_t), intent(in) :: sb 
     FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
   
     integer :: ierr
@@ -83,7 +81,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map)
 
-    call cube_init(cube, ll, sb, namespace, space)
+    call cube_init(cube, ll, namespace, space)
     call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
     cf%dRS = pesK
   

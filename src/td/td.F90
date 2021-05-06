@@ -433,7 +433,7 @@ contains
     ! Calculate initial forces and kinetic energy
     if (ion_dynamics_ions_move(td%ions_dyn)) then
       if (td%iter > 0) then
-        call td_read_coordinates(td, namespace, gr, ions)
+        call td_read_coordinates(td, namespace, ions)
         call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = td%iter*td%dt)
       end if
 
@@ -968,10 +968,9 @@ contains
 
   ! ---------------------------------------------------------
   !> reads the pos and vel from coordinates file
-  subroutine td_read_coordinates(td, namespace, gr, ions)
+  subroutine td_read_coordinates(td, namespace, ions)
     type(td_t),               intent(in)    :: td
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(in)    :: gr
     type(ions_t),             intent(inout) :: ions
 
     integer :: iatom, iter, iunit

@@ -138,8 +138,7 @@ contains
     call oct_read_inp(oct, sys%namespace)
 
     ! Read info about, and prepare, the control functions
-    call controlfunction_mod_init(sys%hm%ep, sys%hm%ext_lasers, sys%namespace, td%dt, &
-                                     td%max_iter, oct%mode_fixed_fluence)
+    call controlfunction_mod_init(sys%hm%ext_lasers, sys%namespace, td%dt, td%max_iter, oct%mode_fixed_fluence)
     call controlfunction_init(par, td%dt, td%max_iter)
     call controlfunction_set(par, sys%hm%ext_lasers)
       ! This prints the initial control parameters, exactly as described in the inp file,
