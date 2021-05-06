@@ -201,9 +201,9 @@ contains
 
     call target_tdcalc(tg, sys%namespace, sys%space, sys%hm, sys%gr, sys%ions, psi, 0, td%max_iter)
 
-    if (present(prop)) then
+    if(present(prop)) then
       call oct_prop_dump_states(prop, sys%space, 0, psi, sys%gr%mesh, sys%kpoints, ierr)
-      if (ierr /= 0) then
+      if(ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
         call messages_warning(1)
       end if
@@ -241,15 +241,14 @@ contains
         call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm,  sys%ions, sys%hm%ep%kick, &
           td%dt, istep)
         ii = ii + 1
-        ! MFT: TODO: which output interval?
-        if(ii == sys%outp%output_interval(1)+1 .or. istep == td%max_iter) then ! output
-          if(istep == td%max_iter) sys%outp%output_interval(1) = ii - 1
+        if(any(ii == sys%outp%output_interval + 1) .or. istep == td%max_iter) then ! output
+          if(istep == td%max_iter) sys%outp%output_interval = ii - 1
           ii = istep
           call td_write_data(write_handler) 
         end if
       end if
 
-      if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
+      if((mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 

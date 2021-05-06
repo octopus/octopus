@@ -221,10 +221,9 @@
         end if
 
         write(fname, '(2a)') 'current_kpt'
-        !MFT: TODO: which how shoud be passed in here?
-        call io_function_output_vector_BZ(0_8, dir, fname, namespace, space, st%d%kpt, hm%kpoints, &
-            current_kpt(:, :), (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
-            grp = st%st_kpt_mpi_grp)
+        call io_function_output_vector_BZ(outp%how(OPTION__OUTPUT__CURRENT_KPT), dir, fname, namespace, space, &
+          st%d%kpt, hm%kpoints, current_kpt(:, :), (unit_one/units_out%time)*units_out%length**(1 - space%dim), err, &
+          grp = st%st_kpt_mpi_grp)
         SAFE_DEALLOCATE_A(current_kpt)
       else
         message(1) = 'No current density output for real states since it is identically zero.'

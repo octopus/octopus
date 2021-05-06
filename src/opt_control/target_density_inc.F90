@@ -354,13 +354,12 @@
     PUSH_SUB(target_output_density)
     
     call io_mkdir(trim(dir), namespace)
-    if(any(outp%how /= 0)) then
-      if(tg%density_weight > M_ZERO) then
-      ! MFT: TODO: which how should be passed here?
-        call dio_function_output(0_8, trim(dir), 'density_target', namespace, space, mesh, &
-          tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
-      end if
+
+    if(tg%density_weight > M_ZERO) then
+      call dio_function_output(outp%how(0), trim(dir), 'density_target', namespace, space, mesh &
+        tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
+
 
     POP_SUB(target_output_density)
   end subroutine target_output_density
