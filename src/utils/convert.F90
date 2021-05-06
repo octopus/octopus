@@ -377,7 +377,7 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      do output_i = 1, size(outp%how)
+      do output_i = 0, size(outp%how) - 1
         if(outp%how(output_i) /= 0) then
           call dio_function_output(outp%how(output_i), trim(restart_folder)//trim(folder), & 
            trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, ions = ions)
@@ -728,7 +728,7 @@ contains
     if(mesh%parallel_in_domains) then
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
-        do output_i = 1, size(outp%how)
+        do output_i = 0, size(outp%how) - 1
           if(outp%how(output_i) /= 0) then
             call dio_function_output(0_8, trim(filename), & 
             trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
@@ -743,7 +743,7 @@ contains
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
-          do output_i = 1, size(outp%how)
+          do output_i = 0, size(outp%how) - 1
             if((outp%how(output_i) /= 0) .and. (outp%how(output_i) /= OPTION__OUTPUTFORMAT__BINARY)) then
               call dio_function_output(outp%how(output_i), trim(filename), & 
                 trim('density'), namespace, space, mesh, read_rff, &
@@ -886,7 +886,7 @@ contains
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-space%dim)
-    do output_i = 1, size(outp%how)
+    do output_i = 0, size(outp%how) - 1
       if(outp%how(output_i) /= 0) then
         call dio_function_output(outp%how(output_i), trim(out_folder), trim(out_filename), namespace, space, mesh, & 
           scalar_ff, units, ierr, ions = ions)

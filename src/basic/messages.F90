@@ -58,6 +58,7 @@ module messages_oct_m
     messages_print_var_option,  &
     messages_print_var_value,   &
     messages_obsolete_variable, &
+    messages_variable_nowblock, &
     messages_experimental,      &
     messages_check_def,         &
     messages_not_implemented,   &

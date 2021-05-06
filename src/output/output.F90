@@ -500,7 +500,7 @@ contains
       call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
-    do iout = 1, size(outp%how)
+    do iout = 0, size(outp%how) - 1
       if(bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
         call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions, iter)
         exit
@@ -600,7 +600,7 @@ contains
       end if
 
       if(outp%what(OPTION__OUTPUT__ELF_BASINS)) &
-        call out_basins(f_loc(:,1), "elf_rs_basins")
+        call out_basins(f_loc(:,1), "elf_rs_basins", outp%how(OPTION__OUTPUT__ELF_BASINS))
     end if
 
     ! Now Bader analysis
@@ -621,7 +621,7 @@ contains
         else
           write(fname, '(a,i1)') 'bader_basins-sp', is
         end if
-        call out_basins(f_loc(:,1), fname)
+        call out_basins(f_loc(:,1), fname, outp%how(OPTION__OUTPUT__BADER))
       end do
     end if
 
@@ -639,9 +639,10 @@ contains
 
   contains
     ! ---------------------------------------------------------
-    subroutine out_basins(ff, filename)
+    subroutine out_basins(ff, filename, output_how)
       FLOAT,            intent(in)    :: ff(:)
       character(len=*), intent(in)    :: filename
+      integer(8),       intent(in)    :: output_how
 
       character(len=256) :: fname
       type(basins_t)     :: basins
@@ -652,8 +653,7 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
-      !MFT: TODO: which how should be passed here?
-      call dio_function_output(0_8, dir, trim(filename), namespace, space, gr%mesh, &
+      call dio_function_output(output_how, dir, trim(filename), namespace, space, gr%mesh, &
         TOFLOAT(basins%map), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
 

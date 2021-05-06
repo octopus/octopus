@@ -641,7 +641,7 @@ contains
     etime = loct_clock()
 
     output_iter = .false.
-    do it = 1, size(outp%output_interval)
+    do it = 0, size(outp%output_interval) - 1
       if(outp%output_interval(it) /= 0) then
         if(mod(iter, outp%output_interval(it)) == 0) then
           output_iter = .true.
