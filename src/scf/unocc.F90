@@ -332,7 +332,7 @@ contains
         end if
       end if 
 
-      do it = 1, size(sys%outp%output_interval)
+      do it = lbound(sys%outp%output_interval, 1), ubound(sys%outp%output_interval, 1)
         if(sys%outp%output_interval(it) /= 0) then
           if(mod(iter, sys%outp%output_interval(it)) == 0) then
             output_iter = .true.

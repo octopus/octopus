@@ -863,7 +863,7 @@ contains
       end if
 
       if(any(outp%what) .and. outp%duringscf .and. gs_run_) then
-          do what_i = 1, size(outp%what) 
+          do what_i = lbound(outp%what, 1), ubound(outp%what, 1)
             if (outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
               write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
               call output_all(outp, namespace, space, dirname, gr, ions, iter, st, hm, ks)

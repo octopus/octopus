@@ -500,7 +500,7 @@ contains
       call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
-    do iout = 0, size(outp%how) - 1
+    do iout = lbound(outp%how, 1), ubound(outp%how, 1)
       if(bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
         call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions, iter)
         exit
