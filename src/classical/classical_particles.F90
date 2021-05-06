@@ -87,16 +87,11 @@ contains
   !! signatures for the initialization routines because they are not
   !! type-bound and thus also not inherited.
   ! ---------------------------------------------------------
-  subroutine classical_particles_init(this, namespace, np)
+  subroutine classical_particles_init(this, np)
     class(classical_particles_t), intent(inout) :: this
-    type(namespace_t),            intent(in)    :: namespace
     integer,                      intent(in)    :: np !< Number of particles
 
     PUSH_SUB(classical_particles_init)
-
-    this%namespace = namespace
-
-    call space_init(this%space, namespace)
 
     this%np = np
     SAFE_ALLOCATE(this%mass(1:np))
