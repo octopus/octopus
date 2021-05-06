@@ -508,7 +508,7 @@ contains
     endif
 
     
-    do what_i = 0, size(what)
+    do what_i = 1, size(what)
       if(what_tag == 'Output') then
         if(what(what_i) .and. (.not. any(what_no_how == what_i))) then
           if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
