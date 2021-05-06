@@ -135,8 +135,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_mxll_init(this, namespace)
-    class(system_mxll_t), target, intent(inout) :: this
-    type(namespace_t),            intent(in)    :: namespace
+    class(system_mxll_t), intent(inout) :: this
+    type(namespace_t),    intent(in)    :: namespace
 
     type(profile_t), save :: prof
 
@@ -154,8 +154,7 @@ contains
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
 
-    nullify(this%ions%space)
-    this%ions%space => this%space
+    this%ions%space = this%space
     this%ions%natoms = 0
     this%ions%ncatoms = 0
     this%ions%nspecies = 0

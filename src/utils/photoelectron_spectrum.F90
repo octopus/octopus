@@ -113,7 +113,7 @@ program photoelectron_spectrum
   call unit_system_init(global_namespace)
   
   call space_init(space, global_namespace)
-  ions => ions_t(global_namespace, space)
+  ions => ions_t(global_namespace)
   call simul_box_init(sb, global_namespace, ions, space)
   call symmetries_init(symm, global_namespace, ions, space)
 

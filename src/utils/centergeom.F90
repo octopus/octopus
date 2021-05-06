@@ -27,7 +27,6 @@ program centergeom
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -68,13 +67,11 @@ contains
       LARGE   = 3
 
     type(ions_t),     pointer :: ions
-    type(space_t)     :: space
     FLOAT, allocatable :: center(:), x1(:), x2(:), to(:)
     integer :: axis_type, idir, default
     type(block_t) :: blk
 
-    call space_init(space, global_namespace)
-    ions => ions_t(global_namespace, space)
+    ions => ions_t(global_namespace)
 
     SAFE_ALLOCATE(center(1:ions%space%dim))
     SAFE_ALLOCATE(x1(1:ions%space%dim))

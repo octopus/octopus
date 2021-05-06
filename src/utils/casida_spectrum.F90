@@ -146,7 +146,7 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    ions => ions_t(global_namespace, cs%space)
+    ions => ions_t(global_namespace)
     do iatom = 1, ions%natoms
       coord(1:cs%space%dim) = ions%atom(iatom)%x(1:cs%space%dim)
       ions%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))

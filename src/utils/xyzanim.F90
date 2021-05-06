@@ -27,7 +27,6 @@ program xyzanim
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -65,7 +64,6 @@ contains
     logical :: multifiles
     FLOAT :: time
     type(ions_t),     pointer :: ions
-    type(space_t)     :: space
 
     ! Sets the filenames
     coords_file = 'td.general/coordinates'
@@ -93,8 +91,7 @@ contains
     !%End
     call parse_variable(global_namespace, 'AnimationMultiFiles', .false., multifiles)
 
-    call space_init(space, global_namespace)
-    ions => ions_t(global_namespace, space)
+    ions => ions_t(global_namespace)
 
     record_length = 100 + ions%space%dim*ions%natoms*3*20
 

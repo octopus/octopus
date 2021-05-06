@@ -169,7 +169,7 @@ contains
       call messages_not_implemented('DFTB+ for Dimensions /= 3')
     end if
 
-    this%ions => ions_t(namespace, this%space)
+    this%ions => ions_t(namespace)
     this%n_atom = this%ions%natoms
     SAFE_ALLOCATE(this%coords(3, this%n_atom))
     SAFE_ALLOCATE(this%acc(3, this%n_atom))
