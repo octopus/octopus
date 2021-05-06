@@ -666,7 +666,7 @@ program photoelectron_spectrum
 
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
-        call io_function_read_how(sb, global_namespace, how, ignore_error = .true.)
+        call io_function_read_how(global_namespace, space, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
         if ( .not. (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) .and. &

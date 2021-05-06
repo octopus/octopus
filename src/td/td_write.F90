@@ -773,7 +773,9 @@ contains
       call io_mkdir(outp%iter_dir, namespace)
     end if
 
-    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp%how)
+    if (outp%how == 0 .and. writ%out(OUT_N_EX)%write) then
+      call io_function_read_how(namespace, space, outp%how)
+    end if
 
     !%Variable TDOutputDFTU
     !%Type flag

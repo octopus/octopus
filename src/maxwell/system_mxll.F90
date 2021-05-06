@@ -220,7 +220,7 @@ contains
          &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
     call grid_init_stage_2(this%gr, this%namespace, this%space, this%mc)
-    call output_mxll_init(this%outp, this%namespace, this%gr%sb)
+    call output_mxll_init(this%outp, this%namespace, this%space)
     call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
 
     POP_SUB(system_mxll_init_parallelization)

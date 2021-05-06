@@ -17,10 +17,10 @@
 !!
  
  ! ---------------------------------------------------------
-  subroutine output_mxll_init(outp, namespace, sb)
+  subroutine output_mxll_init(outp, namespace, space)
     type(output_t),            intent(out) :: outp
     type(namespace_t),         intent(in)  :: namespace
-    type(simul_box_t),         intent(in)  :: sb
+    type(space_t),             intent(in)  :: space
 
     PUSH_SUB(output_mxll_init)
 
@@ -168,7 +168,7 @@
       outp%wfs_list = trim("1-3")
     end if
 
-    call io_function_read_how(sb, namespace, outp%how)
+    call io_function_read_how(namespace, space, outp%how)
 
     POP_SUB(output_mxll_init)
   end subroutine output_mxll_init

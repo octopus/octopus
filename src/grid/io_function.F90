@@ -106,9 +106,9 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, namespace, how, ignore_error)
-    type(simul_box_t), intent(in)  :: sb
+  subroutine io_function_read_how(namespace, space, how, ignore_error)
     type(namespace_t), intent(in)  :: namespace
+    type(space_t),     intent(in)  :: space
     integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
@@ -220,7 +220,7 @@ contains
      end if
 
     ! some modes are not available in some circumstances
-    if(sb%dim == 1) then
+    if (space%dim == 1) then
       if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
         message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
         call messages_fatal(1)
@@ -235,7 +235,7 @@ contains
       end if
     end if
 
-    if(sb%dim <= 2) then
+    if (space%dim <= 2) then
       if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
         message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
         call messages_fatal(1)

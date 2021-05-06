@@ -87,10 +87,10 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, namespace, sb, st, nst)
+  subroutine output_me_init(this, namespace, space, st, nst)
     type(output_me_t),   intent(out) :: this
     type(namespace_t),   intent(in)  :: namespace
-    type(simul_box_t),   intent(in)  :: sb
+    type(space_t),       intent(in)  :: space
     type(states_elec_t), intent(in)  :: st
     integer,             intent(in)  :: nst
 
@@ -144,7 +144,7 @@ contains
         namespace=namespace)
     end if
 
-    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
+    if (space%dim /= 2 .and. space%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
 
     if(bitand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
       !%Variable OutputMEMultipoles

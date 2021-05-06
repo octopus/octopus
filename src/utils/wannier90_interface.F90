@@ -276,7 +276,7 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call generate_wannier_states(sys%space, sys%gr%mesh, sys%gr%sb, sys%ions, sys%st, sys%kpoints)
+    call generate_wannier_states(sys%space, sys%gr%mesh, sys%ions, sys%st, sys%kpoints)
   case default
     message(1) = "Wannier90Mode is set to an unsupported value."
     call messages_fatal(1)
@@ -1211,10 +1211,9 @@ contains
 
   end subroutine create_wannier90_amn
 
-  subroutine generate_wannier_states(space, mesh, sb, ions, st, kpoints)
+  subroutine generate_wannier_states(space, mesh, ions, st, kpoints)
     type(space_t),          intent(in) :: space
     type(mesh_t),           intent(in) :: mesh
-    type(simul_box_t),      intent(in) :: sb
     type(ions_t),           intent(in) :: ions
     type(states_elec_t),    intent(in) :: st
     type(kpoints_t),        intent(in) :: kpoints
@@ -1291,7 +1290,7 @@ contains
     call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
-    call io_function_read_how(sb, global_namespace, how)
+    call io_function_read_how(global_namespace, space, how)
 
     call io_mkdir('wannier', global_namespace)
 
