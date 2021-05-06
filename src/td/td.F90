@@ -562,8 +562,7 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         call propagator_elec_dt(ks, namespace, space, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions_dyn, &
-          ions, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
-          move_ions = ion_dynamics_ions_move(td%ions_dyn) )
+          ions, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter))
       case(BO)
         call propagator_elec_dt_bo(td%scf, namespace, space, gr, ks, st, hm, ions, mc, outp, iter, td%dt, td%ions_dyn, scsteps)
       end select
