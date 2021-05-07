@@ -197,7 +197,7 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                     is_complex = complex_response)
       call restart_end(gs_restart)
     else
@@ -250,7 +250,8 @@ contains
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
         if (ierr == 0) then
-          call states_elec_load(kdotp_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr, lr=kdotp_lr(idir, 1))
+          call states_elec_load(kdotp_restart, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr, &
+            lr=kdotp_lr(idir, 1))
         end if
         call restart_close_dir(kdotp_restart)
 
@@ -1396,7 +1397,7 @@ contains
             end if
           end if
           do isigma = 1, em_vars%nsigma
-            call zoutput_lr(outp, namespace, space, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+            call zoutput_lr(outp, namespace, space, dirname, st, gr%mesh, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
               units_out%force)
           end do
         else
@@ -1410,7 +1411,7 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call doutput_lr(outp, namespace, space, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+            call doutput_lr(outp, namespace, space, dirname, st, gr%mesh, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
               units_out%force)
           end do
 

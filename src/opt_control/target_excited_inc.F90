@@ -19,8 +19,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_excited(gr, namespace, space, tg, td, restart, kpoints)
-    type(grid_t),      intent(in)    :: gr
+  subroutine target_init_excited(mesh, namespace, space, tg, td, restart, kpoints)
+    type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
     type(space_t),     intent(in)    :: space
     type(target_t),    intent(inout) :: tg
@@ -57,10 +57,10 @@
       SAFE_DEALLOCATE_A(tg%st%spin)
       SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
     end if
-    call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
+    call states_elec_allocate_wfns(tg%st, mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
 
-    call states_elec_load(restart, namespace, space, tg%st, gr, kpoints, ierr)
+    call states_elec_load(restart, namespace, space, tg%st, mesh, kpoints, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)

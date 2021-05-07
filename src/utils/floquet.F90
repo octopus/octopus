@@ -112,7 +112,7 @@ program oct_floquet
 
   call restart_init(restart, global_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
   if(ierr == 0) then
-    call states_elec_load(restart, global_namespace, sys%space, st, gr, sys%kpoints, ierr, label = ": gs")
+    call states_elec_load(restart, global_namespace, sys%space, st, gr%mesh, sys%kpoints, ierr, label = ": gs")
   end if
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'

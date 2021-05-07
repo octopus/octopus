@@ -67,7 +67,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
               str_tmp = em_wfs_tag(idir, ifactor)
               call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
               if (ierr == 0) then
-                call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, &
                   lr=em_vars%lr(idir, sigma_alt, ifactor))
               end if
               call restart_close_dir(restart_load)
@@ -84,7 +84,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                 str_tmp = em_wfs_tag(idir, ifactor, idir2)              
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                 if (ierr == 0) then
-                  call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                  call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, &
                     lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
                 end if
                 call restart_close_dir(restart_load)
@@ -106,10 +106,10 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                       if (ierr == 0) then
                         select case(ipert)
                         case(PK2)
-                          call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                          call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, &
                             lr = k2_lr(idir, idir2, sigma))
                         case(PKB)
-                          call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                          call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, &
                             lr = kb_lr(idir, idir2, sigma))
                         end select
                       end if
@@ -135,7 +135,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                 str_tmp = em_wfs_tag(idir, ifactor, ipert = PB)  
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                 if(ierr == 0) then
-                  call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, lr = b_lr(idir, sigma))
+                  call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, lr = b_lr(idir, sigma))
                 end if
                 call restart_close_dir(restart_load)
                 if(ierr /= 0) then
@@ -150,7 +150,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                   str_tmp = em_wfs_tag(idir, ifactor, idir2, ipert = PKE)              
                   call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                   if (ierr == 0) then
-                    call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                    call states_elec_load(restart_load, namespace, space, st, gr%mesh, kpoints, ierr, &
                       lr=ke_lr(idir, idir2, sigma_alt, ifactor))
                   end if
                   call restart_close_dir(restart_load)
@@ -365,7 +365,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           ! 1 is the sigma index which is used in em_resp
           call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
           if (ierr == 0) then
-            call states_elec_load(kdotp_restart, namespace, space, st, gr, kpoints, ierr, lr=kdotp_lr2)
+            call states_elec_load(kdotp_restart, namespace, space, st, gr%mesh, kpoints, ierr, lr=kdotp_lr2)
           end if
 
           call restart_close_dir(kdotp_restart)

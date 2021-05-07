@@ -21,7 +21,6 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-  use derivatives_oct_m
   use global_oct_m
   use hirshfeld_oct_m
   use io_oct_m
@@ -159,11 +158,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, namespace, ions, der, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, ions, mesh, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
     type(ions_t),        intent(in)    :: ions
-    type(derivatives_t), intent(in)    :: der
+    type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
@@ -197,14 +196,14 @@ contains
     PUSH_SUB(vdw_ts_calculate)
 
     SAFE_ALLOCATE(vol_ratio(1:ions%natoms))
-    SAFE_ALLOCATE(dvadens(1:der%mesh%np))
+    SAFE_ALLOCATE(dvadens(1:mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     SAFE_ALLOCATE(dr0dvra(1:ions%natoms))
 
     energy=M_ZERO
     force(1:ions%space%dim, 1:ions%natoms) = M_ZERO
     this%derivative_coeff(1:ions%natoms) = M_ZERO
-    call hirshfeld_init(hirshfeld, namespace, der%mesh, ions, st)
+    call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
 
     do iatom = 1, ions%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
@@ -294,11 +293,11 @@ contains
     potential = M_ZERO
     do iatom = 1, ions%natoms
       call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) - this%derivative_coeff(iatom)*dvadens(1:der%mesh%np) 
+      potential(1:mesh%np) = potential(1:mesh%np) - this%derivative_coeff(iatom)*dvadens(1:mesh%np)
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", namespace, ions%space, der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, ions%space, mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)
@@ -314,12 +313,12 @@ contains
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, ions, der, st, density)
+  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, ions, mesh, st, density)
     type(vdw_ts_t),      intent(in)    :: this
     type(namespace_t),   intent(in)    :: namespace
     type(ions_t),        intent(in)    :: ions
     FLOAT,               intent(inout) :: force_vdw(1:ions%space%dim, 1:ions%natoms)
-    type(derivatives_t), intent(in)    :: der
+    type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
@@ -352,7 +351,7 @@ contains
     vol_ratio(1:ions%natoms) = M_ZERO
 
 
-    call hirshfeld_init(hirshfeld, namespace, der%mesh, ions, st)
+    call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
 
 
     do iatom = 1, ions%natoms

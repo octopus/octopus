@@ -284,11 +284,11 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine states_mxll_dump(restart, st, space, gr, zff, zff_dim, ierr, iter, st_start_writing, verbose)
+  subroutine states_mxll_dump(restart, st, space, mesh, zff, zff_dim, ierr, iter, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
     type(states_mxll_t),  intent(in)  :: st
     type(space_t),        intent(in)  :: space
-    type(grid_t),         intent(in)  :: gr
+    type(mesh_t),         intent(in)  :: mesh
     CMPLX,                intent(in)  :: zff(:,:)
     integer,              intent(in)  :: zff_dim
     integer,              intent(out) :: ierr
@@ -344,7 +344,7 @@ contains
     do idim = 1, zff_dim
        itot = itot + 1
 
-       root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
+       root(P_STRATEGY_DOMAINS) = mod(itot - 1, mesh%mpi_grp%size)
        write(filename,'(i10.10)') itot
 
        write(lines(1), '(i8,3a)') idim, ' | "', trim(filename), '"'
@@ -357,7 +357,7 @@ contains
        end if
 
        if (should_write) then
-          call zrestart_write_mesh_function(restart, space, filename, gr%mesh, zff(:,idim), err, root = root)
+          call zrestart_write_mesh_function(restart, space, filename, mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if
     end do ! zff_dim
@@ -390,10 +390,10 @@ contains
   end subroutine states_mxll_dump
 
   !----------------------------------------------------------
-  subroutine states_mxll_load(restart, st, gr, namespace, space, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
+  subroutine states_mxll_load(restart, st, mesh, namespace, space, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_mxll_t),        intent(inout) :: st
-    type(grid_t),               intent(in)    :: gr
+    type(mesh_t),               intent(in)    :: mesh
     type(namespace_t),          intent(in)    :: namespace
     type(space_t),              intent(in)    :: space
     CMPLX,                      intent(inout) :: zff(:,:)
@@ -527,27 +527,26 @@ contains
 
     ist = 1
     do idim = 1, zff_dim
-       if (.not. restart_file_present(idim, ist)) then
-          if (present(lowest_missing)) &
-               lowest_missing(idim) = min(lowest_missing(idim), ist)
-          cycle
-       endif
-
-       call zrestart_read_mesh_function(restart, space, restart_file(idim, ist), gr%mesh, &
-            zff(:,idim), err)
-
-
-       if (err == 0) then
-          filled(idim, ist) = .true.
-          iread = iread + 1
-       else if (present(lowest_missing)) then
+      if (.not. restart_file_present(idim, ist)) then
+        if (present(lowest_missing)) &
           lowest_missing(idim) = min(lowest_missing(idim), ist)
-       end if
+        cycle
+      endif
 
-       if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-          idone = idone + 1
-          call loct_progress_bar(idone, ntodo)
-       end if
+      call zrestart_read_mesh_function(restart, space, restart_file(idim, ist), mesh, &
+        zff(:,idim), err)
+
+      if (err == 0) then
+        filled(idim, ist) = .true.
+        iread = iread + 1
+      else if (present(lowest_missing)) then
+        lowest_missing(idim) = min(lowest_missing(idim), ist)
+      end if
+
+      if (mpi_grp_is_root(mpi_world) .and. verbose_) then
+        idone = idone + 1
+        call loct_progress_bar(idone, ntodo)
+      end if
 
     end do
     

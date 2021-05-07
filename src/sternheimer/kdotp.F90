@@ -164,7 +164,7 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+      call states_elec_look_and_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                                        is_complex = complex_response)
       call restart_end(restart_load)
     else
@@ -236,7 +236,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                                  ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
@@ -250,7 +250,7 @@ contains
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
             if (ierr == 0) then
-              call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+              call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                            ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             end if
             call restart_close_dir(restart_load)
@@ -298,15 +298,15 @@ contains
 
       errornorm = M_ZERO
       if(states_are_real(sys%st)) then 
-        call doutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
-          units_out%force)
+        call doutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr%mesh, kdotp_vars%lr(1, idir), idir, 1, &
+          sys%ions, units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, TOFLOAT(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin))))
         end do
       else
-        call zoutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
-          units_out%force)
+        call zoutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr%mesh, kdotp_vars%lr(1, idir), idir, 1, &
+          sys%ions, units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, TOFLOAT(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin))))

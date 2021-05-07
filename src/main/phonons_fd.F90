@@ -96,7 +96,7 @@ contains
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+      call states_elec_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
     end if
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."

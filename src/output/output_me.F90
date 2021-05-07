@@ -252,9 +252,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
+              call doutput_me_ks_multipoles2d(fname, namespace, st, gr%mesh, ll, ik)
             else
-              call zoutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles2d(fname, namespace, st, gr%mesh, ll, ik)
             end if
 
             id = id + 1
@@ -265,9 +265,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
+              call doutput_me_ks_multipoles1d(fname, namespace, st, gr%mesh, ll, ik)
             else
-              call zoutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles1d(fname, namespace, st, gr%mesh, ll, ik)
             end if
 
             id = id + 1

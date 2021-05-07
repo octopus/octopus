@@ -601,7 +601,7 @@ contains
 
     call states_elec_copy(staux, st)
 
-    call states_elec_freeze_redistribute_states(st, namespace, gr, mc, n)
+    call states_elec_freeze_redistribute_states(st, namespace, gr%mesh, mc, n)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
@@ -681,10 +681,10 @@ contains
   end subroutine states_elec_freeze_orbitals
 
   ! ---------------------------------------------------------
-  subroutine states_elec_freeze_redistribute_states(st, namespace, gr, mc, nn)
+  subroutine states_elec_freeze_redistribute_states(st, namespace, mesh, mc, nn)
     type(states_elec_t), intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in)    :: gr
+    type(mesh_t),        intent(in)    :: mesh
     type(multicomm_t),   intent(in)    :: mc
     integer,             intent(in)    :: nn
 
@@ -694,7 +694,7 @@ contains
 
     call states_elec_deallocate_wfns(st)
     call states_elec_distribute_nodes(st, namespace, mc)
-    call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+    call states_elec_allocate_wfns(st, mesh, TYPE_CMPLX)
 
     SAFE_DEALLOCATE_A(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))

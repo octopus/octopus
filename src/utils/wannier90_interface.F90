@@ -267,7 +267,7 @@ program wannier90_interface
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-        call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                                  ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
@@ -404,7 +404,7 @@ contains
         nik = nik / 2
       end if
       if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-         call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+         call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                     ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'

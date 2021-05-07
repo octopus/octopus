@@ -76,11 +76,11 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_local(tg, namespace, space, gr, dir, ions, outp)
+  subroutine target_output_local(tg, namespace, space, mesh, dir, ions, outp)
     type(target_t),    intent(in) :: tg
     type(namespace_t), intent(in) :: namespace
     type(space_t),     intent(in) :: space
-    type(grid_t),      intent(in) :: gr
+    type(mesh_t),      intent(in) :: mesh
     character(len=*),  intent(in) :: dir
     type(ions_t),      intent(in) :: ions
     type(output_t),    intent(in) :: outp
@@ -90,7 +90,7 @@
     
     call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'local_target', namespace, space, gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'local_target', namespace, space, mesh, &
         tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
 
@@ -101,8 +101,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_local(gr, tg, psi) result(j1)
-    type(grid_t),        intent(in) :: gr
+  FLOAT function target_j1_local(mesh, tg, psi) result(j1)
+    type(mesh_t),        intent(in) :: mesh
     type(target_t),      intent(in) :: tg
     type(states_elec_t), intent(in) :: psi
 
@@ -111,7 +111,7 @@
 
     j1 = M_ZERO
     do is = 1, psi%d%spin_channels
-      j1 = j1 + dmf_dotp(gr%mesh, tg%rho, psi%rho(:, is))
+      j1 = j1 + dmf_dotp(mesh, tg%rho, psi%rho(:, is))
     end do
 
     POP_SUB(target_j1_local)
@@ -120,9 +120,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_local(tg, gr, psi_in, chi_out)
+  subroutine target_chi_local(tg, mesh, psi_in, chi_out)
     type(target_t),      intent(in)    :: tg
-    type(grid_t),        intent(in)    :: gr
+    type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: psi_in
     type(states_elec_t), intent(inout) :: chi_out
 
@@ -131,16 +131,16 @@
     
     PUSH_SUB(target_chi_local)
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:psi_in%d%dim))
+    SAFE_ALLOCATE(zpsi(1:mesh%np, 1:psi_in%d%dim))
     
     do ik = 1, psi_in%d%nik
       do idim = 1, psi_in%d%dim
         do ist = psi_in%st_start, psi_in%st_end
-          call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-          do ip = 1, gr%mesh%np
+          call states_elec_get_state(psi_in, mesh, ist, ik, zpsi)
+          do ip = 1, mesh%np
             zpsi(ip, idim) = psi_in%occ(ist, ik)*tg%rho(ip)*zpsi(ip, idim)
           end do
-          call states_elec_set_state(chi_out, gr%mesh, ist, ik, zpsi)
+          call states_elec_set_state(chi_out, mesh, ist, ik, zpsi)
         end do
       end do
     end do

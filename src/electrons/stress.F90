@@ -606,7 +606,7 @@ contains
     vloc = M_ZERO
     rvloc = M_ZERO    
     do iatom = 1, ions%natoms
-       call epot_local_pseudopotential_SR(gr%der, hm%ions, iatom, vloc, rvloc)
+       call epot_local_pseudopotential_SR(gr%mesh, hm%ions, iatom, vloc, rvloc)
     end do
 
     energy_ps_SR = dmf_dotp(gr%mesh, vloc, rho_total(:))
@@ -692,8 +692,8 @@ contains
   end subroutine stress_from_pseudo
       
   ! -------------------------------------------------------
-  subroutine epot_local_pseudopotential_SR(der, ions, iatom, vpsl, rvpsl)
-    type(derivatives_t),      intent(in)    :: der
+  subroutine epot_local_pseudopotential_SR(mesh, ions, iatom, vpsl, rvpsl)
+    type(mesh_t),             intent(in)    :: mesh
     type(ions_t),             intent(in)    :: ions
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
@@ -715,9 +715,9 @@ contains
         
        ps => species_ps(ions%atom(iatom)%species)
 
-       radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + der%mesh%spacing(1)
+       radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-       call submesh_init(sphere, ions%space, der%mesh%sb, der%mesh, ions%atom(iatom)%x, radius)
+       call submesh_init(sphere, ions%space, mesh%sb, mesh, ions%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
 
        do ip = 1, sphere%np

@@ -109,7 +109,9 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+    if(ierr == 0) then
+      call states_elec_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
+    end if
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -285,7 +287,7 @@ contains
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
           if (ierr == 0) then
-            call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+            call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
           end if
           call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
           if(ierr /= 0) fromScratch_local = .true.
@@ -325,7 +327,7 @@ contains
         if(write_restart_densities) then
           call restart_open_dir(restart_dump, trim(dir_name), ierr)
           if (ierr == 0) then
-            call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+            call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
           end if
           call restart_close_dir(restart_dump)
           if(ierr /= 0) then
@@ -370,7 +372,7 @@ contains
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
         if (ierr == 0) then
-          call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+          call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
         end if
         call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
         if(ierr /= 0) fromScratch_local = .true.
@@ -418,7 +420,7 @@ contains
       if(write_restart_densities) then
         call restart_open_dir(restart_dump, "field_yz+", ierr)
         if (ierr == 0) then
-          call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+          call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr)
         end if
         call restart_close_dir(restart_dump)
         if(ierr /= 0) then

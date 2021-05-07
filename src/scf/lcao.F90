@@ -946,11 +946,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, namespace, st, gr, sb, ions, iatom, spin_channels, rho)
+  subroutine lcao_atom_density(this, namespace, st, mesh, sb, ions, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
+    type(mesh_t),             intent(in)    :: mesh
     type(simul_box_t),        intent(in)    :: sb
     type(ions_t),     target, intent(in)    :: ions
     integer,                  intent(in)    :: iatom
@@ -983,9 +983,9 @@ contains
       if(.not. this%alternative) then
         
         if(states_are_real(st)) then
-          SAFE_ALLOCATE(dorbital(1:gr%mesh%np, 1:st%d%dim))
+          SAFE_ALLOCATE(dorbital(1:mesh%np, 1:st%d%dim))
         else
-          SAFE_ALLOCATE(zorbital(1:gr%mesh%np, 1:st%d%dim))
+          SAFE_ALLOCATE(zorbital(1:mesh%np, 1:st%d%dim))
         end if
         
         do iorb = 1, this%norbs
@@ -995,15 +995,15 @@ contains
           factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
          
           if(states_are_real(st)) then
-            call dget_ao(this, st, gr%mesh, ions, iorb, 1, dorbital, use_psi = .true.)
+            call dget_ao(this, st, mesh, ions, iorb, 1, dorbital, use_psi = .true.)
             !$omp parallel do
-            do ip = 1, gr%mesh%np
+            do ip = 1, mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
             end do
           else
-            call zget_ao(this, st, gr%mesh, ions, iorb, 1, zorbital, use_psi = .true.)
+            call zget_ao(this, st, mesh, ions, iorb, 1, zorbital, use_psi = .true.)
             !$omp parallel do
-            do ip = 1, gr%mesh%np
+            do ip = 1, mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*abs(zorbital(ip, 1))**2
             end do
           end if
@@ -1043,7 +1043,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%mesh, ions%space, namespace, sb, ions%atom(iatom), spin_channels, rho)
+      call species_atom_density(mesh, ions%space, namespace, sb, ions%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)
@@ -1123,7 +1123,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = ions%atoms_dist%start, ions%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, spin_channels, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, spin_channels, atom_rho)
         rho(1:gr%mesh%np, 1:spin_channels) = rho(1:gr%mesh%np, 1:spin_channels) + &
                                                   atom_rho(1:gr%mesh%np, 1:spin_channels)
       end do
@@ -1140,14 +1140,14 @@ contains
 
       rho = M_ZERO
       do ia = ions%atoms_dist%start, ions%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho(1:gr%mesh%np, 1:2))
+        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho(1:gr%mesh%np, 1:2))
         rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:2))
       do ia = 1, ions%natoms
-        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho)
 
         if (ispin == SPIN_POLARIZED) then
           call quickrnd(iseed, rnd)
@@ -1215,7 +1215,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%mesh, atom_rho(:, 1))

@@ -360,31 +360,26 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, namespace, gr, ions, st_d)
+  subroutine epot_generate(ep, namespace, mesh, ions, st_d)
     type(epot_t),             intent(inout) :: ep
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),     target, intent(in)    :: gr
+    type(mesh_t),     target, intent(in)    :: mesh
     type(ions_t),     target, intent(inout) :: ions
     type(states_elec_dim_t),  intent(inout) :: st_d
 
     integer :: ia
-    type(mesh_t),      pointer :: mesh
-    type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
     type(ps_t), pointer :: ps
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
 
-    sb   => gr%sb
-    mesh => gr%mesh
-
     ! Local part
     ep%vpsl = M_ZERO
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(ions%ion_interaction, ions%space, ions%latt, ions%atom, ions%natoms, ions%catom, ions%ncatoms, &
-      sb%lsize, ep%eii, ep%fii)
+      mesh%sb%lsize, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, ions%natoms

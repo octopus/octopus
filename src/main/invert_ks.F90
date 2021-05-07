@@ -165,7 +165,7 @@ contains
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
     call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
-    call states_elec_dump(restart, sys%space, sys%ks%ks_inversion%aux_st, sys%gr, sys%kpoints, err, 0)
+    call states_elec_dump(restart, sys%space, sys%ks%ks_inversion%aux_st, sys%gr%mesh, sys%kpoints, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
       call messages_warning(1)

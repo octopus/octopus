@@ -107,14 +107,14 @@ contains
       call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
     end if
 
-    call calc_dipole(dipole, space, gr, st, ions)
+    call calc_dipole(dipole, space, gr%mesh, st, ions)
 
     do iberry = 1, this%max_iter_berry
       eigens%converged = 0
       call eigensolver_run(eigens, namespace, gr, st, hm, iter)
 
       !Calculation of the Berry potential
-      call berry_potential(st, namespace, space, ks%gr%mesh, hm%ep%E_field, hm%vberry)
+      call berry_potential(st, namespace, space, gr%mesh, hm%ep%E_field, hm%vberry)
 
       !Calculation of the corresponding energy 
       hm%energy%berry = berry_energy_correction(st, space, gr%mesh, &
@@ -124,7 +124,7 @@ contains
       call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current=.false.)
 
       dipole_prev = dipole
-      call calc_dipole(dipole, space, gr, st, ions)
+      call calc_dipole(dipole, space, gr%mesh, st, ions)
       write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:space%dim)
       call messages_info(1)
   
@@ -147,10 +147,10 @@ contains
   ! ---------------------------------------------------------
   !TODO: This should be a method of the electronic system directly
   ! that can be exposed
-  subroutine calc_dipole(dipole, space, gr, st, ions)
+  subroutine calc_dipole(dipole, space, mesh, st, ions)
     FLOAT,                 intent(out)   :: dipole(:)
     type(space_t),         intent(in)    :: space
-    type(grid_t),          intent(in)    :: gr
+    type(mesh_t),          intent(in)    :: mesh
     type(states_elec_t),   intent(in)    :: st
     type(ions_t),          intent(in)    :: ions
 
@@ -164,7 +164,7 @@ contains
     dipole(1:space%dim) = M_ZERO
 
     do ispin = 1, st%d%nspin
-      call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+      call dmf_multipoles(mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
     end do
 
     n_dip = ions%dipole()
@@ -172,7 +172,7 @@ contains
     do idir = 1, space%dim
       ! in periodic directions use single-point Berry`s phase calculation
       if(idir  <=  space%periodic_dim) then
-        dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
+        dipole(idir) = -n_dip(idir) - berry_dipole(st, mesh, idir)
 
         ! use quantum of polarization to reduce to smallest possible magnitude
         nquantumpol = nint(dipole(idir)/norm2(ions%latt%rlattice(:, idir)))
