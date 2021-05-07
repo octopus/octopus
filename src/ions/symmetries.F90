@@ -174,7 +174,7 @@ contains
 
         do iatom = 1, ions%natoms
           position(1:3, iatom) = M_ZERO
-          position(1:dim4syms, iatom) = ions%atom(iatom)%x(1:dim4syms)
+          position(1:dim4syms, iatom) = ions%pos(1:dim4syms, iatom)
           typs(iatom) = species_index(ions%atom(iatom)%species)
         end do
 
@@ -199,7 +199,7 @@ contains
         position(1:3,iatom) = M_ZERO
 
         ! Transform atomic positions to reduced coordinates
-        position(1:dim4syms,iatom) = ions%latt%cart_to_red(ions%atom(iatom)%x(1:dim4syms))
+        position(1:dim4syms,iatom) = ions%latt%cart_to_red(ions%pos(1:dim4syms, iatom))
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
         do idir = 1, dim4syms
           position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
@@ -231,7 +231,7 @@ contains
 
         do iatom = 1, ions%natoms
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
-            ' reduced coords ', position(:, iatom), ' cartesian coords ', ions%atom(iatom)%x(:)
+            ' reduced coords ', position(:, iatom), ' cartesian coords ', ions%pos(:, iatom)
           call messages_info(1)
         end do
 
@@ -353,13 +353,13 @@ contains
       if(iop == symmetries_identity_index(this)) cycle
 
       do iatom = 1, ions%natoms
-        ratom(1:ions%space%dim) = symm_op_apply_cart(this%ops(iop), ions%atom(iatom)%x)
+        ratom = symm_op_apply_cart(this%ops(iop), ions%pos(:, iatom))
 
-        ratom(1:ions%space%dim) = ions%latt%fold_into_cell(ratom(1:ions%space%dim))
+        ratom = ions%latt%fold_into_cell(ratom)
 
         ! find iatom_symm
         do iatom_symm = 1, ions%natoms
-          if(all(abs(ratom(1:ions%space%dim) - ions%atom(iatom_symm)%x(1:ions%space%dim)) < CNST(1.0e-5))) exit
+          if(all(abs(ratom - ions%pos(:, iatom_symm)) < CNST(1.0e-5))) exit
         end do
 
         if (iatom_symm > ions%natoms) then

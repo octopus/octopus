@@ -623,7 +623,7 @@ contains
 
     ! Some atoms might have moved outside the simulation box. We stop if this happens.
     do iatom = 1, g_opt%ions%natoms
-      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%ions%atom(iatom)%x)) then
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%ions%pos(:, iatom))) then
         if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because contains_point is too strict with atoms close to
@@ -784,8 +784,8 @@ contains
       if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        coords(icoord) = gopt%ions%atom(iatom)%x(idir)
-        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%ions%atom(gopt%fixed_atom)%x(idir)
+        coords(icoord) = gopt%ions%pos(idir, iatom)
+        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%ions%pos(idir, gopt%fixed_atom)
         icoord = icoord + 1
       end do
     end do
@@ -837,9 +837,9 @@ contains
       if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) &
-          gopt%ions%atom(iatom)%x(idir) = coords(icoord)
+          gopt%ions%pos(idir, iatom) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
-          gopt%ions%atom(iatom)%x(idir) = gopt%ions%atom(iatom)%x(idir) + gopt%ions%atom(gopt%fixed_atom)%x(idir)
+          gopt%ions%pos(idir, iatom) = gopt%ions%pos(idir, iatom) + gopt%ions%pos(idir, gopt%fixed_atom)
         end if
         icoord = icoord + 1
       end do

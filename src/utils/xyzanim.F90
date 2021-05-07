@@ -102,12 +102,8 @@ contains
     ierr = 0
     do while(ierr == 0)
       read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
-        ((ions%atom(i)%x(j), j = 1, ions%space%dim), i = 1, ions%natoms)
-      do i = 1, ions%natoms
-        do j = 1, ions%space%dim
-          ions%atom(i)%x(j)=units_to_atomic(units_out%length, ions%atom(i)%x(j))
-        end do
-      end do
+        ((ions%pos(j, i), j = 1, ions%space%dim), i = 1, ions%natoms)
+      ions%pos = units_to_atomic(units_out%length, ions%pos)
       if(mod(iter, sampling) == 0) then
         write(comment, '(i10,f20.6)') iter, time
         if(.not.multifiles)then

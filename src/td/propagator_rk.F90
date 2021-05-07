@@ -158,8 +158,8 @@ contains
     end if
 
     if(ion_dynamics_ions_move(ions_dyn)) then
+      pos0 = ions%pos
       do iatom = 1, ions%natoms
-        pos0(1:ions%space%dim, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
         vel0(1:ions%space%dim, iatom) = ions%atom(iatom)%v(1:ions%space%dim)
       end do
       posfinal = pos0
@@ -299,8 +299,8 @@ contains
 
     call density_calc(st, gr, st%rho)
     if(ion_dynamics_ions_move(ions_dyn)) then
+      ions%pos = posfinal
       do iatom = 1, ions%natoms
-        ions%atom(iatom)%x(1:ions%space%dim) = posfinal(:, iatom)
         ions%atom(iatom)%v(1:ions%space%dim) = velfinal(:, iatom)
       end do
       call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, st, time)
@@ -357,8 +357,8 @@ contains
       FLOAT, intent(in) :: tau
 
       if(ion_dynamics_ions_move(ions_dyn)) then
+        ions%pos = pos
         do iatom = 1, ions%natoms
-          ions%atom(iatom)%x(1:ions%space%dim) = pos(:, iatom)
           ions%atom(iatom)%v(1:ions%space%dim) = vel(:, iatom)
         end do
         call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, stphi, time = tau)

@@ -410,7 +410,7 @@ contains
       vib%dyn_matrix(:,:) = M_ZERO
 
       do iatom = 1, natoms
-        xi(1:ndim) = ions%atom(iatom)%x(1:ndim)
+        xi(1:ndim) = ions%pos(:, iatom)
 
         do idir = 1, ndim
 
@@ -419,7 +419,7 @@ contains
 
             do jdir = 1, ndim         
 
-              xj(1:ndim) = ions%atom(jatom)%x(1:ndim)
+              xj(1:ndim) = ions%pos(:, jatom)
               r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
 
               term = species_zval(ions%atom(iatom)%species) * species_zval(ions%atom(jatom)%species) &

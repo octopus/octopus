@@ -103,7 +103,7 @@ contains
     FLOAT :: def_h, def_rsize, center(space%dim), rsize, xsize
     integer :: n_site_types, n_sites
     integer, allocatable :: site_type(:)
-    FLOAT,   allocatable :: site_type_radius(:), site_position(:,:)
+    FLOAT,   allocatable :: site_type_radius(:)
     character(len=LABEL_LEN), allocatable :: site_type_label(:)
     character(len=200) :: filename
     character(len=1024) :: user_def
@@ -133,11 +133,10 @@ contains
       sb%box => box_user_defined_t(space%dim, center, user_def, M_TWO*sb%lsize(1:space%dim))
 
     case (MINIMUM)
-      sb%box => box_minimum_t(space%dim, n_site_types, site_type_label, site_type_radius, n_sites, site_type, site_position)
+      sb%box => box_minimum_t(space%dim, n_site_types, site_type_label, site_type_radius, n_sites, site_type, ions%pos)
       SAFE_DEALLOCATE_A(site_type_label)
       SAFE_DEALLOCATE_A(site_type_radius)
       SAFE_DEALLOCATE_A(site_type)
-      SAFE_DEALLOCATE_A(site_position)
 
     case (BOX_IMAGE)
       sb%box => box_image_t(center, sb%lsize, filename, space%periodic_dim, namespace)
@@ -270,10 +269,8 @@ contains
         end do
 
         n_sites = ions%natoms
-        SAFE_ALLOCATE(site_position(1:sb%dim, 1:ions%natoms))
         SAFE_ALLOCATE(site_type(1:ions%natoms))
         do iatom = 1, ions%natoms
-          site_position(1:sb%dim, iatom) = ions%atom(iatom)%x(1:sb%dim)
           do ispec = 1, ions%nspecies
             if (ions%atom(iatom)%label == site_type_label(ispec)) then
               site_type(iatom) = ispec
@@ -453,9 +450,9 @@ contains
       case(MINIMUM)
         do idir = 1, sb%dim
           if(rsize > M_ZERO) then
-            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + rsize
+            sb%lsize(idir) = maxval(abs(ions%pos(idir, :))) + rsize
           else
-            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + def_rsize
+            sb%lsize(idir) = maxval(abs(ions%pos(idir, :))) + def_rsize
           end if
         end do
       end select

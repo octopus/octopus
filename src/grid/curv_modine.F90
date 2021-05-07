@@ -224,15 +224,13 @@ contains
 
       ! Initialize csi
       SAFE_ALLOCATE(cv%csi(1:sb%dim, 1:ions%natoms))
-      do iatom = 1, ions%natoms
-        cv%csi(1:sb%dim, iatom) = ions%atom(iatom)%x(1:sb%dim)
-      end do
+      cv%csi = ions%pos
 
       ! get first estimate for chi_atoms
       SAFE_ALLOCATE(cv%chi_atoms(1:sb%dim, 1:ions%natoms))
       do jj = 1, 10  ! \warning: make something better
         do iatom = 1, ions%natoms
-          call curv_modine_x2chi(sb, cv, rs, ions%atom(iatom)%x, cv%chi_atoms(:, iatom))
+          call curv_modine_x2chi(sb, cv, rs, ions%pos(:, iatom), cv%chi_atoms(:, iatom))
         end do
         cv%csi(:,:) = cv%chi_atoms(:,:)
       end do
@@ -262,7 +260,7 @@ contains
       do iatom = 1, ions%natoms
         do idim = 1, sb%dim
           index = (iatom-1)*sb%dim + idim
-          x_p(index)       = ions%atom(iatom)%x(idim)
+          x_p(index)       = ions%pos(idim, iatom)
           start_csi(index) = cv%chi_atoms(idim, iatom)
         end do
       end do

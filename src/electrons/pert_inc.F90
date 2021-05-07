@@ -286,7 +286,7 @@ contains
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
         
-        xx(1:gr%sb%dim) = ions%atom(iatom)%x(1:gr%sb%dim)
+        xx(1:gr%sb%dim) = ions%pos(:,iatom)
         
         do idim = 1, hm%d%dim
           do ip = 1, gr%mesh%np
@@ -504,7 +504,7 @@ contains
         do ip = 1, gr%mesh%np
           select case(this%gauge)
           case(GAUGE_GIPAW)
-            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(ions%atom(iatom)%x))
+            cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(ions%pos(:, iatom)))
           case(GAUGE_ICL)
             cross1 = X(cross_product)(bdir(:, 2), R_TOTYPE(gr%mesh%x(ip, :)))
           end select
@@ -550,7 +550,7 @@ contains
         do ip = 1, gr%mesh%np
           select case(this%gauge)
           case(GAUGE_GIPAW)
-            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(ions%atom(iatom)%x))
+            cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(ions%pos(:, iatom)))
           case(GAUGE_ICL)
             cross1 = X(cross_product)(bdir(:, 1), R_TOTYPE(gr%mesh%x(ip, :)))
           end select

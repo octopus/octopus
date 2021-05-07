@@ -638,7 +638,7 @@ contains
              
              zphase = M_Z0
              do iatom = 1, ions%natoms
-                gx = sum(Gvec(ii, jj, kk, 1:3)*ions%atom(iatom)%x(1:3))
+                gx = sum(Gvec(ii, jj, kk, 1:3)*ions%pos(:, iatom))
                 zphase = zphase + species_zval(ions%atom(iatom)%species) &
                      *TOCMPLX(cos(gx), sin(gx)) 
              end do
@@ -717,7 +717,7 @@ contains
 
        radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-       call submesh_init(sphere, ions%space, mesh, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), radius)
+       call submesh_init(sphere, ions%space, mesh, ions%latt, ions%pos(:, iatom), radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
 
        do ip = 1, sphere%np
@@ -797,11 +797,11 @@ contains
       zi = species_zval(ions%atom(iatom)%species)
 
       do icopy = 1, latt_iter%n_cells
-        xi = ions%atom(iatom)%x(1:ions%space%dim) + latt_iter%get(icopy)
+        xi = ions%pos(:, iatom) + latt_iter%get(icopy)
         
         do jatom = 1,  ions%natoms
           zj = species_zval(ions%atom(jatom)%species)
-          rr = norm2(xi - ions%atom(jatom)%x(1:ions%space%dim))
+          rr = norm2(xi - ions%pos(:, jatom))
           
           if(rr < CNST(1e-5)) cycle
           
@@ -811,7 +811,7 @@ contains
           do idir = 1,3
             do jdir =1,3
               stress_l(idir, jdir) = stress_l(idir, jdir) &
-                - factor*(xi(idir) - ions%atom(jatom)%x(idir))*(xi(jdir) - ions%atom(jatom)%x(jdir))/(rr**2)
+                - factor*(xi(idir) - ions%pos(idir, jatom))*(xi(jdir) - ions%pos(jdir, jatom))/(rr**2)
             end do
           end do
 
@@ -868,7 +868,7 @@ contains
              sumatoms = M_Z0
 
              do iatom = 1, ions%natoms
-                gx = sum(gg*ions%atom(iatom)%x(1:ions%space%dim))
+                gx = sum(gg*ions%pos(:, iatom))
                 aa = species_zval(ions%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
                 sumatoms = sumatoms + aa
              end do

@@ -195,7 +195,7 @@ contains
         call messages_info(1)
 
         ! move atom iatom in direction alpha by dist
-        ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp
+        ions%pos(alpha, iatom) = ions%pos(alpha, iatom) + vib%disp
 
         ! first force
         call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
@@ -211,7 +211,7 @@ contains
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
         call messages_info(1)
 
-        ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) - M_TWO*vib%disp
+        ions%pos(alpha, iatom) = ions%pos(alpha, iatom) - M_TWO*vib%disp
 
         ! second force
         call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
@@ -224,7 +224,7 @@ contains
           forces(jatom, 1:ions%space%dim) = ions%atom(jatom)%f(1:ions%space%dim)
         end do
 
-        ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp
+        ions%pos(alpha, iatom) = ions%pos(alpha, iatom) + vib%disp
 
         do jatom = 1, ions%natoms
           do beta = 1, space%dim

@@ -1249,7 +1249,7 @@ contains
         (mesh%spacing(idir)*mesh%sb%latt%rlattice_primitive(idir2, idir), idir2 = 1, 3)
     end do
     do iatom = 1, ions%natoms
-      write(iunit, '(i5,4f12.6)') int(species_z(ions%atom(iatom)%species)),  M_ZERO, (ions%atom(iatom)%x(idir), idir = 1, 3)
+      write(iunit, '(i5,4f12.6)') int(species_z(ions%atom(iatom)%species)),  M_ZERO, ions%pos(:, iatom)
     end do
 
     do ix = 1, cube%rs_n_global(1)

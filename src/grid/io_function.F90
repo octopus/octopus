@@ -345,10 +345,10 @@ contains
 
     SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
     SAFE_ALLOCATE(center(1:ions%natoms, 1:ions%space%dim))
+    center = units_from_atomic(units_out%length, ions%pos)
     do iatom = 1, ions%natoms
       do idir = 1, ions%space%dim
         forces(iatom, idir) = units_from_atomic(units_out%force, ions%atom(iatom)%f(idir))
-        center(iatom, idir) = units_from_atomic(units_out%length, ions%atom(iatom)%x(idir))
       end do
     end do
     write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
@@ -406,7 +406,7 @@ contains
       write(iunit, '(10a)', advance='no') ions%atom(iatom)%label
       do idir = 1, 3
         if(idir <= ions%space%dim) then
-          position = ions%atom(iatom)%x(idir)
+          position = ions%pos(idir, iatom)
         else
           position = M_ZERO
         end if
@@ -524,7 +524,7 @@ contains
     ! BoxOffset should be considered here
     do iatom = 1, ions%natoms
       write(iunit, '(a10, 3f12.6)', advance='no') trim(ions%atom(iatom)%label), &
-        (units_from_atomic(units_out%length, ions%atom(iatom)%x(idir) - offset(idir)), idir = 1, ions%space%dim)
+        (units_from_atomic(units_out%length, ions%pos(idir, iatom) - offset(idir)), idir = 1, ions%space%dim)
       if(present(forces)) then
         write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, ions%space%dim)
       end if

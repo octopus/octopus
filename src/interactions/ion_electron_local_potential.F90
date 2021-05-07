@@ -61,6 +61,7 @@ module ion_electron_local_potential_oct_m
     ! This is a temporary change here
     type(distributed_t), pointer, public :: atoms_dist
     type(atom_t), pointer, public :: atom(:)
+    FLOAT, pointer, public :: pos(:,:)
     type(lattice_vectors_t), pointer :: latt
 
     ! Temporary pointer to namespace
@@ -131,6 +132,7 @@ contains
     this%atoms_dist => ions%atoms_dist
     this%atom => ions%atom
     this%space => ions%space
+    this%pos => ions%pos
     this%latt => ions%latt
 
     this%namespace => namespace
@@ -170,7 +172,7 @@ contains
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
         call species_get_long_range_density(this%atom(ia)%species, this%namespace, this%space, this%latt, &
-          this%atom(ia)%x(1:this%space%dim), this%mesh, rho)
+          this%pos(:, ia), this%mesh, rho)
         call lalg_axpy(this%mesh%np, M_ONE, rho, density)
         SAFE_DEALLOCATE_A(rho)
 
@@ -178,7 +180,7 @@ contains
 
         SAFE_ALLOCATE(vl(1:this%mesh%np))
         call species_get_local(this%atom(ia)%species, this%namespace, this%space, this%latt, &
-          this%atom(ia)%x(1:this%space%dim), this%mesh, vl)
+          this%pos(:, ia), this%mesh, vl)
         call lalg_axpy(this%mesh%np, M_ONE, vl, this%potential(:,1))
         SAFE_DEALLOCATE_A(vl)
 
@@ -191,7 +193,7 @@ contains
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + this%mesh%spacing(1)
 
-        call submesh_init(sphere, this%space, this%mesh, this%latt, this%atom(ia)%x(1:this%space%dim), radius)
+        call submesh_init(sphere, this%space, this%mesh, this%latt, this%pos(:, ia), radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np

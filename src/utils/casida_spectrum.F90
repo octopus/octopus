@@ -148,8 +148,8 @@ program casida_spectrum
     ! apply rotation to geometry
     ions => ions_t(global_namespace)
     do iatom = 1, ions%natoms
-      coord(1:cs%space%dim) = ions%atom(iatom)%x(1:cs%space%dim)
-      ions%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
+      coord(1:cs%space%dim) = ions%pos(:, iatom)
+      ions%pos(1:cs%space%dim, iatom) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
     call ions%write_xyz(trim(CASIDA_DIR)//'rotated')
     SAFE_DEALLOCATE_P(ions)

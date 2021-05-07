@@ -1042,7 +1042,7 @@ contains
 
     else
       call species_atom_density(ions%atom(iatom)%species, ions%namespace, ions%space, ions%latt, &
-        ions%atom(iatom)%x(1:ions%space%dim), mesh, spin_channels, rho)
+        ions%pos(:, iatom), mesh, spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)

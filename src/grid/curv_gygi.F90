@@ -69,8 +69,6 @@ contains
     type(ions_t),      intent(in)  :: ions
     FLOAT,             intent(out) :: min_scaling_product
 
-    integer :: ipos, idir
-
     PUSH_SUB(curv_gygi_init)
 
     !%Variable CurvGygiA
@@ -115,12 +113,8 @@ contains
     if(cv%beta<=M_ZERO)  call messages_input_error(namespace, 'CurvGygiBeta')
 
     cv%npos = ions%natoms
-    SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    do idir = 1, sb%dim
-      do ipos = 1, cv%npos
-        cv%pos(ipos, idir) = ions%atom(ipos)%x(idir)
-      end do
-    end do
+    SAFE_ALLOCATE(cv%pos(1:sb%dim, 1:cv%npos))
+    cv%pos = ions%pos
 
     call curv_gygi_min_scaling(sb, cv, min_scaling_product)
 
@@ -222,12 +216,12 @@ contains
 
     chi(1:sb%dim) = x(1:sb%dim)
     do ia = 1, cv%npos
-      r = max(sqrt(sum((x(1:sb%dim) - cv%pos(ia, 1:sb%dim))**2)), CNST(1e-6))
+      r = max(norm2(x(1:sb%dim) - cv%pos(1:sb%dim, ia)), CNST(1e-6))
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
       ex = exp(-(r/cv%beta)**2)
       do i = 1, sb%dim
-        chi(i) = chi(i) + (x(i) - cv%pos(ia, i)) * cv%a * ar * th * ex
+        chi(i) = chi(i) + (x(i) - cv%pos(i, ia)) * cv%a * ar * th * ex
       end do
     end do
 
@@ -260,7 +254,7 @@ contains
     if(present(natoms)) natoms_ = natoms
 
     do i = 1, natoms_
-      r = max(sqrt(sum((x(1:sb%dim) - cv%pos(i, 1:sb%dim))**2)), CNST(1e-6))
+      r = max(norm2(x(1:sb%dim) - cv%pos(1:sb%dim, i)), CNST(1e-6))
 
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
@@ -270,11 +264,11 @@ contains
       df_alpha = ar*(-th*ex/r + ex/(cv%alpha*cosh(r/cv%alpha)**2) - th*M_TWO*r*ex/cv%beta**2)
 
       do ix = 1, sb%dim
-        chi(ix) = chi(ix) + f_alpha*(x(ix)-cv%pos(i, ix))
+        chi(ix) = chi(ix) + f_alpha*(x(ix) - cv%pos(ix, i))
 
         J(ix, ix) = J(ix, ix) + f_alpha
         do iy = 1, sb%dim
-          J(ix, iy) = J(ix, iy) + (x(ix)-cv%pos(i, ix))*(x(iy)-cv%pos(i, iy))/r*df_alpha
+          J(ix, iy) = J(ix, iy) + (x(ix) - cv%pos(ix, i))*(x(iy) - cv%pos(iy, i))/r*df_alpha
         end do
       end do
     end do

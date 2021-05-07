@@ -243,13 +243,13 @@ subroutine X(forces_from_potential)(gr, namespace, space, ions, hm, st, force, f
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
                 !We find the atom that correspond to this one, once symmetry is applied
-                ratom(1:space%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), ions%atom(iatom)%x)
+                ratom(1:space%dim) = symm_op_apply_inv_cart(gr%symm%ops(iop), ions%pos(:, iatom))
 
                 ratom(1:ions%space%dim) = ions%latt%fold_into_cell(ratom(1:ions%space%dim))
 
                 ! find iatom_symm
                 do iatom_symm = 1, ions%natoms
-                  if(all(abs(ratom(1:space%dim) - ions%atom(iatom_symm)%x(1:space%dim)) < CNST(1.0e-5))) exit
+                  if(all(abs(ratom(1:space%dim) - ions%pos(:, iatom_symm)) < CNST(1.0e-5))) exit
                 end do
 
                 if(iatom_symm > ions%natoms) then

@@ -101,7 +101,7 @@ contains
 
       latt_iter = lattice_iterator_t(ions%latt, rmax)
       do icell = 1, latt_iter%n_cells
-        pos = this%ions%atom(iatom)%x(1:ions%space%dim) + latt_iter%get(icell)
+        pos = this%ions%pos(:, iatom) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
         call species_atom_density_np(ions%atom(iatom)%species, ions%namespace, pos, mesh, st%d%nspin, atom_density)
@@ -172,7 +172,7 @@ contains
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
     call species_atom_density(this%ions%atom(iatom)%species, this%ions%namespace, this%ions%space, this%ions%latt, &
-      this%ions%atom(iatom)%x(1:this%ions%space%dim), this%mesh, this%st%d%nspin, atom_density)
+      this%ions%pos(:, iatom), this%mesh, this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -317,7 +317,7 @@ contains
     latt_iter_j = lattice_iterator_t(this%ions%latt, rmax_j)
     do jcell = 1, latt_iter_j%n_cells
 
-      pos_j = this%ions%atom(jatom)%x(1:this%ions%space%dim) + latt_iter_j%get(jcell)
+      pos_j = this%ions%pos(:, jatom) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
       call species_atom_density_derivative_np(this%ions%atom(jatom)%species, this%ions%namespace, pos_j, this%mesh, &
         this%st%d%spin_channels, atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
@@ -325,8 +325,7 @@ contains
       latt_iter_i = lattice_iterator_t(this%ions%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
 
-        pos_i = pos_j + latt_iter_i%get(icell) + (this%ions%atom(iatom)%x(1:this%ions%space%dim) &
-                                                - this%ions%atom(jatom)%x(1:this%ions%space%dim))
+        pos_i = pos_j + latt_iter_i%get(icell) + (this%ions%pos(:, iatom) - this%ions%pos(:, jatom))
         rij =  norm2(pos_i - pos_j)
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 

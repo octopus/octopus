@@ -1635,7 +1635,7 @@ contains
     call write_iter_start(out_coords)
 
     do iatom = 1, ions%natoms
-      tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%atom(iatom)%x(1:ions%space%dim))
+      tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%pos(:, iatom))
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     do iatom = 1, ions%natoms
@@ -1714,7 +1714,7 @@ contains
     select case (which)
       case (COORDINATES)
         do iatom = 1, ions%natoms
-          tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%atom(iatom)%x(1:ions%space%dim))
+          tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%pos(:, iatom))
           call write_iter_double(out_coords, tmp, ions%space%dim)
         end do
       case (VELOCITIES)

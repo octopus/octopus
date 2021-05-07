@@ -378,8 +378,8 @@ contains
     ep%vpsl = M_ZERO
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ions%ion_interaction, ions%space, ions%latt, ions%atom, ions%natoms, ions%catom, ions%ncatoms, &
-      mesh%sb%lsize, ep%eii, ep%fii)
+    call ion_interaction_calculate(ions%ion_interaction, ions%space, ions%latt, ions%atom, ions%natoms, ions%pos, &
+      ions%catom, ions%ncatoms, mesh%sb%lsize, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, ions%natoms
@@ -391,15 +391,14 @@ contains
     do ia = ions%atoms_dist%start, ions%atoms_dist%end
       if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(ions%atom(ia)%species)
-      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh, ions%latt, ions%atom(ia)%x(1:ions%space%dim), &
-        ps%rc_max + mesh%spacing(1))
+      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh, ions%latt, ions%pos(:, ia), ps%rc_max + mesh%spacing(1))
     end do
 
     if(ions%atoms_dist%parallel) then
       do ia = 1, ions%natoms
         if(ep%proj(ia)%type == PROJ_NONE) cycle
         ps => species_ps(ions%atom(ia)%species)
-        call submesh_broadcast(ep%proj(ia)%sphere, ions%space, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
+        call submesh_broadcast(ep%proj(ia)%sphere, ions%space, mesh, ions%pos(:, ia), ps%rc_max + mesh%spacing(1), &
           ions%atoms_dist%node(ia), ions%atoms_dist%mpi_grp)
       end do
     end if
@@ -574,7 +573,7 @@ contains
     do iatom = 1, ions%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
       call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom)%species, &
-        ions%atom(iatom)%x(1:ions%space%dim), iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
+        ions%pos(:, iatom), iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 

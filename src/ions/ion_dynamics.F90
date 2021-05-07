@@ -115,7 +115,7 @@ contains
     type(ions_t),         intent(inout) :: ions
 
     integer :: i, j, iatom, ierr
-    FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
+    FLOAT   :: xx(ions%space%dim), temperature, sigma, kin1, kin2
     type(c_ptr) :: random_gen_pointer
     type(read_coords_info) :: xyz
     character(len=100)  :: temp_function_name
@@ -282,9 +282,7 @@ contains
         
         SAFE_ALLOCATE(this%old_pos(1:ions%space%dim, 1:ions%natoms))
         
-        do iatom = 1, ions%natoms
-          this%old_pos(1:ions%space%dim, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
-        end do
+        this%old_pos = ions%pos
       end if
 
     end if
@@ -331,10 +329,9 @@ contains
 
       kin1 = ion_dynamics_kinetic_energy(ions)
 
-      x = M_ZERO
-      x(1:ions%space%dim) = ions%center_of_mass_vel()
+      xx = ions%center_of_mass_vel()
       do i = 1, ions%natoms
-        ions%atom(i)%v = ions%atom(i)%v - x
+        ions%atom(i)%v(1:ions%space%dim) = ions%atom(i)%v(1:ions%space%dim) - xx
       end do
 
       kin2 = ion_dynamics_kinetic_energy(ions)
@@ -489,7 +486,7 @@ contains
     type(namespace_t),    intent(in)    :: namespace
 
     integer :: iatom
-    FLOAT   :: DR(1:3)
+    FLOAT   :: dr(3)
 
     if(.not. ion_dynamics_ions_move(this)) return
 
@@ -523,26 +520,24 @@ contains
 
         if(.not. this%drive_ions) then
 
-          ions%atom(iatom)%x(1:ions%space%dim) = ions%atom(iatom)%x(1:ions%space%dim) &
-            + dt*ions%atom(iatom)%v(1:ions%space%dim) + &
+          ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%atom(iatom)%v(1:ions%space%dim) + &
             M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * ions%atom(iatom)%f(1:ions%space%dim)
           
           this%oldforce(1:ions%space%dim, iatom) = ions%atom(iatom)%f(1:ions%space%dim)
           
         else
           if(this%constant_velocity) then
-            ions%atom(iatom)%x(1:ions%space%dim) = ions%atom(iatom)%x(1:ions%space%dim) &
-                                                + dt*ions%atom(iatom)%v(1:ions%space%dim)
+            ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%atom(iatom)%v(1:ions%space%dim)
           end if
 
 
           if (this%td_displacements(iatom)%move) then
             
-            DR(1:3)=(/TOFLOAT(tdf(this%td_displacements(iatom)%fx,time)), &
+            dr(1:3)=(/TOFLOAT(tdf(this%td_displacements(iatom)%fx,time)), &
                       TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
                       TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
 
-            ions%atom(iatom)%x(1:ions%space%dim) = this%ions_t0%atom(iatom)%x(1:ions%space%dim) + DR(1:ions%space%dim)
+            ions%pos(:, iatom) = this%ions_t0%pos(:, iatom) + dr(1:ions%space%dim)
           end if
             
         end if
@@ -559,7 +554,7 @@ contains
       call nh_chain(this, ions)
 
       do iatom = 1, ions%natoms
-        ions%atom(iatom)%x(1:ions%space%dim) = ions%atom(iatom)%x(1:ions%space%dim) + M_HALF*dt*ions%atom(iatom)%v(1:ions%space%dim)
+        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*dt*ions%atom(iatom)%v(1:ions%space%dim)
       end do
 
     end if
@@ -650,8 +645,7 @@ contains
       do iatom = 1, ions%natoms
         ions%atom(iatom)%v(1:ions%space%dim) = ions%atom(iatom)%v(1:ions%space%dim) + &
           this%dt*ions%atom(iatom)%f(1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
-        ions%atom(iatom)%x(1:ions%space%dim) = ions%atom(iatom)%x(1:ions%space%dim) + &
-          M_HALF*this%dt*ions%atom(iatom)%v(1:ions%space%dim)
+        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*this%dt*ions%atom(iatom)%v(1:ions%space%dim)
       end do
       
       call nh_chain(this, ions)
@@ -756,8 +750,8 @@ contains
     SAFE_ALLOCATE(state%pos(1:ions%space%dim, 1:ions%natoms))
     SAFE_ALLOCATE(state%vel(1:ions%space%dim, 1:ions%natoms))
 
+    state%pos = ions%pos
     do iatom = 1, ions%natoms
-      state%pos(1:ions%space%dim, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
       state%vel(1:ions%space%dim, iatom) = ions%atom(iatom)%v(1:ions%space%dim)
     end do
 
@@ -784,8 +778,8 @@ contains
 
     PUSH_SUB(ion_dynamics_restore_state)
 
+    ions%pos = state%pos
     do iatom = 1, ions%natoms
-      ions%atom(iatom)%x(1:ions%space%dim) = state%pos(1:ions%space%dim, iatom)
       ions%atom(iatom)%v(1:ions%space%dim) = state%vel(1:ions%space%dim, iatom)
     end do
 

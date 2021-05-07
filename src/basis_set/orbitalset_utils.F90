@@ -115,7 +115,7 @@ contains
 
     this%nneighbors = 0
     if(this%iatom /= -1)then
-      xat = ions%atom(this%iatom)%x(1:ions%space%dim)
+      xat = ions%pos(:, this%iatom)
 
       latt_iter = lattice_iterator_t(ions%latt, rcut)
 

@@ -1113,8 +1113,8 @@ contains
     sys => electrons_t(namespace, generate_epot=.false.)
     call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%space, sys%ions%latt, sys%ions%atom, sys%ions%natoms, sys%ions%catom, sys%ions%ncatoms, &
-      sys%gr%sb%lsize, namespace, sys%mc)
+    call ion_interaction_test(sys%space, sys%ions%latt, sys%ions%atom, sys%ions%natoms, sys%ions%pos, sys%ions%catom, &
+      sys%ions%ncatoms, sys%gr%sb%lsize, namespace, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 

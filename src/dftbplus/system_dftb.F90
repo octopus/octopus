@@ -188,8 +188,8 @@ contains
     this%species(1) = 1
     this%labels(1) = trim(this%ions%atom(1)%label)
 
+    this%coords = this%ions%pos
     do ii = 1, this%n_atom
-      this%coords(1:3,ii) = this%ions%atom(ii)%x(1:3)
       ! mass is read from the default pseudopotential files
       this%mass(ii) = species_mass(this%ions%atom(ii)%species)
       if ((ii > 1) .and. .not. (any(this%labels(1:ispec) == this%ions%atom(ii)%label))) then

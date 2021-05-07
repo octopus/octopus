@@ -93,7 +93,7 @@
     ! check the number of time steps we will read
     do
       read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime, &
-        ((ions%atom(ii)%x(jj), jj = 1, 3), ii = 1, ions%natoms), &
+        ((ions%pos(jj, ii), jj = 1, 3), ii = 1, ions%natoms), &
         ((ions%atom(ii)%v(jj), jj = 1, 3), ii = 1, ions%natoms)
 
       curtime = units_to_atomic(units_out%time, curtime)
@@ -137,7 +137,7 @@
 
     do
       read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime, &
-        ((ions%atom(ii)%x(jj), jj = 1, 3), ii = 1, ions%natoms), &
+        ((ions%pos(jj, ii), jj = 1, 3), ii = 1, ions%natoms), &
         ((ions%atom(ii)%v(jj), jj = 1, 3), ii = 1, ions%natoms)
 
       curtime = units_to_atomic(units_out%time, curtime)

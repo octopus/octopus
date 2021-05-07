@@ -142,8 +142,8 @@ contains
     do iatom = 1, ions%natoms
       do jatom = 1, ions%natoms
         if(jatom == iatom) cycle
-        xx(1:ions%space%dim) = ions%atom(jatom)%x(1:ions%space%dim) - ions%atom(iatom)%x(1:ions%space%dim)
-        r = sqrt( sum( xx(1:ions%space%dim)**2 ) )
+        xx(1:ions%space%dim) = ions%pos(:, jatom) - ions%pos(:, iatom)
+        r = norm2(xx(1:ions%space%dim))
         w2r_ = w2r(ions%atom(iatom)%species, ions%atom(jatom)%species, r)
         w1r_ = w1r(ions%atom(iatom)%species, ions%atom(jatom)%species, r)
         do idim = 1, ions%space%dim
@@ -176,10 +176,10 @@ contains
         call zderivatives_grad(gr%der, zpsi(:, 1), derpsi(:, :, 1))
         do iatom = 1, ions%natoms
           do j = 1, ions%space%dim
-            call force1(ions%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
-            call force1(ions%atom(iatom)%x(j) - dq, forceks1m, pdot3m)
-            call force1(ions%atom(iatom)%x(j) + dq/M_TWO, forceks1p2, pdot3p2)
-            call force1(ions%atom(iatom)%x(j) - dq/M_TWO, forceks1m2, pdot3m2)
+            call force1(ions%pos(j, iatom) + dq, forceks1p, pdot3p)
+            call force1(ions%pos(j, iatom) - dq, forceks1m, pdot3m)
+            call force1(ions%pos(j, iatom) + dq/M_TWO, forceks1p2, pdot3p2)
+            call force1(ions%pos(j, iatom) - dq/M_TWO, forceks1m2, pdot3m2)
             dforceks1 = ((M_FOUR/M_THREE) * (forceks1p2 - forceks1m2) - (M_ONE / CNST(6.0)) * (forceks1p - forceks1m)) / dq
             dforce1 = sum(q(iatom, :) * dforceks1(:))
             dforce2 = ((M_FOUR/M_THREE) * (pdot3p2 - pdot3m2) - (M_ONE / CNST(6.0)) * (pdot3p - pdot3m)) / dq
@@ -229,8 +229,8 @@ contains
       FLOAT :: qold
       CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
 
-      qold = ions%atom(iatom)%x(j)
-      ions%atom(iatom)%x(j) = q
+      qold = ions%pos(j, iatom)
+      ions%pos(j, iatom) = q
       SAFE_ALLOCATE(viapsi(1:gr%mesh%np_part, 1:psi%d%dim))
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
@@ -246,7 +246,7 @@ contains
 
       call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
       pdot3 = TOFLOAT(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)))
-      ions%atom(iatom)%x(j) = qold
+      ions%pos(j, iatom) = qold
 
       SAFE_DEALLOCATE_A(viapsi)
     end subroutine force1
@@ -492,7 +492,7 @@ contains
       ff = M_ZERO
       torque = M_ZERO
       do iatom = 1, ions%natoms
-        rr(1:ions%space%dim) = ions%atom(iatom)%x(1:ions%space%dim)
+        rr(1:ions%space%dim) = ions%pos(:, iatom)
         ff(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim)
         torque(1:3) = torque(1:3) + dcross_product(rr, ff)
       end do
@@ -547,8 +547,7 @@ subroutine forces_from_nlcc(mesh, ions, hm, st, force_nlcc)
   force_nlcc = M_ZERO
 
   do iatom = ions%atoms_dist%start, ions%atoms_dist%end
-    call species_get_nlcc_grad(ions%atom(iatom)%species, ions%space, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), &
-      mesh, drho)
+    call species_get_nlcc_grad(ions%atom(iatom)%species, ions%space, ions%latt, ions%pos(:, iatom), mesh, drho)
 
     do idir = 1, ions%space%dim
       do is = 1, hm%d%spin_channels
@@ -610,7 +609,7 @@ subroutine forces_from_scf(mesh, ions, hm, force_scf, vhxc_old)
       if(ps_has_density(species_ps(ions%atom(iatom)%species))) then
 
         call species_atom_density_grad(ions%atom(iatom)%species, ions%namespace, ions%space, ions%latt, &
-          ions%atom(iatom)%x(1:ions%space%dim), mesh, hm%d%spin_channels, drho)
+          ions%pos(:, iatom), mesh, hm%d%spin_channels, drho)
 
         do idir = 1, ions%space%dim
           do is = 1, hm%d%spin_channels
