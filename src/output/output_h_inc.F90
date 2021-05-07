@@ -65,13 +65,13 @@
           SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:space%dim))
           vh(1:der%mesh%np) = hm%vhartree(1:der%mesh%np)
           call dderivatives_grad(der, vh, gradvh(1:der%mesh%np, 1:space%dim))
-          call io_function_output_vector(outp%how(OPTION__OUTPUT__POTENTIAL), dir, 'grad_vh', namespace, &
+          call io_function_output_vector(outp%how(OPTION__OUTPUT__POTENTIAL_GRADIENT), dir, 'grad_vh', namespace, &
             space, der%mesh, gradvh(:, :), units_out%force, err, ions = ions, grp = grp)
 
           SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
           v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
           call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:space%dim))
-          call io_function_output_vector(outp%how(OPTION__OUTPUT__POTENTIAL), dir, 'grad_v0', namespace, &
+          call io_function_output_vector(outp%how(OPTION__OUTPUT__POTENTIAL_GRADIENT), dir, 'grad_v0', namespace, &
             space, der%mesh, gradvh(:, :), units_out%force, err, ions = ions, grp = grp)
           SAFE_DEALLOCATE_A(v0)
           SAFE_DEALLOCATE_A(vh)
