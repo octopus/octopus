@@ -17,7 +17,6 @@ Spacing = 0.5
  geometry | xyz + xcrysden
  wfs | axis_x + plane_x + xcrysden
  potential_gradient |  plane_x
- potential | plane_x
 %
 
 OutputInterval = 4

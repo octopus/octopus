@@ -455,7 +455,7 @@ contains
         !%Output
         !  density | output_interval | 10   | output_format   | cube + axis_z
         !  wfs     | output_format   | cube
-        !%        
+        !%
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
           if(.not. varinfo_valid_option(what_tag, what_i)) then
@@ -595,6 +595,14 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
     end do
+
+    if(what_tag == 'Output') then
+      ! required for output_hamiltonian()
+      if(what(OPTION__OUTPUT__POTENTIAL_GRADIENT)) then
+        what(OPTION__OUTPUT__POTENTIAL) = .true.
+      end if
+    end if
+  
     POP_SUB(io_function_read_what_how_when)
   end subroutine io_function_read_what_how_when
 
