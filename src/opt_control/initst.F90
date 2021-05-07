@@ -20,10 +20,10 @@
 
 module initst_oct_m
   use density_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use messages_oct_m
   use mesh_function_oct_m
   use opt_control_state_oct_m
@@ -71,7 +71,7 @@ contains
 
     PUSH_SUB(initial_state_init)
 
-    call opt_control_state_init(qcstate, sys%st, sys%geo)
+    call opt_control_state_init(qcstate, sys%st, sys%ions)
     psi => opt_control_point_qs(qcstate)
     call states_elec_deallocate_wfns(psi)
     call states_elec_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
@@ -232,14 +232,14 @@ contains
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, calc_eigenval = .true.)
       call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, sys%kpoints, &
                    psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
@@ -247,7 +247,7 @@ contains
     else
       ! Normal run.
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

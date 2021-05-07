@@ -21,11 +21,11 @@
 module geom_opt_oct_m
   use density_oct_m
   use energy_calc_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lcao_oct_m
   use loct_oct_m
   use mesh_oct_m
@@ -69,7 +69,7 @@ module geom_opt_oct_m
 
     !> shortcuts
     type(scf_t)                       :: scfv
-    type(geometry_t),         pointer :: geo
+    type(ions_t),             pointer :: ions
     type(hamiltonian_elec_t), pointer :: hm
     type(electrons_t),        pointer :: syst
     type(mesh_t),             pointer :: mesh
@@ -151,15 +151,15 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%ions, sys%st, sys%mc, sys%hm, sys%ks, sys%space)
 
     if(fromScratch) then
-      call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
     end if
 
     !Initial point
@@ -178,11 +178,11 @@ contains
 
       SAFE_ALLOCATE(mass(1:g_opt%size))
       imass = 1
-      do iatom = 1, sys%geo%natoms
+      do iatom = 1, sys%ions%natoms
         if(g_opt%fixed_atom == iatom) cycle
-        if(.not. g_opt%geo%atom(iatom)%move) cycle
+        if(.not. g_opt%ions%atom(iatom)%move) cycle
         if (g_opt%fire_mass <= M_ZERO) then
-          mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%species)
+          mass(imass:imass + 2) = species_mass(sys%ions%atom(iatom)%species)
         else
           mass(imass:imass + 2) = g_opt%fire_mass  ! Mass of H
         end if
@@ -216,7 +216,7 @@ contains
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
     call messages_info(1)
-    call g_opt%geo%write_xyz('./min', g_opt%syst%namespace)
+    call g_opt%ions%write_xyz('./min', g_opt%syst%namespace)
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -252,13 +252,13 @@ contains
 
       ! shortcuts
       g_opt%mesh   => sys%gr%mesh
-      g_opt%geo    => sys%geo
+      g_opt%ions    => sys%ions
       g_opt%st     => sys%st
       g_opt%hm     => sys%hm
       g_opt%syst   => sys
       g_opt%dim    =  sys%space%dim
 
-      g_opt%size = g_opt%dim*g_opt%geo%natoms
+      g_opt%size = g_opt%dim*g_opt%ions%natoms
 
       !%Variable GOCenter
       !%Type logical
@@ -279,8 +279,8 @@ contains
       end if
 
       !Check if atoms are allowed to move and redifine g_opt%size
-      do iatom = 1, g_opt%geo%natoms
-        if (.not. g_opt%geo%atom(iatom)%move) then
+      do iatom = 1, g_opt%ions%natoms
+        if (.not. g_opt%ions%atom(iatom)%move) then
           g_opt%size = g_opt%size  - g_opt%dim
         end if
       end do
@@ -517,19 +517,19 @@ contains
       !%End
 
       call read_coords_init(xyz)
-      call read_coords_read('GOConstrains', xyz, g_opt%geo%space, sys%namespace)
+      call read_coords_read('GOConstrains', xyz, g_opt%ions%space, sys%namespace)
       if(xyz%source /= READ_COORDS_ERR) then
         !Sanity check
-        if(g_opt%geo%natoms /= xyz%n) then
-          write(message(1), '(a,i4,a,i4)') 'I need exactly ', g_opt%geo%natoms, ' constrains, but I found ', xyz%n
+        if(g_opt%ions%natoms /= xyz%n) then
+          write(message(1), '(a,i4,a,i4)') 'I need exactly ', g_opt%ions%natoms, ' constrains, but I found ', xyz%n
           call messages_fatal(1)
         end if
         ! copy information and adjust units
-        do iatom = 1, g_opt%geo%natoms
+        do iatom = 1, g_opt%ions%natoms
           where(xyz%atom(iatom)%x == M_ZERO)
-            g_opt%geo%atom(iatom)%c = M_ZERO
+            g_opt%ions%atom(iatom)%c = M_ZERO
           elsewhere
-            g_opt%geo%atom(iatom)%c = M_ONE
+            g_opt%ions%atom(iatom)%c = M_ONE
           end where
         end do
 
@@ -538,8 +538,8 @@ contains
         if(g_opt%fixed_atom /= 0) &
           call messages_not_implemented("GOCenter with constrains") 
       else
-        do iatom = 1, g_opt%geo%natoms
-          g_opt%geo%atom(iatom)%c = M_ZERO
+        do iatom = 1, g_opt%ions%natoms
+          g_opt%ions%atom(iatom)%c = M_ZERO
         end do
       end if
 
@@ -552,7 +552,7 @@ contains
         if(.not. does_exist) fromScratch = .true.
       end if
 
-      if(.not. fromScratch) call g_opt%geo%read_xyz('./last', sys%namespace)
+      if(.not. fromScratch) call g_opt%ions%read_xyz('./last', sys%namespace)
       
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
@@ -583,7 +583,7 @@ contains
       call restart_end(g_opt%restart_dump)
 
       nullify(g_opt%mesh)
-      nullify(g_opt%geo)
+      nullify(g_opt%ions)
       nullify(g_opt%st)
       nullify(g_opt%hm)
       nullify(g_opt%syst)
@@ -613,15 +613,15 @@ contains
     call from_coords(g_opt, coords)
 
     if(g_opt%fixed_atom /= 0) then
-      call g_opt%geo%translate(g_opt%geo%center())
+      call g_opt%ions%translate(g_opt%ions%center())
     end if
 
     ! When the system is periodic in some directions, the atoms might have moved to a an adjacent cell, so we need to move them back to the original cell
-    call g_opt%geo%fold_atoms_into_cell()
+    call g_opt%ions%fold_atoms_into_cell()
 
     ! Some atoms might have moved outside the simulation box. We stop if this happens.
-    do iatom = 1, g_opt%geo%natoms
-      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%geo%atom(iatom)%x)) then
+    do iatom = 1, g_opt%ions%natoms
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%ions%atom(iatom)%x)) then
         if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because contains_point is too strict with atoms close to
@@ -632,17 +632,17 @@ contains
       end if
     end do
 
-    call g_opt%geo%write_xyz('./work-geom', g_opt%syst%namespace, append = .true.)
+    call g_opt%ions%write_xyz('./work-geom', g_opt%syst%namespace, append = .true.)
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
+    call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%ions, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%ions, calc_eigenval = .true.)
     call energy_calc_total(g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
+    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%mc, g_opt%syst%gr, g_opt%ions, g_opt%st, &
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
@@ -650,9 +650,9 @@ contains
 
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO
-      do iatom = 1, g_opt%geo%natoms
-        if(.not.g_opt%geo%atom(iatom)%move) cycle
-        objective = objective + sum(g_opt%geo%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
+      do iatom = 1, g_opt%ions%natoms
+        if(.not.g_opt%ions%atom(iatom)%move) cycle
+        objective = objective + sum(g_opt%ions%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
       end do
       objective = sqrt(objective)
     else
@@ -706,15 +706,15 @@ contains
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
     call io_mkdir('geom', g_opt%syst%namespace)
-    call g_opt%geo%write_xyz('geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
-    call g_opt%geo%write_xyz('./last', g_opt%syst%namespace)
+    call g_opt%ions%write_xyz('geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
+    call g_opt%ions%write_xyz('./last', g_opt%syst%namespace)
 
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%namespace)
+        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%ions, g_opt%syst%namespace)
       else
-        call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
+        call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%ions, g_opt%syst%gr%mesh, &
           g_opt%syst%namespace, write_forces = .true.)
       end if
     end if
@@ -778,12 +778,12 @@ contains
     PUSH_SUB(to_coords)
 
     icoord = 1
-    do iatom = 1, gopt%geo%natoms
+    do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle
-      if(.not. gopt%geo%atom(iatom)%move) cycle
+      if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        coords(icoord) = gopt%geo%atom(iatom)%x(idir)
-        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%geo%atom(gopt%fixed_atom)%x(idir)
+        coords(icoord) = gopt%ions%atom(iatom)%x(idir)
+        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%ions%atom(gopt%fixed_atom)%x(idir)
         icoord = icoord + 1
       end do
     end do
@@ -802,16 +802,16 @@ contains
     PUSH_SUB(to_grad)
 
     icoord = 1
-    do iatom = 1, gopt%geo%natoms
+    do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle
-      if(.not. gopt%geo%atom(iatom)%move) cycle
+      if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) then
-          grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
+        if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) then
+          grad(icoord) = -gopt%ions%atom(iatom)%f(idir)
         else
           grad(icoord) = M_ZERO
         end if
-        if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%geo%atom(gopt%fixed_atom)%f(idir)
+        if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%ions%atom(gopt%fixed_atom)%f(idir)
         icoord = icoord + 1
       end do
     end do
@@ -830,14 +830,14 @@ contains
     PUSH_SUB(from_coords)
 
     icoord = 1
-    do iatom = 1, gopt%geo%natoms
+    do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle      
-      if(.not. gopt%geo%atom(iatom)%move) cycle
+      if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) &
-          gopt%geo%atom(iatom)%x(idir) = coords(icoord)
+        if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) &
+          gopt%ions%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
-          gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)
+          gopt%ions%atom(iatom)%x(idir) = gopt%ions%atom(iatom)%x(idir) + gopt%ions%atom(gopt%fixed_atom)%x(idir)
         end if
         icoord = icoord + 1
       end do

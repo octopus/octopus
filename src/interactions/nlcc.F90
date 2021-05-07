@@ -25,10 +25,10 @@ module nlcc_oct_m
   use density_interaction_oct_m
   use distributed_oct_m
   use epot_oct_m
-  use geometry_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -95,10 +95,10 @@ contains
   end function nlcc_constructor
 
   ! ---------------------------------------------------------
-  subroutine nlcc_init(this, mesh, geo)
+  subroutine nlcc_init(this, mesh, ions)
     class(nlcc_t),         intent(inout) :: this
     type(mesh_t),     target, intent(in) :: mesh
-    type(geometry_t), target, intent(in) :: geo
+    type(ions_t),     target, intent(in) :: ions
 
 
     PUSH_SUB(nlcc_init)
@@ -107,9 +107,9 @@ contains
 
     SAFE_ALLOCATE(this%density(1:mesh%np,1:1))
 
-    this%atoms_dist => geo%atoms_dist
-    this%atom => geo%atom
-    this%space => geo%space
+    this%atoms_dist => ions%atoms_dist
+    this%atom => ions%atom
+    this%space => ions%space
 
     POP_SUB(nlcc_init)
   end subroutine nlcc_init

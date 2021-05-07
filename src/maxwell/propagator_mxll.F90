@@ -33,14 +33,13 @@ module propagator_mxll_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use grid_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_mxll_oct_m
   use index_oct_m
   use io_oct_m
   use io_function_oct_m
-  use io_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
@@ -757,7 +756,7 @@ contains
   end subroutine transform_rs_densities_to_4x4_rs_densities_backward
 
   !----------------------------------------------------------
-  subroutine calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr_elec, st_elec, hm_elec, rs_state_matter, geo)
+  subroutine calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr_elec, st_elec, hm_elec, rs_state_matter, ions)
     type(grid_t),                  intent(in)    :: gr_mxll
     type(states_mxll_t),           intent(in)    :: st_mxll
     type(hamiltonian_mxll_t),      intent(in)    :: hm_mxll
@@ -765,7 +764,7 @@ contains
     type(states_elec_t),           intent(in)    :: st_elec
     type(hamiltonian_elec_t),      intent(in)    :: hm_elec
     CMPLX,                         intent(inout) :: rs_state_matter(:,:)
-    type(geometry_t),    optional, intent(in)    :: geo
+    type(ions_t),        optional, intent(in)    :: ions
 
     CMPLX, allocatable :: tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
@@ -793,7 +792,7 @@ contains
 
   !----------------------------------------------------------
   subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, &
-    poisson_solver, time, field, transverse_field, vector_potential, geo)
+    poisson_solver, time, field, transverse_field, vector_potential, ions)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
     type(hamiltonian_mxll_t),   intent(in)    :: hm_mxll
@@ -807,7 +806,7 @@ contains
     CMPLX,                      intent(inout) :: field(:,:)
     CMPLX,                      intent(inout) :: transverse_field(:,:)
     FLOAT,                      intent(inout) :: vector_potential(:,:)
-    type(geometry_t), optional, intent(in)    :: geo
+    type(ions_t),     optional, intent(in)    :: ions
 
     integer            :: np
 

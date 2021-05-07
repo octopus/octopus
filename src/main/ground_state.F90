@@ -23,9 +23,9 @@ module ground_state_oct_m
   use electrons_oct_m
   use electrons_ground_state_oct_m
   use global_oct_m
-  use geometry_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use multisystem_basic_oct_m
@@ -79,7 +79,7 @@ contains
 
     PUSH_SUB(ground_state_run_legacy)
 
-    call electrons_ground_state_run(electrons%namespace, electrons%mc, electrons%gr, electrons%geo, electrons%st, electrons%ks, &
+    call electrons_ground_state_run(electrons%namespace, electrons%mc, electrons%gr, electrons%ions, electrons%st, electrons%ks, &
       electrons%hm, electrons%outp, electrons%space, from_scratch)
 
     POP_SUB(ground_state_run_legacy)

@@ -19,12 +19,12 @@
 #include "global.h"
 
 module kdotp_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use output_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use kdotp_calc_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
@@ -148,14 +148,14 @@ contains
        call messages_fatal(1)
     end if
 
-    call pert_init(kdotp_vars%perturbation, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
+    call pert_init(kdotp_vars%perturbation, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%ions)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
     call parse_input()
 
     if(calc_2nd_order) then
-      call pert_init(kdotp_vars%perturbation2, sys%namespace, PERTURBATION_NONE, sys%gr, sys%geo)
-      call pert_init(pert2, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(kdotp_vars%perturbation2, sys%namespace, PERTURBATION_NONE, sys%gr, sys%ions)
+      call pert_init(pert2, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%ions)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     end if
@@ -186,7 +186,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -201,7 +201,7 @@ contains
     SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     kdotp_vars%velocity(:,:,:) = M_ZERO
     if(states_are_complex(sys%st)) then
-      call zcalc_band_velocity(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+      call zcalc_band_velocity(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ions, kdotp_vars%perturbation, &
         kdotp_vars%velocity(:,:,:))
     end if
 
@@ -277,19 +277,19 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
           kdotp_vars%lr(1:1, idir), 1, M_ZERO, kdotp_vars%perturbation, restart_dump, "", kdotp_wfs_tag(idir), &
           have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
-          call dkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, &
+          call dkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%ions, kdotp_vars%perturbation, &
             kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
         end if
       else
-        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, &
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
           kdotp_vars%lr(1:1, idir), 1, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, "", &
           kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
-          call zkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), &
+          call zkdotp_add_occ(sys%namespace, sys%gr, sys%st, sys%hm, sys%ions, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), &
             kdotp_vars%degen_thres)
         end if
       end if
@@ -298,14 +298,14 @@ contains
 
       errornorm = M_ZERO
       if(states_are_real(sys%st)) then 
-        call doutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
+        call doutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, TOFLOAT(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin))))
         end do
       else
-        call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
+        call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
@@ -327,13 +327,13 @@ contains
 
           if(states_are_real(sys%st)) then
             call dsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%geo, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+              sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
             call zsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%geo, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+              sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
@@ -355,10 +355,10 @@ contains
 
 
       if(states_are_real(sys%st)) then
-        call dcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+        call dcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ions, kdotp_vars%lr, &
           kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
-        call zcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, kdotp_vars%lr, &
+        call zcalc_eff_mass_inv(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ions, kdotp_vars%lr, &
           kdotp_vars%perturbation, kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       end if
 

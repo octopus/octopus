@@ -247,7 +247,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+      call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
@@ -310,18 +310,18 @@ contains
 
       PUSH_SUB(vdw_run_legacy.get_pol)
 
-      call pert_init(perturbation, sys%namespace, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+      call pert_init(perturbation, sys%namespace, PERTURBATION_ELECTRIC, sys%gr, sys%ions)
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
         call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
-        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr(dir, :), &
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, lr(dir, :), &
           1, omega, perturbation, restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%geo, lr(:,:), 1, perturbation, &
+      call zcalc_polarizability_finite(sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ions, lr(:,:), 1, perturbation, &
         alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO

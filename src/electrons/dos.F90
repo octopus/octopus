@@ -21,10 +21,10 @@
 module dos_oct_m
   use atomic_orbital_oct_m
   use comm_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -148,12 +148,12 @@ contains
   end subroutine dos_init
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
+  subroutine dos_write_dos(this, dir, st, sb, ions, mesh, hm, namespace)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
-    type(geometry_t), target, intent(in) :: geo
+    type(ions_t),     target, intent(in) :: ions
     type(mesh_t),             intent(in) :: mesh
     type(hamiltonian_elec_t), intent(in) :: hm
     type(namespace_t),        intent(in) :: namespace
@@ -298,9 +298,9 @@ contains
       end if
 
 
-      do ia = 1, geo%natoms
+      do ia = 1, ions%natoms
         !We first count how many orbital set we have
-        work = orbitalset_utils_count(geo, ia)
+        work = orbitalset_utils_count(ions, ia)
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
@@ -308,14 +308,14 @@ contains
 
           !We count the orbitals
           work2 = 0
-          do iorb = 1, species_niwfs(geo%atom(ia)%species)
-            call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+          do iorb = 1, species_niwfs(ions%atom(ia)%species)
+            call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
             if(ii == norb) then
               os%ll = ll
               os%nn = nn
               os%ii = ii
-              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+              os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, &
                                 OPTION__AOTRUNCATION__AO_FULL, threshold)
               work2 = work2 + 1
             end if
@@ -323,16 +323,16 @@ contains
           os%norbs = work2
           os%ndim = 1
           os%submesh = .false.
-          os%spec => geo%atom(ia)%species
+          os%spec => ions%atom(ia)%species
  
           do work = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
-              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call dget_atomic_orbital(ions, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                        os, work, os%radius, os%ndim, use_mesh=.not.os%submesh, &
                                        normalize = normalize)
             else
-              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call zget_atomic_orbital(ions, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                       os, work, os%radius, os%ndim, &
                                       use_mesh=.not.allocated(hm%hm_base%phase) .and. .not. os%submesh, &
                                       normalize = normalize)

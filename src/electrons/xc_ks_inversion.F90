@@ -22,12 +22,12 @@ module xc_ks_inversion_oct_m
   use density_oct_m
   use derivatives_oct_m
   use eigensolver_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -92,11 +92,11 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc, space, kpoints)
+  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, ions, st, xc, mc, space, kpoints)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),            intent(inout) :: gr
-    type(geometry_t),        intent(inout) :: geo
+    type(ions_t),            intent(inout) :: ions
     type(states_elec_t),     intent(in)    :: st
     type(xc_t),              intent(in)    :: xc
     type(multicomm_t),       intent(in)    :: mc
@@ -171,7 +171,7 @@ contains
 
       ! initialize densities, hamiltonian and eigensolver
       call states_elec_densities_init(ks_inv%aux_st, gr)
-      call hamiltonian_elec_init(ks_inv%aux_hm, namespace, space, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc, kpoints)
+      call hamiltonian_elec_init(ks_inv%aux_hm, namespace, space, gr, ions, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc, kpoints)
       call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, mc, space)
     end if
 

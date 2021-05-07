@@ -60,7 +60,7 @@
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-    f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%geo) - controlfunction_j2(par_)
+    f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%ions) - controlfunction_j2(par_)
 
     SAFE_DEALLOCATE_A(theta)
     SAFE_DEALLOCATE_A(y)
@@ -142,7 +142,7 @@
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%ions) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
     end if
@@ -211,7 +211,7 @@
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, sys_%kpoints, qcpsi, sys_%ions) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
     else

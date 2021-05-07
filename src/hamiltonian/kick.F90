@@ -20,9 +20,9 @@
 
 module kick_oct_m
   use iso_c_binding
-  use geometry_oct_m
   use global_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
   use math_oct_m
@@ -996,11 +996,11 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions, geo, kick, psolver, kpoints, pcm)
+  subroutine kick_apply(mesh, st, ions_dyn, ions, kick, psolver, kpoints, pcm)
     type(mesh_t),          intent(in)    :: mesh
     type(states_elec_t),   intent(inout) :: st
-    type(ion_dynamics_t),  intent(in)    :: ions
-    type(geometry_t),      intent(inout) :: geo
+    type(ion_dynamics_t),  intent(in)    :: ions_dyn
+    type(ions_t),          intent(inout) :: ions
     type(kick_t),          intent(in)    :: kick
     type(poisson_t),       intent(in)    :: psolver
     type(kpoints_t),       intent(in)    :: kpoints
@@ -1205,13 +1205,13 @@ contains
       ! The nuclear velocities will be changed by
       ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
       ! where M and Z are the ionic mass and charge, respectively.
-      if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
+      if(ion_dynamics_ions_move(ions_dyn)  .and. kick%delta_strength /= M_ZERO) then
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
-          do iatom = 1, geo%natoms
-            geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
+          do iatom = 1, ions%natoms
+            ions%atom(iatom)%v(1:mesh%sb%dim) = ions%atom(iatom)%v(1:mesh%sb%dim) + &
                  kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
-                 P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
-                 species_mass(geo%atom(iatom)%species)
+                 P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / &
+                 species_mass(ions%atom(iatom)%species)
           end do
         end if
       end if

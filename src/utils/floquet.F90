@@ -25,11 +25,11 @@ program oct_floquet
   use density_oct_m
   use fft_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -96,7 +96,7 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_elec_epot_generate(sys%hm, global_namespace, gr, sys%geo, st, time=M_ZERO)
+  call hamiltonian_elec_epot_generate(sys%hm, global_namespace, gr, sys%ions, st, time=M_ZERO)
   call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
 
   call states_elec_allocate_wfns(st, gr%mesh)
@@ -106,7 +106,7 @@ program oct_floquet
      call v_ks_calculate_current(sys%ks, .true.)
 
      ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(sys%hm%ep%gfield, sys%geo%latt%rcell_volume, st%qtot)
+     call gauge_field_init_vec_pot(sys%hm%ep%gfield, sys%ions%latt%rcell_volume, st%qtot)
      call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
   end if
 
@@ -118,7 +118,7 @@ program oct_floquet
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, global_namespace, sys%space, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call v_ks_calc(sys%ks, global_namespace, sys%space, sys%hm, st, sys%ions, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_elec_update(sys%hm, gr%mesh, global_namespace, time = M_ZERO)
 
   call floquet_init()

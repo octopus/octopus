@@ -30,12 +30,12 @@ module td_oct_m
   use epot_oct_m
   use forces_oct_m
   use gauge_field_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use kick_oct_m
   use lasers_oct_m
   use lda_u_oct_m
@@ -97,7 +97,7 @@ module td_oct_m
     private
     type(propagator_base_t), public :: tr             !< contains the details of the time-evolution
     type(scf_t),             public :: scf
-    type(ion_dynamics_t),    public :: ions
+    type(ion_dynamics_t),    public :: ions_dyn
     FLOAT,                   public :: dt             !< time step
     integer,                 public :: max_iter       !< maximum number of iterations to perform
     integer,                 public :: iter           !< the actual iteration
@@ -132,12 +132,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine td_init(td, namespace, space, gr, geo, st, ks, hm, outp)
+  subroutine td_init(td, namespace, space, gr, ions, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(in)    :: st
     type(v_ks_t),             intent(in)    :: ks
     type(hamiltonian_elec_t), intent(in)    :: hm
@@ -152,9 +152,9 @@ contains
 
     if (hm%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
 
-    call ion_dynamics_init(td%ions, namespace, geo)
+    call ion_dynamics_init(td%ions_dyn, namespace, ions)
 
-    if (ion_dynamics_ions_move(td%ions)) then
+    if (ion_dynamics_ions_move(td%ions_dyn)) then
       if (hm%kpoints%use_symmetries) then
         message(1) = "KPoints symmetries cannot be used with moving ions."
         message(2) = "Please set KPointsSymmetries = no."
@@ -306,7 +306,7 @@ contains
     if (.not. varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error(namespace, 'TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if (td%dynamics .ne. EHRENFEST) then
-      if (.not. ion_dynamics_ions_move(td%ions)) call messages_input_error(namespace, 'TDDynamics')
+      if (.not. ion_dynamics_ions_move(td%ions_dyn)) call messages_input_error(namespace, 'TDDynamics')
     end if
 
     !%Variable RecalculateGSDuringEvolution
@@ -343,8 +343,8 @@ contains
     td%scissor = units_to_atomic(units_inp%energy, td%scissor)
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
-    call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
-      family_is_mgga_with_exc(ks%xc))
+    call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions_dyn) .or. &
+      gauge_field_is_applied(hm%ep%gfield), family_is_mgga_with_exc(ks%xc))
 
     if (hm%ext_lasers%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=namespace)
@@ -380,12 +380,12 @@ contains
   end subroutine td_init
 
   ! ---------------------------------------------------------
-  subroutine td_init_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+  subroutine td_init_run(td, namespace, mc, gr, ions, st, ks, hm, outp, space, fromScratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(inout) :: mc
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -403,14 +403,14 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, geo, st, hm%psolver, hm%kpoints)
+        call lda_u_init(hm%lda_u, namespace, space, hm%lda_u_level, gr, ions, st, hm%psolver, hm%kpoints)
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
       end if
     else
       call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-      call scf_init(td%scf, namespace, gr, geo, st, mc, hm, ks, space)
+      call scf_init(td%scf, namespace, gr, ions, st, mc, hm, ks, space)
     end if
 
     if (gauge_field_is_applied(hm%ep%gfield)) then
@@ -418,43 +418,43 @@ contains
       call v_ks_calculate_current(ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(hm%ep%gfield, geo%latt%rcell_volume, st%qtot)
+      call gauge_field_init_vec_pot(hm%ep%gfield, ions%latt%rcell_volume, st%qtot)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
     end if
 
-    call td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, fromScratch)
+    call td_init_wfs(td, namespace, space, mc, gr, ions, st, ks, hm, fromScratch)
 
     if (td%iter > td%max_iter) then
       call states_elec_deallocate_wfns(st)
-      if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
+      if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
       POP_SUB(td_init_run)
       return
     end if
 
     ! Calculate initial forces and kinetic energy
-    if (ion_dynamics_ions_move(td%ions)) then
+    if (ion_dynamics_ions_move(td%ions_dyn)) then
       if (td%iter > 0) then
-        call td_read_coordinates(td, namespace, gr, geo)
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = td%iter*td%dt)
+        call td_read_coordinates(td, namespace, gr, ions)
+        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, namespace, geo, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
+      call forces_calculate(gr, namespace, ions, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
 
-      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+      ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
     else
       if (bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, namespace, geo, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
+        call forces_calculate(gr, namespace, ions, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
       end if
     end if
 
-    call td_write_init(td%write_handler, namespace, space, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
+    call td_write_init(td%write_handler, namespace, space, outp, gr, st, hm, ions, ks, ion_dynamics_ions_move(td%ions_dyn), &
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
       call scissor_init(hm%scissor, namespace, space, st, gr, hm%d, hm%kpoints, td%scissor, mc)
     end if
 
-    if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
+    if (td%iter == 0) call td_run_zero_iter(td, namespace, space, gr, ions, st, ks, hm, outp)
 
     if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
@@ -462,7 +462,7 @@ contains
     td%iter = td%iter + 1
 
     call restart_init(td%restart_dump, namespace, RESTART_TD, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
-    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
+    if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
       call restart_init(td%restart_load, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
     end if
@@ -487,7 +487,7 @@ contains
 
     call pes_end(td%pesv)
     call propagator_elec_end(td%tr)  ! clean the evolution method
-    call ion_dynamics_end(td%ions)
+    call ion_dynamics_end(td%ions_dyn)
 
     if(td%dynamics == BO) call scf_end(td%scf)
 
@@ -509,18 +509,18 @@ contains
 
     ! free memory
     call states_elec_deallocate_wfns(st)
-    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
+    if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) call restart_end(td%restart_load)
 
     POP_SUB(td_end_run)
   end subroutine td_end_run
 
   ! ---------------------------------------------------------
-  subroutine td_run(td, namespace, mc, gr, geo, st, ks, hm, outp, space, fromScratch)
+  subroutine td_run(td, namespace, mc, gr, ions, st, ks, hm, outp, space, fromScratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(inout) :: mc
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -548,11 +548,11 @@ contains
       if (iter > 1) then
         if (((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time)) then
           if (.not. hm%pcm%localf) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints)
+            call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
+            call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
           end if
-          call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, geo, iter)
+          call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, ions, iter)
           !We activate the sprial BC only after the kick,
           !to be sure that the first iteration corresponds to the ground state
           if (gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
@@ -562,11 +562,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_elec_dt(ks, namespace, space, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions, &
-          geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
-          move_ions = ion_dynamics_ions_move(td%ions) )
+        call propagator_elec_dt(ks, namespace, space, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, iter, td%ions_dyn, &
+          ions, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
+          move_ions = ion_dynamics_ions_move(td%ions_dyn) )
       case(BO)
-        call propagator_elec_dt_bo(td%scf, namespace, space, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
+        call propagator_elec_dt_bo(td%scf, namespace, space, gr, ks, st, hm, ions, mc, outp, iter, td%dt, td%ions_dyn, scsteps)
       end select
 
       !Apply mask absorbing boundaries
@@ -577,10 +577,10 @@ contains
         call pes_calc(td%pesv, namespace, space, gr%mesh, st, td%dt, iter, gr, hm, stopping)
       end if
 
-      call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
+      call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, ions, hm%ep%kick, td%dt, iter)
 
       ! write down data
-      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, fromScratch)
+      call td_check_point(td, namespace, mc, gr, ions, st, ks, hm, outp, space, iter, scsteps, etime, stopping, fromScratch)
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly(namespace)
@@ -607,12 +607,12 @@ contains
   end subroutine td_print_header
 
   ! ---------------------------------------------------------
-  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, space, iter, scsteps, etime, stopping, from_scratch)
+  subroutine td_check_point(td, namespace, mc, gr, ions, st, ks, hm, outp, space, iter, scsteps, etime, stopping, from_scratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -629,7 +629,7 @@ contains
     PUSH_SUB(td_check_point)
 
     write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, units_from_atomic(units_out%time, iter*td%dt), &
-      units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), scsteps, loct_clock() - etime
+      units_from_atomic(units_out%energy, hm%energy%total + ions%kinetic_energy), scsteps, loct_clock() - etime
 
     call messages_info(1)
     etime = loct_clock()
@@ -639,7 +639,7 @@ contains
       if (st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st)
       end if
-      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, iter, td%dt)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, ions, iter, td%dt)
     end if
 
     if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -651,13 +651,13 @@ contains
         call messages_warning(1, namespace=namespace)
       end if
 
-      call pes_output(td%pesv, namespace, space, gr%mesh, st, iter, outp, td%dt, gr, geo)
+      call pes_output(td%pesv, namespace, space, gr%mesh, st, iter, outp, td%dt, gr, ions)
 
-      if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
+      if (ion_dynamics_ions_move(td%ions_dyn) .and. td%recalculate_gs) then
         call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
         from_scratch = .false.
         call states_elec_deallocate_wfns(st)
-        call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, space, from_scratch)
+        call electrons_ground_state_run(namespace, mc, gr, ions, st, ks, hm, outp, space, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
         call td_load(td%restart_load, namespace, gr, st, hm, td, ierr)
         if (ierr /= 0) then
@@ -665,8 +665,8 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-        call forces_calculate(gr, namespace, geo, hm, st, ks, t = iter*td%dt, dt = td%dt)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+        call forces_calculate(gr, namespace, ions, hm, st, ks, t = iter*td%dt, dt = td%dt)
         call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=namespace)
         call td_print_header(namespace)
       end if
@@ -676,13 +676,13 @@ contains
   end subroutine td_check_point
 
   ! ---------------------------------------------------------
-  subroutine td_init_wfs(td, namespace, space, mc, gr, geo, st, ks, hm, from_scratch)
+  subroutine td_init_wfs(td, namespace, space, mc, gr, ions, st, ks, hm, from_scratch)
     type(td_t),                  intent(inout) :: td
     type(namespace_t),           intent(in)    :: namespace
     type(space_t),               intent(in)    :: space
     type(multicomm_t),           intent(in)    :: mc
     type(grid_t),                intent(inout) :: gr
-    type(geometry_t),            intent(in)    :: geo
+    type(ions_t),                intent(in)    :: ions
     type(states_elec_t), target, intent(inout) :: st
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_elec_t),    intent(inout) :: hm
@@ -810,13 +810,13 @@ contains
       call messages_info(1)
       call states_elec_freeze_adjust_qtot(st)
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
     else if (freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
       if (from_scratch) then
         call states_elec_freeze_orbitals(st, namespace, gr, mc, hm%kpoints, st%nst-1, family_is_mgga(ks%xc_family))
       else
@@ -827,7 +827,7 @@ contains
     else
       ! Normal run.
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
     end if
 
     !%Variable TDFreezeHXC
@@ -851,7 +851,7 @@ contains
         call restart_end(restart_frozen)
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true., time = td%iter*td%dt)
 
         call restart_init(restart_frozen, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
         call states_elec_load(restart_frozen, namespace, st, gr, hm%kpoints, ierr, iter=td%iter, label = ": td")
@@ -927,12 +927,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_run_zero_iter(td, namespace, space, gr, geo, st, ks, hm, outp)
+  subroutine td_run_zero_iter(td, namespace, space, gr, ions, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -940,17 +940,17 @@ contains
 
     PUSH_SUB(td_run_zero_iter)
 
-    call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
+    call td_write_iter(td%write_handler, namespace, space, outp, gr, st, hm, ions, hm%ep%kick, td%dt, 0)
 
     ! I apply the delta electric field *after* td_write_iter, otherwise the
     ! dipole matrix elements in write_proj are wrong
     if (abs(hm%ep%kick%time)  <=  M_EPSILON) then
       if (.not. hm%pcm%localf ) then
-        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints)
+        call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints)
       else
-        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
+        call kick_apply(gr%mesh, st, td%ions_dyn, ions, hm%ep%kick, hm%psolver, hm%kpoints, pcm = hm%pcm)
       end if
-      call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, geo, 0)
+      call td_write_kick(outp, namespace, gr%mesh, hm%ep%kick, ions, 0)
 
       !We activate the sprial BC only after the kick
       if (gr%der%boundaries%spiralBC) then
@@ -960,7 +960,7 @@ contains
     call propagator_elec_run_zero_iter(hm, gr, td%tr)
     if (outp%output_interval > 0) then
       call td_write_data(td%write_handler)
-      call td_write_output(namespace, space, gr, st, hm, ks, outp, geo, 0)
+      call td_write_output(namespace, space, gr, st, hm, ks, outp, ions, 0)
     end if
 
     POP_SUB(td_run_zero_iter)
@@ -969,11 +969,11 @@ contains
 
   ! ---------------------------------------------------------
   !> reads the pos and vel from coordinates file
-  subroutine td_read_coordinates(td, namespace, gr, geo)
+  subroutine td_read_coordinates(td, namespace, gr, ions)
     type(td_t),               intent(in)    :: td
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(inout) :: geo
+    type(ions_t),             intent(inout) :: ions
 
     integer :: iatom, iter, iunit
 
@@ -996,17 +996,17 @@ contains
     end do
     read(iunit, '(28x)', advance='no') ! skip the time index.
 
-    do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%sb%dim)
-      geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
+    do iatom = 1, ions%natoms
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%x(1:gr%sb%dim)
+      ions%atom(iatom)%x(:) = units_to_atomic(units_out%length, ions%atom(iatom)%x(:))
     end do
-    do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%sb%dim)
-      geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
+    do iatom = 1, ions%natoms
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%v(1:gr%sb%dim)
+      ions%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, ions%atom(iatom)%v(:))
     end do
-    do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%sb%dim)
-      geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
+    do iatom = 1, ions%natoms
+      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%f(1:gr%sb%dim)
+      ions%atom(iatom)%f(:) = units_to_atomic(units_out%force, ions%atom(iatom)%f(:))
     end do
 
     call io_close(iunit)

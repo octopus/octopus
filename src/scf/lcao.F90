@@ -26,12 +26,12 @@ module lcao_oct_m
   use blacs_proc_grid_oct_m
   use boundaries_oct_m
   use comm_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -137,12 +137,12 @@ module lcao_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(this, namespace, space, gr, geo, st)
+  subroutine lcao_init(this, namespace, space, gr, ions, st)
     type(lcao_t),         intent(out) :: this
     type(namespace_t),    intent(in)  :: namespace
     type(space_t),        intent(in)  :: space
     type(grid_t),         intent(in)  :: gr
-    type(geometry_t),     intent(in)  :: geo
+    type(ions_t),         intent(in)  :: ions
     type(states_elec_t),  intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
@@ -161,7 +161,7 @@ contains
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     mode_default = OPTION__LCAOSTART__LCAO_STATES
-    if(geo%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
+    if(ions%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
     
     !%Variable LCAOStart
     !%Type integer
@@ -287,9 +287,9 @@ contains
       ! count the number of orbitals available
       maxj = 0
       this%maxorbs = 0
-      do ia = 1, geo%natoms
-        maxj = max(maxj, species_niwfs(geo%atom(ia)%species) )
-        this%maxorbs = this%maxorbs + species_niwfs(geo%atom(ia)%species)
+      do ia = 1, ions%natoms
+        maxj = max(maxj, species_niwfs(ions%atom(ia)%species) )
+        this%maxorbs = this%maxorbs + species_niwfs(ions%atom(ia)%species)
       end do
 
       this%maxorbs = this%maxorbs*st%d%dim
@@ -315,15 +315,15 @@ contains
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
 
       ! calculate the radius of each orbital
-      SAFE_ALLOCATE(this%radius(1:geo%natoms))
+      SAFE_ALLOCATE(this%radius(1:ions%natoms))
 
-      do ia = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(ia)%species)
+      do ia = 1, ions%natoms
+        norbs = species_niwfs(ions%atom(ia)%species)
 
         maxradius = M_ZERO
         do iorb = 1, norbs
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(ia)%species, ii, is = 1))
+          call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+          maxradius = max(maxradius, species_get_iwf_radius(ions%atom(ia)%species, ii, is = 1))
         end do
 
         maxradius = min(maxradius, M_TWO*maxval(gr%sb%lsize(1:gr%sb%dim)))
@@ -333,7 +333,7 @@ contains
 
 
       ! Each atom provides niwfs pseudo-orbitals (this number is given in
-      ! geo%atom(ia)%species%niwfs for atom number ia). This number is
+      ! ions%atom(ia)%species%niwfs for atom number ia). This number is
       ! actually multiplied by two in case of spin-unrestricted or spinors
       ! calculations.
       !
@@ -360,11 +360,11 @@ contains
 
       iorb = 1
       do jj = 1, maxj
-        do ia = 1, geo%natoms
+        do ia = 1, ions%natoms
           do idim = 1,st%d%dim
-            if(jj > species_niwfs(geo%atom(ia)%species) ) cycle
-            call species_iwf_ilm(geo%atom(ia)%species, jj, idim, ii, ll, mm)            
-            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%species, ii, is = 1) >= max_orb_radius) cycle
+            if(jj > species_niwfs(ions%atom(ia)%species) ) cycle
+            call species_iwf_ilm(ions%atom(ia)%species, jj, idim, ii, ll, mm)            
+            if(this%orbital_scale_factor*species_get_iwf_radius(ions%atom(ia)%species, ii, is = 1) >= max_orb_radius) cycle
 
             this%atom(iorb) = ia
             this%level(iorb) = jj
@@ -545,19 +545,19 @@ contains
         this%mult = 1
       end if
 
-      SAFE_ALLOCATE(this%sphere(1:geo%natoms))
-      SAFE_ALLOCATE(this%orbitals(1:geo%natoms))
-      SAFE_ALLOCATE(this%is_orbital_initialized(1:geo%natoms))
+      SAFE_ALLOCATE(this%sphere(1:ions%natoms))
+      SAFE_ALLOCATE(this%orbitals(1:ions%natoms))
+      SAFE_ALLOCATE(this%is_orbital_initialized(1:ions%natoms))
       this%is_orbital_initialized = .false.
 
-      SAFE_ALLOCATE(this%norb_atom(1:geo%natoms))
+      SAFE_ALLOCATE(this%norb_atom(1:ions%natoms))
 
       this%maxorb = 0
       this%norbs = 0
-      do iatom = 1, geo%natoms
-        this%norb_atom(iatom) = this%mult*species_niwfs(geo%atom(iatom)%species)
-        this%maxorb = max(this%maxorb, species_niwfs(geo%atom(iatom)%species))
-        this%norbs = this%norbs + species_niwfs(geo%atom(iatom)%species)
+      do iatom = 1, ions%natoms
+        this%norb_atom(iatom) = this%mult*species_niwfs(ions%atom(iatom)%species)
+        this%maxorb = max(this%maxorb, species_niwfs(ions%atom(iatom)%species))
+        this%norbs = this%norbs + species_niwfs(ions%atom(iatom)%species)
       end do
 
       this%maxorb = this%maxorb*this%mult
@@ -565,13 +565,13 @@ contains
 
       SAFE_ALLOCATE(this%basis_atom(1:this%norbs))
       SAFE_ALLOCATE(this%basis_orb(1:this%norbs))
-      SAFE_ALLOCATE(this%atom_orb_basis(1:geo%natoms, 1:this%maxorb))
+      SAFE_ALLOCATE(this%atom_orb_basis(1:ions%natoms, 1:this%maxorb))
 
       ! Initialize the mapping between indices
 
       ibasis = 0
-      do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%species)
+      do iatom = 1, ions%natoms
+        norbs = species_niwfs(ions%atom(iatom)%species)
 
         do iorb = 1, this%mult*norbs
           ibasis = ibasis + 1
@@ -581,7 +581,7 @@ contains
 
           ! no stored spin index in alternative mode
           if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-            call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_ilm(ions%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
           end if
         end do
@@ -595,15 +595,15 @@ contains
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
 
       ! calculate the radius of each orbital
-      SAFE_ALLOCATE(this%radius(1:geo%natoms))
+      SAFE_ALLOCATE(this%radius(1:ions%natoms))
 
-      do iatom = 1, geo%natoms
-        norbs = species_niwfs(geo%atom(iatom)%species)
+      do iatom = 1, ions%natoms
+        norbs = species_niwfs(ions%atom(iatom)%species)
 
         maxradius = M_ZERO
         do iorb = 1, norbs
-          call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
-          maxradius = max(maxradius, species_get_iwf_radius(geo%atom(iatom)%species, ii, is = 1))
+          call species_iwf_ilm(ions%atom(iatom)%species, iorb, 1, ii, ll, mm)
+          maxradius = max(maxradius, species_get_iwf_radius(ions%atom(iatom)%species, ii, is = 1))
         end do
 
         if(this%derivative) maxradius = maxradius + this%lapdist
@@ -613,7 +613,7 @@ contains
         this%radius(iatom) = maxradius
       end do
 
-      SAFE_ALLOCATE(this%calc_atom(1:geo%natoms))
+      SAFE_ALLOCATE(this%calc_atom(1:ions%natoms))
       this%calc_atom = .true.
 
       ! initialize parallel data
@@ -644,10 +644,10 @@ contains
         end if
 
         this%calc_atom = .false.
-        do iatom = 1, geo%natoms
+        do iatom = 1, ions%natoms
           ibasis = this%atom_orb_basis(iatom, 1)
 
-          do jatom = 1, geo%natoms
+          do jatom = 1, ions%natoms
             jbasis = this%atom_orb_basis(jatom, 1)
 
             do iorb = 1, this%norb_atom(iatom)
@@ -674,11 +674,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(namespace, space, gr, geo, st, ks, hm, st_start, lmm_r)
+  subroutine lcao_run(namespace, space, gr, ions, st, ks, hm, st_start, lmm_r)
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -695,7 +695,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
       if (st_start > st%nst) then ! nothing to be done in LCAO
@@ -706,16 +706,16 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, namespace, space, gr, geo, st)
+    call lcao_init(lcao, namespace, space, gr, ions, st)
 
-    call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
+    call lcao_init_orbitals(lcao, st, gr, ions, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, namespace, st, gr, hm, gr%sb, geo, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, hm, gr%sb, ions, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
 
       if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
+        call write_magnetic_moments(stdout, gr%fine%mesh, st, ions, gr%der%boundaries, lmm_r)
       end if
 
       ! set up Hamiltonian (we do not call v_ks_h_setup here because we do not want to
@@ -724,7 +724,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         st%eigenval = M_HUGE
@@ -746,7 +746,7 @@ contains
         call messages_info(1)
       end if
 
-      call lcao_wf(lcao, st, gr, geo, hm, namespace, start = st_start)
+      call lcao_wf(lcao, st, gr, ions, hm, namespace, start = st_start)
 
       if (.not. present(st_start)) then
         call states_elec_fermi(st, namespace, gr%mesh)
@@ -754,10 +754,10 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
+          call v_ks_h_setup(namespace, space, gr, ions, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
           if (st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
+            call write_magnetic_moments(stdout, gr%fine%mesh, st, ions, gr%der%boundaries, lmm_r)
           end if
         end if
       end if
@@ -787,7 +787,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
           call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if
@@ -840,11 +840,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(this, st, gr, geo, hm, namespace, start)
+  subroutine lcao_wf(this, st, gr, ions, hm, namespace, start)
     type(lcao_t),             intent(inout) :: this
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(namespace_t),        intent(in)    :: namespace
     integer, optional,        intent(in)    :: start
@@ -862,15 +862,15 @@ contains
 
     if(this%alternative) then
       if (states_are_real(st)) then
-        call dlcao_alt_wf(this, st, gr, geo, hm, namespace, start_)
+        call dlcao_alt_wf(this, st, gr, ions, hm, namespace, start_)
       else
-        call zlcao_alt_wf(this, st, gr, geo, hm, namespace, start_)
+        call zlcao_alt_wf(this, st, gr, ions, hm, namespace, start_)
       end if
     else
       if (states_are_real(st)) then
-        call dlcao_wf(this, st, gr, geo, hm, namespace, start_)
+        call dlcao_wf(this, st, gr, ions, hm, namespace, start_)
       else
-        call zlcao_wf(this, st, gr, geo, hm, namespace, start_)
+        call zlcao_wf(this, st, gr, ions, hm, namespace, start_)
       end if
     end if
     POP_SUB(lcao_wf)
@@ -946,13 +946,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, namespace, st, gr, sb, geo, iatom, spin_channels, rho)
+  subroutine lcao_atom_density(this, namespace, st, gr, sb, ions, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(simul_box_t),        intent(in)    :: sb
-    type(geometry_t), target, intent(in)    :: geo
+    type(ions_t),     target, intent(in)    :: ions
     integer,                  intent(in)    :: iatom
     integer,                  intent(in)    :: spin_channels
     FLOAT,                    intent(inout) :: rho(:, :) !< (gr[%fine]%mesh%np, spin_channels)
@@ -969,18 +969,18 @@ contains
 
     rho = M_ZERO
 
-    use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
+    use_stored_orbitals = species_is_ps(ions%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
-      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. geo%space%is_periodic()
+      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. ions%space%is_periodic()
 
-    ps => species_ps(geo%atom(iatom)%species)
+    ps => species_ps(ions%atom(iatom)%species)
 
     ! we can use the orbitals we already have calculated
     if(use_stored_orbitals) then
       ASSERT(.not. gr%have_fine_mesh)
    
       !There is no periodic copies here, so this will not work for periodic systems
-      ASSERT(.not. geo%space%is_periodic())
+      ASSERT(.not. ions%space%is_periodic())
 
       if(.not. this%alternative) then
         
@@ -993,17 +993,17 @@ contains
         do iorb = 1, this%norbs
           if(iatom /= this%atom(iorb)) cycle
           
-          call species_iwf_ilm(geo%atom(iatom)%species, this%level(iorb), 1, ii, ll, mm)
+          call species_iwf_ilm(ions%atom(iatom)%species, this%level(iorb), 1, ii, ll, mm)
           factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
          
           if(states_are_real(st)) then
-            call dget_ao(this, st, gr%mesh, geo, iorb, 1, dorbital, use_psi = .true.)
+            call dget_ao(this, st, gr%mesh, ions, iorb, 1, dorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
             end do
           else
-            call zget_ao(this, st, gr%mesh, geo, iorb, 1, zorbital, use_psi = .true.)
+            call zget_ao(this, st, gr%mesh, ions, iorb, 1, zorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*abs(zorbital(ip, 1))**2
@@ -1018,13 +1018,13 @@ contains
       else
 
         ! for simplicity, always use real ones here.
-        call dlcao_alt_get_orbital(this, this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
+        call dlcao_alt_get_orbital(this, this%sphere(iatom), ions, 1, iatom, this%norb_atom(iatom))
 
         ! the extra orbitals with the derivative are not relevant here, hence we divide by this%mult
         SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)/this%mult))
 
         do iorb = 1, this%norb_atom(iatom)/this%mult
-          call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
+          call species_iwf_ilm(ions%atom(iatom)%species, iorb, 1, ii, ll, mm)
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
 
@@ -1045,7 +1045,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%fine%mesh, geo%space, namespace, sb, geo%atom(iatom), spin_channels, rho)
+      call species_atom_density(gr%fine%mesh, ions%space, namespace, sb, ions%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)
@@ -1053,14 +1053,14 @@ contains
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, namespace, st, gr, hm, sb, geo, qtot, ispin, spin_channels, rho)
+  subroutine lcao_guess_density(this, namespace, st, gr, hm, sb, ions, qtot, ispin, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(simul_box_t),        intent(in)    :: sb
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     FLOAT,                    intent(in)    :: qtot  !< the total charge of the system
     integer,                  intent(in)    :: ispin, spin_channels
     FLOAT,                    intent(out)   :: rho(:, :)
@@ -1124,8 +1124,8 @@ contains
 
       parallelized_in_atoms = .true.
 
-      do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, spin_channels, atom_rho)
+      do ia = ions%atoms_dist%start, ions%atoms_dist%end
+        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, spin_channels, atom_rho)
         rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh%np, 1:spin_channels) + &
                                                   atom_rho(1:gr%fine%mesh%np, 1:spin_channels)
       end do
@@ -1141,15 +1141,15 @@ contains
       parallelized_in_atoms = .true.
 
       rho = M_ZERO
-      do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
+      do ia = ions%atoms_dist%start, ions%atoms_dist%end
+        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
         rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
-      do ia = 1, geo%natoms
-        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho)
+      do ia = 1, ions%natoms
+        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho)
 
         if (ispin == SPIN_POLARIZED) then
           call quickrnd(iseed, rnd)
@@ -1196,13 +1196,13 @@ contains
         call messages_fatal(1)
       end if
 
-      if (parse_block_n(blk) /= geo%natoms) then
+      if (parse_block_n(blk) /= ions%natoms) then
         message(1) = "AtomsMagnetDirection block has the wrong number of rows."
         call messages_fatal(1)
       end if
 
       SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
-      do ia = 1, geo%natoms
+      do ia = 1, ions%natoms
         !Read from AtomsMagnetDirection block 
         if (ispin == SPIN_POLARIZED) then
           call parse_block_float(blk, ia-1, 0, mag(1))
@@ -1217,7 +1217,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr, sb, ions, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%fine%mesh, atom_rho(:, 1))
@@ -1288,12 +1288,12 @@ contains
 
 
 #ifdef HAVE_MPI
-    if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
+    if(ions%atoms_dist%parallel .and. parallelized_in_atoms) then
       ! NOTE: if random or user_defined are made parallelized in atoms, below should be st%d%nspin instead of spin_channels
       do is = 1, spin_channels
         call lalg_copy(gr%fine%mesh%np, rho(:,is), atom_rho(:,1))
         call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%fine%mesh%np, &
-          MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+          MPI_FLOAT, MPI_SUM, ions%atoms_dist%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif
@@ -1365,11 +1365,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_init_orbitals(this, st, gr, geo, start)
+  subroutine lcao_init_orbitals(this, st, gr, ions, start)
     type(lcao_t),        intent(inout) :: this
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(ions_t),        intent(in)    :: ions
     integer, optional,   intent(in)    :: start
 
     if(.not. lcao_is_available(this)) return
@@ -1378,15 +1378,15 @@ contains
         
     if(.not. this%alternative) then
       if(states_are_real(st)) then
-        call dinit_orbitals(this, st, gr, geo, start)
+        call dinit_orbitals(this, st, gr, ions, start)
       else
-        call zinit_orbitals(this, st, gr, geo, start)
+        call zinit_orbitals(this, st, gr, ions, start)
       end if
     else
       if(states_are_real(st)) then
-        call dlcao_alt_init_orbitals(this, st, gr, geo, start)
+        call dlcao_alt_init_orbitals(this, st, gr, ions, start)
       else
-        call zlcao_alt_init_orbitals(this, st, gr, geo, start)
+        call zlcao_alt_init_orbitals(this, st, gr, ions, start)
       end if
 
     end if

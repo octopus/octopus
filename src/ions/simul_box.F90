@@ -29,10 +29,10 @@ module simul_box_oct_m
   use box_parallelepiped_oct_m
   use box_sphere_oct_m
   use box_user_defined_oct_m
-  use iso_c_binding
-  use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use ions_oct_m
+  use iso_c_binding
   use lalg_basic_oct_m
   use lattice_vectors_oct_m
   use lookup_oct_m
@@ -98,10 +98,10 @@ module simul_box_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, namespace, geo, space)
+  subroutine simul_box_init(sb, namespace, ions, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t),  target,           intent(inout) :: geo
+    type(ions_t),      target,           intent(inout) :: ions
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -115,12 +115,12 @@ contains
 
     PUSH_SUB(simul_box_init)
 
-    call geo%grid_defaults(def_h, def_rsize)
+    call ions%grid_defaults(def_h, def_rsize)
 
     sb%dim = space%dim
     sb%periodic_dim = space%periodic_dim
 
-    sb%latt => geo%latt
+    sb%latt => ions%latt
 
     call read_box()                        ! Parameters defining the simulation box.
 
@@ -255,33 +255,33 @@ contains
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
 
-        n_site_types = geo%nspecies
-        SAFE_ALLOCATE(site_type_label(1:geo%nspecies))
-        SAFE_ALLOCATE(site_type_radius(1:geo%nspecies))
+        n_site_types = ions%nspecies
+        SAFE_ALLOCATE(site_type_label(1:ions%nspecies))
+        SAFE_ALLOCATE(site_type_radius(1:ions%nspecies))
 
-        do ispec = 1, geo%nspecies
-          site_type_label(ispec) = species_label(geo%species(ispec))
+        do ispec = 1, ions%nspecies
+          site_type_label(ispec) = species_label(ions%species(ispec))
           if (sb%rsize > M_ZERO) then
             site_type_radius(ispec) = sb%rsize
           else
-            if (species_def_rsize(geo%species(ispec)) < -M_EPSILON) then
+            if (species_def_rsize(ions%species(ispec)) < -M_EPSILON) then
               write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-                trim(species_label(geo%species(ispec))), ' is negative or undefined.'
+                trim(species_label(ions%species(ispec))), ' is negative or undefined.'
               message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
               call messages_fatal(2, namespace=namespace)
             else
-              site_type_radius(ispec) = species_def_rsize(geo%species(ispec))
+              site_type_radius(ispec) = species_def_rsize(ions%species(ispec))
             end if
           end if
         end do
 
-        n_sites = geo%natoms
-        SAFE_ALLOCATE(site_position(1:sb%dim, 1:geo%natoms))
-        SAFE_ALLOCATE(site_type(1:geo%natoms))
-        do iatom = 1, geo%natoms
-          site_position(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
-          do ispec = 1, geo%nspecies
-            if (geo%atom(iatom)%label == site_type_label(ispec)) then
+        n_sites = ions%natoms
+        SAFE_ALLOCATE(site_position(1:sb%dim, 1:ions%natoms))
+        SAFE_ALLOCATE(site_type(1:ions%natoms))
+        do iatom = 1, ions%natoms
+          site_position(1:sb%dim, iatom) = ions%atom(iatom)%x(1:sb%dim)
+          do ispec = 1, ions%nspecies
+            if (ions%atom(iatom)%label == site_type_label(ispec)) then
               site_type(iatom) = ispec
             end if
           end do
@@ -459,9 +459,9 @@ contains
       case(MINIMUM)
         do idir = 1, sb%dim
           if(sb%rsize > M_ZERO) then
-            sb%lsize(idir) = maxval(abs(geo%atom(:)%x(idir))) + sb%rsize
+            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + sb%rsize
           else
-            sb%lsize(idir) = maxval(abs(geo%atom(:)%x(idir))) + def_rsize
+            sb%lsize(idir) = maxval(abs(ions%atom(:)%x(idir))) + def_rsize
           end if
         end do
       end select

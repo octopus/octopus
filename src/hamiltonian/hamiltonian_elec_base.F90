@@ -27,10 +27,10 @@ module hamiltonian_elec_base_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use epot_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hardware_oct_m
   use hgh_projector_oct_m
+  use ions_oct_m
   use kb_projector_oct_m
   use math_oct_m
   use mesh_oct_m

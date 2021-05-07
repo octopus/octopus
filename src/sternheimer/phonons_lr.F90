@@ -22,12 +22,12 @@ module phonons_lr_oct_m
   use born_charges_oct_m
   use epot_oct_m
   use forces_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
   use kpoints_oct_m
@@ -99,7 +99,7 @@ contains
     type(vibrations_t)  :: vib
     type(pert_t)        :: ionic_pert
 
-    type(geometry_t), pointer :: geo
+    type(ions_t),     pointer :: ions
     type(states_elec_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
@@ -115,7 +115,7 @@ contains
 
     !some shortcuts
 
-    geo => sys%geo
+    ions => sys%ions
     st  => sys%st
     gr  => sys%gr
 
@@ -166,7 +166,7 @@ contains
     ! replaced by properly saving and reading the dynamical matrix
     call messages_obsolete_variable(sys%namespace, 'UseRestartDontSolve')
 
-    natoms = geo%natoms
+    natoms = ions%natoms
     ndim = sys%space%dim
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -213,15 +213,15 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm)
     call sternheimer_init(sh, sys%namespace, sys%space, sys%gr, sys%st, sys%hm, sys%ks%xc, sys%mc, &
         wfs_are_cplx = states_are_complex(st))
-    call vibrations_init(vib, geo, "lr", sys%namespace)
+    call vibrations_init(vib, ions, "lr", sys%namespace)
 
-    call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
+    call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%ions)
 
     if(do_infrared) then
-      call born_charges_init(born, sys%namespace, geo, st, ndim)
+      call born_charges_init(born, sys%namespace, ions, st, ndim)
     end if
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
@@ -232,12 +232,12 @@ contains
 
     !the  <phi0 | v2 | phi0> term
     if(states_are_real(st)) then
-      call dionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call dionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%ions, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     else
-      call zionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call zionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%ions, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
-    call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, gr, geo)
+    call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, gr, ions)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
@@ -285,18 +285,18 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(states_are_real(st)) then
-        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, &
+        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, lr, 1, &
           M_ZERO, ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%geo, lr, 1, M_z0, &
+        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, lr, 1, M_z0, &
           ionic_pert, restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, sys%namespace, sys%space, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
+        call dforces_derivative(gr, sys%namespace, sys%space, ions, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
           sys%hm%lda_u_level)
       else
-        call zforces_derivative(gr, sys%namespace, sys%space, geo, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
+        call zforces_derivative(gr, sys%namespace, sys%space, ions, sys%hm%ep, st, sys%kpoints, lr(1), lr(1), force_deriv, &
           sys%hm%lda_u_level)
       end if
 
@@ -310,15 +310,15 @@ contains
         jdir  = vibrations_get_dir (vib, jmat)
 
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) + TOFLOAT(force_deriv(jdir, jatom))
-        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, geo, iatom, jatom)
+        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, ions, iatom, jatom)
       end do
       call vibrations_out_dyn_matrix_row(vib, imat)
       
       if(do_infrared) then
         if(states_are_real(st)) then
-          call dphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call dphonons_lr_infrared(gr%mesh, ions, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         else
-          call zphonons_lr_infrared(gr%mesh, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
+          call zphonons_lr_infrared(gr%mesh, ions, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
         end if
       end if
 
@@ -349,7 +349,7 @@ contains
     if(symmetrize) call vibrations_symmetrize_dyn_matrix(vib)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib)
-    call axsf_mode_output(vib, geo, gr%mesh, sys%namespace)
+    call axsf_mode_output(vib, ions, gr%mesh, sys%namespace)
 
     if(do_infrared) then
       if(sys%space%is_periodic() .and. .not. smear_is_semiconducting(st%smear)) then
@@ -357,7 +357,7 @@ contains
         call messages_info(1)
       else
         call born_from_infrared(vib, born)
-        call out_Born_charges(born, geo, sys%namespace, ndim, VIB_MODES_DIR, write_real = .true.)
+        call out_Born_charges(born, ions, sys%namespace, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
       end if
 
@@ -405,7 +405,7 @@ contains
       vib%dyn_matrix(:,:) = M_ZERO
 
       do iatom = 1, natoms
-        xi(1:ndim) = geo%atom(iatom)%x(1:ndim)
+        xi(1:ndim) = ions%atom(iatom)%x(1:ndim)
 
         do idir = 1, ndim
 
@@ -414,10 +414,10 @@ contains
 
             do jdir = 1, ndim         
 
-              xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
+              xj(1:ndim) = ions%atom(jatom)%x(1:ndim)
               r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
 
-              term = species_zval(geo%atom(iatom)%species) * species_zval(geo%atom(jatom)%species) &
+              term = species_zval(ions%atom(iatom)%species) * species_zval(ions%atom(jatom)%species) &
                 /(r2**CNST(1.5))*(ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
 
               ! note: this accomplishes the sum over k for diagonal terms, using the j loop
@@ -534,9 +534,9 @@ contains
 
   ! ---------------------------------------------------------
   !> output eigenvectors as animated XSF file, one per frame, displacements as forces
-  subroutine axsf_mode_output(this, geo, mesh, namespace)
+  subroutine axsf_mode_output(this, ions, mesh, namespace)
     type(vibrations_t), intent(in) :: this
-    type(geometry_t),   intent(in) :: geo
+    type(ions_t),       intent(in) :: ions
     type(mesh_t),       intent(in) :: mesh
     type(namespace_t),  intent(in) :: namespace
     
@@ -553,14 +553,14 @@ contains
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
-    SAFE_ALLOCATE(forces(1:geo%natoms, 1:geo%space%dim))
+    SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
     do imat = 1, this%num_modes
       do jmat = 1, this%num_modes
         iatom = vibrations_get_atom(this, jmat)
         idir  = vibrations_get_dir (this, jmat)
         forces(iatom, idir) = this%normal_mode(jmat, imat)
       end do
-      call write_xsf_geometry(iunit, geo, mesh, forces = forces, index = imat)
+      call write_xsf_geometry(iunit, ions, mesh, forces = forces, index = imat)
     end do
     SAFE_DEALLOCATE_A(forces)
     call io_close(iunit)

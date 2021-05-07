@@ -18,9 +18,9 @@
 ! ---------------------------------------------------------
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
-subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all_orb, verbose)
+subroutine X(orbitalbasis_build)(this, ions, mesh, kpt, ndim, skip_s_orb, use_all_orb, verbose)
   type(orbitalbasis_t), target, intent(inout)    :: this
-  type(geometry_t),     target, intent(in)       :: geo
+  type(ions_t),         target, intent(in)       :: ions
   type(mesh_t),                 intent(in)       :: mesh
   type(distributed_t),          intent(in)       :: kpt
   integer,                      intent(in)       :: ndim
@@ -56,14 +56,14 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   !We first count the number of orbital sets we have to treat
   norb = 0
   if( .not. use_all_orb ) then
-    do ia = 1, geo%natoms
-      hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      hubbardj = species_hubbard_j(geo%atom(ia)%species)
+    do ia = 1, ions%natoms
+      hubbardl = species_hubbard_l(ions%atom(ia)%species)
+      hubbardj = species_hubbard_j(ions%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
   
       !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
       hasjdependence = .false.
-      call species_iwf_j(geo%atom(ia)%species, 1, jj)
+      call species_iwf_j(ions%atom(ia)%species, 1, jj)
       if(abs(jj) > M_EPSILON) hasjdependence = .true.
 
       if(hasjdependence .and. abs(hubbardj) <= M_EPSILON) then
@@ -79,15 +79,15 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
       end if
     end do
   else
-    do ia = 1, geo%natoms
-      if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
-           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+    do ia = 1, ions%natoms
+      if(species_type(ions%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(ions%atom(ia)%species) /= SPECIES_PSPIO) cycle
       work = 0
       n_s_orb = 0
-      hubbardj = species_hubbard_j(geo%atom(ia)%species)
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm) 
-        call species_iwf_j(geo%atom(ia)%species, iorb, jj)
+      hubbardj = species_hubbard_j(ions%atom(ia)%species)
+      do iorb = 1, species_niwfs(ions%atom(ia)%species)
+        call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm) 
+        call species_iwf_j(ions%atom(ia)%species, iorb, jj)
         if(ll == 0) n_s_orb = n_s_orb + 1
         work = max(work, ii)
 
@@ -120,14 +120,14 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   end do
 
   iorbset = 0
-  do ia = 1, geo%natoms
-    if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
-           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+  do ia = 1, ions%natoms
+    if(species_type(ions%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(ions%atom(ia)%species) /= SPECIES_PSPIO) cycle
 
-    hubbardj = species_hubbard_j(geo%atom(ia)%species)
+    hubbardj = species_hubbard_j(ions%atom(ia)%species)
     !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
     hasjdependence = .false.
-    call species_iwf_j(geo%atom(ia)%species, 1, jj)
+    call species_iwf_j(ions%atom(ia)%species, 1, jj)
     if(abs(jj) >  M_EPSILON) hasjdependence = .true.
     if (debug%info .and. hasjdependence .and. verbose_) then
       write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
@@ -135,7 +135,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     end if 
 
     if(.not. use_all_orb) then
-      hubbardl = species_hubbard_l(geo%atom(ia)%species)
+      hubbardl = species_hubbard_l(ions%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
       !In this case we only have one orbital or we only want one
       if(.not. hasjdependence .or. hubbardj /= M_ZERO &
@@ -143,15 +143,15 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
         norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
+        do iorb = 1, species_niwfs(ions%atom(ia)%species)
+          call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+          call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
+          call species_iwf_j(ions%atom(ia)%species, iorb, jj)
           if(ll .eq. hubbardl .and. hubbardj == jj ) then
             norb = norb + 1
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, &
                           this%truncation, this%threshold)
           end if
         end do
@@ -162,69 +162,69 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
           os%ndim = 1
           os%norbs = norb
         end if
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
+        os%Ueff = species_hubbard_u(ions%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(ions%atom(ia)%species)
         os%submesh = this%submesh
-        os%spec => geo%atom(ia)%species
+        os%spec => ions%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
+        call X(orbitalset_utils_getorbitals)(os, ions, mesh, use_mesh, this%normalize)
       else
         !j = l-1/2
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
         norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
+        do iorb = 1, species_niwfs(ions%atom(ia)%species)
+          call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+          call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
+          call species_iwf_j(ions%atom(ia)%species, iorb, jj)
           if(ll .eq. hubbardl .and. jj < ll ) then
             norb = norb + 1
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, &
                         this%truncation, this%threshold)
           end if
         end do
         os%ndim = ndim
         os%norbs = norb-1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
+        os%Ueff = species_hubbard_u(ions%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(ions%atom(ia)%species)
         os%submesh = this%submesh
-        os%spec => geo%atom(ia)%species
+        os%spec => ions%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
+        call X(orbitalset_utils_getorbitals)(os, ions, mesh, use_mesh, this%normalize)
 
         !j = l+1/2
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
         norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
+        do iorb = 1, species_niwfs(ions%atom(ia)%species)
+          call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+          call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
+          call species_iwf_j(ions%atom(ia)%species, iorb, jj)
           if(ll .eq. hubbardl .and. jj > ll ) then
             norb = norb + 1
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, &
                         this%truncation, this%threshold)
           end if
         end do
         os%ndim = ndim
         os%norbs = norb+1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
+        os%Ueff = species_hubbard_u(ions%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(ions%atom(ia)%species)
         os%submesh = this%submesh
-        os%spec => geo%atom(ia)%species
+        os%spec => ions%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
+        call X(orbitalset_utils_getorbitals)(os, ions, mesh, use_mesh, this%normalize)
       end if
     else !use_all_orbitals
       ASSERT(.not.hasjdependence)
       work = 0
       n_s_orb = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+      do iorb = 1, species_niwfs(ions%atom(ia)%species)
+        call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
         if(ll == 0) n_s_orb = n_s_orb + 1
         work = max(work, ii)          
       end do
@@ -239,26 +239,26 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os => this%orbsets(iorbset+norb)
         !We count the number of orbital for this orbital set
         work2 = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj )
+        do iorb = 1, species_niwfs(ions%atom(ia)%species)
+          call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
+          call species_iwf_n(ions%atom(ia)%species, iorb, 1, nn )
+          call species_iwf_j(ions%atom(ia)%species, iorb, jj )
           if(ii == norb+offset .and. hubbardj == jj) then
             work2 = work2 + 1
             call orbitalset_set_jln(os, jj, ll, nn)
             os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = atomic_orbital_get_radius(ions, mesh, ia, iorb, 1, &
                                this%truncation, this%threshold)
           end if
         end do
         os%norbs = work2
         os%ndim = 1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
+        os%Ueff = species_hubbard_u(ions%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(ions%atom(ia)%species)
         os%submesh = this%submesh
-        os%spec => geo%atom(ia)%species
+        os%spec => ions%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
+        call X(orbitalset_utils_getorbitals)(os, ions, mesh, use_mesh, this%normalize)
       end do !norb
       iorbset = iorbset + work
     end if

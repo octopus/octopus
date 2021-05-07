@@ -19,8 +19,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_classical(geo, namespace, tg, td, oct)
-    type(geometry_t),  intent(in)    :: geo
+  subroutine target_init_classical(ions, namespace, tg, td, oct)
+    type(ions_t),      intent(in)    :: ions
     type(namespace_t), intent(in)    :: namespace
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
@@ -31,7 +31,7 @@
     character(len=1024) :: expression
     PUSH_SUB(target_init_classical)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     tg%dt = td%dt
     ASSERT(tg%move_ions)
 
@@ -74,9 +74,9 @@
     !% corresponds with the derivative wrt p[i,j].
     !%End
     if( parse_block(namespace, 'OCTMomentumDerivatives', blk)==0   ) then
-      SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
-      do ist=0, geo%natoms-1
-        do jst=0, geo%space%dim-1
+      SAFE_ALLOCATE(tg%mom_der_array(1:ions%natoms,1:ions%space%dim))
+      do ist=0, ions%natoms-1
+        do jst=0, ions%space%dim-1
           call parse_block_string(blk, ist, jst, tg%mom_der_array(ist+1, jst+1))
         end do
       end do
@@ -99,9 +99,9 @@
     !% corresponds with the derivative wrt q[i,j].
     !%End
     if( parse_block(namespace, 'OCTPositionDerivatives', blk)==0 ) then
-      SAFE_ALLOCATE(tg%pos_der_array(1:geo%natoms,1:geo%space%dim))
-      do ist=0, geo%natoms-1
-        do jst=0, geo%space%dim-1
+      SAFE_ALLOCATE(tg%pos_der_array(1:ions%natoms,1:ions%space%dim))
+      do ist=0, ions%natoms-1
+        do jst=0, ions%space%dim-1
           call parse_block_string(blk, ist, jst, tg%pos_der_array(ist+1, jst+1))
         end do
       end do
@@ -169,11 +169,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_classical(tg, qcpsi, qcchi, geo)
+  subroutine target_chi_classical(tg, qcpsi, qcchi, ions)
     type(target_t),            intent(inout) :: tg
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(opt_control_state_t), intent(inout) :: qcchi
-    type(geometry_t), intent(in)    :: geo
+    type(ions_t),     intent(in)    :: ions
 
     integer :: ist, jst, ib, iqn
     character(len=1024) :: temp_string
@@ -189,8 +189,8 @@
     tq = M_ZERO
     tp = M_ZERO
 
-    do ist = 1, geo%natoms
-      do jst=1, geo%space%dim
+    do ist = 1, ions%natoms
+      do jst=1, ions%space%dim
         temp_string = tg%mom_der_array(ist, jst)
         call parse_array(temp_string, p, 'p')
         call parse_array(temp_string, q, 'q')
@@ -200,8 +200,8 @@
       end do
     end do
 
-    do ist = 1, geo%natoms
-      do jst=1, geo%space%dim
+    do ist = 1, ions%natoms
+      do jst=1, ions%space%dim
         temp_string = tg%pos_der_array(ist, jst)
         call parse_array(temp_string, p, 'p')
         call parse_array(temp_string, q, 'q')

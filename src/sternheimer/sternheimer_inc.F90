@@ -19,7 +19,7 @@
 !--------------------------------------------------------------
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
-subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, geo, lr, nsigma, omega, perturbation, restart, &
+subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ions, lr, nsigma, omega, perturbation, restart, &
   rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),         intent(inout) :: this
   type(namespace_t),           intent(in)    :: namespace
@@ -29,7 +29,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
   type(hamiltonian_elec_t),    intent(inout) :: hm
   type(xc_t),                  intent(in)    :: xc
   type(multicomm_t),           intent(in)    :: mc
-  type(geometry_t),            intent(in)    :: geo
+  type(ions_t),                intent(in)    :: ions
   type(lr_t),                  intent(inout) :: lr(:) 
   integer,                     intent(in)    :: nsigma 
   R_TYPE,                      intent(in)    :: omega
@@ -165,7 +165,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ge
             call batch_set_state(rhsb, ist-sst+1, gr%mesh%np, this%X(rhs)(:, :, ist, ik - st%d%kpt%start + 1))
           end do
         else
-          call X(pert_apply_batch)(perturbation, namespace, gr, geo, hm, st%group%psib(ib, ik), rhsb)
+          call X(pert_apply_batch)(perturbation, namespace, gr, ions, hm, st%group%psib(ib, ik), rhsb)
         end if
 
         call rhsb%end()
@@ -639,7 +639,7 @@ end subroutine X(sternheimer_set_inhomog)
 
 
 !--------------------------------------------------------------
-subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, geo, lr1, lr2, nsigma, &
+subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, ions, lr1, lr2, nsigma, &
   omega1, omega2, pert1, pert2, lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
   give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),         intent(inout) :: sh1
@@ -652,7 +652,7 @@ subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpo
   type(hamiltonian_elec_t),    intent(inout) :: hm
   type(xc_t),                  intent(in)    :: xc
   type(multicomm_t),           intent(in)    :: mc
-  type(geometry_t),            intent(in)    :: geo
+  type(ions_t),                intent(in)    :: ions
   type(lr_t),                  intent(inout) :: lr1(:) 
   type(lr_t),                  intent(inout) :: lr2(:) 
   integer,                     intent(in)    :: nsigma 
@@ -720,14 +720,14 @@ subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpo
 
       do isigma = 1, nsigma
 
-        call X(pert_apply)(pert1, namespace, gr, geo, hm, ik, psi, pert1psi)
-        call X(pert_apply)(pert2, namespace, gr, geo, hm, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, namespace, gr, ions, hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, namespace, gr, ions, hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:mesh%np, 1:st%d%dim, ist, ik)
         else
-          call X(pert_apply)(pert1, namespace, gr, geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+          call X(pert_apply)(pert1, namespace, gr, ions, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
         end if
-        call X(pert_apply)(pert2, namespace, gr, geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
+        call X(pert_apply)(pert2, namespace, gr, ions, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues:
         ! bare perturbation
@@ -766,7 +766,7 @@ subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpo
 
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
-  call X(sternheimer_solve)(sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, geo, lr_2ndorder, nsigma, omega1 + omega2, &
+  call X(sternheimer_solve)(sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, ions, lr_2ndorder, nsigma, omega1 + omega2, &
     pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
   

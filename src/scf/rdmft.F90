@@ -26,13 +26,13 @@ module rdmft_oct_m
   use eigensolver_oct_m
   use energy_oct_m
   use exchange_operator_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use io_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
   use mesh_oct_m
@@ -278,12 +278,12 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, namespace, space, gr, geo, st, ks, hm, outp, restart_dump)
+  subroutine scf_rdmft(rdm, namespace, space, gr, ions, st, ks, hm, outp, restart_dump)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr  !< grid
-    type(geometry_t),         intent(in)    :: geo !< geometry
+    type(ions_t),             intent(in)    :: ions !< geometry
     type(states_elec_t),      intent(inout) :: st  !< States
     type(v_ks_t),             intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_elec_t), intent(inout) :: hm  !< Hamiltonian
@@ -358,7 +358,7 @@ contains
         if (rdm%do_basis) then
           call scf_orb(rdm, namespace, gr, st, hm, space, energy)
         else
-          call scf_orb_cg(rdm, namespace, space, gr, geo, st, ks, hm, energy)
+          call scf_orb_cg(rdm, namespace, space, gr, ions, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
@@ -450,7 +450,7 @@ contains
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, space, dirname, gr, geo, st, hm, ks)
+        call output_all(outp, namespace, space, dirname, gr, ions, st, hm, ks)
         call scf_write_static(dirname, "info")
       end if
 
@@ -469,7 +469,7 @@ contains
     end if
 
     call scf_write_static(STATIC_DIR, "info")
-    call output_all(outp, namespace, space, STATIC_DIR, gr, geo, st, hm, ks)
+    call output_all(outp, namespace, space, STATIC_DIR, gr, ions, st, hm, ks)
 
     POP_SUB(scf_rdmft) 
 
@@ -1019,12 +1019,12 @@ contains
   !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
   !-----------------------------------------------------------------
-  subroutine scf_orb_cg(rdm, namespace, space, gr, geo, st, ks, hm, energy)
+  subroutine scf_orb_cg(rdm, namespace, space, gr, ions, st, ks, hm, energy)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr !< grid
-    type(geometry_t),         intent(in)    :: geo !< geometry
+    type(ions_t),             intent(in)    :: ions !< geometry
     type(states_elec_t),      intent(inout) :: st !< States
     type(v_ks_t),             intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_elec_t), intent(inout) :: hm !< Hamiltonian
@@ -1037,7 +1037,7 @@ contains
     PUSH_SUB(scf_orb_cg)
     call profiling_in(prof_orb_cg, "CG")
     
-    call v_ks_calc(ks, namespace, space, hm, st, geo)
+    call v_ks_calc(ks, namespace, space, hm, st, ions)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
     
     rdm%eigens%converged = 0
@@ -1069,7 +1069,7 @@ contains
     
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, namespace, space, hm, st, geo)
+    call v_ks_calc(ks, namespace, space, hm, st, ions)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
     call rdm_derivatives(rdm, namespace, hm, st, gr, space)
     

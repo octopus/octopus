@@ -27,10 +27,10 @@ module lda_u_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use energy_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_base_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -154,13 +154,13 @@ module lda_u_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine lda_u_init(this, namespace, space, level, gr, geo, st, psolver, kpoints)
+  subroutine lda_u_init(this, namespace, space, level, gr, ions, st, psolver, kpoints)
     type(lda_u_t),     target, intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     integer,                   intent(in)    :: level
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t),  target, intent(in)    :: geo
+    type(ions_t),      target, intent(in)    :: ions
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(kpoints_t),           intent(in)    :: kpoints
@@ -242,7 +242,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if (geo%latt%nonorthogonal) then
+      if (ions%latt%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -254,7 +254,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
       end if
-      if (geo%latt%nonorthogonal) then
+      if (ions%latt%nonorthogonal) then
         call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -357,10 +357,10 @@ contains
       call orbitalbasis_init(this%basis, namespace, space%periodic_dim)
 
       if (states_are_real(st)) then
-        call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+        call dorbitalbasis_build(this%basis, ions, gr%mesh, st%d%kpt, st%d%dim, &
           this%skipSOrbitals, this%useAllOrbitals)
       else
-        call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+        call zorbitalbasis_build(this%basis, ions, gr%mesh, st%d%kpt, st%d%dim, &
           this%skipSOrbitals, this%useAllOrbitals)
       end if
       this%orbsets => this%basis%orbsets
@@ -369,7 +369,7 @@ contains
       this%max_np = this%basis%max_np
       this%nspins = st%d%nspin
       this%spin_channels = st%d%spin_channels
-      this%nspecies = geo%nspecies
+      this%nspecies = ions%nspecies
 
       !We allocate the necessary ressources
       if (states_are_real(st)) then
@@ -506,10 +506,10 @@ contains
   end subroutine lda_u_end
 
   ! When moving the ions, the basis must be reconstructed
-  subroutine lda_u_update_basis(this, gr, geo, st, psolver, namespace, kpoints, has_phase)
+  subroutine lda_u_update_basis(this, gr, ions, st, psolver, namespace, kpoints, has_phase)
     type(lda_u_t),     target, intent(inout) :: this
     type(grid_t),              intent(in)    :: gr
-    type(geometry_t),  target, intent(in)    :: geo
+    type(ions_t),      target, intent(in)    :: ions
     type(states_elec_t),       intent(in)    :: st
     type(poisson_t),           intent(in)    :: psolver
     type(namespace_t),         intent(in)    :: namespace
@@ -530,10 +530,10 @@ contains
 
     !We now reconstruct the basis
     if (states_are_real(st)) then
-      call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+      call dorbitalbasis_build(this%basis, ions, gr%mesh, st%d%kpt, st%d%dim, &
         this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
     else
-      call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+      call zorbitalbasis_build(this%basis, ions, gr%mesh, st%d%kpt, st%d%dim, &
         this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
     end if
     this%orbsets => this%basis%orbsets
@@ -542,7 +542,7 @@ contains
     if(this%intersite) then
       this%maxneighbors = 0
       do ios = 1, this%norbsets
-        call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, gr%sb, geo, gr%der, psolver, &
+        call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, gr%sb, ions, gr%der, psolver, &
           this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase, this%sm_poisson)
         this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
       end do

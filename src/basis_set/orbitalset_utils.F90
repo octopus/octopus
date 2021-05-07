@@ -21,9 +21,9 @@ module orbitalset_utils_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use io_function_oct_m
+  use ions_oct_m
   use lattice_vectors_oct_m
   use loct_oct_m
   use mesh_oct_m
@@ -57,8 +57,8 @@ module orbitalset_utils_oct_m
 
 contains
 
-  integer function orbitalset_utils_count(geo, ia, iselect) result(norb)
-    type(geometry_t),     intent(in) :: geo
+  integer function orbitalset_utils_count(ions, ia, iselect) result(norb)
+    type(ions_t),         intent(in) :: ions
     integer,              intent(in) :: ia
     integer, optional,    intent(in) :: iselect
 
@@ -68,8 +68,8 @@ contains
     !If iselect is present, this routine return instead the number of orbital for a given
     !value of i
     norb = 0
-    do iorb = 1, species_niwfs(geo%atom(ia)%species)
-      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+    do iorb = 1, species_niwfs(ions%atom(ia)%species)
+      call species_iwf_ilm(ions%atom(ia)%species, iorb, 1, ii, ll, mm)
       if(present(iselect)) then
         if(ii == iselect) norb = norb + 1
       else
@@ -78,13 +78,13 @@ contains
     end do
   end function orbitalset_utils_count
 
-  subroutine orbitalset_init_intersite(this, namespace, ind, sb, geo, der, psolver, os, nos, maxnorbs, &
+  subroutine orbitalset_init_intersite(this, namespace, ind, sb, ions, der, psolver, os, nos, maxnorbs, &
                 rcut, kpt, has_phase, sm_poisson)
     type(orbitalset_t),           intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
     integer,                      intent(in)    :: ind
     type(simul_box_t),            intent(in)    :: sb
-    type(geometry_t),             intent(in)    :: geo
+    type(ions_t),                 intent(in)    :: ions
     type(derivatives_t),          intent(in)    :: der
     type(poisson_t),              intent(in)    :: psolver
     type(orbitalset_t),           intent(inout) :: os(:) !> inout as this is also in orbs
@@ -96,7 +96,7 @@ contains
 
 
     type(lattice_iterator_t) :: latt_iter
-    FLOAT :: xat(geo%space%dim), xi(geo%space%dim)
+    FLOAT :: xat(ions%space%dim), xi(ions%space%dim)
     FLOAT :: rr
     integer :: inn, ist, jst
     integer :: np_sphere, ip, ios
@@ -117,15 +117,15 @@ contains
 
     this%nneighbors = 0
     if(this%iatom /= -1)then
-      xat = geo%atom(this%iatom)%x(1:geo%space%dim)
+      xat = ions%atom(this%iatom)%x(1:ions%space%dim)
 
-      latt_iter = lattice_iterator_t(geo%latt, rcut)
+      latt_iter = lattice_iterator_t(ions%latt, rcut)
 
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos
         do inn = 1, latt_iter%n_cells
 
-          xi = os(ios)%sphere%center(1:geo%space%dim) + latt_iter%get(inn)
+          xi = os(ios)%sphere%center(1:ions%space%dim) + latt_iter%get(inn)
           rr = norm2(xi - xat)
 
           !This atom is too far
@@ -139,8 +139,8 @@ contains
 
       !The first three values are the position of the periodic copies
       !and the zero value one is used to store the actual value of V_ij
-      SAFE_ALLOCATE(this%V_ij(1:this%nneighbors, 0:geo%space%dim+1))
-      this%V_ij(1:this%nneighbors, 0:geo%space%dim+1) = M_ZERO
+      SAFE_ALLOCATE(this%V_ij(1:this%nneighbors, 0:ions%space%dim+1))
+      this%V_ij(1:this%nneighbors, 0:ions%space%dim+1) = M_ZERO
       SAFE_ALLOCATE(this%map_os(1:this%nneighbors))
       this%map_os(1:this%nneighbors) = 0
       if(has_phase) then
@@ -150,7 +150,7 @@ contains
       this%nneighbors = 0
       do ios = 1, nos
         do inn = 1, latt_iter%n_cells
-          xi = os(ios)%sphere%center(1:geo%space%dim) + latt_iter%get(inn)
+          xi = os(ios)%sphere%center(1:ions%space%dim) + latt_iter%get(inn)
           rr = norm2(xi - xat)
 
           if( rr > rcut + TOL_INTERSITE ) cycle
@@ -158,8 +158,8 @@ contains
 
           this%nneighbors = this%nneighbors +1
 
-          this%V_ij(this%nneighbors, 1:geo%space%dim) = xi(1:geo%space%dim) -os(ios)%sphere%center(1:geo%space%dim)
-          this%V_ij(this%nneighbors, geo%space%dim+1) = rr
+          this%V_ij(this%nneighbors, 1:ions%space%dim) = xi(1:ions%space%dim) -os(ios)%sphere%center(1:ions%space%dim)
+          this%V_ij(this%nneighbors, ions%space%dim+1) = rr
           
           this%map_os(this%nneighbors) = ios
         end do
@@ -185,10 +185,10 @@ contains
 
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
-                       shift = this%V_ij(inn, 1:geo%space%dim))
+                       shift = this%V_ij(inn, 1:ions%space%dim))
 
         write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', &
-                             this%V_ij(inn, geo%space%dim+1), ' Bohr and has ', sm%np, ' grid points.'
+                             this%V_ij(inn, ions%space%dim+1), ' Bohr and has ', sm%np, ' grid points.'
         call messages_info(1)
 
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))
@@ -200,7 +200,7 @@ contains
                           1, orb(1:sm%np, ist,1))
         end do
          
-        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:geo%space%dim)+os(ios)%sphere%center(1:geo%space%dim))
+        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:ions%space%dim)+os(ios)%sphere%center(1:ions%space%dim))
 
         do ist = 1, os(ios)%norbs
           call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
@@ -214,13 +214,13 @@ contains
 
         select case (sm_poisson)
         case(SM_POISSON_DIRECT)
-          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_DIRECT_SUM)
+          call poisson_init_sm(this%poisson, namespace, ions%space, psolver, der, sm, method = POISSON_DIRECT_SUM)
         case(SM_POISSON_ISF)
-          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_ISF)
+          call poisson_init_sm(this%poisson, namespace, ions%space, psolver, der, sm, method = POISSON_ISF)
         case(SM_POISSON_PSOLVER)
-          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_PSOLVER)
+          call poisson_init_sm(this%poisson, namespace, ions%space, psolver, der, sm, method = POISSON_PSOLVER)
         case(SM_POISSON_FFT)
-          call poisson_init_sm(this%poisson, namespace, geo%space, psolver, der, sm, method = POISSON_FFT)
+          call poisson_init_sm(this%poisson, namespace, ions%space, psolver, der, sm, method = POISSON_FFT)
         end select
  
         np_sphere = sm%np

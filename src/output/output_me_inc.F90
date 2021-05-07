@@ -261,7 +261,7 @@ end subroutine X(output_me_ks_multipoles1d)
 !! It prints the states to the file opened in iunit.
 !!
 ! ---------------------------------------------------------
-subroutine X(output_me_dipole)(this, fname, namespace, space, st, gr, hm, geo, ik)
+subroutine X(output_me_dipole)(this, fname, namespace, space, st, gr, hm, ions, ik)
   type(output_me_t),   intent(in) :: this
   character(len=*),    intent(in) :: fname
   type(namespace_t),   intent(in) :: namespace
@@ -269,7 +269,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, space, st, gr, hm, geo, i
   type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   type(hamiltonian_elec_t), intent(in) :: hm
-  type(geometry_t),    intent(in) :: geo
+  type(ions_t),        intent(in) :: ions
   integer,             intent(in) :: ik
   
   integer :: ist, jst, ip, iunit, idir, idim, ispin
@@ -339,7 +339,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, space, st, gr, hm, geo, i
         end if
 
         !A nonlocal contribution from the pseudopotential must be included
-        call X(projector_commute_r_allatoms_alldir)(hm%ep%proj, geo, gr%mesh, st%d%dim, &
+        call X(projector_commute_r_allatoms_alldir)(hm%ep%proj, ions, gr%mesh, st%d%dim, &
                     gr%der%boundaries, ik, psii, gpsii) 
         
         !A nonlocal contribution from the scissor must be included

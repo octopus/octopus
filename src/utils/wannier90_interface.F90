@@ -26,12 +26,12 @@ program wannier90_interface
   use cube_oct_m
   use cube_function_oct_m
   use fft_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
+  use ions_oct_m
   use iso_fortran_env
   use kpoints_oct_m
   use lalg_adv_oct_m
@@ -245,7 +245,7 @@ program wannier90_interface
   ! create setup files
   select case(w90_mode) 
   case(OPTION__WANNIER90MODE__W90_SETUP)
-    call wannier90_setup(sys%geo, sys%kpoints)
+    call wannier90_setup(sys%ions, sys%kpoints)
 
   ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
@@ -276,7 +276,7 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st, sys%kpoints)
+    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%ions, sys%st, sys%kpoints)
   case default
     message(1) = "Wannier90Mode is set to an unsupported value."
     call messages_fatal(1)
@@ -296,8 +296,8 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup(geo, kpoints)
-    type(geometry_t),  intent(in) :: geo
+  subroutine wannier90_setup(ions, kpoints)
+    type(ions_t),      intent(in) :: ions
     type(kpoints_t),   intent(in) :: kpoints
 
     character(len=80) :: filename
@@ -316,14 +316,14 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim = 1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, geo%latt%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, ions%latt%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a)') 'begin atoms_frac'
-    do ia = 1, geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), geo%latt%cart_to_red(geo%atom(ia)%x(1:3))
+    do ia = 1, ions%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(ions%atom(ia)%label), ions%latt%cart_to_red(ions%atom(ia)%x(1:3))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -838,7 +838,7 @@ contains
          iknn = (iknn-1)*2 + w90_spin_channel
        end if
 
-       Gr(1:3) = matmul(G(1:3), sys%geo%latt%klattice(1:3,1:3))
+       Gr(1:3) = matmul(G(1:3), sys%ions%latt%klattice(1:3,1:3))
 
        if(any(G(1:3) /= 0)) then
          do ip = 1, mesh%np
@@ -1210,10 +1210,10 @@ contains
 
   end subroutine create_wannier90_amn
 
-  subroutine generate_wannier_states(mesh, sb, geo, st, kpoints)
+  subroutine generate_wannier_states(mesh, sb, ions, st, kpoints)
     type(mesh_t),           intent(in) :: mesh
     type(simul_box_t),      intent(in) :: sb
-    type(geometry_t),       intent(in) :: geo
+    type(ions_t),           intent(in) :: ions
     type(states_elec_t),    intent(in) :: st
     type(kpoints_t),        intent(in) :: kpoints
 
@@ -1342,7 +1342,7 @@ contains
       end do
         
       call dio_function_output(how, 'wannier', trim(fname), global_namespace, mesh, &
-          dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          dwn,  unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(Umnk)

@@ -24,11 +24,11 @@ module propagator_etrs_oct_m
   use density_oct_m
   use exponential_oct_m
   use grid_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
+  use ions_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
@@ -63,7 +63,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(space_t),                    intent(in)    :: space
@@ -74,8 +74,8 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     logical,                          intent(in)    :: move_ions
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
@@ -90,7 +90,7 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt, dt)
 
-      call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
+      call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -105,7 +105,7 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
                time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -129,7 +129,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
+  subroutine td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions, sctol, scsteps)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(space_t),                    intent(in)    :: space
@@ -140,8 +140,8 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     logical,                          intent(in)    :: move_ions
     FLOAT,                            intent(in)    :: sctol
     integer,                optional, intent(out)   :: scsteps
@@ -168,7 +168,7 @@ contains
     !Propagate the states to t+dt/2 and compute the density at t+dt
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt, dt)
 
-    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
+    call v_ks_calc(ks, namespace, space, hm, st, ions, calc_current = .false., calc_energy = .false., calc_eigenval = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -178,7 +178,7 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
                 time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -204,7 +204,7 @@ contains
 
       call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
 
-      call v_ks_calc(ks, namespace, space, hm, st, geo, time = time, calc_current = .false., &
+      call v_ks_calc(ks, namespace, space, hm, st, ions, time = time, calc_current = .false., &
                                            calc_energy = .false., calc_eigenval = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -259,7 +259,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
@@ -268,8 +268,8 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     logical,                          intent(in)    :: move_ions
 
     PUSH_SUB(td_aetrs)
@@ -281,8 +281,8 @@ contains
     call propagation_ops_elec_interpolate_get(gr%mesh, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
-              geo, time, ionic_scale*dt, move_ions = move_ions)
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, &
+              ions, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -298,7 +298,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(space_t),                    intent(in)    :: space
@@ -309,8 +309,8 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
-    type(ion_dynamics_t),             intent(inout) :: ions
-    type(geometry_t),                 intent(inout) :: geo
+    type(ion_dynamics_t),             intent(inout) :: ions_dyn
+    type(ions_t),                     intent(inout) :: ions
     logical,                          intent(in)    :: move_ions
 
     integer :: ik, ispin, ip, ist, ib
@@ -336,7 +336,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
 
-    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time = time - dt, calc_energy = .false., &
+    call v_ks_calc_start(ks, namespace, space, hm, st, ions, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
@@ -385,8 +385,8 @@ contains
     call propagation_ops_elec_interpolate_get(gr%mesh, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
-              geo, time, ionic_scale*dt, move_ions = move_ions)
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, &
+              ions, time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 

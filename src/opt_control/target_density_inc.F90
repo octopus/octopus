@@ -40,7 +40,7 @@
     message(1) =  'Info: Target is a combination of a density and/or a current functional.'
     call messages_info(1)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
+    tg%move_ions = ion_dynamics_ions_move(td%ions_dyn)
     tg%dt = td%dt
 
     tg%curr_functional = oct_no_curr
@@ -340,12 +340,12 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_density(tg, namespace, gr, dir, geo, outp)
+  subroutine target_output_density(tg, namespace, gr, dir, ions, outp)
     type(target_t),    intent(in) :: tg
     type(namespace_t), intent(in) :: namespace
     type(grid_t),      intent(in) :: gr
     character(len=*),  intent(in) :: dir
-    type(geometry_t),  intent(in) :: geo
+    type(ions_t),      intent(in) :: ions
     type(output_t),    intent(in) :: outp
 
     integer :: ierr
@@ -355,7 +355,7 @@
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
         call dio_function_output(outp%how, trim(dir), 'density_target', namespace, gr%mesh, &
-          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+          tg%rho, units_out%length**(-gr%sb%dim), ierr, ions = ions)
       end if
     end if
 

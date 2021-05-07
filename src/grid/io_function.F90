@@ -23,12 +23,12 @@ module io_function_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
   use io_csv_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -321,9 +321,9 @@ contains
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
-  subroutine write_bild_forces_file(dir, fname, geo, namespace)
+  subroutine write_bild_forces_file(dir, fname, ions, namespace)
     character(len=*),   intent(in) :: dir, fname
-    type(geometry_t),   intent(in) :: geo
+    type(ions_t),       intent(in) :: ions
     type(namespace_t),  intent(in) :: namespace
 
     integer :: iunit, iatom, idir
@@ -338,25 +338,25 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.bild', namespace, action='write', &
       position='asis')
 
-    write(frmt,'(a,i0,a)')'(a,2(', geo%space%dim,'f16.6,1x))'
+    write(frmt,'(a,i0,a)')'(a,2(', ions%space%dim,'f16.6,1x))'
 
-    SAFE_ALLOCATE(forces(1:geo%natoms, 1:geo%space%dim))
-    SAFE_ALLOCATE(center(1:geo%natoms, 1:geo%space%dim))
-    do iatom = 1, geo%natoms
-      do idir = 1, geo%space%dim
-        forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
-        center(iatom, idir) = units_from_atomic(units_out%length, geo%atom(iatom)%x(idir))
+    SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
+    SAFE_ALLOCATE(center(1:ions%natoms, 1:ions%space%dim))
+    do iatom = 1, ions%natoms
+      do idir = 1, ions%space%dim
+        forces(iatom, idir) = units_from_atomic(units_out%force, ions%atom(iatom)%f(idir))
+        center(iatom, idir) = units_from_atomic(units_out%length, ions%atom(iatom)%x(idir))
       end do
     end do
     write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
     write(iunit, *)
     write(iunit, '(a)')'.color red'
     write(iunit, *)
-    do iatom = 1, geo%natoms
-      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(geo%atom(iatom)%label), & 
+    do iatom = 1, ions%natoms
+      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(ions%atom(iatom)%label), & 
                          'force:', sqrt(sum(forces(iatom,:)**2)),'['//trim(units_abbrev(units_out%force))//']'
-      write(iunit,fmt=trim(frmt))'.arrow',(center(iatom, idir), idir = 1, geo%space%dim), &
-                                 (center(iatom, idir) + forces(iatom, idir), idir = 1, geo%space%dim)
+      write(iunit,fmt=trim(frmt))'.arrow',(center(iatom, idir), idir = 1, ions%space%dim), &
+                                 (center(iatom, idir) + forces(iatom, idir), idir = 1, ions%space%dim)
       write(iunit,*)
     end do
 
@@ -373,10 +373,10 @@ contains
   !> Includes information about simulation box and periodicity when applicable.
   !> This differs from a normal xyz file by including information about box
   !> shape and always using Angstroms.
-  subroutine write_canonicalized_xyz_file(dir, fname, geo, sb, namespace)
+  subroutine write_canonicalized_xyz_file(dir, fname, ions, sb, namespace)
     character(len=*),  intent(in) :: dir
     character(len=*),  intent(in) :: fname
-    type(geometry_t),  intent(in) :: geo
+    type(ions_t),      intent(in) :: ions
     type(simul_box_t), intent(in) :: sb
     type(namespace_t), intent(in) :: namespace
 
@@ -390,20 +390,20 @@ contains
     call io_mkdir(dir, namespace)
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', namespace, action='write', position='asis')
 
-    write(iunit, '(i6)') geo%natoms
-    write(iunit, '(a,a,a)', advance='no') trim(geo%space%short_info()), '; ', trim(sb%short_info(unit_angstrom))
-    if (geo%space%is_periodic()) then
-      write(iunit, '(a,a)') '; ', trim(geo%latt%short_info(unit_angstrom))
+    write(iunit, '(i6)') ions%natoms
+    write(iunit, '(a,a,a)', advance='no') trim(ions%space%short_info()), '; ', trim(sb%short_info(unit_angstrom))
+    if (ions%space%is_periodic()) then
+      write(iunit, '(a,a)') '; ', trim(ions%latt%short_info(unit_angstrom))
     else
       write(iunit, '()')
     end if
 
     ! xyz-style labels and positions:
-    do iatom = 1, geo%natoms
-      write(iunit, '(10a)', advance='no') geo%atom(iatom)%label
+    do iatom = 1, ions%natoms
+      write(iunit, '(10a)', advance='no') ions%atom(iatom)%label
       do idir = 1, 3
-        if(idir <= geo%space%dim) then
-          position = geo%atom(iatom)%x(idir)
+        if(idir <= ions%space%dim) then
+          position = ions%atom(iatom)%x(idir)
         else
           position = M_ZERO
         end if
@@ -418,9 +418,9 @@ contains
   end subroutine write_canonicalized_xyz_file
 
   ! ---------------------------------------------------------
-  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, namespace, write_forces)
+  subroutine write_xsf_geometry_file(dir, fname, ions, mesh, namespace, write_forces)
     character(len=*),   intent(in) :: dir, fname
-    type(geometry_t),   intent(in) :: geo
+    type(ions_t),       intent(in) :: ions
     type(mesh_t),       intent(in) :: mesh
     type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: write_forces
@@ -443,16 +443,16 @@ contains
     end if
 
     if(write_forces_) then
-      SAFE_ALLOCATE(forces(1:geo%natoms, 1:geo%space%dim))
-      do iatom = 1, geo%natoms
-        do idir = 1, geo%space%dim
-          forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
+      SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
+      do iatom = 1, ions%natoms
+        do idir = 1, ions%space%dim
+          forces(iatom, idir) = units_from_atomic(units_out%force, ions%atom(iatom)%f(idir))
         end do
       end do
-      call write_xsf_geometry(iunit, geo, mesh, forces = forces)
+      call write_xsf_geometry(iunit, ions, mesh, forces = forces)
       SAFE_DEALLOCATE_A(forces)
     else
-      call write_xsf_geometry(iunit, geo, mesh)
+      call write_xsf_geometry(iunit, ions, mesh)
     end if
 
     call io_close(iunit)
@@ -463,9 +463,9 @@ contains
   ! ---------------------------------------------------------
   !> for format specification see:
   !! http://www.xcrysden.org/doc/XSF.html#__toc__11
-  subroutine write_xsf_geometry(iunit, geo, mesh, forces, index)
+  subroutine write_xsf_geometry(iunit, ions, mesh, forces, index)
     integer,           intent(in) :: iunit
-    type(geometry_t),  intent(in) :: geo
+    type(ions_t),      intent(in) :: ions
     type(mesh_t),      intent(in) :: mesh
     FLOAT,   optional, intent(in) :: forces(:, :)
     integer, optional, intent(in) :: index !< for use in writing animated files
@@ -488,15 +488,15 @@ contains
     ! so the offset is applied to the atomic coordinates.
     ! Along periodic dimensions the offset is -1/2 in reduced coordinates, as
     ! our origin is at the center of the cell instead of being at the edge.
-    offset(1:geo%space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, geo%space%dim))
+    offset(1:ions%space%dim) = mesh%sb%latt%red_to_cart(spread(-M_HALF, 1, ions%space%dim))
     ! Offset in aperiodic directions:
-    do idir = geo%space%periodic_dim + 1, 3
+    do idir = ions%space%periodic_dim + 1, 3
       offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
     end do
 
-    if(geo%space%is_periodic()) then
+    if(ions%space%is_periodic()) then
       if(index_ == 1) then
-        select case(geo%space%periodic_dim)
+        select case(ions%space%periodic_dim)
         case(3)
           write(iunit, '(a)') 'CRYSTAL'
         case(2)
@@ -508,22 +508,22 @@ contains
 
       write(iunit, '(a)') 'PRIMVEC'//trim(index_str)
 
-      do idir = 1, geo%space%dim
-        write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, geo%latt%rlattice(idir2, idir)), idir2 = 1, geo%space%dim)
+      do idir = 1, ions%space%dim
+        write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, ions%latt%rlattice(idir2, idir)), idir2 = 1, ions%space%dim)
       end do
 
       write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)
-      write(iunit, '(i10, a)') geo%natoms, ' 1'
+      write(iunit, '(i10, a)') ions%natoms, ' 1'
     else
       write(iunit, '(a)') 'ATOMS'//trim(index_str)
     end if
 
     ! BoxOffset should be considered here
-    do iatom = 1, geo%natoms
-      write(iunit, '(a10, 3f12.6)', advance='no') trim(geo%atom(iatom)%label), &
-        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, geo%space%dim)
+    do iatom = 1, ions%natoms
+      write(iunit, '(a10, 3f12.6)', advance='no') trim(ions%atom(iatom)%label), &
+        (units_from_atomic(units_out%length, ions%atom(iatom)%x(idir) - offset(idir)), idir = 1, ions%space%dim)
       if(present(forces)) then
-        write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, geo%space%dim)
+        write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, ions%space%dim)
       end if
       write(iunit, '()')
     end do

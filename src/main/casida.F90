@@ -307,7 +307,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval=.false.)
+    call v_ks_h_setup(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -607,7 +607,7 @@ contains
       end if
 
       if(cas%calc_forces) then
-        do iatom = 1, sys%geo%natoms
+        do iatom = 1, sys%ions%natoms
           do idir = 1, cas%space_dim
             write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
@@ -785,7 +785,7 @@ contains
       else
         SAFE_ALLOCATE(cas%zmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       end if
-      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:cas%space_dim, 1:cas%n_pairs))
+      SAFE_ALLOCATE(cas%forces(1:sys%ions%natoms, 1:cas%space_dim, 1:cas%n_pairs))
     end if
 
     if(cas%qcalc) then

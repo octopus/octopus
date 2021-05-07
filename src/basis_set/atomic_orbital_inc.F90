@@ -21,10 +21,10 @@
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim, &
+subroutine X(get_atomic_orbital) (ions, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim, &
                                     use_mesh, normalize)
   type(mesh_t),             intent(in)    :: mesh
-  type(geometry_t), target, intent(in)    :: geo
+  type(ions_t),     target, intent(in)    :: ions
   type(submesh_t),          intent(inout) :: sm
   integer,                  intent(in)    :: iatom, ii, ll
   FLOAT,                    intent(in)    :: jj
@@ -43,7 +43,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
   PUSH_SUB(X(get_atomic_orbital))
 
-  spec => geo%atom(iatom)%species
+  spec => ions%atom(iatom)%species
 
   if(sm%np == -1) then
     
@@ -70,7 +70,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     end if 
 
     if(mesh%sb%box_shape == SPHERE ) then
-      if(sqrt(sum(geo%atom(iatom)%x(1:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
+      if(sqrt(sum(ions%atom(iatom)%x(1:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
        message(1) = "An orbital set has points outside of the simulatio box."
        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
@@ -79,13 +79,13 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     end if
 
     if(mesh%sb%box_shape == CYLINDER ) then
-      if(sqrt(sum(geo%atom(iatom)%x(2:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
+      if(sqrt(sum(ions%atom(iatom)%x(2:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
        message(1) = "An orbital set has points outside of the simulatio box."
        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
        call messages_fatal(3)
       end if
-      if(abs(geo%atom(iatom)%x(1)) + radius > mesh%sb%xsize) then
+      if(abs(ions%atom(iatom)%x(1)) + radius > mesh%sb%xsize) then
        message(1) = "An orbital set has points outside of the simulatio box."
        message(2) = "Increase the value of Xlength or decrease the value of OrbitalsThreshold_LDAU."
        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
@@ -95,7 +95,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
  
     !We initialise the submesh corresponding to the orbital 
-    call submesh_init(sm, geo%space, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+    call submesh_init(sm, ions%space, mesh%sb, mesh, ions%atom(iatom)%x, radius)
 
   end if
 

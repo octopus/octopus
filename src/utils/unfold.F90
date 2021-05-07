@@ -25,23 +25,22 @@ program oct_unfold
   use batch_oct_m
   use batch_ops_oct_m
   use calc_mode_par_oct_m
-  use cube_oct_m
   use comm_oct_m
   use command_line_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
   use fft_oct_m
   use fftw_params_oct_m
+  use fourier_shell_oct_m
   use fourier_space_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use kpoints_oct_m
-  use lalg_basic_oct_m
-  use multicomm_oct_m
-  use cube_function_oct_m
-  use fourier_shell_oct_m
   use io_oct_m
   use io_binary_oct_m
   use io_function_oct_m
+  use ions_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
   use lattice_vectors_oct_m
   use loct_oct_m
   use math_oct_m
@@ -50,6 +49,7 @@ program oct_unfold
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use poisson_fft_oct_m

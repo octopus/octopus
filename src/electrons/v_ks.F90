@@ -28,11 +28,11 @@ module v_ks_oct_m
   use energy_calc_oct_m
   use epot_oct_m
   use exchange_operator_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
+  use ions_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -113,7 +113,7 @@ module v_ks_oct_m
     logical                           :: calc_energy
 
     FLOAT,                allocatable :: vdw_forces(:, :)
-    type(geometry_t),     pointer     :: geo
+    type(ions_t),         pointer     :: ions
   end type v_ks_calc_t
 
   type v_ks_t
@@ -142,12 +142,12 @@ module v_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, namespace, gr, st, geo, mc, space, kpoints)
+  subroutine v_ks_init(ks, namespace, gr, st, ions, mc, space, kpoints)
     type(v_ks_t),            intent(inout) :: ks
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
     type(states_elec_t),     intent(in)    :: st
-    type(geometry_t),        intent(inout) :: geo
+    type(ions_t),            intent(inout) :: ions
     type(multicomm_t),       intent(in)    :: mc
     type(space_t),           intent(in)    :: space
     type(kpoints_t),         intent(in)    :: kpoints
@@ -432,7 +432,7 @@ contains
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc, space, kpoints)
+        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, ions, st, ks%xc, mc, space, kpoints)
       end if
 
     end select
@@ -489,7 +489,7 @@ contains
         !%End
         call parse_variable(namespace, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, namespace, geo)
+        call vdw_ts_init(ks%vdw_ts, namespace, ions)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -499,8 +499,8 @@ contains
           call messages_fatal(namespace=namespace)
         end if
         
-        do iatom = 1, geo%natoms
-          if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
+        do iatom = 1, ions%natoms
+          if(.not. species_represents_real_atom(ions%atom(iatom)%species)) then
             call messages_write('vdw_d3 is not implemented when non-atomic species are present')
             call messages_fatal(namespace=namespace)
           end if
@@ -582,12 +582,12 @@ contains
       c_functional = PSEUDO_CORRELATION_ANY
       
       warned_inconsistent = .false.
-      do ispecies = 1, geo%nspecies
-        xf = species_x_functional(geo%species(ispecies))
-        cf = species_c_functional(geo%species(ispecies))
+      do ispecies = 1, ions%nspecies
+        xf = species_x_functional(ions%species(ispecies))
+        cf = species_c_functional(ions%species(ispecies))
 
         if(xf == PSEUDO_EXCHANGE_UNKNOWN .or. cf == PSEUDO_CORRELATION_UNKNOWN) then
-          call messages_write("Unknown XC functional for species '"//trim(species_label(geo%species(ispecies)))//"'")
+          call messages_write("Unknown XC functional for species '"//trim(species_label(ions%species(ispecies)))//"'")
           call messages_warning(namespace=namespace)
           cycle
         end if
@@ -692,11 +692,11 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine v_ks_h_setup(namespace, space, gr, geo, st, ks, hm, calc_eigenval, calc_current)
+  subroutine v_ks_h_setup(namespace, space, gr, ions, st, ks, hm, calc_eigenval, calc_current)
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
-    type(geometry_t),         intent(in)    :: geo
+    type(ions_t),             intent(in)    :: ions
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -715,7 +715,7 @@ contains
     calc_current_ = optional_default(calc_current, .true.)
     call states_elec_fermi(st, namespace, gr%mesh)
     call density_calc(st, gr, st%rho)
-    call v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
+    call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
 
     if (st%restart_reorder_occs .and. .not. st%fromScratch) then
       message(1) = "Reordering occupations for restart."
@@ -743,13 +743,13 @@ contains
   end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, namespace, space, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval, time, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
     type(namespace_t),          intent(in)    :: namespace
     type(space_t),              intent(in)    :: space
     type(hamiltonian_elec_t),   intent(inout) :: hm
     type(states_elec_t),        intent(inout) :: st
-    type(geometry_t),           intent(in)    :: geo
+    type(ions_t),               intent(in)    :: ions
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
     logical,          optional, intent(in)    :: calc_energy
@@ -761,7 +761,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, space, hm, st, ions, time, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm, namespace, space)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -777,13 +777,13 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, space, hm, st, geo, time, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, space, hm, st, ions, time, calc_energy, calc_current) 
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
     type(space_t),                     intent(in)    :: space
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_elec_t),               intent(inout) :: st
-    type(geometry_t) ,         target, intent(in)    :: geo
+    type(ions_t) ,         target, intent(in)    :: ions
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_energy
     logical,                 optional, intent(in)    :: calc_current
@@ -803,7 +803,7 @@ contains
     ASSERT(.not. ks%calc%calculating)
     ks%calc%calculating = .true.
 
-    ks%calc%geo => geo
+    ks%calc%ions => ions
     
     if(debug%info) then
       write(message(1), '(a)') 'Debug: Calculating Kohn-Sham potential.'
@@ -819,7 +819,7 @@ contains
     if(ks%frozen_hxc) then      
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, ks%gr%symm)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, ions, st, ks%gr%symm)
       end if
 
       call profiling_out(prof)
@@ -854,7 +854,7 @@ contains
 
     if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, ks%gr%symm)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, ions, st, ks%gr%symm)
     end if
 
     nullify(ks%calc%hf_st)
@@ -1093,29 +1093,29 @@ contains
       end if
 
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-        ASSERT(geo%space%dim == 3)
+        ASSERT(ions%space%dim == 3)
         
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
-        SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
+        SAFE_ALLOCATE(ks%calc%vdw_forces(1:ions%space%dim, 1:ions%natoms))
 
         select case(ks%vdw_correction)
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, namespace, ions, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 
-          SAFE_ALLOCATE(coords(1:3, geo%natoms))
-          SAFE_ALLOCATE(atnum(geo%natoms))
+          SAFE_ALLOCATE(coords(1:3, ions%natoms))
+          SAFE_ALLOCATE(atnum(ions%natoms))
 
-          do iatom = 1, geo%natoms
-            atnum(iatom) = nint(species_z(geo%atom(iatom)%species))
-            coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
+          do iatom = 1, ions%natoms
+            atnum(iatom) = nint(species_z(ions%atom(iatom)%species))
+            coords(1:3, iatom) = ions%atom(iatom)%x(1:3)
           end do
           
           if (space%is_periodic()) then
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, geo%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, ions%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
               vdw_stress)
           else
             call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
@@ -1356,10 +1356,10 @@ contains
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-      hm%ep%vdw_forces(1:space%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:space%dim, 1:ks%calc%geo%natoms)
+      hm%ep%vdw_forces(1:space%dim, 1:ks%calc%ions%natoms) = ks%calc%vdw_forces(1:space%dim, 1:ks%calc%ions%natoms)
       SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
     else
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
+      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%ions%natoms) = CNST(0.0)      
     end if
 
     if(ks%calc%time_present .or. hm%time_zero) then

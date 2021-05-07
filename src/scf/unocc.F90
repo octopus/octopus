@@ -242,10 +242,10 @@ contains
         nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
-      call lcao_run(sys%namespace, sys%space, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, st_start = showstart)
+      call lcao_run(sys%namespace, sys%space, sys%gr, sys%ions, sys%st, sys%ks, sys%hm, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
-      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, sys%st, sys%ions, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
 
@@ -332,7 +332,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%namespace, sys%space, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
+        call output_all(sys%outp, sys%namespace, sys%space, dirname, sys%gr, sys%ions, sys%st, sys%hm, sys%ks)
       end if
      
       if(converged .or. forced_finish) exit
@@ -359,14 +359,14 @@ contains
     if(sys%space%is_periodic().and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%kpoints%method, KPOINTS_PATH) /= 0) then
         call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, &
-              sys%gr%sb, sys%geo, sys%gr%mesh, sys%kpoints, &
+              sys%gr%sb, sys%ions, sys%gr%mesh, sys%kpoints, &
               sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
               vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
     end if
  
 
-    call output_all(sys%outp, sys%namespace, sys%space, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
+    call output_all(sys%outp, sys%namespace, sys%space, STATIC_DIR, sys%gr, sys%ions, sys%st, sys%hm, sys%ks)
 
     call end_()
     POP_SUB(unocc_run_legacy)

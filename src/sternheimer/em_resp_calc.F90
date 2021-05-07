@@ -24,10 +24,10 @@ module em_resp_calc_oct_m
   use density_oct_m
   use derivatives_oct_m
   use elf_oct_m
-  use geometry_oct_m
   use grid_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
+  use ions_oct_m
   use kpoints_oct_m
   use linear_response_oct_m
   use magnetic_oct_m

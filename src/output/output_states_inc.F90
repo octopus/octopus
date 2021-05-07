@@ -17,13 +17,13 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
+subroutine output_states(outp, namespace, dir, st, gr, ions, hm)
   type(output_t),           intent(in) :: outp
   type(namespace_t),        intent(in) :: namespace
   character(len=*),         intent(in) :: dir
   type(states_elec_t),      intent(in) :: st
   type(grid_t),             intent(in) :: gr
-  type(geometry_t),         intent(in) :: geo
+  type(ions_t),             intent(in) :: ions
   type(hamiltonian_elec_t), intent(in) :: hm
 
   integer :: ik, ist, idim, idir, is, ierr, ip
@@ -44,7 +44,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
         write(fname, '(a,i1)') 'density-sp', is
       end if
       call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
-        st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        st%rho(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
@@ -65,7 +65,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
       call io_function_output_vector(outp%how, dir, fname, namespace, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
-        geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+        ions = ions, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
     end do
 
     SAFE_DEALLOCATE_A(polarization)
@@ -101,11 +101,11 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
             if (states_are_real(st)) then
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp, &
-                fn_unit, ierr, geo = geo)
+                fn_unit, ierr, ions = ions)
             else
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, ztmp, &
-                fn_unit, ierr, geo = geo)
+                fn_unit, ierr, ions = ions)
             end if
           end do
         end do
@@ -148,7 +148,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
             call dio_function_output (outp%how, dir, fname, namespace, gr%mesh, &
-              dtmp, fn_unit, ierr, geo = geo)
+              dtmp, fn_unit, ierr, ions = ions)
           end do
         end do
       end if
@@ -165,12 +165,12 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
-        elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        elf(:,1), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
-          elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          elf(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)
@@ -178,7 +178,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, namespace, st, hm%kpoints)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, namespace)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, ions, gr%mesh, hm, namespace)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
@@ -187,9 +187,9 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
-      call doutput_modelmb(outp, namespace, trim(dir), gr, st, geo)
+      call doutput_modelmb(outp, namespace, trim(dir), gr, st, ions)
     else
-      call zoutput_modelmb(outp, namespace, trim(dir), gr, st, geo)
+      call zoutput_modelmb(outp, namespace, trim(dir), gr, st, ions)
     end if
   end if
 
