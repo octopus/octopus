@@ -470,8 +470,11 @@ contains
     
     call output_states(outp, namespace, space, dir, st, gr, ions, hm)
     call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, iter, st%st_kpt_mpi_grp)
-    call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
-    call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
+    call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
+
+    if(outp%what(OPTION__OUTPUT__J_FLOW) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__J_FLOW)) == 0)) then
+      call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
+    end if
 
     if(outp%what(OPTION__OUTPUT__GEOMETRY) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__GEOMETRY)) == 0)) then
       if(bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
@@ -551,7 +554,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
+  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, geo, iter)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
@@ -560,13 +563,21 @@ contains
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
     type(ions_t),             intent(in)    :: ions
+    integer,                  intent(in)    :: iter
 
     FLOAT, allocatable :: f_loc(:,:)
     character(len=256) :: fname
     integer :: is, ierr, imax
     type(mpi_grp_t) :: mpi_grp
+    logical :: elf_or_basins_output_iter
 
     PUSH_SUB(output_localization_funct)
+
+    elf_or_basins_output_iter = .false.
+    if((outp%what(OPTION__OUTPUT__ELF) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__ELF)) == 0)) .or. &
+    (outp%what(OPTION__OUTPUT__ELF_BASINS) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__ELF_BASINS)) == 0))) then
+      elf_or_basins_output_iter = .true.
+    end if
     
     mpi_grp = st%dom_st_kpt_mpi_grp
 
@@ -577,13 +588,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(outp%what(OPTION__OUTPUT__ELF) .or. outp%what(OPTION__OUTPUT__ELF_BASINS)) then
+    if(elf_or_basins_output_iter) then
       ASSERT(space%dim /= 1)
 
       call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
-      if(outp%what(OPTION__OUTPUT__ELF)) then
+      if(outp%what(OPTION__OUTPUT__ELF) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__ELF)) == 0)) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how(OPTION__OUTPUT__ELF), dir, trim(fname), namespace, space, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, ions = ions, grp = mpi_grp)
@@ -599,12 +610,12 @@ contains
         end if
       end if
 
-      if(outp%what(OPTION__OUTPUT__ELF_BASINS)) &
+      if(outp%what(OPTION__OUTPUT__ELF_BASINS) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__ELF_BASINS)) == 0)) &
         call out_basins(f_loc(:,1), "elf_rs_basins", outp%how(OPTION__OUTPUT__ELF_BASINS))
     end if
 
     ! Now Bader analysis
-    if(outp%what(OPTION__OUTPUT__BADER)) then
+    if(outp%what(OPTION__OUTPUT__BADER) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__BADER)) == 0)) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         if(st%d%nspin == 1) then
@@ -626,7 +637,7 @@ contains
     end if
 
     ! Now the pressure
-    if(outp%what(OPTION__OUTPUT__EL_PRESSURE)) then
+    if(outp%what(OPTION__OUTPUT__EL_PRESSURE) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__EL_PRESSURE)) == 0)) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how(OPTION__OUTPUT__EL_PRESSURE), dir, "el_pressure", namespace, space, gr%mesh, &
         f_loc(:,1), unit_one, ierr, ions = ions, grp = mpi_grp)
