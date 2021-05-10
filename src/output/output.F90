@@ -517,19 +517,19 @@ contains
     call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      if(outp%what(OPTION__OUTPUT__OCC_MATRICES))&
+      if(outp%what(OPTION__OUTPUT__OCC_MATRICES) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__OCC_MATRICES)) == 0))&
         call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
-      if(outp%what(OPTION__OUTPUT__EFFECTIVEU))&
+      if(outp%what(OPTION__OUTPUT__EFFECTIVEU) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__EFFECTIVEU)) == 0))&
         call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
-      if(outp%what(OPTION__OUTPUT__MAGNETIZATION))&
+      if(outp%what(OPTION__OUTPUT__MAGNETIZATION) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__MAGNETIZATION)) == 0))&
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
-      if(outp%what(OPTION__OUTPUT__LOCAL_ORBITALS))&
+      if(outp%what(OPTION__OUTPUT__LOCAL_ORBITALS) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__LOCAL_ORBITALS)) == 0))&
         call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, associated(hm%hm_base%phase))
 
-      if(outp%what(OPTION__OUTPUT__KANAMORIU))&
+      if(outp%what(OPTION__OUTPUT__KANAMORIU) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__KANAMORIU)) == 0))&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     
@@ -537,7 +537,7 @@ contains
            .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
       if(ks%oep%level == XC_OEP_FULL) then
         if(ks%oep%has_photons) then
-          if(outp%what(OPTION__OUTPUT__PHOTON_CORRELATOR)) then
+          if(outp%what(OPTION__OUTPUT__PHOTON_CORRELATOR) .and. (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__PHOTON_CORRELATOR)) == 0)) then
             write(fname, '(a)') 'photon_correlator'
             call dio_function_output(outp%how(OPTION__OUTPUT__PHOTON_CORRELATOR), dir, trim(fname), namespace, space, &
               gr%mesh, ks%oep%pt%correlator(:,1), units_out%length, ierr, ions = ions)
