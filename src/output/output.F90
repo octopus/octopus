@@ -962,14 +962,14 @@ contains
 
       ! the external potential energy density
       do is = 1, st%d%nspin
-        do ip = 1, gr%fine%mesh%np
+        do ip = 1, gr%mesh%np
           energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
         end do
       end do
 
       ! the hartree energy density
       do is = 1, st%d%nspin
-        do ip = 1, gr%fine%mesh%np
+        do ip = 1, gr%mesh%np
           energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
         end do
       end do
@@ -978,12 +978,10 @@ contains
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
       SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
 
-      ASSERT(.not. gr%have_fine_mesh)
-
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, &
+      call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
       do is = 1, st%d%nspin
-        do ip = 1, gr%fine%mesh%np
+        do ip = 1, gr%mesh%np
           energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
         end do
       end do

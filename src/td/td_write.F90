@@ -981,7 +981,7 @@ contains
     end if
     
     if (writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, gr%fine%mesh, st, &
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, gr%mesh, st, &
         ions, iter)
     end if
     
@@ -1326,7 +1326,7 @@ contains
     
     
     if (out_multip%resolve_states) then
-      SAFE_ALLOCATE(rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      SAFE_ALLOCATE(rho(1:gr%mesh%np_part, 1:st%d%nspin))
       rho(:,:)     = M_ZERO
 
       do ist = st%st_start, st%st_end

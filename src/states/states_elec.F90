@@ -1146,7 +1146,7 @@ contains
 
     PUSH_SUB(states_elec_densities_init)
 
-    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+    SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
 
     fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size

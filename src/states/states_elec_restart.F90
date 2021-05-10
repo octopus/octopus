@@ -779,7 +779,6 @@ contains
     integer :: iunit, isp, err, err2(2)
     character(len=80) :: filename
     character(len=300) :: lines(2)
-    FLOAT, allocatable :: rho(:), rho_fine(:)
 
     PUSH_SUB(states_elec_dump_rho)
 
@@ -804,11 +803,6 @@ contains
     call restart_write(restart, iunit, lines, 2, err)
     if (err /= 0) ierr = ierr + 1
 
-    if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(rho(1:gr%mesh%np))
-      SAFE_ALLOCATE(rho_fine(1:gr%fine%mesh%np))
-    end if
-
     err2 = 0
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
@@ -820,23 +814,12 @@ contains
       call restart_write(restart, iunit, lines, 1, err)
       if (err /= 0) err2(1) = err2(1) + 1
 
-      if(gr%have_fine_mesh)then
-        rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
-        call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
-        call drestart_write_mesh_function(restart, space, filename, gr%mesh, rho, err)
-      else
-        call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
-      end if
+      call drestart_write_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
     end do
     if (err2(1) /= 0) ierr = ierr + 2
     if (err2(2) /= 0) ierr = ierr + 4
-
-    if(gr%have_fine_mesh)then
-      SAFE_DEALLOCATE_A(rho)
-      SAFE_DEALLOCATE_A(rho_fine)
-    end if
 
     lines(1) = '%'
     call restart_write(restart, iunit, lines, 1, err)
@@ -869,7 +852,6 @@ contains
 
     integer              :: err, err2, isp
     character(len=12)    :: filename
-    FLOAT, allocatable   :: rho_coarse(:)
 
     PUSH_SUB(states_elec_load_rho)
 
@@ -893,10 +875,6 @@ contains
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.
 
-    if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
-    end if
-
     err2 = 0
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
@@ -907,20 +885,11 @@ contains
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
 !      end if
-      if(gr%have_fine_mesh)then
-        call drestart_read_mesh_function(restart, space, filename, gr%mesh, rho_coarse, err)
-        call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
-      else
-        call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
-      end if
+      call drestart_read_mesh_function(restart, space, filename, gr%mesh, st%rho(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
     end do
     if (err2 /= 0) ierr = ierr + 1
-
-    if(gr%have_fine_mesh)then
-      SAFE_DEALLOCATE_A(rho_coarse)
-    end if
 
     if (debug%info) then
       message(1) = "Debug: Reading density restart done."

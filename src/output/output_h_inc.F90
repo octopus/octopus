@@ -262,7 +262,7 @@
       SAFE_ALLOCATE(density_kpt(1:st%d%nik, 1:st%d%nspin))
       density_kpt(1:st%d%nik, 1:st%d%nspin) = M_ZERO
 
-      SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
+      SAFE_ALLOCATE(density_tmp(1:gr%mesh%np, st%d%nspin))
 
       !Compute the k-resolved density and integrate it over the mesh
       do ik = st%d%kpt%start,st%d%kpt%end
