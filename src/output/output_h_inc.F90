@@ -17,7 +17,7 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(outp, namespace, space, dir, hm, st, der, ions, gr, grp)
+  subroutine output_hamiltonian(outp, namespace, space, dir, hm, st, der, ions, gr, iter, grp)
     type(output_t),            intent(in)    :: outp
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
@@ -27,6 +27,7 @@
     type(derivatives_t),       intent(in)    :: der
     type(ions_t),              intent(in)    :: ions
     type(grid_t),              intent(in)    :: gr
+    integer,                   intent(in)    :: iter
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, err, idir, ik, ib
@@ -40,7 +41,8 @@
     PUSH_SUB(output_hamiltonian)
    
 
-    if(outp%what(OPTION__OUTPUT__POTENTIAL)) then
+    if(outp%what(OPTION__OUTPUT__POTENTIAL) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__POTENTIAL)) == 0)) then
       SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
       v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
       call dio_function_output(outp%how(OPTION__OUTPUT__POTENTIAL), dir, "v0", namespace, &
@@ -158,7 +160,8 @@
     end if
 
 
-    if(outp%what(OPTION__OUTPUT__XC_DENSITY) .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+    if(outp%what(OPTION__OUTPUT__XC_DENSITY) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__XC_DENSITY)) == 0) .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
       SAFE_ALLOCATE(nxc(1:der%mesh%np))
 
@@ -182,7 +185,8 @@
       SAFE_DEALLOCATE_A(nxc)
     end if
 
-    if(outp%what(OPTION__OUTPUT__CURRENT)) then
+    if(outp%what(OPTION__OUTPUT__CURRENT) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__CURRENT)) == 0)) then
       
       if(states_are_complex(st)) then
         ASSERT(allocated(st%current))
@@ -206,7 +210,8 @@
       endif
     end if
    
-    if(outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
+    if(outp%what(OPTION__OUTPUT__CURRENT_KPT) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__CURRENT_KPT)) == 0)) then
 
       if(states_are_complex(st)) then
       
@@ -231,7 +236,8 @@
       endif
     end if
 
-    if(outp%what(OPTION__OUTPUT__HEAT_CURRENT)) then
+    if(outp%what(OPTION__OUTPUT__HEAT_CURRENT) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__HEAT_CURRENT)) == 0)) then
       
       if(states_are_complex(st)) then
 
@@ -258,7 +264,8 @@
       endif
     end if
     
-    if(outp%what(OPTION__OUTPUT__DENSITY_KPT)) then
+    if(outp%what(OPTION__OUTPUT__DENSITY_KPT) .and. &
+      (iter == -1 .or. mod(iter, outp%output_interval(OPTION__OUTPUT__DENSITY_KPT)) == 0)) then
       SAFE_ALLOCATE(density_kpt(1:st%d%nik, 1:st%d%nspin))
       density_kpt(1:st%d%nik, 1:st%d%nspin) = M_ZERO
 

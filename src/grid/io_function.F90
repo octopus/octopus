@@ -598,8 +598,9 @@ contains
 
     if(what_tag == 'Output') then
       ! required for output_hamiltonian()
-      if(what(OPTION__OUTPUT__POTENTIAL_GRADIENT)) then
+      if(what(OPTION__OUTPUT__POTENTIAL_GRADIENT) .and. .not. what(OPTION__OUTPUT__POTENTIAL)) then
         what(OPTION__OUTPUT__POTENTIAL) = .true.
+        output_interval(OPTION__OUTPUT__POTENTIAL) = output_interval(OPTION__OUTPUT__POTENTIAL_GRADIENT)
       end if
     end if
   
