@@ -67,7 +67,8 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
               str_tmp = em_wfs_tag(idir, ifactor)
               call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
               if (ierr == 0) then
-                call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+                call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                  lr=em_vars%lr(idir, sigma_alt, ifactor))
               end if
               call restart_close_dir(restart_load)
 
@@ -83,7 +84,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                 str_tmp = em_wfs_tag(idir, ifactor, idir2)              
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                 if (ierr == 0) then
-                  call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, &
+                  call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
                     lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
                 end if
                 call restart_close_dir(restart_load)
@@ -105,9 +106,11 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                       if (ierr == 0) then
                         select case(ipert)
                         case(PK2)
-                          call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, lr = k2_lr(idir, idir2, sigma))
+                          call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                            lr = k2_lr(idir, idir2, sigma))
                         case(PKB)
-                          call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, lr = kb_lr(idir, idir2, sigma))
+                          call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
+                            lr = kb_lr(idir, idir2, sigma))
                         end select
                       end if
                       call restart_close_dir(restart_load)
@@ -131,7 +134,9 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
               if(sigma == 1 .and. ifactor == 1) then
                 str_tmp = em_wfs_tag(idir, ifactor, ipert = PB)  
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-                if(ierr == 0) call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, lr = b_lr(idir, sigma))
+                if(ierr == 0) then
+                  call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, lr = b_lr(idir, sigma))
+                end if
                 call restart_close_dir(restart_load)
                 if(ierr /= 0) then
                   message(1) = "Unable to read magneto-optics response wavefunctions (B) from '"&
@@ -145,7 +150,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                   str_tmp = em_wfs_tag(idir, ifactor, idir2, ipert = PKE)              
                   call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                   if (ierr == 0) then
-                    call states_elec_load(restart_load, namespace, st, gr, kpoints, ierr, &
+                    call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, &
                       lr=ke_lr(idir, idir2, sigma_alt, ifactor))
                   end if
                   call restart_close_dir(restart_load)
@@ -180,7 +185,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           if(closest_omega * frequency < M_ZERO) opp_freq = .true.
           if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
       
-          call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), gr%mesh, st%d%nspin, restart_load, &
+          call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), space, gr%mesh, st%d%nspin, restart_load, &
             em_rho_tag(closest_omega, idir), ierr_e(idir))
       
           if (ierr_e(idir) == 0) then 
@@ -206,7 +211,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
        
         if(ierr_e(idir) == 0 .and. em_vars%calc_magnetooptics .and. use_kdotp) then
           if(complex_wfs) then
-            call X(lr_load_rho)(em_vars%lr(idir, swap_sigma(sigma_alt), 2)%X(dl_rho), gr%mesh, st%d%nspin, &
+            call X(lr_load_rho)(em_vars%lr(idir, swap_sigma(sigma_alt), 2)%X(dl_rho), space, gr%mesh, st%d%nspin, &
               restart_load, em_rho_tag(closest_omega, idir, ipert = PE), ierr_e2(idir))
       
             if (ierr_e2(idir) == 0) then 
@@ -255,7 +260,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
       call X(inhomog_B)(sh, namespace, gr, st, hm, xc, ions, magn_dir(idir,1), magn_dir(idir,2), kdotp_lr(magn_dir(idir, 1), 1:1), &
         kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
       call X(sternheimer_set_inhomog)(sh, inhomog)   
-      call X(sternheimer_solve)(sh, namespace, gr, kpoints, st, hm, xc, mc, ions, em_vars%lr(idir, 1:1, ifactor), 1, &
+      call X(sternheimer_solve)(sh, namespace, space, gr, kpoints, st, hm, xc, mc, ions, em_vars%lr(idir, 1:1, ifactor), 1, &
         R_TOPREC(frequency_zero), pert2_none, restart_dump, &
         em_rho_tag(abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega)), idir), &
         em_wfs_tag(idir, ifactor), have_restart_rho = (ierr_e(idir) == 0), have_exact_freq = exact_freq(idir))
@@ -269,7 +274,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
         call messages_info(1)
         call X(inhomog_k2_tot)(namespace, gr, st, hm, ions, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
-        call X(sternheimer_solve)(sh_kmo, namespace, gr, kpoints, st, hm, xc, mc, ions, k2_lr(idir, idir2, 1:1), 1, &
+        call X(sternheimer_solve)(sh_kmo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, k2_lr(idir, idir2, 1:1), 1, &
           R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
           em_wfs_tag(idir, ifactor, idir2, PK2), have_restart_rho = .false., have_exact_freq = .false.)
         call sternheimer_unset_inhomog(sh_kmo)
@@ -287,7 +292,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           k2_lr(max(magn_dir(idir2, 1), idir), min(magn_dir(idir2,1), idir), 1:1),&
           k2_lr(max(magn_dir(idir2, 2), idir), min(magn_dir(idir2,2), idir), 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-        call X(sternheimer_solve)(sh_kmo, namespace, gr, kpoints, st, hm, xc, mc, ions, &
+        call X(sternheimer_solve)(sh_kmo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, &
           kb_lr(idir, idir2, 1:1), 1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
           em_wfs_tag(idir, ifactor, idir2, PKB), have_restart_rho = .false., have_exact_freq = .false.)
         call sternheimer_unset_inhomog(sh_kmo)
@@ -315,12 +320,12 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
         call messages_info(1)
   
         if((.not. em_vars%calc_magnetooptics) .or. ifactor==1) then
-          call X(sternheimer_solve)(sh, namespace, gr, kpoints, st, hm, xc, mc, ions, &
+          call X(sternheimer_solve)(sh, namespace, space, gr, kpoints, st, hm, xc, mc, ions, &
             em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
             em_vars%perturbation, restart_dump, em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
             em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
         else
-          call X(sternheimer_solve)(sh, namespace, gr, kpoints, st, hm, xc, mc, ions, &
+          call X(sternheimer_solve)(sh, namespace, space, gr, kpoints, st, hm, xc, mc, ions, &
             em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, R_TOPREC(frequency_eta), &
             em_vars%perturbation, restart_dump, &
             em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, ipert = PE), &
@@ -360,7 +365,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           ! 1 is the sigma index which is used in em_resp
           call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
           if (ierr == 0) then
-            call states_elec_load(kdotp_restart, namespace, st, gr, kpoints, ierr, lr=kdotp_lr2)
+            call states_elec_load(kdotp_restart, namespace, space, st, gr, kpoints, ierr, lr=kdotp_lr2)
           end if
 
           call restart_close_dir(kdotp_restart)
@@ -370,7 +375,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
             call messages_fatal(2)
           end if
           
-          call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, namespace, gr, kpoints, st, hm, xc, mc, ions, &
+          call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, namespace, space, gr, kpoints, st, hm, xc, mc, ions, &
             em_vars%lr(idir, 1:nsigma_eff, ifactor), kdotp_lr(idir2, 1:1), nsigma_eff, &
             R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), em_vars%perturbation, pert_kdotp, &
             kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), pert2_none, &
@@ -402,7 +407,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           call X(inhomog_B)(sh_mo, namespace, gr, st, hm, xc, ions, magn_dir(idir, 1), &
             magn_dir(idir, 2), kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
           call X(sternheimer_set_inhomog)(sh_mo, inhomog)   
-          call X(sternheimer_solve)(sh_mo, namespace, gr, kpoints, st, hm, xc, mc, ions, b_lr(idir, 1:1), 1, &
+          call X(sternheimer_solve)(sh_mo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, b_lr(idir, 1:1), 1, &
             R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
             em_wfs_tag(idir, ifactor, ipert = PB), have_restart_rho = .false., have_exact_freq = .false.)
           call sternheimer_unset_inhomog(sh_mo)
@@ -421,8 +426,8 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                   call messages_info(1)
                   call X(inhomog_k2_tot)(namespace, gr, st, hm, ions, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
                   call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
-                  call X(sternheimer_solve)(sh_kmo, namespace, gr, kpoints, st, hm, xc, mc, ions, k2_lr(idir, idir2, 1:1), 1, &
-                    R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+                  call X(sternheimer_solve)(sh_kmo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, k2_lr(idir, idir2, 1:1), &
+                    1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
                     em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
                   call sternheimer_unset_inhomog(sh_kmo)
                   em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -438,8 +443,8 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                   k2_lr(max(magn_dir(idir2, 1), idir), min(magn_dir(idir2, 1), idir), 1:1), & 
                   k2_lr(max(magn_dir(idir2, 2), idir), min(magn_dir(idir2, 2), idir), 1:1), inhomog)
                 call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-                call X(sternheimer_solve)(sh_kmo, namespace, gr, kpoints, st, hm, xc, mc, ions, kb_lr(idir, idir2, 1:1), 1, &
-                  R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
+                call X(sternheimer_solve)(sh_kmo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, kb_lr(idir, idir2, 1:1), &
+                  1, R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
                   em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
                 call sternheimer_unset_inhomog(sh_kmo)
                 em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
@@ -452,7 +457,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
                 call X(inhomog_kE_tot)(sh, namespace, gr, st, hm, xc, ions, idir, nsigma_eff, kdotp_lr(idir, 1:1), &
                   em_vars%lr(idir2, :, ifactor), k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
                 call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-                call X(sternheimer_solve)(sh_kmo, namespace, gr, kpoints, st, hm, xc, mc, ions, &
+                call X(sternheimer_solve)(sh_kmo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, &
                   ke_lr(idir, idir2, 1:nsigma_eff, ifactor), nsigma_eff, &
                   R_TOPREC(frequency_eta), pert2_none, restart_dump, "null", &
                   em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
@@ -472,7 +477,7 @@ subroutine X(run_sternheimer)(em_vars, namespace, space, gr, kpoints, st, hm, xc
           message(1)="Info: Calculating response for B-perturbation"
           call messages_info(1)  
           call pert_setup_dir(pert_b, idir)
-          call X(sternheimer_solve)(sh_mo, namespace, gr, kpoints, st, hm, xc, mc, ions, b_lr(idir, 1:1), 1, &
+          call X(sternheimer_solve)(sh_mo, namespace, space, gr, kpoints, st, hm, xc, mc, ions, b_lr(idir, 1:1), 1, &
             R_TOPREC(frequency_zero), pert_b, restart_dump, "null", &
             em_wfs_tag(idir, ifactor, ipert = PB), have_restart_rho = .false., have_exact_freq = .false.)
           em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_mo)

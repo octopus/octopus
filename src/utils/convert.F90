@@ -24,6 +24,7 @@ program oct_convert
   use batch_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
+  use electrons_oct_m
   use fft_oct_m
   use fftw_params_oct_m
   use global_oct_m
@@ -44,9 +45,9 @@ program oct_convert
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
   use spectrum_oct_m
   use string_oct_m
-  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -249,16 +250,16 @@ contains
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, global_namespace, sys%ions, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, global_namespace, sys%space, sys%ions, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, global_namespace, sys%ions, sys%mc, sys%kpoints, basename, folder, &
+      call convert_transform(sys%gr%mesh, global_namespace, sys%space, sys%ions, sys%mc, sys%kpoints, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, global_namespace, sys%ions, sys%hm%psolver, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, global_namespace, sys%space, sys%ions, sys%hm%psolver, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -271,13 +272,14 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, namespace, ions, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
-    subtract_file, ref_name, ref_folder)
+  subroutine convert_low(mesh, namespace, space, ions, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, &
+    iterate_folder, subtract_file, ref_name, ref_folder)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(ions_t),      intent(in)    :: ions
     type(poisson_t),   intent(in)    :: psolver
-    type(multicomm_t), intent(in)   :: mc
+    type(multicomm_t), intent(in)    :: mc
     character(len=*),  intent(inout) :: basename       !< File name
     character(len=*),  intent(in)    :: in_folder      !< Folder name
     integer,           intent(in)    :: c_start        !< The first file number
@@ -312,7 +314,7 @@ contains
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
-        call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
+        call drestart_read_mesh_function(restart, space, trim(ref_name), mesh, read_rff, ierr)
         call restart_end(restart)
       else
         write(message(1),'(2a)') "Failed to read from ref-file ", trim(ref_name)
@@ -360,7 +362,7 @@ contains
 
       ! Read the obf file
       if(ierr == 0) then
-        call drestart_read_mesh_function(restart, trim(filename), mesh, read_ff, ierr)
+        call drestart_read_mesh_function(restart, space, trim(filename), mesh, read_ff, ierr)
       end if
 
       if (ierr /= 0) then
@@ -376,13 +378,13 @@ contains
       end if
       ! Write the corresponding output
       call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
-           trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, ions = ions)
+           trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
       
       if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
-             trim(out_name), namespace, mesh, pot, units_out%energy, ierr, ions = ions)
+             trim(out_name), namespace, space, mesh, pot, units_out%energy, ierr, ions = ions)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
       ! It does not matter if the current write has failed for the next iteration
@@ -399,10 +401,11 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, namespace, ions, mc, kpoints, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, namespace, space, ions, mc, kpoints, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    ,  intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(ions_t),      intent(in)    :: ions
     type(multicomm_t), intent(in)    :: mc
     type(kpoints_t),   intent(in)    :: kpoints
@@ -572,7 +575,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%ions%periodic_dim)
-    call kick_init(kick, namespace, mesh%sb, kpoints, 1)
+    call kick_init(kick, namespace, space, kpoints, 1)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)
@@ -589,7 +592,7 @@ contains
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
-        call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
+        call drestart_read_mesh_function(restart, space, trim(ref_name), mesh, read_rff, ierr)
         call restart_end(restart)
       else
         write(message(1),'(2a)') "Failed to read from ref-file ", trim(ref_name)
@@ -633,7 +636,7 @@ contains
         if (mesh%parallel_in_domains .and. i_space == 1) then
           write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),i_time,"/"
           write(filename, '(a,a,a)') trim(folder), trim(basename)
-          call drestart_read_mesh_function(restart, trim(filename), mesh, point_tmp(:, t_point), ierr)
+          call drestart_read_mesh_function(restart, space, trim(filename), mesh, point_tmp(:, t_point), ierr)
         else
           ! Here, we always iterate folders
           ! Delete the last / and add the corresponding folder number
@@ -723,8 +726,8 @@ contains
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), namespace, mesh, point_tmp(:, i_energy), &
-           units_out%length**(-mesh%sb%dim), ierr, ions = ions)
+           trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
+           units_out%length**(-space%dim), ierr, ions = ions)
       end do
       call restart_end(restart)
     else
@@ -734,8 +737,8 @@ contains
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
           call dio_function_output(outp%how, trim(filename), & 
-             trim('density'), namespace, mesh, read_rff, &
-             units_out%length**(-mesh%sb%dim), ierr, ions = ions)
+             trim('density'), namespace, space, mesh, read_rff, &
+             units_out%length**(-space%dim), ierr, ions = ions)
         end do
       end if
     end if
@@ -758,12 +761,13 @@ contains
   ! ---------------------------------------------------------
   !> Given a set of mesh function operations it computes a  
   !! a resulting mesh function from linear combination of them.
-  subroutine convert_operate(mesh, namespace, ions, mc, outp)
-    type(mesh_t),      intent(in)    :: mesh
+  subroutine convert_operate(mesh, namespace, space, ions, mc, outp)
+    type(mesh_t),      intent(in)   :: mesh
     type(namespace_t), intent(in)   :: namespace
-    type(ions_t),      intent(in)    :: ions
+    type(space_t),     intent(in)   :: space
+    type(ions_t),      intent(in)   :: ions
     type(multicomm_t), intent(in)   :: mc
-    type(output_t)  ,  intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
+    type(output_t)  ,  intent(in)   :: outp           !< Output object; Decides the kind, what and where to output
 
     integer             :: ierr, ip, i_op, length, n_operations
     type(block_t)       :: blk
@@ -843,7 +847,7 @@ contains
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
-        call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
+        call drestart_read_mesh_function(restart, space, trim(filename), mesh, tmp_ff, ierr)
       else
         write(message(1),'(2a)') "Failed to read from file ", trim(filename)
         write(message(2), '(2a)') "from folder ", trim(folder)
@@ -870,8 +874,8 @@ contains
     ! Write the corresponding output
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
-    units = units_out%length**(-mesh%sb%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, mesh, & 
+    units = units_out%length**(-space%dim)
+    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, space, mesh, & 
       scalar_ff, units, ierr, ions = ions)
 
     SAFE_DEALLOCATE_A(tmp_ff)

@@ -634,8 +634,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     
     cb = .not. mesh%use_curvilinear .and. &
-         .not. mesh%parallel_in_domains .and.  &
-         mesh%sb%periodic_dim == 0
+         .not. mesh%parallel_in_domains
 
   end function mesh_compact_boundaries
 

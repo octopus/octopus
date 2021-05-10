@@ -142,7 +142,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
+      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."
@@ -636,7 +636,7 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%ions, g_opt%st)
+    call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%space, g_opt%syst%gr, g_opt%ions, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%st, g_opt%ions, calc_eigenval = .true.)
     call energy_calc_total(g_opt%syst%namespace, g_opt%syst%space, g_opt%hm, g_opt%syst%gr, g_opt%st)

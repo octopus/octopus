@@ -164,7 +164,7 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+      call states_elec_look_and_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                                        is_complex = complex_response)
       call restart_end(restart_load)
     else
@@ -236,7 +236,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                                  ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
@@ -250,7 +250,7 @@ contains
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
             if (ierr == 0) then
-              call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+              call states_elec_load(restart_load, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                            ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             end if
             call restart_close_dir(restart_load)
@@ -277,7 +277,7 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
+        call dsternheimer_solve(sh, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
           kdotp_vars%lr(1:1, idir), 1, M_ZERO, kdotp_vars%perturbation, restart_dump, "", kdotp_wfs_tag(idir), &
           have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
@@ -285,7 +285,7 @@ contains
             kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
         end if
       else
-        call zsternheimer_solve(sh, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
+        call zsternheimer_solve(sh, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, sys%ions, &
           kdotp_vars%lr(1:1, idir), 1, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, "", &
           kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if (kdotp_vars%occ_solution_method == 1) then
@@ -298,14 +298,14 @@ contains
 
       errornorm = M_ZERO
       if(states_are_real(sys%st)) then 
-        call doutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
+        call doutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, TOFLOAT(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin))))
         end do
       else
-        call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
+        call zoutput_lr(sys%outp, sys%namespace, sys%space, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%ions, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
@@ -326,14 +326,14 @@ contains
           call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
-            call dsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call dsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, &
+              sys%ks%xc, sys%mc, sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
-            call zsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%gr, sys%kpoints, sys%st, sys%hm, sys%ks%xc, sys%mc, &
-              sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call zsternheimer_solve_order2(sh, sh, sh2, sys%namespace, sys%space, sys%gr, sys%kpoints, sys%st, sys%hm, &
+              sys%ks%xc, sys%mc, sys%ions, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)

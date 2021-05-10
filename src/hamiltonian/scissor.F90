@@ -109,7 +109,7 @@ contains
      call messages_fatal(1, namespace=namespace)
   end if
 
-  call states_elec_load(restart_gs, namespace, this%gs_st, gr, kpoints, ierr, label = ': gs for TDScissor')
+  call states_elec_load(restart_gs, namespace, space, this%gs_st, gr, kpoints, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
     call messages_fatal(1, namespace=namespace)

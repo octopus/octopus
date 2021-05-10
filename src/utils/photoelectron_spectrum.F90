@@ -684,12 +684,12 @@ program photoelectron_spectrum
 !           how = io_function_fill_how("VTK")
           
           if(bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) then
-             call pes_flux_out_vmap(pflux, pesP_out, filename, global_namespace, llp, pmesh, sb%dim)
+             call pes_flux_out_vmap(pflux, pesP_out, filename, global_namespace, llp, pmesh, space%dim)
           else            
-            call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb, pmesh)
+            call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how, sb, pmesh)
           end if
         else
-          call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb)
+          call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how, sb)
         end if
         
       end if
@@ -709,7 +709,7 @@ program photoelectron_spectrum
         how = io_function_fill_how("VTK")
 
         call pes_out_velocity_map(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-                                  global_namespace, Lg, llp, how, sb, pmesh)
+                                  global_namespace, space, Lg, llp, how, sb, pmesh)
       end if
       
       

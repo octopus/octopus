@@ -331,7 +331,7 @@ contains
 
     this%hm%plane_waves_apply = .true.
     this%hm%spatial_constant_apply = .true.
-    call bc_mxll_init(this%hm%bc, this%namespace, this%gr, this%st, this%gr%sb, this%prop%dt/this%tr_mxll%inter_steps)
+    call bc_mxll_init(this%hm%bc, this%namespace, this%space, this%gr, this%st, this%gr%sb, this%prop%dt/this%tr_mxll%inter_steps)
     this%bc_bounds(:,1:3) = this%hm%bc%bc_bounds(:,1:3)
     call inner_and_outer_points_mapping(this%gr%mesh, this%st, this%bc_bounds)
     this%dt_bounds(2, 1:3) = this%bc_bounds(1, 1:3)
@@ -339,7 +339,7 @@ contains
     call surface_grid_points_mapping(this%gr%mesh, this%st, this%dt_bounds)
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
-      call states_mxll_read_user_def(this%gr%mesh, this%st, this%rs_state_init, this%namespace)
+      call states_mxll_read_user_def(this%namespace, this%space, this%gr%mesh, this%st, this%rs_state_init)
       call messages_print_stress(stdout, "Setting initial EM field inside box")
       ! TODO: add consistency check that initial state fulfills Gauss laws
       this%st%rs_state(:,:) = this%st%rs_state + this%rs_state_init
@@ -589,7 +589,8 @@ contains
 
     call td_write_mxll_init(this%write_handler, this%namespace, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
-    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%ions, this%outp, this%clock)
+    call td_write_mxll_free_data(this%write_handler, this%namespace, this%space, this%gr, this%st, this%hm, this%ions, &
+      this%outp, this%clock)
 
     ! Currently we print this header here, but this needs to be changed.
     write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
@@ -617,7 +618,8 @@ contains
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
 
     if ((this%outp%output_interval > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval) == 0) .or. stopping) then
-      call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%ions, this%outp, this%clock)
+      call td_write_mxll_free_data(this%write_handler, this%namespace, this%space, this%gr, this%st, this%hm, this%ions, &
+        this%outp, this%clock)
     end if
 
     call profiling_out(prof)

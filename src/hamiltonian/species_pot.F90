@@ -78,7 +78,7 @@ contains
 
     integer :: isp, ip, in_points, icell
     FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
-    FLOAT :: xx(sb%dim), yy(sb%dim), rerho, imrho
+    FLOAT :: xx(space%dim), yy(space%dim), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(volume_t) :: volume
@@ -127,7 +127,7 @@ contains
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
             if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
           else
-            call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+            call parse_expression(rerho, imrho, space%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip, 1) = rho(ip, 1) + rerho
        end do
@@ -241,7 +241,7 @@ contains
         
         latt_iter = lattice_iterator_t(sb%latt, rmax)
         do icell = 1, latt_iter%n_cells
-          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
+          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -260,7 +260,7 @@ contains
 
         latt_iter = lattice_iterator_t(sb%latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
-          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
+          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -410,7 +410,7 @@ contains
         latt_iter = lattice_iterator_t(sb%latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
+          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
           call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
       end if
@@ -503,7 +503,7 @@ contains
         latt_iter = lattice_iterator_t(sb%latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos(1:sb%dim) = atom%x(1:sb%dim) + latt_iter%get(icell)
+          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
@@ -513,7 +513,7 @@ contains
               if(rr >= spline_range_max(ps%density_der(isp))) cycle
               spline = spline_eval(ps%density_der(isp), rr)
 
-              do idir = 1, mesh%sb%dim
+              do idir = 1, space%dim
                 drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir)-pos(idir))/rr
               end do
            end do
@@ -537,7 +537,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_long_range_density(species,space, namespace, pos, mesh, rho)
+  subroutine species_get_long_range_density(species, space, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     type(space_t),              intent(in)  :: space
     type(namespace_t),          intent(in)  :: namespace
@@ -549,7 +549,7 @@ contains
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(mesh%sb%dim), yy(mesh%sb%dim), rr, imrho1, rerho
+    FLOAT   :: delta, alpha, beta, xx(space%dim), yy(space%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
     type(lattice_iterator_t) :: latt_iter
@@ -605,7 +605,7 @@ contains
 
         rho(ip) = M_ZERO
 
-        dist2 = sum((mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim))**2)
+        dist2 = sum((mesh%x(ip, 1:space%dim) - pos(1:space%dim))**2)
         if (dist2 < dist2_min) then
           ipos = ip
           dist2_min = dist2
@@ -653,7 +653,7 @@ contains
       ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
       ! section II.B
       ! --------------------------------------------------------------
-      dim = mesh%sb%dim
+      dim = space%dim
 
       SAFE_ALLOCATE(rho_p(1:mesh%np))
       SAFE_ALLOCATE(grho_p(1:mesh%np, 1:dim+1))
@@ -718,7 +718,7 @@ contains
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
             if(volume_in_volume(mesh%sb, volume, xx)) rerho = M_ONE
           else
-            call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+            call parse_expression(rerho, imrho1, space%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip) = rho(ip) - rerho
         end do
@@ -801,7 +801,7 @@ contains
       do icell = 1, latt_iter%n_cells
         center = pos(1:space%dim) + latt_iter%get(icell)
         do ip = 1, mesh%np
-          rr = norm2(mesh%x(ip, 1:mesh%sb%dim) - center)
+          rr = norm2(mesh%x(ip, 1:space%dim) - center)
           if(rr < spline_range_max(ps%core)) then
             rho_core(ip) = rho_core(ip) + spline_eval(ps%core, rr)
           end if
@@ -844,7 +844,7 @@ contains
             if(rr >= spline_range_max(ps%core_der)) cycle
             spline = spline_eval(ps%core_der, rr)
 
-            do idir = 1, mesh%sb%dim
+            do idir = 1, space%dim
               rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline*(mesh%x(ip, idir)-center(idir))/rr
             end do
           end do
@@ -925,7 +925,7 @@ contains
         latt_iter = lattice_iterator_t(mesh%sb%latt, species_zval(species) / threshold)
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
-          x_atom_per = x_atom(1:mesh%sb%dim) + latt_iter%get(icell)
+          x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per)
             r2 = r*r
@@ -938,7 +938,7 @@ contains
         latt_iter = lattice_iterator_t(mesh%sb%latt, CNST(5.0) * maxval(norm2(mesh%sb%latt%rlattice, dim=1)))
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
-          x_atom_per = x_atom(1:mesh%sb%dim) + latt_iter%get(icell)
+          x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
 
@@ -946,7 +946,7 @@ contains
             ! the units back and forth
             xx = units_from_atomic(units_inp%length, xx)
             r = units_from_atomic(units_inp%length, r)
-            zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
+            zpot = species_userdef_pot(species, space%dim, xx, r)
             vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, TOFLOAT(zpot))
           end do
         end do
@@ -955,7 +955,7 @@ contains
 
         ASSERT(.not. space%is_periodic())
 
-        call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
+        call dio_function_input(trim(species_filename(species)), namespace, space, mesh, vl, err)
         if(err /= 0) then
           write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
@@ -972,7 +972,7 @@ contains
         
         do ip = 1, mesh%np
           
-          xx = mesh%x(ip, :) - x_atom(1:mesh%sb%dim)
+          xx = mesh%x(ip, :) - x_atom(1:space%dim)
           r = norm2(xx)
           
           if(r <= species_jradius(species)) then
@@ -1005,7 +1005,7 @@ contains
         ps => species_ps(species)
 
         do ip = 1, mesh%np
-          r2 = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
+          r2 = sum((mesh%x(ip, 1:space%dim) - x_atom(1:space%dim))**2)
           if(r2 < spline_range_max(ps%vlr_sq)) then
             vl(ip) = spline_eval(ps%vlr_sq, r2)
           else

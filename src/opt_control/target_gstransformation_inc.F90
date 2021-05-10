@@ -19,9 +19,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, namespace, tg, td, restart, kpoints)
+  subroutine target_init_gstransformation(gr, namespace, space, tg, td, restart, kpoints)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(inout) :: restart
@@ -47,7 +48,7 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call states_elec_transform(tg%st, namespace, restart, gr, kpoints, prefix = "OCTTarget")
+    call states_elec_transform(tg%st, namespace, space, restart, gr, kpoints, prefix = "OCTTarget")
 
     if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
@@ -71,9 +72,10 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, namespace, gr, dir, ions, hm, outp)
+  subroutine target_output_gstransformation(tg, namespace, space, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
-    type(namespace_t),   intent(in)    :: namespace
+    type(namespace_t),   intent(in) :: namespace
+    type(space_t),       intent(in) :: space
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(ions_t),        intent(in) :: ions
@@ -82,7 +84,7 @@
     PUSH_SUB(target_output_gstransformation)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
+    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation

@@ -18,18 +18,19 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_density(gr, kpoints, namespace, tg, stin, td, restart)
+  subroutine target_init_density(gr, kpoints, namespace, space, tg, stin, td, restart)
     type(grid_t),        intent(in)    :: gr
     type(kpoints_t),     intent(in)    :: kpoints
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(target_t),      intent(inout) :: tg
     type(states_elec_t), intent(inout) :: stin 
     type(td_t),          intent(in)    :: td
     type(restart_t),     intent(inout) :: restart
 
-    integer             :: ip, ist, jst, cstr_dim(gr%sb%dim), ib, idim, jj, no_constraint, no_ptpair, iqn
+    integer             :: ip, ist, jst, cstr_dim(space%dim), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
-    FLOAT               :: psi_re, psi_im, xx(gr%sb%dim), rr, fact, xend, xstart
+    FLOAT               :: psi_re, psi_im, xx(space%dim), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
     CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
     type(states_elec_t) :: tmp_st
@@ -81,7 +82,7 @@
         if(parse_block(namespace, 'OCTTargetDensityFromState', blk) == 0) then
           call states_elec_copy(tmp_st, tg%st)
           call states_elec_deallocate_wfns(tmp_st)
-          call states_elec_look_and_load(restart, namespace, tmp_st, gr, kpoints)
+          call states_elec_look_and_load(restart, namespace, space, tmp_st, gr, kpoints)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 
@@ -133,7 +134,7 @@
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, rr, coords = xx)
           ! parse user-defined expression
-          call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
+          call parse_expression(psi_re, psi_im, space%dim, xx, rr, M_ZERO, expression)
           tg%rho(ip) = psi_re
         end do
         ! Normalize
@@ -230,7 +231,7 @@
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
       if (.not. allocated(stin%current)) then
-        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%sb%dim, 1:stin%d%nspin ) )
+        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:space%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
       end if
     end select
@@ -261,14 +262,14 @@
       if(parse_block(namespace, 'OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
-        SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%sb%dim))
+        SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:space%dim))
           
         no_constraint = parse_block_n(blk)
         tmp_box = M_ZERO
         cstr_dim = 0
         do ib = 1, no_constraint
           call parse_block_integer(blk, ib - 1, 0, idim)
-          if( idim  <=  0 .or. idim > gr%sb%dim) then
+          if( idim  <=  0 .or. idim > space%dim) then
             write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
             write(message(2), '(a)'   ) '"dimension" has to be positive'
             write(message(3), '(a)'   ) 'and must not exceed dimensions of the system.'
@@ -304,10 +305,10 @@
             
         end do
           
-        do idim = 1, gr%sb%dim
+        do idim = 1, space%dim
           if(cstr_dim(idim) == 0) tmp_box(:,idim) = M_ONE
         end do
-        tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%sb%dim),2) 
+        tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:space%dim),2) 
         SAFE_DEALLOCATE_A(xp)
         SAFE_DEALLOCATE_A(tmp_box)
                              
@@ -340,9 +341,10 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_density(tg, namespace, gr, dir, ions, outp)
+  subroutine target_output_density(tg, namespace, space, gr, dir, ions, outp)
     type(target_t),    intent(in) :: tg
     type(namespace_t), intent(in) :: namespace
+    type(space_t),     intent(in) :: space
     type(grid_t),      intent(in) :: gr
     character(len=*),  intent(in) :: dir
     type(ions_t),      intent(in) :: ions
@@ -354,8 +356,8 @@
     call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, gr%mesh, &
-          tg%rho, units_out%length**(-gr%sb%dim), ierr, ions = ions)
+        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, space, gr%mesh, &
+          tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
       end if
     end if
 

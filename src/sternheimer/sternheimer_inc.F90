@@ -19,10 +19,11 @@
 !--------------------------------------------------------------
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
-subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, ions, lr, nsigma, omega, perturbation, restart, &
+subroutine X(sternheimer_solve)(this, namespace, space, gr, kpoints, st, hm, xc, mc, ions, lr, nsigma, omega, perturbation, restart, &
   rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),         intent(inout) :: this
   type(namespace_t),           intent(in)    :: namespace
+  type(space_t),               intent(in)    :: space
   type(grid_t),       target,  intent(in)    :: gr
   type(kpoints_t),             intent(in)    :: kpoints
   type(states_elec_t),         intent(in)    :: st
@@ -298,7 +299,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, io
         sigma_alt = 2
       end if
       if(st%d%kpt%start == 1) then
-        call X(lr_dump_rho)(lr(sigma_alt), gr%mesh, st%d%nspin, restart, rho_tag, ierr)
+        call X(lr_dump_rho)(lr(sigma_alt), space, gr%mesh, st%d%nspin, restart, rho_tag, ierr)
       end if
       if (ierr /= 0) then
         message(1) = "Unable to write response density '"//trim(rho_tag)//"'."
@@ -312,7 +313,7 @@ subroutine X(sternheimer_solve)(this, namespace, gr, kpoints, st, hm, xc, mc, io
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
       call restart_open_dir(restart, wfs_tag_sigma(wfs_tag, sigma_alt), err)
-      if (err == 0) call states_elec_dump(restart, st, gr, kpoints, err, iter = iter, lr = lr(sigma))
+      if (err == 0) call states_elec_dump(restart, space, st, gr, kpoints, err, iter = iter, lr = lr(sigma))
       if (err /= 0) then
         message(1) = "Unable to write response wavefunctions."
         call messages_warning(1)
@@ -639,13 +640,14 @@ end subroutine X(sternheimer_set_inhomog)
 
 
 !--------------------------------------------------------------
-subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, ions, lr1, lr2, nsigma, &
-  omega1, omega2, pert1, pert2, lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
+subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, space, gr, kpoints, st, hm, xc, mc, ions, lr1, lr2, &
+  nsigma, omega1, omega2, pert1, pert2, lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
   give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),         intent(inout) :: sh1
   type(sternheimer_t),         intent(inout) :: sh2
   type(sternheimer_t),         intent(inout) :: sh_2ndorder
   type(namespace_t),           intent(in)    :: namespace
+  type(space_t),               intent(in)    :: space
   type(grid_t),        target, intent(in)    :: gr
   type(kpoints_t),             intent(in)    :: kpoints
   type(states_elec_t),         intent(in)    :: st
@@ -766,8 +768,9 @@ subroutine X(sternheimer_solve_order2)(sh1, sh2, sh_2ndorder, namespace, gr, kpo
 
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
-  call X(sternheimer_solve)(sh_2ndorder, namespace, gr, kpoints, st, hm, xc, mc, ions, lr_2ndorder, nsigma, omega1 + omega2, &
-    pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
+  call X(sternheimer_solve)(sh_2ndorder, namespace, space, gr, kpoints, st, hm, xc, mc, ions, lr_2ndorder, nsigma, &
+    omega1 + omega2, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho = have_restart_rho, &
+    have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
   
   ! call X(sternheimer_solve) for difference frequency

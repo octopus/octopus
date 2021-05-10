@@ -182,10 +182,11 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, kpoints, namespace, ions, qcs, td, w0, tg, oct, ep, mc)
+  subroutine target_init(gr, kpoints, namespace, space, ions, qcs, td, w0, tg, oct, ep, mc)
     type(grid_t),                intent(in)    :: gr
     type(kpoints_t),             intent(in)    :: kpoints
     type(namespace_t),           intent(in)    :: namespace
+    type(space_t),               intent(in)    :: space
     type(ions_t),                intent(in)    :: ions
     type(opt_control_state_t),   intent(inout) :: qcs
     type(td_t),                  intent(in)    :: td
@@ -281,18 +282,18 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_init_groundstate(gr, namespace, tg, td, restart, kpoints)
+      call target_init_groundstate(gr, namespace, space, tg, td, restart, kpoints)
     case(oct_tg_excited)
       call messages_experimental('OCTTargetOperator = oct_tg_excited')
-      call target_init_excited(gr, namespace, tg, td, restart, kpoints)
+      call target_init_excited(gr, namespace, space, tg, td, restart, kpoints)
     case(oct_tg_exclude_state)
-      call target_init_exclude(gr, namespace, tg, td, restart, kpoints)
+      call target_init_exclude(gr, namespace, space, tg, td, restart, kpoints)
     case(oct_tg_gstransformation)
-      call target_init_gstransformation(gr, namespace, tg, td, restart, kpoints)
+      call target_init_gstransformation(gr, namespace, space, tg, td, restart, kpoints)
     case(oct_tg_userdefined) 
       call target_init_userdefined(gr, namespace, tg, td)
     case(oct_tg_jdensity)
-      call target_init_density(gr, kpoints, namespace, tg, stin, td, restart)
+      call target_init_density(gr, kpoints, namespace, space, tg, stin, td, restart)
     case(oct_tg_local)
       call target_init_local(gr, namespace, tg, td)
     case(oct_tg_td_local)
@@ -365,9 +366,10 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(tg, namespace, gr, dir, ions, hm, outp)
+  subroutine target_output(tg, namespace, space, gr, dir, ions, hm, outp)
     type(target_t),           intent(inout) :: tg
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(in)    :: gr
     character(len=*),         intent(in)    :: dir
     type(ions_t),             intent(in)    :: ions
@@ -378,27 +380,27 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_output_groundstate(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_groundstate(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_excited)
-      call target_output_excited(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_excited(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_exclude_state)
-      call target_output_exclude(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_exclude(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_gstransformation)
-      call target_output_gstransformation(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_gstransformation(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_userdefined) 
-      call target_output_userdefined(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_userdefined(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_jdensity)
-      call target_output_density(tg, namespace, gr, dir, ions, outp)
+      call target_output_density(tg, namespace, space, gr, dir, ions, outp)
     case(oct_tg_local)
-      call target_output_local(tg, namespace, gr, dir, ions, outp)
+      call target_output_local(tg, namespace, space, gr, dir, ions, outp)
     case(oct_tg_td_local)
-      call target_output_tdlocal(tg, namespace, gr, dir, ions, outp)
+      call target_output_tdlocal(tg, namespace, space, gr, dir, ions, outp)
     case(oct_tg_hhg)
-      call target_output_hhg(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_hhg(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_hhgnew)
-      call target_output_hhg(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_hhg(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_velocity)
-      call target_output_velocity(tg, namespace, gr, dir, ions, hm, outp)
+      call target_output_velocity(tg, namespace, space, gr, dir, ions, hm, outp)
     case(oct_tg_classical)
       call target_output_classical()
     end select

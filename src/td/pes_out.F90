@@ -34,6 +34,7 @@ module pes_out_oct_m
   use profiling_oct_m
   use qshep_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use sort_oct_m
   use string_oct_m
   use unit_oct_m
@@ -63,10 +64,11 @@ module pes_out_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map(pesK, file, namespace, Lk, ll, how, sb, pmesh)
+  subroutine pes_out_velocity_map(pesK, file, namespace, space, Lk, ll, how, sb, pmesh)
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
     type(namespace_t), intent(in) :: namespace
+    type(space_t),     intent(in) :: space
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
     integer(8),        intent(in) :: how
@@ -81,7 +83,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map)
 
-    call cube_init(cube, ll, sb, namespace)
+    call cube_init(cube, ll, sb, namespace, space)
     call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
     cf%dRS = pesK
   
@@ -89,7 +91,7 @@ contains
     if (.not. present(pmesh) ) then
       ! Ignore Lk and use pmesh
       dk(:) = M_ZERO
-      dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
+      dk(1:space%dim) = abs(Lk(2, 1:space%dim) - Lk(1,1:space%dim))
     end if
   
 #if defined(HAVE_NETCDF)  
@@ -99,8 +101,7 @@ contains
       write(message(1), '(a)') 'Writing netcdf format file: '
       call messages_info(1)
   
-      call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , & 
-            .false., unit_one/units_out%length)
+      call dout_cf_netcdf(filename, ierr, cf, cube, space, dk(:), .false., unit_one/units_out%length)
 
     end if
 

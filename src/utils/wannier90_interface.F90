@@ -267,7 +267,7 @@ program wannier90_interface
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-        call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                                  ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
@@ -276,7 +276,7 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%ions, sys%st, sys%kpoints)
+    call generate_wannier_states(sys%space, sys%gr%mesh, sys%gr%sb, sys%ions, sys%st, sys%kpoints)
   case default
     message(1) = "Wannier90Mode is set to an unsupported value."
     call messages_fatal(1)
@@ -404,7 +404,7 @@ contains
         nik = nik / 2
       end if
       if(dim == sys%st%d%dim .and. nik == sys%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-         call states_elec_load(restart, global_namespace, sys%st, sys%gr, sys%kpoints, &
+         call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                     ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
@@ -501,7 +501,7 @@ contains
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
-      call write_unk(sys%gr%mesh, sys%st)
+      call write_unk(sys%space, sys%gr%mesh, sys%st)
     end if
 
     if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
@@ -948,7 +948,8 @@ contains
     POP_SUB(create_wannier90_eig)
   end subroutine create_wannier90_eig
 
-  subroutine write_unk(mesh, st)
+  subroutine write_unk(space, mesh, st)
+    type(space_t),       intent(in) :: space
     type(mesh_t),        intent(in) :: mesh
     type(states_elec_t), intent(in) :: st
 
@@ -978,7 +979,7 @@ contains
 
     SAFE_ALLOCATE(psi(1:mesh%np))
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, global_namespace, need_partition=.not.mesh%parallel_in_domains)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, global_namespace, space, need_partition=.not.mesh%parallel_in_domains)
     call zcube_function_alloc_RS(cube, cf)
 
     do ik = 1, w90_num_kpts
@@ -1210,7 +1211,8 @@ contains
 
   end subroutine create_wannier90_amn
 
-  subroutine generate_wannier_states(mesh, sb, ions, st, kpoints)
+  subroutine generate_wannier_states(space, mesh, sb, ions, st, kpoints)
+    type(space_t),          intent(in) :: space
     type(mesh_t),           intent(in) :: mesh
     type(simul_box_t),      intent(in) :: sb
     type(ions_t),           intent(in) :: ions
@@ -1304,7 +1306,7 @@ contains
       zwn(:) = M_Z0
 
       do ik = 1, w90_num_kpts
-        kpoint(1:sb%dim) = kpoints%get_point(ik, absolute_coordinates=.true.)
+        kpoint(1:space%dim) = kpoints%get_point(ik, absolute_coordinates=.true.)
 
         do iw2 = 1, st%nst
           if(exclude_list(iw2)) cycle
@@ -1318,7 +1320,7 @@ contains
           !The minus sign is here is for the wrong convention of Octopus
           do ip = 1, mesh%np
             zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip, 1) * &
-                      exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
+                      exp(-M_zI* sum((mesh%x(ip, 1:space%dim)-centers(1:space%dim, iw)) * kpoint(1:space%dim)))
           end do
         end do!ik   
       end do!iw2
@@ -1341,7 +1343,7 @@ contains
         dwn(ip) = TOFLOAT(zwn(ip))
       end do
         
-      call dio_function_output(how, 'wannier', trim(fname), global_namespace, mesh, &
+      call dio_function_output(how, 'wannier', trim(fname), global_namespace, space, mesh, &
           dwn,  unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
 

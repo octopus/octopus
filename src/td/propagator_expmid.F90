@@ -29,8 +29,9 @@ module propagator_expmid_oct_m
   use parser_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
-  use states_elec_oct_m
   use propagation_ops_elec_oct_m
+  use space_oct_m
+  use states_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -44,9 +45,10 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
+  subroutine exponential_midpoint(hm, namespace, space, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(namespace_t),                intent(in)    :: namespace
+    type(space_t),                    intent(in)    :: space
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_base_t),  target, intent(inout) :: tr
@@ -73,19 +75,19 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, ions, &
             time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, M_HALF*dt, time, save_gf = .true.)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt*M_HALF)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time - dt*M_HALF)
 
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, dt)
 
     !restore to time 'time - dt'
     call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions_dyn, ions, move_ions = move_ions)
 
-    call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr%mesh)
+    call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, space, hm, gr%mesh)
 
     POP_SUB(propagator_dt.exponential_midpoint)
   end subroutine exponential_midpoint

@@ -37,6 +37,7 @@ module propagation_ops_elec_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_verlet_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m
@@ -66,8 +67,9 @@ module propagation_ops_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, hm, time)
+  subroutine propagation_ops_elec_update_hamiltonian(namespace, space, st, mesh, hm, time)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(states_elec_t),      intent(inout) :: st
     type(mesh_t),             intent(in)    :: mesh
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -79,7 +81,7 @@ contains
 
     call profiling_in(prof, 'ELEC_UPDATE_H')
 
-    call hamiltonian_elec_update(hm, mesh, namespace, time = time)
+    call hamiltonian_elec_update(hm, mesh, namespace, space, time = time)
     call lda_u_update_occ_matrices(hm%lda_u, namespace, mesh, st, hm%hm_base, hm%energy)
 
     call profiling_out(prof)
@@ -89,12 +91,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_move_ions(wo, gr, hm, st, namespace, ions_dyn, ions, time, ion_time, save_pos, move_ions)
+  subroutine propagation_ops_elec_move_ions(wo, gr, hm, st, namespace, space, ions_dyn, ions, time, ion_time, save_pos, move_ions)
     class(propagation_ops_elec_t), intent(inout) :: wo
     type(grid_t),                  intent(in)    :: gr
     type(hamiltonian_elec_t),      intent(inout) :: hm
     type(states_elec_t),           intent(inout) :: st
     type(namespace_t),             intent(in)    :: namespace
+    type(space_t),                 intent(in)    :: space
     type(ion_dynamics_t),          intent(inout) :: ions_dyn
     type(ions_t),                  intent(inout) :: ions
     FLOAT,                         intent(in)    :: time
@@ -113,7 +116,7 @@ contains
         call ion_dynamics_save_state(ions_dyn, ions, wo%ions_state)
       end if
       call ion_dynamics_propagate(ions_dyn, ions, time, ion_time, namespace)
-      call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st, time = time)
+      call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = time)
     end if
 
     call profiling_out(prof)
@@ -172,9 +175,10 @@ contains
   end subroutine propagation_ops_elec_propagate_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, mesh)
+  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, space, hm, mesh)
     class(propagation_ops_elec_t), intent(in)    :: wo
     type(namespace_t),             intent(in)    :: namespace
+    type(space_t),                 intent(in)    :: space
     type(hamiltonian_elec_t),      intent(inout) :: hm
     type(mesh_t),                  intent(in)    :: mesh
 
@@ -187,7 +191,7 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_set_vec_pot(hm%ep%gfield, wo%vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
-      call hamiltonian_elec_update(hm, mesh, namespace)
+      call hamiltonian_elec_update(hm, mesh, namespace, space)
     end if
 
     call profiling_out(prof)

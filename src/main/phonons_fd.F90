@@ -95,7 +95,9 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr)
+    if(ierr == 0) then
+      call states_elec_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr)
+    end if
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -196,7 +198,7 @@ contains
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true.)
         call energy_calc_total (namespace, space, hm, gr, st)
@@ -212,14 +214,14 @@ contains
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call hamiltonian_elec_epot_generate(hm, namespace, gr, ions, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, space, hm, st, ions, calc_eigenval=.true.)
         call energy_calc_total(namespace, space, hm, gr, st)
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, ions%natoms
-          forces(jatom, 1:mesh%sb%dim) = ions%atom(jatom)%f(1:space%dim)
+          forces(jatom, 1:ions%space%dim) = ions%atom(jatom)%f(1:ions%space%dim)
         end do
 
         ions%atom(iatom)%x(alpha) = ions%atom(iatom)%x(alpha) + vib%disp

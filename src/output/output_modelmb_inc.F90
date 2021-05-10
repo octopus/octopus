@@ -20,9 +20,10 @@
 !
 !> routine for output of model many-body quantities.
 !
-subroutine X(output_modelmb) (outp, namespace, dir, gr, st, ions)
+subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
   type(output_t),         intent(in)    :: outp
   type(namespace_t),      intent(in)    :: namespace
+  type(space_t),          intent(in)    :: space
   character(len=*),       intent(in)    :: dir
   type(grid_t),           intent(in)    :: gr
   type(states_elec_t),    intent(in)    :: st
@@ -109,9 +110,9 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, ions)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
-      fn_unit = units_out%length**(-gr%sb%dim)
+      fn_unit = units_out%length**(-space%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
-      call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, &
+      call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, space, &
         gr%mesh, wf, fn_unit, ierr, ions = ions)
     end if
 

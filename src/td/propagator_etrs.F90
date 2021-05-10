@@ -94,7 +94,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace, time = time - dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time = time - dt)
 
     else
 
@@ -105,7 +105,7 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, ions, &
                time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -114,7 +114,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time)
     
     ! propagate dt/2 with H(time - dt)
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt)
@@ -173,12 +173,12 @@ contains
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time - dt)
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, ions, &
                 time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -187,7 +187,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time)
 
     SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psi2, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -259,8 +259,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
+  subroutine td_aetrs(namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     type(namespace_t),                intent(in)    :: namespace
+    type(space_t)    ,                intent(in)    :: space
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -281,14 +282,14 @@ contains
     call propagation_ops_elec_interpolate_get(gr%mesh, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, &
               ions, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     !Update Hamiltonian
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time)
 
     !Do the time propagation for the second half of the time step
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
@@ -334,7 +335,7 @@ contains
       call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold)
     endif
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time - dt) 
 
     call v_ks_calc_start(ks, namespace, space, hm, st, ions, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
@@ -385,12 +386,12 @@ contains
     call propagation_ops_elec_interpolate_get(gr%mesh, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions_dyn, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, space, ions_dyn, &
               ions, time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, space, st, gr%mesh, hm, time)
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 

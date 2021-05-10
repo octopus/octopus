@@ -125,7 +125,7 @@ contains
 
       dipole_prev = dipole
       call calc_dipole(dipole, space, gr, st, ions)
-      write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
+      write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:space%dim)
       call messages_info(1)
   
       berry_conv = .true.
@@ -341,7 +341,7 @@ contains
     type(namespace_t),   intent(in)  :: namespace
     type(space_t),       intent(in)  :: space
     type(mesh_t),        intent(in)  :: mesh
-    FLOAT,               intent(in)  :: E_field(:) !< (mesh%sb%dim)
+    FLOAT,               intent(in)  :: E_field(:) !< (space%dim)
     FLOAT,               intent(out) :: pot(:,:)   !< (mesh%np, st%d%nspin)
 
     integer :: ispin, idir

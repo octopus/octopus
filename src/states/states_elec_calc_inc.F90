@@ -1006,8 +1006,9 @@ end function X(states_elec_residue)
 !! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
 !!
 ! ---------------------------------------------------------
-subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
+subroutine X(states_elec_calc_momentum)(st, space, der, kpoints, momentum)
   type(states_elec_t),  intent(in)  :: st
+  type(space_t),        intent(in)  :: space
   type(derivatives_t),  intent(in)  :: der
   type(kpoints_t),      intent(in)  :: kpoints
   FLOAT,                intent(out) :: momentum(:,:,:)
@@ -1026,7 +1027,7 @@ subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
   PUSH_SUB(X(states_elec_calc_momentum))
 
   SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:space%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -1034,10 +1035,10 @@ subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
       call states_elec_get_state(st, der%mesh, ist, ik, psi)
 
       do idim = 1, st%d%dim
-        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%dim))
+        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:space%dim))
       end do
 
-      do idir = 1, der%dim
+      do idir = 1, space%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
@@ -1055,8 +1056,8 @@ subroutine X(states_elec_calc_momentum)(st, der, kpoints, momentum)
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:der%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
-      do idir = 1, der%mesh%sb%periodic_dim
+      kpoint(1:space%dim) = kpoints%get_point(st%d%get_kpoint_index(ik))
+      do idir = 1, space%periodic_dim
         momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
       end do
 

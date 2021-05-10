@@ -19,9 +19,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_exclude(gr, namespace, tg, td, restart, kpoints)
+  subroutine target_init_exclude(gr, namespace, space, tg, td, restart, kpoints)
     type(grid_t),      intent(in)    :: gr
     type(namespace_t), intent(in)    :: namespace
+    type(space_t),     intent(in)    :: space
     type(target_t),    intent(inout) :: tg
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(inout) :: restart
@@ -48,7 +49,7 @@
     call parse_variable(namespace, 'OCTExcludedStates', '1', tg%excluded_states_list)
     call states_elec_deallocate_wfns(tg%st)
 
-    call states_elec_look_and_load(restart, namespace, tg%st, gr, kpoints)
+    call states_elec_look_and_load(restart, namespace, space, tg%st, gr, kpoints)
 
     POP_SUB(target_init_exclude)
   end subroutine target_init_exclude
@@ -64,9 +65,10 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_exclude(tg, namespace, gr, dir, ions, hm, outp)
+  subroutine target_output_exclude(tg, namespace, space, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
     type(namespace_t),   intent(in) :: namespace
+    type(space_t),       intent(in) :: space
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(ions_t),        intent(in) :: ions
@@ -76,7 +78,7 @@
     PUSH_SUB(target_output_exclude)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
+    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_exclude)
   end subroutine target_output_exclude

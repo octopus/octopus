@@ -36,6 +36,7 @@ module restart_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
+  use space_oct_m
   use unit_system_oct_m
 
   implicit none

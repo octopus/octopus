@@ -32,6 +32,7 @@ module mix_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
   use stencil_cube_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -142,9 +143,10 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, namespace, der, d1, d2, d3, def_, func_type_, prefix_)
+  subroutine mix_init(smix, namespace, space, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
     type(namespace_t),             intent(in)  :: namespace
+    type(space_t),                 intent(in)  :: space
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
@@ -331,7 +333,7 @@ contains
       
       call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
       call stencil_cube_get_lapl(smix%preconditioner%stencil, der%dim, 1)
-      call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+      call nl_operator_build(space, der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
       
       ns = smix%preconditioner%stencil%size
 
@@ -404,9 +406,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mix_dump(restart, smix, mesh, ierr)
+  subroutine mix_dump(restart, smix, space, mesh, ierr)
     type(restart_t), intent(in)  :: restart
     type(mix_t),     intent(in)  :: smix
+    type(space_t),   intent(in)  :: space
     type(mesh_t),    intent(in)  :: mesh
     integer,         intent(out) :: ierr
 
@@ -456,17 +459,17 @@ contains
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
             if (smix%mixfield%func_type == TYPE_FLOAT) then
-              call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
+              call drestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(1) = err2(1) + 1
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
             if (smix%mixfield%func_type == TYPE_FLOAT) then
-              call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
+              call drestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(2) = err2(2) + 1
               
@@ -474,17 +477,17 @@ contains
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
           if (smix%mixfield%func_type == TYPE_FLOAT) then
-            call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
+            call drestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(3) = err2(3) + 1
 
           write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
           if (smix%mixfield%func_type == TYPE_FLOAT) then
-            call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
+            call drestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, space, filename, mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(4) = err2(4) + 1
           
@@ -507,9 +510,10 @@ contains
 
 
   !---------------------------------------------------------
-  subroutine mix_load(restart, smix, mesh, ierr)
+  subroutine mix_load(restart, smix, space, mesh, ierr)
     type(restart_t), intent(in)    :: restart
     type(mix_t),     intent(inout) :: smix
+    type(space_t),   intent(in)    :: space
     type(mesh_t),    intent(in)    :: mesh
     integer,         intent(out)   :: ierr
 
@@ -582,17 +586,17 @@ contains
 
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
               if (smix%mixfield%func_type == TYPE_FLOAT) then
-                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
+                call drestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(1) = err2(1) + 1
           
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
               if (smix%mixfield%func_type == TYPE_FLOAT) then
-                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
+                call drestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(2) = err2(2) + 1
 
@@ -600,17 +604,17 @@ contains
 
             write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
             if (smix%mixfield%func_type == TYPE_FLOAT) then
-              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
+              call drestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(3) = err2(3) + 1
 
             write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
             if (smix%mixfield%func_type == TYPE_FLOAT) then
-              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
+              call drestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, space, filename, mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(4) = err2(4) + 1
 

@@ -84,7 +84,7 @@ module em_resp_oct_m
     FLOAT :: eta                     !< small imaginary part to add to the frequency
     FLOAT :: freq_factor(3)
     FLOAT,      allocatable :: omega(:)  !< the frequencies to consider
-    type(lr_t), allocatable :: lr(:,:,:) !< linear response for (gr%sb%dim, nsigma, nfactor)
+    type(lr_t), allocatable :: lr(:,:,:) !< linear response for (space%dim, nsigma, nfactor)
     CMPLX,      allocatable :: alpha_k(:, :, :, :)    !< contributions of k-points to 
                                                       !! the linear polarizability
     CMPLX,      allocatable :: alpha_be_k(:, :, :, :) !< contributions of k-points to 
@@ -197,7 +197,7 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, &
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
                     is_complex = complex_response)
       call restart_end(gs_restart)
     else
@@ -250,7 +250,7 @@ contains
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
         if (ierr == 0) then
-          call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, sys%kpoints, ierr, lr=kdotp_lr(idir, 1))
+          call states_elec_load(kdotp_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, ierr, lr=kdotp_lr(idir, 1))
         end if
         call restart_close_dir(kdotp_restart)
 
@@ -1057,7 +1057,7 @@ contains
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
         call out_polarizability()
         if(em_vars%calc_Born) then
-          call out_Born_charges(em_vars%Born_charges(ifactor), ions, namespace, gr%sb%dim, dirname, &
+          call out_Born_charges(em_vars%Born_charges(ifactor), ions, namespace, space%dim, dirname, &
             write_real = em_vars%eta < M_EPSILON)
         end if
 
@@ -1115,8 +1115,8 @@ contains
       write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
       write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
 
-      do idir = 1, gr%sb%dim
-        do kdir = 1, gr%sb%dim
+      do idir = 1, space%dim
+        do kdir = 1, space%dim
           write(header_string,'(a6,i1,a1,i1,a1)') 'sigma(', idir, ',', kdir, ')'
           write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
         end do
@@ -1124,7 +1124,7 @@ contains
 
       write(out_file, *)
       write(out_file, '(a1,a20)', advance = 'no') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20)
-      do ii = 1, 2 + gr%sb%dim**2
+      do ii = 1, 2 + space%dim**2
         write(out_file, '(a20)', advance = 'no')  str_center('['//trim(units_abbrev(units_out%length**2)) // ']', 20)
       end do
       write(out_file,*)
@@ -1146,18 +1146,17 @@ contains
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
-      call output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), &
-        gr%sb%dim, units_out%polarizability)
+      call output_tensor(iunit, TOFLOAT(em_vars%alpha(:, :, ifactor)), space%dim, units_out%polarizability)
   
       call io_close(iunit)
   
       ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
       if(em_vars%eta > M_EPSILON) then 
-        cross(1:gr%sb%dim, 1:gr%sb%dim) = aimag(em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor)) * &
+        cross(1:space%dim, 1:space%dim) = aimag(em_vars%alpha(1:space%dim, 1:space%dim, ifactor)) * &
           em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * (M_FOUR * M_PI / P_c)
 
-        do idir = 1, gr%sb%dim
-          do idir2 = 1, gr%sb%dim
+        do idir = 1, space%dim
+          do idir2 = 1, space%dim
             cross(idir, idir2) = units_from_atomic(units_out%length**2, cross(idir, idir2))
           end do
         end do
@@ -1165,11 +1164,11 @@ contains
         iunit = io_open(trim(dirname)//'/cross_section', namespace, action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
-        crossp(1:gr%sb%dim, 1:gr%sb%dim) = matmul(cross(1:gr%sb%dim, 1:gr%sb%dim), cross(1:gr%sb%dim, 1:gr%sb%dim))
+        crossp(1:space%dim, 1:space%dim) = matmul(cross(1:space%dim, 1:space%dim), cross(1:space%dim, 1:space%dim))
 
         cross_sum = M_ZERO
         crossp_sum = M_ZERO
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           cross_sum = cross_sum + cross(idir, idir)
           crossp_sum = crossp_sum + crossp(idir, idir)
         end do
@@ -1180,8 +1179,8 @@ contains
         write(iunit,'(3e20.8)', advance = 'no') &
           units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), &
           cross_sum * M_THIRD, sqrt(max(anisotropy, M_ZERO))
-        do idir = 1, gr%sb%dim
-          do idir2 = 1, gr%sb%dim
+        do idir = 1, space%dim
+          do idir2 = 1, space%dim
             write(iunit,'(e20.8)', advance = 'no') cross(idir, idir2)
           end do
         end do
@@ -1206,42 +1205,42 @@ contains
       iunit = io_open(trim(dirname)//'/epsilon', namespace, action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
-      epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-        4 * M_PI * em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / ions%latt%rcell_volume
-      do idir = 1, gr%sb%dim
+      epsilon(1:space%dim, 1:space%dim) = &
+        4 * M_PI * em_vars%alpha(1:space%dim, 1:space%dim, ifactor) / ions%latt%rcell_volume
+      do idir = 1, space%dim
         epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
       end do
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(epsilon(1:space%dim, 1:space%dim)), space%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
-      call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, aimag(epsilon(1:space%dim, 1:space%dim)), space%dim, unit_one)
 
       if(em_vars%lrc_kernel) then
         write(iunit, '(a)')
         write(iunit, '(a)') '# Without G = G'' = 0 term of the LRC kernel'
 
-        epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
-          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / ions%latt%rcell_volume
-        do idir = 1, gr%sb%dim
+        epsilon(1:space%dim, 1:space%dim) = &
+          4 * M_PI * em_vars%alpha0(1:space%dim, 1:space%dim, ifactor) / ions%latt%rcell_volume
+        do idir = 1, space%dim
           epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
         end do
 
         write(iunit, '(a)') '# Real part of dielectric constant'
-        call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
+        call output_tensor(iunit, TOFLOAT(epsilon(1:space%dim, 1:space%dim)), space%dim, unit_one)
         write(iunit, '(a)')
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
-        call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
+        call output_tensor(iunit, aimag(epsilon(1:space%dim, 1:space%dim)), space%dim, unit_one)
       end if
 
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
-        SAFE_ALLOCATE(epsilon_k(1:gr%sb%dim, 1:gr%sb%dim, 1:hm%kpoints%reduced%npoints))
+        SAFE_ALLOCATE(epsilon_k(1:space%dim, 1:space%dim, 1:hm%kpoints%reduced%npoints))
         do ik = 1, hm%kpoints%reduced%npoints
-          do idir = 1, gr%sb%dim
-            do idir1 = 1, gr%sb%dim
+          do idir = 1, space%dim
+            do idir1 = 1, space%dim
               epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / ions%latt%rcell_volume
             end do
           end do
@@ -1255,8 +1254,8 @@ contains
         write(iunit, '(a20)', advance = 'no') str_center("ky", 20)     
         write(iunit, '(a20)', advance = 'no') str_center("kz", 20)
 
-        do idir = 1, gr%sb%dim
-          do idir1 = 1, gr%sb%dim
+        do idir = 1, space%dim
+          do idir1 = 1, space%dim
             write(header_string,'(a7,i1,a1,i1,a1)') 'Re eps(', idir, ',', idir1, ')'
             write(iunit, '(a20)', advance = 'no') str_center(trim(header_string), 20)
           end do
@@ -1266,11 +1265,11 @@ contains
         do ik = 1, hm%kpoints%reduced%npoints
           write(iunit, '(i8)', advance = 'no') ik
           write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
-          do idir = 1, gr%sb%dim
-            do idir1 = 1, gr%sb%dim
+          do idir = 1, space%dim
+            do idir1 = 1, space%dim
               write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_k(idir, idir1, ik))
             end do
           end do
@@ -1287,8 +1286,8 @@ contains
         write(iunit, '(a20)', advance = 'no') str_center("ky", 20)     
         write(iunit, '(a20)', advance = 'no') str_center("kz", 20)
 
-        do idir = 1, gr%sb%dim
-          do idir1 = 1, gr%sb%dim
+        do idir = 1, space%dim
+          do idir1 = 1, space%dim
             write(header_string,'(a7,i1,a1,i1,a1)') 'Im eps(', idir, ',', idir1,')'
             write(iunit, '(a20)', advance = 'no') str_center(trim(header_string), 20)
           end do
@@ -1298,11 +1297,11 @@ contains
         do ik = 1, hm%kpoints%reduced%npoints                              
           write(iunit, '(i8)', advance = 'no') ik
           write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
-          do idir = 1, gr%sb%dim
-            do idir1 = 1, gr%sb%dim
+          do idir = 1, space%dim
+            do idir1 = 1, space%dim
               write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_k(idir, idir1, ik))
             end do
           end do
@@ -1337,34 +1336,34 @@ contains
       ! for periodic systems 
       if(.not. use_kdotp) then
         write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), gr%sb%dim, unit_ppm)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), space%dim, unit_ppm)
         write(iunit, '(1x)')
 
         write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), gr%sb%dim, unit_ppm)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), space%dim, unit_ppm)
         write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :) + em_vars%chi_dia(:,:)), &
-        gr%sb%dim, unit_ppm)
+        space%dim, unit_ppm)
       write(iunit, '(1x)')
 
       write(iunit, '(a)') hyphens
 
       if(.not. use_kdotp) then
         write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), gr%sb%dim, unit_susc_ppm_cgs)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), space%dim, unit_susc_ppm_cgs)
         write(iunit, '(1x)')
 
         write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), gr%sb%dim, unit_susc_ppm_cgs)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), space%dim, unit_susc_ppm_cgs)
         write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :) + em_vars%chi_dia(:,:)), &
-           gr%sb%dim, unit_susc_ppm_cgs)
+           space%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
       if(use_kdotp) then
@@ -1386,10 +1385,10 @@ contains
 
       PUSH_SUB(em_resp_output.out_wfn_and_densities)
 
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         if(states_are_complex(st)) then 
 
-          if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
@@ -1397,12 +1396,12 @@ contains
             end if
           end if
           do isigma = 1, em_vars%nsigma
-            call zoutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+            call zoutput_lr(outp, namespace, space, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
               units_out%force)
           end do
         else
 
-          if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
@@ -1411,7 +1410,7 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call doutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
+            call doutput_lr(outp, namespace, space, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, ions, &
               units_out%force)
           end do
 
@@ -1448,7 +1447,7 @@ contains
         call states_elec_get_state(st, gr%mesh, psi)
 
         dic = M_ZERO
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
             + zpert_expectation_value(angular_momentum, namespace, gr, ions, hm, st, &
@@ -1513,13 +1512,13 @@ contains
       write(iunit, *)
  
       write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
-      do idir = 1, gr%sb%dim + 1 
+      do idir = 1, space%dim + 1 
         write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
       end do
       write(iunit, *)
 
       write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
-      do idir = 1, gr%sb%dim + 1
+      do idir = 1, space%dim + 1
         write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
       end do
       write(iunit, *)
@@ -1534,13 +1533,13 @@ contains
         epsilon_m(4) = 4 * M_PI * diff(4) / ions%latt%rcell_volume
 
         write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
-        do idir = 1, gr%sb%dim + 1
+        do idir = 1, space%dim + 1
           write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
         end do
         write(iunit, *)
 
         write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
-        do idir = 1, gr%sb%dim + 1
+        do idir = 1, space%dim + 1
           write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
         end do
         write(iunit, *)
@@ -1568,25 +1567,25 @@ contains
           write(iunit, *)
 
           write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
-          do idir = 1, gr%sb%dim + 1
+          do idir = 1, space%dim + 1
             write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
           end do
           write(iunit, *)
 
           write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
-          do idir = 1, gr%sb%dim + 1
+          do idir = 1, space%dim + 1
             write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
           end do
           write(iunit, *)
 
           write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
-          do idir = 1, gr%sb%dim + 1
+          do idir = 1, space%dim + 1
             write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
           end do
           write(iunit, *)
 
           write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
-          do idir = 1, gr%sb%dim + 1
+          do idir = 1, space%dim + 1
             write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
           end do
           write(iunit, *)
@@ -1614,18 +1613,18 @@ contains
         do ik = 1, hm%kpoints%reduced%npoints
           write(iunit, '(i8)', advance = 'no') ik
           write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%weight(ik)
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             eps_mk(idir) = M_TWO * M_PI * (em_vars%alpha_be_k(magn_dir(idir, 1), magn_dir(idir, 2), idir, ik) - &
               em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / ions%latt%rcell_volume
           end do
 
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(iunit, '(e20.8)', advance = 'no') hm%kpoints%reduced%red_point(idir, ik)
           end do
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(iunit, '(e20.8)', advance = 'no') TOFLOAT(eps_mk(idir))
           end do
-          do idir = 1, gr%sb%dim
+          do idir = 1, space%dim
             write(iunit, '(e20.8)', advance = 'no') aimag(eps_mk(idir))
           end do
           write(iunit, *)

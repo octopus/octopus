@@ -117,7 +117,7 @@ contains
       sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)
     end do
 
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
     
@@ -127,13 +127,13 @@ contains
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
       call invertks_2part(target_rho, nspin, sys%hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, &
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, sys%space, &
              sys%ks%ks_inversion%asymp)
      
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
           sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, sys%namespace, nspin, sys%hm, sys%gr, &
+        call invertks_iter(target_rho, sys%namespace, sys%space, nspin, sys%hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
              sys%ks%ks_inversion%method)
       end if
@@ -141,7 +141,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace, sys%space)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
     
@@ -165,7 +165,7 @@ contains
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
     call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
-    call states_elec_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, sys%kpoints, err, 0)
+    call states_elec_dump(restart, sys%space, sys%ks%ks_inversion%aux_st, sys%gr, sys%kpoints, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
       call messages_warning(1)

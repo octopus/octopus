@@ -169,9 +169,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick(outp, namespace, mesh, kick, ions, iter)
+  subroutine td_write_kick(outp, namespace, space, mesh, kick, ions, iter)
     type(output_t),    intent(in) :: outp
     type(namespace_t), intent(in) :: namespace
+    type(space_t),     intent(in) :: space
     type(mesh_t),      intent(in) :: mesh
     type(kick_t),      intent(in) :: kick
     type(ions_t),      intent(in) :: ions
@@ -181,7 +182,7 @@ contains
     PUSH_SUB(td_write_kick)
 
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call output_kick(outp, namespace, filename, mesh, ions, kick)
+    call output_kick(outp, namespace, space, filename, mesh, ions, kick)
 
     POP_SUB(td_write_kick)
   end subroutine td_write_kick
@@ -493,7 +494,7 @@ contains
         
       end if
  
-      call states_elec_load(restart_gs, namespace, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
+      call states_elec_load(restart_gs, namespace, space, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -913,7 +914,7 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(namespace, hm, gr, st, iter)
+      call td_write_floquet(namespace, space, hm, gr, st, iter)
     end if
 
     if (writ%out(OUT_KP_PROJ)%write) then
@@ -1058,9 +1059,9 @@ contains
 
     call output_all(outp, namespace, space, filename, gr, ions, st, hm, ks)
     if(present(dt)) then
-      call output_scalar_pot(outp, namespace, filename, gr, ions, hm, iter*dt)
+      call output_scalar_pot(outp, namespace, space, filename, gr, ions, hm, iter*dt)
     else
-      if(iter == 0) call output_scalar_pot(outp, namespace, filename, gr, ions, hm)
+      if(iter == 0) call output_scalar_pot(outp, namespace, space, filename, gr, ions, hm)
     end if
  
     call profiling_out(prof)
@@ -2717,8 +2718,9 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(namespace, hm, gr, st, iter)
+  subroutine td_write_floquet(namespace, space, hm, gr, st, iter)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st !< at iter=0 this is the groundstate
@@ -2826,7 +2828,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, st, hm_st)
 
@@ -2974,7 +2976,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_elec_update(hm, gr%mesh, namespace, time=M_ZERO)
+    call hamiltonian_elec_update(hm, gr%mesh, namespace, space, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)
@@ -3104,7 +3106,7 @@ contains
       ! first line: column names
       call write_iter_header_start(write_obj)
       
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         write(aux, '(a2,i1,a1)') 'Jh(', idir, ')'
         call write_iter_header(write_obj, aux)
       end do
@@ -3114,14 +3116,14 @@ contains
       call td_write_print_header_end(write_obj)
     end if
 
-    SAFE_ALLOCATE(heat_current(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))  
+    SAFE_ALLOCATE(heat_current(1:gr%mesh%np, 1:space%dim, 1:st%d%nspin))  
 
     call current_heat_calculate(space, gr%der, hm, st, heat_current)
     
     if(mpi_grp_is_root(mpi_world)) call write_iter_start(write_obj)
 
     total_current = CNST(0.0)
-    do idir = 1, gr%sb%dim
+    do idir = 1, space%dim
       do ispin = 1, st%d%spin_channels
         total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, heat_current(:, idir, ispin))
       end do
@@ -3130,7 +3132,7 @@ contains
 
     SAFE_DEALLOCATE_A(heat_current)
     
-    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%sb%dim)
+    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, space%dim)
   
     if(mpi_grp_is_root(mpi_world)) call write_iter_nl(write_obj)
       
@@ -3482,11 +3484,12 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_dump_mxll(restart, gr, st, hm, iter, ierr, bc_plane_waves)
+  subroutine td_dump_mxll(restart, space, gr, st, hm, iter, ierr, bc_plane_waves)
     type(restart_t),            intent(in)  :: restart
+    type(space_t),              intent(in)  :: space
     type(grid_t),               intent(in)  :: gr
-    type(states_mxll_t),             intent(in)  :: st
-    type(hamiltonian_mxll_t),        intent(in)  :: hm
+    type(states_mxll_t),        intent(in)  :: st
+    type(hamiltonian_mxll_t),   intent(in)  :: hm
     integer,                    intent(in)  :: iter
     integer,                    intent(out) :: ierr
     logical,                    intent(in)  :: bc_plane_waves
@@ -3549,7 +3552,7 @@ contains
       end if
     end if
 
-    call states_mxll_dump(restart, st, gr, zff, zff_dim, err, iter)
+    call states_mxll_dump(restart, st, space, gr, zff, zff_dim, err, iter)
     if (err /= 0) ierr = ierr + 1
 
     if (debug%info) then
@@ -3962,9 +3965,10 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, ions, outp, clock)
+  subroutine td_write_mxll_free_data(writ, namespace, space, gr, st, hm, ions, outp, clock)
     type(td_write_t),         intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(grid_t),             intent(inout) :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -3988,7 +3992,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", clock%get_tick()  ! name of directory
 
-    call output_mxll(outp, namespace, gr, st, hm, clock%time(), ions, filename)
+    call output_mxll(outp, namespace, space, gr, st, hm, clock%time(), ions, filename)
 
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)

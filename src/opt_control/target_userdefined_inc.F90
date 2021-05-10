@@ -118,9 +118,10 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_userdefined(tg, namespace, gr, dir, ions, hm, outp)
+  subroutine target_output_userdefined(tg, namespace, space, gr, dir, ions, hm, outp)
     type(target_t),      intent(in) :: tg
     type(namespace_t),   intent(in) :: namespace
+    type(space_t),       intent(in) :: space
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(ions_t),        intent(in) :: ions
@@ -129,7 +130,7 @@
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, ions, hm)
+    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

@@ -25,6 +25,7 @@ module mixing_metric_oct_m
   use messages_oct_m
   use nl_operator_oct_m
   use profiling_oct_m
+  use space_oct_m
   use stencil_cube_oct_m
 
   implicit none
@@ -45,7 +46,8 @@ module mixing_metric_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mixing_metric_init(der, weight)
+  subroutine mixing_metric_init(space, der, weight)
+    type(space_t),               intent(in) :: space
     type(derivatives_t), target, intent(in) :: der
     FLOAT,                       intent(in) :: weight
 
@@ -65,9 +67,9 @@ contains
     ! from the gpaw source code.
 
     call nl_operator_init(op, "Mix metric")
-    call stencil_cube_get_lapl(op%stencil, der%dim, 1)
+    call stencil_cube_get_lapl(op%stencil, space%dim, 1)
     
-    call nl_operator_build(der%mesh, op, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+    call nl_operator_build(space, der%mesh, op, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
 
     if (op%const_w) then
       maxp = 1
@@ -79,7 +81,7 @@ contains
       
       do is = 1, op%stencil%size
 
-        inb = sum(abs(op%stencil%points(1:der%dim, is)))
+        inb = sum(abs(op%stencil%points(1:space%dim, is)))
 
         select case(inb)
         case(0)

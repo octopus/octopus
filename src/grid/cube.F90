@@ -33,6 +33,7 @@ module cube_oct_m
   use pnfft_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
 
   implicit none
   private
@@ -89,12 +90,13 @@ module cube_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, namespace, fft_type, fft_library, dont_optimize, nn_out, &
+  subroutine cube_init(cube, nn, sb, namespace, space, fft_type, fft_library, dont_optimize, nn_out, &
                        mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
     type(namespace_t), intent(in)  :: namespace
+    type(space_t),     intent(in)  :: space
     integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?
     integer, optional, intent(in)  :: fft_library !< What fft library to use
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
@@ -127,7 +129,7 @@ contains
       ASSERT(present(spacing))
     end if
 
-    effdim_fft = min (3, sb%dim)
+    effdim_fft = min (3, space%dim)
 
     mpi_grp_ = mpi_world
     if (present(mpi_grp)) mpi_grp_ = mpi_grp
@@ -184,8 +186,8 @@ contains
 
       optimize(1:3) = .false.
       optimize_parity(1:3) = 0
-      optimize(sb%periodic_dim+1:effdim_fft) = .true.
-      optimize_parity(sb%periodic_dim+1:effdim_fft) = 1
+      optimize(space%periodic_dim + 1:effdim_fft) = .true.
+      optimize_parity(space%periodic_dim + 1:effdim_fft) = 1
 
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
@@ -193,7 +195,7 @@ contains
 
       if(present(tp_enlarge)) call cube_tp_fft_defaults(cube, fft_library_)
 
-      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
+      call fft_init(cube%fft, tmp_n, space%dim, fft_type_, fft_library_, optimize, optimize_parity, &
         mpi_comm=mpi_comm, mpi_grp = mpi_grp_, use_aligned=.true.)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 

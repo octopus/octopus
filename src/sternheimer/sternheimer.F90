@@ -164,9 +164,9 @@ contains
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, namespace, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_CMPLX)
+      call mix_init(this%mixer, namespace, space, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, namespace, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_FLOAT)
+      call mix_init(this%mixer, namespace, space, gr%der, gr%mesh%np, st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then

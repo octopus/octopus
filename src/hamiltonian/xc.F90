@@ -39,6 +39,7 @@ module xc_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use unit_system_oct_m
@@ -217,6 +218,12 @@ contains
 
     call messages_obsolete_variable(namespace, 'MGGAimplementation')
     call messages_obsolete_variable(namespace, 'CurrentInTau', 'XCUseGaugeIndependentKED')
+
+    if (xcs%functional(FUNC_X, 1)%id == XC_MGGA_X_TB09 .and. periodic_dim /= 3) then
+      message(1) = "mgga_x_tb09 functional can only be used for 3D periodic systems"
+      call messages_fatal(1, namespace=namespace)
+    end if
+
 
     if(family_is_mgga(xcs%family)) then
       !%Variable XCUseGaugeIndependentKED

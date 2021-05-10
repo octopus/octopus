@@ -439,7 +439,7 @@ contains
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_)
+      call nl_operator_build(space, mesh, der%op(i), der%mesh%np, const_w = const_w_)
       np_zero_bc = max(np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 
@@ -745,9 +745,10 @@ contains
 #endif
 
   ! ---------------------------------------------------------
-  subroutine derivatives_get_lapl(this, op, name, order) 
+  subroutine derivatives_get_lapl(this, op, space, name, order) 
     type(derivatives_t),         intent(in)    :: this
     type(nl_operator_t),         intent(inout) :: op(:) 
+    type(space_t),               intent(in)    :: space
     character(len=32),           intent(in)    :: name
     integer,                     intent(in)    :: order
 
@@ -765,7 +766,7 @@ contains
     else
       call stencil_star_get_lapl(op(1)%stencil, this%dim, order)
     end if
-    call nl_operator_build(this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
+    call nl_operator_build(space, this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
 
     !At the moment this code is almost copy-pasted from derivatives_build.
     if(this%mesh%sb%latt%nonorthogonal) then

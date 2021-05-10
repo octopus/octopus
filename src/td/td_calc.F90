@@ -183,7 +183,7 @@ subroutine td_calc_tvel(space, der, st, kpoints, vel)
   PUSH_SUB(td_calc_tvel)
 
   SAFE_ALLOCATE(momentum(1:space%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call states_elec_calc_momentum(st, der, kpoints, momentum)
+  call states_elec_calc_momentum(st, space, der, kpoints, momentum)
 
   momentum(1:space%dim, st%st_start:st%st_end, 1) = & 
     sum(momentum(1:space%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)

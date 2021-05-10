@@ -506,8 +506,9 @@ contains
   end subroutine lda_u_end
 
   ! When moving the ions, the basis must be reconstructed
-  subroutine lda_u_update_basis(this, gr, ions, st, psolver, namespace, kpoints, has_phase)
+  subroutine lda_u_update_basis(this, space, gr, ions, st, psolver, namespace, kpoints, has_phase)
     type(lda_u_t),     target, intent(inout) :: this
+    type(space_t),             intent(in)    :: space
     type(grid_t),              intent(in)    :: gr
     type(ions_t),      target, intent(in)    :: ions
     type(states_elec_t),       intent(in)    :: st
@@ -576,13 +577,13 @@ contains
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%sb%dim, gr%sb%periodic_dim, st%d, gr%der%boundaries, namespace, kpoints)
+      call lda_u_build_phase_correction(this, space, st%d, gr%der%boundaries, namespace, kpoints)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then
         call dloewdin_orthogonalize(this%basis, st%d%kpt, namespace)
       else
-        if(debug%info .and. gr%sb%periodic_dim > 0) then
+        if(debug%info .and. space%is_periodic()) then
           call dloewdin_info(this%basis, st%d%kpt, namespace)
         end if
       end if
@@ -619,16 +620,15 @@ contains
 
 
   !> Build the phase correction to the global phase for all orbitals
-  subroutine lda_u_build_phase_correction(this, dim, periodic_dim, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
+  subroutine lda_u_build_phase_correction(this, space, std, boundaries, namespace, kpoints, vec_pot, vec_pot_var)
     type(lda_u_t),                 intent(inout) :: this
-    integer,                       intent(in)    :: dim
-    integer,                       intent(in)    :: periodic_dim
+    type(space_t),                 intent(in)    :: space
     type(states_elec_dim_t),       intent(in)    :: std
     type(boundaries_t),            intent(in)    :: boundaries
     type(namespace_t),             intent(in)    :: namespace
     type(kpoints_t),               intent(in)    :: kpoints
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (space%dim)
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:space%dim, 1:ns)
 
     integer :: ios
 
@@ -642,14 +642,14 @@ contains
     PUSH_SUB(lda_u_build_phase_correction)
 
     do ios = 1, this%norbsets
-      call orbitalset_update_phase(this%orbsets(ios), dim, std%kpt, kpoints, (std%ispin==SPIN_POLARIZED), &
+      call orbitalset_update_phase(this%orbsets(ios), space%dim, std%kpt, kpoints, (std%ispin==SPIN_POLARIZED), &
         vec_pot, vec_pot_var)
     end do
 
     if(this%basis%orthogonalization) then
       call zloewdin_orthogonalize(this%basis, std%kpt, namespace)
     else
-      if(debug%info .and. periodic_dim > 0) call zloewdin_info(this%basis, std%kpt, namespace)
+      if(debug%info .and. space%is_periodic()) call zloewdin_info(this%basis, std%kpt, namespace)
     end if
 
     POP_SUB(lda_u_build_phase_correction)

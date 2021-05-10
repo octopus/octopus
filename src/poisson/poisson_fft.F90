@@ -24,6 +24,7 @@ module poisson_fft_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_cube_parallel_map_oct_m
@@ -34,6 +35,7 @@ module poisson_fft_oct_m
   use poisson_cutoff_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use splines_oct_m
   use submesh_oct_m
   use unit_oct_m
@@ -66,9 +68,10 @@ module poisson_fft_oct_m
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, fullcube)
+  subroutine poisson_fft_init(this, namespace, space, mesh, cube, kernel, soft_coulb_param, fullcube)
     type(poisson_fft_t), intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
@@ -80,17 +83,18 @@ contains
     this%kernel = kernel
     this%soft_coulb_param = optional_default(soft_coulb_param, M_ZERO)
 
-    this%coulb%qq(1:mesh%sb%periodic_dim) = M_ZERO
+    this%coulb%qq(1:space%periodic_dim) = M_ZERO
     this%coulb%singularity = M_ZERO
     this%coulb%mu = M_ZERO
 
-    call poisson_fft_get_kernel(namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
+    call poisson_fft_get_kernel(namespace, space, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
 
     POP_SUB(poisson_fft_init)
   end subroutine poisson_fft_init
 
-  subroutine poisson_fft_get_kernel(namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
+  subroutine poisson_fft_get_kernel(namespace, space, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -101,7 +105,7 @@ contains
     PUSH_SUB(poisson_fft_get_kernel)
 
     if(coulb%mu > M_EPSILON) then
-      if(mesh%sb%dim /= 3 .or. kernel /= POISSON_FFT_KERNEL_NOCUT) then
+      if (space%dim /= 3 .or. kernel /= POISSON_FFT_KERNEL_NOCUT) then
         message(1) = "The screened Coulomb potential is only implemented in 3D for PoissonFFTKernel=fft_nocut."
         call messages_fatal(1)
       end if
@@ -121,7 +125,7 @@ contains
     end if
 
 
-    select case(mesh%sb%dim)
+    select case (space%dim)
     case(1)
       ASSERT(present(soft_coulb_param))
       select case(kernel)
@@ -153,7 +157,7 @@ contains
         call poisson_fft_build_3d_0d(namespace,  mesh, cube, kernel, coulb)
 
       case(POISSON_FFT_KERNEL_CYL)
-        call poisson_fft_build_3d_1d(namespace, mesh, cube, coulb)
+        call poisson_fft_build_3d_1d(namespace, space, mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_PLA)
         call poisson_fft_build_3d_2d(namespace, mesh, cube, coulb)
@@ -198,25 +202,26 @@ contains
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_gg_transform(gg_in, temp, sb, qq, gg, modg2)
-    integer,           intent(in)    :: gg_in(:)
-    FLOAT,             intent(in)    :: temp(:)
-    type(simul_box_t), intent(in)    :: sb
-    FLOAT,             intent(in)    :: qq(:)
-    FLOAT,             intent(inout) :: gg(:)
-    FLOAT,             intent(out)   :: modg2
+  subroutine poisson_fft_gg_transform(gg_in, temp, periodic_dim, latt, qq, gg, modg2)
+    integer,                 intent(in)    :: gg_in(:)
+    FLOAT,                   intent(in)    :: temp(:)
+    integer,                 intent(in)    :: periodic_dim
+    type(lattice_vectors_t), intent(in)    :: latt
+    FLOAT,                   intent(in)    :: qq(:)
+    FLOAT,                   intent(inout) :: gg(:)
+    FLOAT,                   intent(out)   :: modg2
 
 !    integer :: idir
 
     ! no PUSH_SUB, called too frequently
 
     gg(1:3) = gg_in(1:3)
-    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
+    gg(1:periodic_dim) = gg(1:periodic_dim) + qq(1:periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
-    gg(1:3) = matmul(sb%latt%klattice_primitive(1:3,1:3),gg(1:3))
+    gg(1:3) = matmul(latt%klattice_primitive(1:3,1:3),gg(1:3))
 ! MJV 27 jan 2015 this should not be necessary
 !    do idir = 1, 3
-!      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
+!      gg(idir) = gg(idir) / lalg_nrm2(3, latt%klattice_primitive(1:3, idir))
 !    end do
 
     modg2 = sum(gg(1:3)**2)
@@ -261,7 +266,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-         call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
+         call poisson_fft_gg_transform(ixx, temp, 3, mesh%sb%latt, coulb%qq, gg, modg2)
 
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
@@ -343,7 +348,7 @@ contains
         do iz = 1, nfs(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
           
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, 3, mesh%sb%latt, coulb%qq, gg, modg2)
           
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -464,7 +469,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, 2, mesh%sb%latt, coulb%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -490,8 +495,9 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_1d(namespace, mesh, cube, coulb)
+  subroutine poisson_fft_build_3d_1d(namespace, space, mesh, cube, coulb)
     type(namespace_t),        intent(in)    :: namespace
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -520,7 +526,7 @@ contains
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    if( mesh%sb%periodic_dim == 0 ) then
+    if (.not. space%is_periodic()) then
       ngp = 8*db(2)
       SAFE_ALLOCATE(x(1:ngp))
       SAFE_ALLOCATE(y(1:ngp))
@@ -533,7 +539,7 @@ contains
       lxx(1) = ixx(1) - cube%fs_istart(1) + 1
       gx = temp(1)*ixx(1)
 
-      if( mesh%sb%periodic_dim == 0 ) then
+      if (.not. space%is_periodic()) then
         call spline_init(cylinder_cutoff_f)
         xmax = sqrt((temp(2)*db(2)/2)**2 + (temp(3)*db(3)/2)**2)
         do k = 1, ngp
@@ -552,13 +558,13 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
           lxx(3) = ixx(3) - cube%fs_istart(3) + 1
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, 1, mesh%sb%latt, coulb%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
-            if (mesh%sb%periodic_dim==1) then
+            if (space%periodic_dim == 1) then
               fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_1D(abs(gx), gperp, r_c)/modg2
-            else if (mesh%sb%periodic_dim==0) then
+            else if (.not. space%is_periodic()) then
               gy = gg(2)
               gz = gg(3)
               if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
@@ -576,9 +582,9 @@ contains
             end if
 
           else
-            if (mesh%sb%periodic_dim == 1) then
+            if (space%periodic_dim == 1) then
               fft_Coulb_FS(lx, ly, lz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
-            else if (mesh%sb%periodic_dim == 0) then
+            else if (.not. space%is_periodic()) then
               fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_1D_finite(M_ZERO, M_ZERO, &
                 M_TWO*mesh%sb%lsize(1), maxval(M_TWO*mesh%sb%lsize(2:3)))
             end if
@@ -588,7 +594,9 @@ contains
         end do
       end do
 
-      if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
+      if (.not. space%is_periodic()) then
+        call spline_end(cylinder_cutoff_f)
+      end if
     end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
@@ -650,7 +658,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, 0, mesh%sb%latt, coulb%qq, gg, modg2)
 
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then

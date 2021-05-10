@@ -96,7 +96,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, mesh, sb, fine, hm,
         idm = 1
       end if
 
-      call X(oep_sic) (xcs, mesh, fine, hm%psolver, namespace, st, hm%kpoints, is, oep, ex, ec)
+      call X(oep_sic) (xcs, mesh, fine, hm%psolver, namespace, space, st, hm%kpoints, is, oep, ex, ec)
     end do spin
   end if   
 

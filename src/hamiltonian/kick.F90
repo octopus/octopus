@@ -35,7 +35,7 @@ module kick_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use species_oct_m
-  use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use symm_op_oct_m
@@ -123,10 +123,10 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, namespace, sb, kpoints, nspin)
+  subroutine kick_init(kick, namespace, space, kpoints, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
-    type(simul_box_t), intent(in)  :: sb
+    type(space_t),     intent(in)  :: space
     type(kpoints_t),   intent(in)  :: kpoints
     integer,           intent(in)  :: nspin
 
@@ -138,8 +138,8 @@ contains
 
     PUSH_SUB(kick_init)
 
-    kick%dim = sb%dim
-    periodic_dim = sb%periodic_dim
+    kick%dim = space%dim
+    periodic_dim = space%periodic_dim
 
     !%Variable TDDeltaKickTime
     !%Type float
@@ -862,7 +862,8 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_function_get(mesh, kick, kick_function, iq, to_interpolate)
+  subroutine kick_function_get(space, mesh, kick, kick_function, iq, to_interpolate)
+    type(space_t),        intent(in)    :: space
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
@@ -870,7 +871,7 @@ contains
     logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
-    FLOAT   :: xx(mesh%sb%dim)
+    FLOAT   :: xx(space%dim)
     FLOAT   :: rkick, ikick, rr, ylm
 
     integer :: np
@@ -883,7 +884,7 @@ contains
     end if
 
     if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
-      ASSERT(mesh%sb%dim == 3)
+      ASSERT(space%dim == 3)
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
@@ -927,7 +928,7 @@ contains
         do ip = 1, np
           call mesh_r(mesh, ip, rr, coords = xx)
             rkick = M_ZERO; ikick = M_ZERO
-          call parse_expression(rkick, ikick, mesh%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
+          call parse_expression(rkick, ikick, space%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
             kick_function(ip) = rkick
         end do
 
@@ -943,8 +944,8 @@ contains
         end do
       else
         do ip = 1, np
-          kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
-            kick%pol(1:mesh%sb%dim, kick%pol_dir))
+          kick_function(ip) = sum(mesh%x(ip, 1:space%dim) * &
+            kick%pol(1:space%dim, kick%pol_dir))
         end do
       end if
     end if
@@ -955,7 +956,8 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
+  subroutine kick_pcm_function_get(space, mesh, kick, psolver, pcm, kick_pcm_function)
+    type(space_t),        intent(in)    :: space
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     type(poisson_t),      intent(in)    :: psolver
@@ -971,7 +973,7 @@ contains
     if ( pcm%localf ) then
       SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
       kick_function_interpolate = M_ZERO
-      call kick_function_get(mesh, kick, kick_function_interpolate, 1, to_interpolate = .true.)
+      call kick_function_get(space, mesh, kick, kick_function_interpolate, 1, to_interpolate = .true.)
       SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
       kick_function_real = DREAL(kick_function_interpolate)
       if ( pcm%kick_like ) then
@@ -996,7 +998,8 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions_dyn, ions, kick, psolver, kpoints, pcm)
+  subroutine kick_apply(space, mesh, st, ions_dyn, ions, kick, psolver, kpoints, pcm)
+    type(space_t),         intent(in)    :: space
     type(mesh_t),          intent(in)    :: mesh
     type(states_elec_t),   intent(inout) :: st
     type(ion_dynamics_t),  intent(in)    :: ions_dyn
@@ -1023,13 +1026,13 @@ contains
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE .or. kick%nqvec == 1) then
-        call kick_function_get(mesh, kick, kick_function, 1)
+        call kick_function_get(space, mesh, kick, kick_function, 1)
       end if
 
       ! PCM - computing polarization due to kick
       if( present(pcm) ) then
         SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
-        call kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
+        call kick_pcm_function_get(space, mesh, kick, psolver, pcm, kick_pcm_function)
         kick_function = kick_function + kick_pcm_function
       end if
 
@@ -1208,8 +1211,8 @@ contains
       if(ion_dynamics_ions_move(ions_dyn)  .and. kick%delta_strength /= M_ZERO) then
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
           do iatom = 1, ions%natoms
-            ions%atom(iatom)%v(1:mesh%sb%dim) = ions%atom(iatom)%v(1:mesh%sb%dim) + &
-                 kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
+            ions%atom(iatom)%v(1:ions%space%dim) = ions%atom(iatom)%v(1:ions%space%dim) + &
+                 kick%delta_strength * kick%pol(1:ions%space%dim, kick%pol_dir) * &
                  P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / &
                  species_mass(ions%atom(iatom)%species)
           end do

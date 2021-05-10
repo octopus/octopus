@@ -81,7 +81,7 @@ module simul_box_oct_m
     type(lattice_vectors_t), pointer :: latt => NULL()
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
-    
+
     integer :: periodic_dim
   contains
     procedure :: contains_points => simul_box_contains_points

@@ -272,15 +272,16 @@ contains
   end subroutine poisson_psolver_end
 
   !-----------------------------------------------------------------
-  subroutine poisson_psolver_reinit(this, mesh, cube, mu, qq_in)
+  subroutine poisson_psolver_reinit(this, space, mesh, cube, mu, qq_in)
     type(poisson_psolver_t), intent(inout) :: this
+    type(space_t),           intent(in)    :: space
     type(cube_t),            intent(inout) :: cube
     type(mesh_t),            intent(inout) :: mesh
     FLOAT,                   intent(in)    :: mu
     FLOAT,                   intent(in)    :: qq_in(1:MAX_DIM)
 
     FLOAT :: alpha, beta, gamma
-    FLOAT :: qq_abs(1:mesh%sb%dim), qq(1:mesh%sb%dim)
+    FLOAT :: qq_abs(1:space%dim), qq(1:space%dim)
     FLOAT :: modq2
     integer :: idim
 
@@ -306,10 +307,10 @@ contains
 
     !G=0 component
     !We remove potential umklapp
-    do idim = 1, mesh%sb%periodic_dim
+    do idim = 1, space%periodic_dim
       qq(idim) = qq_in(idim) - anint(qq_in(idim) + M_HALF*CNST(1e-8))
     end do
-    qq(mesh%sb%periodic_dim + 1:mesh%sb%dim) = M_ZERO
+    qq(space%periodic_dim + 1:space%dim) = M_ZERO
     call kpoints_to_absolute(mesh%sb%latt, qq, qq_abs)
     modq2 = norm2(qq_abs)
     if (modq2 > M_EPSILON) then

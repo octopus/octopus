@@ -19,6 +19,8 @@
 #include "global.h"
 
 module states_mxll_restart_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
   use grid_oct_m
   use io_function_oct_m
@@ -34,15 +36,14 @@ module states_mxll_restart_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use space_oct_m
+  use states_elec_restart_oct_m
   use states_mxll_oct_m
   use states_elec_dim_oct_m
   use string_oct_m
   use types_oct_m
   use unit_system_oct_m
   use unit_oct_m
-  use states_elec_restart_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
     
   implicit none
 
@@ -57,15 +58,16 @@ module states_mxll_restart_oct_m
 contains
 
   !----------------------------------------------------------
-  subroutine states_mxll_read_user_def(mesh, st, user_def_rs_state, namespace)
+  subroutine states_mxll_read_user_def(namespace, space, mesh, st, user_def_rs_state)
+    type(namespace_t),   intent(in)    :: namespace
+    type(space_t),       intent(in)    :: space
     type(mesh_t),        intent(inout) :: mesh
     type(states_mxll_t), intent(inout) :: st
-    type(namespace_t),   intent(in)    :: namespace
     CMPLX,               intent(inout) :: user_def_rs_state(:,:)
 
     type(block_t)      :: blk
     integer            :: il, nlines, idim, ncols, ip, state_from, ierr, maxwell_field
-    FLOAT              :: xx(1:mesh%sb%dim), rr, e_value, dummy, b_value
+    FLOAT              :: xx(space%dim), rr, e_value, dummy, b_value
     FLOAT, allocatable :: e_field(:), b_field(:)
     FLOAT, allocatable :: total_efield(:,:), total_bfield(:,:)
     CMPLX, allocatable :: rs_state_add(:), rs_state(:,:)
@@ -215,7 +217,7 @@ contains
           if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_e_field)
             call messages_write("  E-field in dimension "//trim(cdim)//" : "//trim(filename_e_field), fmt='(a,i1,2a)')
-            call dio_function_input(filename_e_field, namespace, mesh, e_field(:), ierr)
+            call dio_function_input(filename_e_field, namespace, space, mesh, e_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -225,7 +227,7 @@ contains
           else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_b_field)
             call messages_write("  B-field in dimension "//trim(cdim)//" : "//trim(filename_b_field), fmt='(a,i1,2a)')
-            call dio_function_input(filename_b_field, namespace, mesh, b_field(:), ierr)
+            call dio_function_input(filename_b_field, namespace, space, mesh, b_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -282,9 +284,10 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine states_mxll_dump(restart, st, gr, zff, zff_dim, ierr, iter, st_start_writing, verbose)
+  subroutine states_mxll_dump(restart, st, space, gr, zff, zff_dim, ierr, iter, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
     type(states_mxll_t),  intent(in)  :: st
+    type(space_t),        intent(in)  :: space
     type(grid_t),         intent(in)  :: gr
     CMPLX,                intent(in)  :: zff(:,:)
     integer,              intent(in)  :: zff_dim
@@ -354,7 +357,7 @@ contains
        end if
 
        if (should_write) then
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff(:,idim), err, root = root)
+          call zrestart_write_mesh_function(restart, space, filename, gr%mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if
     end do ! zff_dim
@@ -387,11 +390,12 @@ contains
   end subroutine states_mxll_dump
 
   !----------------------------------------------------------
-  subroutine states_mxll_load(restart, st, gr, namespace, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
+  subroutine states_mxll_load(restart, st, gr, namespace, space, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_mxll_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     type(namespace_t),          intent(in)    :: namespace
+    type(space_t),              intent(in)    :: space
     CMPLX,                      intent(inout) :: zff(:,:)
     integer,                    intent(in)    :: zff_dim
     integer,                    intent(out)   :: ierr
@@ -529,7 +533,7 @@ contains
           cycle
        endif
 
-       call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
+       call zrestart_read_mesh_function(restart, space, restart_file(idim, ist), gr%mesh, &
             zff(:,idim), err)
 
 
