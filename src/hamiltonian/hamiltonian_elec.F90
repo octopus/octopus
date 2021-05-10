@@ -385,7 +385,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, namespace, gr%mesh, gr%sb, hm%ions)
+    call bc_init(hm%bc, namespace, space, gr%mesh, gr%sb%box)
 
     !%Variable MassScaling
     !%Type block

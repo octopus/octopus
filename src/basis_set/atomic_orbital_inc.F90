@@ -47,53 +47,58 @@ subroutine X(get_atomic_orbital) (ions, mesh, sm, iatom, ii, ll, jj, os, orbind,
 
   if(sm%np == -1) then
     
-    if(mesh%sb%box_shape == MINIMUM .and. radius > mesh%sb%rsize) then
-      message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
-      message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
-      write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-      call messages_fatal(3)
-    end if
- 
-    if(mesh%sb%box_shape == SPHERE .or. mesh%sb%box_shape == CYLINDER) then
-      if(radius > mesh%sb%rsize) then
-       message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
-       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
-       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-       call messages_fatal(3) 
+    select type (box => mesh%sb%box)
+    type is (box_minimum_t)
+      if (radius > box%radius) then
+        message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
+        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
       end if
-      if(mesh%sb%box_shape == CYLINDER .and. radius > mesh%sb%xsize) then
-       message(1) = "The radius of an orbital set is bigger than the length of the cylinder box."
-       message(2) = "Increase the value of XLength or decrease the value of OrbitalsThreshold_LDAU."
-       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-       call messages_fatal(3) 
-      end if
-    end if 
 
-    if(mesh%sb%box_shape == SPHERE ) then
-      if(sqrt(sum(ions%atom(iatom)%x(1:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
-       message(1) = "An orbital set has points outside of the simulatio box."
-       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
-       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-       call messages_fatal(3)
+    type is (box_sphere_t)
+      if (radius > box%radius) then
+        message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
+        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
       end if
-    end if
+      if (norm2(ions%atom(iatom)%x(1:mesh%sb%dim) - box%center) + radius > box%radius) then
+        message(1) = "An orbital set has points outside of the simulatio box."
+        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
+      end if
 
-    if(mesh%sb%box_shape == CYLINDER ) then
-      if(sqrt(sum(ions%atom(iatom)%x(2:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
-       message(1) = "An orbital set has points outside of the simulatio box."
-       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
-       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-       call messages_fatal(3)
+    type is (box_cylinder_t)
+      if(radius > box%radius) then
+        message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
+        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
       end if
-      if(abs(ions%atom(iatom)%x(1)) + radius > mesh%sb%xsize) then
-       message(1) = "An orbital set has points outside of the simulatio box."
-       message(2) = "Increase the value of Xlength or decrease the value of OrbitalsThreshold_LDAU."
-       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
-       call messages_fatal(3)
+      if (radius > box%half_length) then
+        message(1) = "The radius of an orbital set is bigger than the length of the cylinder box."
+        message(2) = "Increase the value of XLength or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
       end if
-    end if
 
- 
+      if (norm2(ions%atom(iatom)%x(2:mesh%sb%dim) - box%center(2:mesh%sb%dim)) + radius > box%radius) then
+        message(1) = "An orbital set has points outside of the simulatio box."
+        message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
+      end if
+      if (abs(ions%atom(iatom)%x(1) - box%center(1)) + radius > box%half_length) then
+        message(1) = "An orbital set has points outside of the simulatio box."
+        message(2) = "Increase the value of Xlength or decrease the value of OrbitalsThreshold_LDAU."
+        write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+        call messages_fatal(3)
+      end if
+
+    end select
+
     !We initialise the submesh corresponding to the orbital 
     call submesh_init(sm, ions%space, mesh%sb, mesh, ions%atom(iatom)%x, radius)
 

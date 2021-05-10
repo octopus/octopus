@@ -19,6 +19,7 @@
 #include "global.h"
 
 module pcm_oct_m
+  use box_minimum_oct_m
   use comm_oct_m
   use global_oct_m
   use grid_oct_m
@@ -245,10 +246,16 @@ contains
     call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       call messages_print_stress(stdout, trim('PCM'), namespace=namespace)
-      if ( (grid%sb%box_shape /= MINIMUM) .or. (grid%sb%dim /= PCM_DIM_SPACE) ) then
-        message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
+      if (grid%sb%dim /= PCM_DIM_SPACE) then
+        message(1) = "PCM is only available for 3d calculations"
         call messages_fatal(1, namespace=namespace)
       end if
+      select type (box => grid%sb%box)
+      type is (box_minimum_t)
+      class default
+        message(1) = "PCM is only available for BoxShape = minimum"
+        call messages_fatal(1, namespace=namespace)
+      end select
     else
       POP_SUB(pcm_init)
       return

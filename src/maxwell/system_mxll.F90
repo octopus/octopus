@@ -331,7 +331,7 @@ contains
 
     this%hm%plane_waves_apply = .true.
     this%hm%spatial_constant_apply = .true.
-    call bc_mxll_init(this%hm%bc, this%namespace, this%gr, this%st, this%gr%sb, this%ions, this%prop%dt/this%tr_mxll%inter_steps)
+    call bc_mxll_init(this%hm%bc, this%namespace, this%gr, this%st, this%gr%sb, this%prop%dt/this%tr_mxll%inter_steps)
     this%bc_bounds(:,1:3) = this%hm%bc%bc_bounds(:,1:3)
     call inner_and_outer_points_mapping(this%gr%mesh, this%st, this%bc_bounds)
     this%dt_bounds(2, 1:3) = this%bc_bounds(1, 1:3)

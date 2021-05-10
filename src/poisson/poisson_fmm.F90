@@ -24,6 +24,7 @@
 
 module poisson_fmm_oct_m
   use boundaries_oct_m
+  use box_parallelepiped_oct_m
   use cube_oct_m
   use derivatives_oct_m
   use fft_oct_m
@@ -228,11 +229,14 @@ contains
     mesh => der%mesh
 
     if(mesh%sb%periodic_dim /= 0) then
-      if (.not.((mesh%sb%box_shape == PARALLELEPIPED) .and. ((mesh%sb%lsize(1) == mesh%sb%lsize(2)) .and. &
-        (mesh%sb%lsize(1) == mesh%sb%lsize(3)) .and. &
-        (mesh%sb%lsize(2) == mesh%sb%lsize(3))))) then
+      select type (box => mesh%sb%box)
+      type is (box_parallelepiped_t)
+        if (.not. all(box%half_length == box%half_length(1))) then
+          call messages_not_implemented("FMM Poisson solver with non-cubic boxes.")
+        end if
+      class default
         call messages_not_implemented("FMM Poisson solver with non-cubic boxes.")
-      end if
+      end select
     end if
 
     total_particles = mesh%np_global

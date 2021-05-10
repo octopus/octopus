@@ -39,8 +39,8 @@ module box_cylinder_oct_m
     integer :: dir         !< axis along which the cylinder lies (for the moment
                            !! must be one of the Cartesian axes, but this could
                            !! be generalized)
-    FLOAT   :: radius      !< the radius of the cylinder
-    FLOAT   :: half_length !< half the length of the cylinder
+    FLOAT, public :: radius      !< the radius of the cylinder
+    FLOAT, public :: half_length !< half the length of the cylinder
 
     logical :: periodic_boundaries = .false. !< are the bases of the cylinder to be treated as periodic?
   contains

@@ -18,18 +18,22 @@
 #include "global.h"
 
 module boundary_op_oct_m
-  use io_function_oct_m
+  use box_oct_m
+  use box_cylinder_oct_m
+  use box_sphere_oct_m
+  use box_parallelepiped_oct_m
   use cube_function_oct_m
   use global_oct_m
   use ions_oct_m
+  use io_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use simul_box_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -59,18 +63,18 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, namespace, mesh, sb, ions)
+  subroutine bc_init(this, namespace, space, mesh, sb)
     type(bc_t),               intent(out) :: this
     type(namespace_t),        intent(in)  :: namespace
+    type(space_t),            intent(in)  :: space
     type(mesh_t),             intent(in)  :: mesh
-    type(simul_box_t),        intent(in)  :: sb
-    type(ions_t),             intent(in)  :: ions
+    class(box_t),             intent(in)  :: sb
 
     integer             :: ip
-    FLOAT               :: bounds(1:sb%dim, 1:2)
+    FLOAT               :: bounds(space%dim, 2)
     integer             :: cols_abshape_block, imdim, maxdim
 
-    FLOAT               :: xx(1:sb%dim), rr
+    FLOAT               :: xx(space%dim), rr
     FLOAT               :: ufn_re, ufn_im
     character(len=1024) :: user_def_expr
 
@@ -108,10 +112,11 @@ contains
       call messages_input_error(namespace, 'AbsorbingBoundaries')
     end if
 
-    if(this%abtype == EXTERIOR) &
+    if (this%abtype == EXTERIOR) then
       call messages_not_implemented('Exterior complex scaling', namespace=namespace)
+    end if
 
-    if(this%abtype /= NOT_ABSORBING) then
+    if (this%abtype /= NOT_ABSORBING) then
       write(str, '(a,i5)') 'Absorbing Boundaries'
       call messages_print_stress(stdout, trim(str), namespace=namespace)
 
@@ -122,7 +127,7 @@ contains
       !%Description
       !% When <tt>AbsorbingBoundaries = cap</tt>, this is the height of the imaginary potential.
       !%End
-      if(this%abtype == IMAGINARY_ABSORBING) then
+      if (this%abtype == IMAGINARY_ABSORBING) then
         call parse_variable(namespace, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
       end if
 
@@ -151,20 +156,20 @@ contains
       if(parse_block(namespace, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
-      
-        select case (sb%box_shape)
-        case (SPHERE)
-          bounds(1,1) = sb%rsize/M_TWO
-          bounds(1,2) = sb%rsize
-        case (PARALLELEPIPED)
-          bounds(1:sb%dim,1)=sb%lsize(1:sb%dim)/M_TWO
-          bounds(1:sb%dim,2)=sb%lsize(1:sb%dim)
-        case (CYLINDER)
-          bounds(1,2) = sb%xsize
-          bounds(2,2) = sb%rsize
+
+        select type (sb)
+        type is (box_sphere_t)
+          bounds(1,1) = sb%radius/M_TWO
+          bounds(1,2) = sb%radius
+        type is (box_parallelepiped_t)
+          bounds(:,1) = sb%half_length/M_TWO
+          bounds(:,2) = sb%half_length
+        type is (box_cylinder_t)
+          bounds(1,2) = sb%half_length
+          bounds(2,2) = sb%radius
           bounds(1,1) = bounds(1,1)/M_TWO
           bounds(2,1) = bounds(2,2)/M_TWO
-        case default
+        class default
           bounds(:,1) = M_ZERO
           bounds(:,2) = CNST(0.4)
         end select
@@ -175,20 +180,33 @@ contains
         case(2)
           call parse_block_float(blk, 0, 0, bounds(1,1), units_inp%length)
           call parse_block_float(blk, 0, 1, bounds(1,2), units_inp%length)
-          if (sb%box_shape == SPHERE) then
-            if(bounds(1,2) > sb%rsize)  bounds(1,2) = sb%rsize 
+
+          select type (sb)
+          type is (box_sphere_t)
+            if (bounds(1,2) > sb%radius) then
+              bounds(1,2) = sb%radius
+            end if
             message(1) = "Info: using spherical absorbing boundaries."
-          else if (sb%box_shape == PARALLELEPIPED) then
-            do imdim = 1, sb%dim
-              if(bounds(imdim,2) > sb%lsize(imdim))  bounds(imdim,2) = sb%lsize(imdim) 
+
+          type is (box_parallelepiped_t)
+            do imdim = 1, space%dim
+              if (bounds(imdim,2) > sb%half_length(imdim)) then
+                bounds(imdim,2) = sb%half_length(imdim)
+              end if
             end do
             message(1) = "Info: using cubic absorbing boundaries."
-          else if (sb%box_shape == CYLINDER) then
-            if(bounds(1,2) > sb%xsize)  bounds(1,2) = sb%xsize
-            if(bounds(1,2) > sb%rsize)  bounds(1,2) = sb%rsize            
+
+          type is (box_cylinder_t)
+            if (bounds(1,2) > sb%half_length) then
+              bounds(1,2) = sb%half_length
+            end if
+            if (bounds(1,2) > sb%radius) then
+              bounds(1,2) = sb%radius
+            end if
             message(1) = "Info: using cylindrical absorbing boundaries."
-          end if    
+          end select
           call messages_info(1)
+
         case(3)
           this%ab_user_def = .true.
           SAFE_ALLOCATE(this%ab_ufn(1:mesh%np))
@@ -197,12 +215,9 @@ contains
           call parse_block_float( blk, 0, 1, bounds(1,2), units_inp%length)
           call parse_block_string(blk, 0, 2, user_def_expr)
           do ip = 1, mesh%np
-            xx = mesh%x(ip, :)
-            rr = units_from_atomic(units_inp%length, sqrt(sum(xx**2)))
-            do imdim = 1, sb%dim
-              xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
-            end do
-            call parse_expression(ufn_re, ufn_im, sb%dim, xx, rr, M_ZERO, user_def_expr)
+            xx = units_from_atomic(units_inp%length, mesh%x(ip, :))
+            rr = norm2(xx)
+            call parse_expression(ufn_re, ufn_im, space%dim, xx, rr, M_ZERO, user_def_expr)
             this%ab_ufn(ip) = ufn_re
           end do
           message(1) = "Input: using user-defined function from expression:"
@@ -224,13 +239,22 @@ contains
       !% shape use ABShape. 
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
-      abwidth_def = bounds(1,2)-bounds(1,1)
+      abwidth_def = bounds(1,2) - bounds(1,1)
       call parse_variable(namespace, 'ABWidth', abwidth_def, abwidth, units_inp%length)
       bounds(:, 1) = bounds(:, 2) - abwidth
 
-      maxdim = sb%dim
-      if(sb%box_shape == SPHERE .or. this%ab_user_def) maxdim = 1
-      if(sb%box_shape == CYLINDER) maxdim = 2
+      select type (sb)
+      type is (box_sphere_t)
+        maxdim = 1
+      type is (box_cylinder_t)
+        maxdim = 2
+      class default
+        if (this%ab_user_def) then
+          maxdim = 1
+        else
+          maxdim = space%dim
+        end if
+      end select
       write(message(1),'(a,2a,9f12.6)') & 
           "  Lower bound [", trim(units_abbrev(units_inp%length)), '] =', & 
           (units_from_atomic(units_inp%length, bounds(imdim,1)), imdim=1,maxdim)
@@ -241,16 +265,17 @@ contains
       
       ! generate boundary function
       SAFE_ALLOCATE(mf(1:mesh%np))
-      call bc_generate_mf(this, mesh, sb, ions, bounds, mf)
+      call bc_generate_mf(this, space, mesh, sb, bounds, mf)
       
       ! mask or cap
       SAFE_ALLOCATE(this%mf(1:mesh%np))
 
-      if(this%abtype == MASK_ABSORBING) then
+      select case (this%abtype)
+      case (MASK_ABSORBING)
         this%mf = M_ONE - mf
-      else if(this%abtype == IMAGINARY_ABSORBING) then
+      case (IMAGINARY_ABSORBING)
         this%mf(:) = abheight * mf(:)
-      end if
+      end select
       
       if(debug%info) call bc_write_info(this, mesh, namespace)
       
@@ -304,31 +329,29 @@ contains
   end subroutine bc_write_info
 
   ! ---------------------------------------------------------
-  subroutine bc_generate_mf(this, mesh, sb, ions, bounds, mf)
+  subroutine bc_generate_mf(this, space, mesh, sb, bounds, mf)
     type(bc_t),               intent(inout) :: this
+    type(space_t),            intent(in)    :: space
     type(mesh_t),             intent(in)    :: mesh
-    type(simul_box_t),        intent(in)    :: sb
-    type(ions_t),             intent(in)    :: ions
-    FLOAT,                    intent(in)    :: bounds(1:sb%dim, 1:2)
+    class(box_t),             intent(in)    :: sb
+    FLOAT,                    intent(in)    :: bounds(1:space%dim, 1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
     integer :: ip, dir
-    FLOAT   :: width(1:sb%dim)
-    FLOAT   :: xx(1:sb%dim), rr, dd, ddv(1:sb%dim), tmp(1:sb%dim)
+    FLOAT   :: width(space%dim)
+    FLOAT   :: xx(space%dim), rr, dd, ddv(space%dim), tmp(space%dim)
 
     PUSH_SUB(bc_generate_mf)
 
-    ! generate the boundaries on the mesh 
-
     mf = M_ZERO
 
+    ! generate the boundaries on the mesh 
     width = bounds(:, 2) - bounds(:,1)
 
     do ip = 1, mesh%np
       xx = mesh%x(ip, :)
-      rr = sqrt(dot_product(xx, xx))
  
-      if(this%ab_user_def) then
+      if (this%ab_user_def) then
         dd = this%ab_ufn(ip) - bounds(1,1)
         if(dd > M_ZERO) then
           if(this%ab_ufn(ip) < bounds(1,2) ) then
@@ -340,9 +363,9 @@ contains
  
       else ! this%ab_user_def == .false.
  
-        select case (sb%box_shape)
-        case (SPHERE)
-        
+        select type (sb)
+        type is (box_sphere_t)
+          rr = norm2(xx - sb%center)
           dd = rr -  bounds(1,1) 
           if(dd > M_ZERO ) then 
             if (dd  <  width(1)) then
@@ -352,13 +375,12 @@ contains
             end if
           end if
  
-        case (PARALLELEPIPED)
-
+        type is (box_parallelepiped_t)
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv = abs(xx) -  bounds(:, 1)
-          do dir = 1, sb%dim
+          ddv = abs(xx - sb%center) -  bounds(:, 1)
+          do dir = 1, space%dim
             if(ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2
@@ -370,31 +392,27 @@ contains
           end do
           mf(ip) = M_ONE - mf(ip)
           
-        case (CYLINDER)
-          
-          rr = sqrt(dot_product(xx(2:sb%dim), xx(2:sb%dim)))
+        type is (box_cylinder_t)
+          rr = norm2(xx(2:space%dim) - sb%center(2:space%dim))
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv(1) = abs(xx(1)) - bounds(1,1) 
+          ddv(1) = abs(xx(1) - sb%center(1)) - bounds(1,1) 
           ddv(2) = rr         - bounds(2,1) 
-          do dir=1, 2
-            if(ddv(dir) > M_ZERO ) then 
+          do dir = 1, 2
+            if (ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2
               else 
                 tmp(dir) = M_ZERO
               end if
             end if        
-          mf(ip) = mf(ip) * tmp(dir)
+            mf(ip) = mf(ip) * tmp(dir)
           end do
           mf(ip) = M_ONE - mf(ip)
 
-        case default
-
-          if (mesh_inborder(mesh, ions, ip, dd, width(1))) then
-            mf(ip) = M_ONE - sin(dd * M_PI / (M_TWO * width(1)))**2
-          end if
-
+        class default
+          ! Other box shapes are not implemented
+          ASSERT(.false.)
         end select
       end if
     end do
