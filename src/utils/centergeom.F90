@@ -93,7 +93,7 @@ contains
       !% <br> 1 | 0 | 0 
       !% <br>%</tt>
       !%End
-      if(parse_block(global_namespace, 'MainAxis', blk)==0) then
+      if(parse_block(ions%namespace, 'MainAxis', blk)==0) then
         do idir = 1, ions%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         end do
@@ -129,11 +129,11 @@ contains
       else
         default = NONE
       end if
-      call parse_variable(global_namespace, 'AxisType', default, axis_type)
+      call parse_variable(ions%namespace, 'AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if (ions%space%dim /= 3 .and. axis_type /= NONE) then
-        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions", namespace=global_namespace)
+        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions", namespace=ions%namespace)
       end if
 
       select case (axis_type)
@@ -157,7 +157,7 @@ contains
         call ions%axis_large(x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-        call messages_fatal(1, namespace=global_namespace)
+        call messages_fatal(1, namespace=ions%namespace)
       end select
 
       write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1
@@ -165,7 +165,7 @@ contains
       call messages_info(2)
 
       if (axis_type /= NONE) then
-        call ions%rotate(global_namespace, x1, x2, to)
+        call ions%rotate(x1, x2, to)
       end if
 
     end if
@@ -175,7 +175,7 @@ contains
     call ions%translate(center)
 
     ! write adjusted geometry
-    call ions%write_xyz('./adjusted', global_namespace)
+    call ions%write_xyz('./adjusted')
 
     SAFE_DEALLOCATE_A(center)
     SAFE_DEALLOCATE_A(x1)

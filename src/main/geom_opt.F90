@@ -216,7 +216,7 @@ contains
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
     call messages_info(1)
-    call g_opt%ions%write_xyz('./min', g_opt%syst%namespace)
+    call g_opt%ions%write_xyz('./min')
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -552,7 +552,7 @@ contains
         if(.not. does_exist) fromScratch = .true.
       end if
 
-      if(.not. fromScratch) call g_opt%ions%read_xyz('./last', sys%namespace)
+      if(.not. fromScratch) call g_opt%ions%read_xyz('./last')
       
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
@@ -632,7 +632,7 @@ contains
       end if
     end do
 
-    call g_opt%ions%write_xyz('./work-geom', g_opt%syst%namespace, append = .true.)
+    call g_opt%ions%write_xyz('./work-geom', append = .true.)
 
     call scf_mix_clear(g_opt%scfv)
 
@@ -705,9 +705,9 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
-    call io_mkdir('geom', g_opt%syst%namespace)
-    call g_opt%ions%write_xyz('geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
-    call g_opt%ions%write_xyz('./last', g_opt%syst%namespace)
+    call io_mkdir('geom', g_opt%ions%namespace)
+    call g_opt%ions%write_xyz('geom/'//trim(c_geom_iter), comment = trim(title))
+    call g_opt%ions%write_xyz('./last')
 
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter

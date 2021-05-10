@@ -202,7 +202,7 @@ contains
 
 
     call ions_fold_atoms_into_cell(ions)
-    call ions_init_species(ions, namespace, print_info=print_info)
+    call ions_init_species(ions, print_info=print_info)
     call distributed_nullify(ions%atoms_dist, ions%natoms)
 
     ! Check that atoms are not too close
@@ -217,7 +217,7 @@ contains
 
         ! then write out the geometry, whether asked for or not in Output variable
         call io_mkdir(STATIC_DIR, namespace)
-        call ions%write_xyz(trim(STATIC_DIR)//'/geometry', namespace)
+        call ions%write_xyz(trim(STATIC_DIR)//'/geometry')
       end if
 
       if (ions_min_distance(ions, real_atoms_only = .true.) < threshold) then
@@ -274,9 +274,8 @@ contains
   end function ions_constructor
 
   ! ---------------------------------------------------------
-  subroutine ions_init_species(ions, namespace, print_info)
+  subroutine ions_init_species(ions, print_info)
     type(ions_t),      intent(inout) :: ions
-    type(namespace_t), intent(in)    :: namespace
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_, spec_user_defined
@@ -309,19 +308,19 @@ contains
       end do
       k = k + 1
       call species_init(ions%species(k), atom_get_label(ions%atom(j)), k)
-      call species_read(ions%species(k), namespace)
+      call species_read(ions%species(k), ions%namespace)
       ! these are the species which do not represent atoms
       ions%only_user_def = ions%only_user_def .and. .not. species_represents_real_atom(ions%species(k))
       
       if (species_is_ps(ions%species(k)) .and. ions%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
-        call messages_fatal(1, namespace=namespace)
+        call messages_fatal(1, namespace=ions%namespace)
       end if
 
       if (species_type(ions%species(k)) == SPECIES_JELLIUM_SLAB) then
         if (ions%space%is_periodic() .and. ions%space%periodic_dim /= 2) then
           message(1) = "Periodic jelium slab can only be used if PeriodicDim = 2"
-          call messages_fatal(1, namespace=namespace)
+          call messages_fatal(1, namespace=ions%namespace)
         end if
       end if
 
@@ -329,18 +328,18 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call parse_variable(namespace, 'SpinComponents', 1, ispin)
-    if (.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error(namespace, 'SpinComponents')
+    call parse_variable(ions%namespace, 'SpinComponents', 1, ispin)
+    if (.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error(ions%namespace, 'SpinComponents')
     ispin = min(2, ispin)
 
     if (print_info_) then
-      call messages_print_stress(stdout, "Species", namespace=namespace)
+      call messages_print_stress(stdout, "Species", namespace=ions%namespace)
     end if
     do i = 1, ions%nspecies
-      call species_build(ions%species(i), namespace, ispin, ions%space%dim, print_info=print_info_)
+      call species_build(ions%species(i), ions%namespace, ispin, ions%space%dim, print_info=print_info_)
     end do
     if (print_info_) then
-      call messages_print_stress(stdout, namespace=namespace)
+      call messages_print_stress(stdout, namespace=ions%namespace)
     end if
 
     !%Variable SpeciesTimeDependent
@@ -352,7 +351,7 @@ contains
     !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
     !% type of species to use this.
     !%End
-    call parse_variable(namespace, 'SpeciesTimeDependent', .false., ions%species_time_dependent)
+    call parse_variable(ions%namespace, 'SpeciesTimeDependent', .false., ions%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,ions%nspecies
       if (species_type(ions%species(i)) == SPECIES_USDEF) then
@@ -360,7 +359,7 @@ contains
       end if
     end do
     if (ions%species_time_dependent .and. .not. spec_user_defined) then
-      call messages_input_error(namespace, 'SpeciesTimeDependent')
+      call messages_input_error(ions%namespace, 'SpeciesTimeDependent')
     end if
 
     !  assign species
@@ -503,17 +502,16 @@ contains
     select type (interaction)
     class default
       message(1) = "Unsupported interaction."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=partner%namespace)
     end select
 
     POP_SUB(ions_copy_quantities_to_interaction)
   end subroutine ions_copy_quantities_to_interaction
   
   ! ---------------------------------------------------------
-  subroutine ions_write_xyz(this, fname, namespace, append, comment)
-    class(ions_t),               intent(in) :: this
+  subroutine ions_write_xyz(this, fname, append, comment)
+    class(ions_t),              intent(in) :: this
     character(len=*),           intent(in) :: fname
-    type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: append
     character(len=*), optional, intent(in) :: comment
 
@@ -528,7 +526,7 @@ contains
     if (present(append)) then
       if (append) position = 'append'
     end if
-    iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
+    iunit = io_open(trim(fname)//'.xyz', this%namespace, action='write', position=position)
 
     write(iunit, '(i4)') this%natoms
     if (present(comment)) then
@@ -542,7 +540,7 @@ contains
     call io_close(iunit)
 
     if (this%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', this%namespace, action='write', position=position)
       write(iunit, '(i4)') this%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, this%ncatoms
@@ -555,17 +553,16 @@ contains
   end subroutine ions_write_xyz
 
   ! ---------------------------------------------------------
-  subroutine ions_read_xyz(this, fname, namespace, comment)
+  subroutine ions_read_xyz(this, fname, comment)
     class(ions_t),              intent(inout) :: this
     character(len=*),           intent(in)    :: fname
-    type(namespace_t),          intent(in)    :: namespace
     character(len=*), optional, intent(in)    :: comment
 
     integer :: iatom, iunit
 
     PUSH_SUB(ions_read_xyz)
 
-    iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
+    iunit = io_open(trim(fname)//'.xyz', this%namespace, action='read', position='rewind')
 
     read(iunit, '(i4)') this%natoms
     if (present(comment)) then
@@ -579,7 +576,7 @@ contains
     call io_close(iunit)
 
     if (this%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
+      iunit = io_open(trim(fname)//'_classical.xyz', this%namespace, action='read', position='rewind')
       read(iunit, '(i4)') this%ncatoms
       read(iunit, *)
       do iatom = 1, this%ncatoms
@@ -888,9 +885,8 @@ contains
   end subroutine ions_translate
 
   ! ---------------------------------------------------------
-  subroutine ions_rotate(this, namespace, from, from2, to)
+  subroutine ions_rotate(this, from, from2, to)
     class(ions_t),     intent(inout) :: this
-    type(namespace_t), intent(in)    :: namespace
     FLOAT,             intent(in)    :: from(this%space%dim)   !< assumed to be normalized
     FLOAT,             intent(in)    :: from2(this%space%dim)  !< assumed to be normalized
     FLOAT,             intent(in)    :: to(this%space%dim)     !< assumed to be normalized
@@ -903,7 +899,7 @@ contains
     PUSH_SUB(ions_rotate)
 
     if (this%space%dim /= 3) then
-      call messages_not_implemented("ions_rotate in other than 3 dimensions", namespace=namespace)
+      call messages_not_implemented("ions_rotate in other than 3 dimensions", namespace=this%namespace)
     end if
 
     ! initialize matrices
@@ -1110,10 +1106,9 @@ contains
   ! ----------------------------------------------------------------
   !> This subroutine creates a crystal by replicating the geometry and
   !! writes the result to dir//'crystal.xyz'
-  subroutine ions_write_crystal(this, dir, namespace)
+  subroutine ions_write_crystal(this, dir)
     class(ions_t),           intent(in) :: this 
     character(len=*),        intent(in) :: dir
-    type(namespace_t),       intent(in) :: namespace 
     
     type(lattice_iterator_t) :: latt_iter
     FLOAT :: radius, pos(this%space%dim)
@@ -1126,7 +1121,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       
-      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
+      iunit = io_open(trim(dir)//'/crystal.xyz', this%namespace, action='write')
       
       write(iunit, '(i9)') this%natoms*latt_iter%n_cells
       write(iunit, '(a)') '#generated by Octopus'

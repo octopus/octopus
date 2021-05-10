@@ -697,9 +697,9 @@ contains
         call write_xsf_geometry_file(dir, "geometry", ions, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call ions%write_xyz(trim(dir)//'/geometry', namespace)
+        call ions%write_xyz(trim(dir)//'/geometry')
         if(ions%space%is_periodic()) then
-          call ions%write_crystal(dir, namespace)
+          call ions%write_crystal(dir)
         end if
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then

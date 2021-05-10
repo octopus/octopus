@@ -151,7 +151,7 @@ program casida_spectrum
       coord(1:cs%space%dim) = ions%atom(iatom)%x(1:cs%space%dim)
       ions%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
-    call ions%write_xyz(trim(CASIDA_DIR)//'rotated', global_namespace)
+    call ions%write_xyz(trim(CASIDA_DIR)//'rotated')
     SAFE_DEALLOCATE_P(ions)
   else
     rotation(:,:) = identity(:,:)
