@@ -1061,9 +1061,9 @@ contains
             end if
           else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
             if (states_are_real(st)) then
-              call  dx_fbe_calc(namespace, hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  dx_fbe_calc(hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             else
-              call  zx_fbe_calc(namespace, hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  zx_fbe_calc(hm%psolver, ks%gr%mesh, ks%gr%der, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
 
           else
@@ -1101,7 +1101,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, namespace, space, ions, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, &
+          call vdw_ts_calculate(ks%vdw_ts, namespace, ions, ks%gr%mesh, st, st%rho, ks%calc%energy%vdw, vvdw, &
             ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)

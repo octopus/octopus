@@ -17,8 +17,7 @@
 !!
 !!
 ! ---------------------------------------------------------
-subroutine X(x_fbe_calc)(namespace, psolver, mesh, der, st, ex, vxc)
-  type(namespace_t),        intent(in)    :: namespace
+subroutine X(x_fbe_calc)(psolver, mesh, der, st, ex, vxc)
   type(poisson_t),          intent(in)    :: psolver
   type(mesh_t),             intent(in)    :: mesh
   type(derivatives_t),      intent(in)    :: der
@@ -38,7 +37,7 @@ subroutine X(x_fbe_calc)(namespace, psolver, mesh, der, st, ex, vxc)
   eig = M_ZERO
   !At the moment we treat only spins and not k-points
   do isp = 1, st%d%nspin
-    call X(fbe) (namespace, mesh, der, psolver, st, isp, eig, vxc)
+    call X(fbe)(mesh, der, psolver, st, isp, eig, vxc)
   end do
   ex = ex + eig
 
@@ -49,8 +48,7 @@ end subroutine X(x_fbe_calc)
 !------------------------------------------------------------
 !> This routine is adapted from the X(slater) routine
 !------------------------------------------------------------
-subroutine X(fbe) (namespace, mesh, der, psolver, st, isp, ex, vxc)
-  type(namespace_t),           intent(in)    :: namespace
+subroutine X(fbe) (mesh, der, psolver, st, isp, ex, vxc)
   type(mesh_t),                intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
   type(poisson_t),             intent(in)    :: psolver

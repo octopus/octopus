@@ -18,9 +18,8 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
+subroutine xc_kli_pauli_solve(mesh, st, oep)
   type(mesh_t),        intent(in)    :: mesh
-  type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(in) :: st
   type(xc_oep_t),      intent(inout) :: oep
   !

@@ -1266,7 +1266,7 @@ contains
     PUSH_SUB(hamiltonian_elec_epot_generate)
 
     this%ions => ions
-    call epot_generate(this%ep, namespace, gr, this%ions, this%d)
+    call epot_generate(this%ep, namespace, gr%mesh, this%ions, this%d)
 
     ! Interation terms are treated below
 

@@ -154,7 +154,7 @@ contains
         mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
-        call states_elec_load(restart_load_unocc, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart_load_unocc, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                   ierr, lowest_missing = lowest_missing)
         call restart_end(restart_load_unocc)
       end if
@@ -176,13 +176,13 @@ contains
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_elec_load(restart_load_gs, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
+        call states_elec_load(restart_load_gs, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, &
                ierr, lowest_missing = lowest_missing)
       end if
       if (sys%hm%lda_u_level /= DFT_U_NONE) then
         call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, sys%hm%energy%dft_u, ierr)
       end if
-      call states_elec_load_rho(restart_load_gs, sys%space, sys%st, sys%gr, ierr_rho)
+      call states_elec_load_rho(restart_load_gs, sys%space, sys%st, sys%gr%mesh, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
     else
@@ -274,7 +274,7 @@ contains
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if (write_density) then
-        call states_elec_dump_rho(restart_dump, sys%space, sys%st, sys%gr, ierr_rho)
+        call states_elec_dump_rho(restart_dump, sys%space, sys%st, sys%gr%mesh, ierr_rho)
       end if
     end if
 
@@ -323,7 +323,7 @@ contains
         ! write restart information.
         if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
                      .or. iter == max_iter .or. forced_finish) then
-          call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr, sys%kpoints, ierr, iter=iter)
+          call states_elec_dump(restart_dump, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)

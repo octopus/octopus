@@ -157,11 +157,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, space, sb, st, nst, ks)
+  subroutine output_init(outp, namespace, space, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
-    type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
     type(v_ks_t),              intent(inout) :: ks
@@ -489,7 +488,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, namespace, sb, st, nst)
+      call output_me_init(outp%me, namespace, space, st, nst)
     else
       outp%me%what = 0
     end if
@@ -636,7 +635,7 @@ contains
 
     ! we are using a what that has a how.
     if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(sb, namespace, outp%how)
+      call io_function_read_how(namespace, space, outp%how)
     else
       outp%how = 0
     end if
@@ -1282,8 +1281,7 @@ contains
       call zbgw_vxc_dat(bgw, namespace, space, dir, st, gr, hm, vxc)
     end if
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, space, &
-      fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
+    call cube_init(cube, gr%mesh%idx%ll, namespace, space, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1, namespace=namespace)

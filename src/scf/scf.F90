@@ -544,7 +544,7 @@ contains
     if (present(restart_load)) then
       if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
-        call states_elec_load_rho(restart_load, space, st, gr, ierr)
+        call states_elec_load_rho(restart_load, space, st, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
@@ -806,13 +806,13 @@ contains
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
-          call states_elec_dump(restart_dump, space, st, gr, hm%kpoints, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, space, st, gr%mesh, hm%kpoints, ierr, iter=iter) 
           if (ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
 
-          call states_elec_dump_rho(restart_dump, space, st, gr, ierr, iter=iter)
+          call states_elec_dump_rho(restart_dump, space, st, gr%mesh, ierr, iter=iter)
           if (ierr /= 0) then
             message(1) = 'Unable to write density.'
             call messages_warning(1)
@@ -1000,7 +1000,7 @@ contains
         end if
 
         if (allocated(hm%vberry)) then
-          call calc_dipole(dipole, space, gr, st, ions)
+          call calc_dipole(dipole, space, gr%mesh, st, ions)
           call write_dipole(stdout, dipole)
         end if
 
@@ -1106,7 +1106,7 @@ contains
         end if 
 
       if(scf%calc_dipole) then
-        call calc_dipole(dipole, space, gr, st, ions)
+        call calc_dipole(dipole, space, gr%mesh, st, ions)
         call write_dipole(iunit, dipole)
       end if
 

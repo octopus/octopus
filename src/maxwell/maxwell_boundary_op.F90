@@ -1734,8 +1734,8 @@ contains
     ip_bd = 0
     do ip = 1, mesh%np
       xx = mesh%x(ip, :)
-      if (abs(xx(1)) <= bounds(2,1) .and. abs(xx(2)) <= bounds(2,2) .and. abs(xx(3)) <= bounds(2,3)) then
-        if (abs(xx(1)) > bounds(1,1) .or. abs(xx(2)) > bounds(1,2) .or. abs(xx(3)) > bounds(1,3)) then
+      if (all(abs(xx) <= bounds(2,1:mesh%sb%dim))) then
+        if (any(abs(xx) > bounds(1,1:mesh%sb%dim))) then
           point_info = 1
         else
           point_info = 0
@@ -1763,8 +1763,8 @@ contains
     ip_bd = 0
     do ip = 1, mesh%np
       xx = mesh%x(ip, :)
-      if (abs(xx(1)) <= bounds(2,1) .and. abs(xx(2)) <= bounds(2,2) .and. abs(xx(3)) <= bounds(2,3)) then
-        if (abs(xx(1)) > bounds(1,1) .or. abs(xx(2)) > bounds(1,2) .or. abs(xx(3)) > bounds(1,3)) then
+      if (all(abs(xx) <= bounds(2,1:mesh%sb%dim))) then
+        if (any(abs(xx) > bounds(1,1:mesh%sb%dim))) then
           point_info = 1
         else
           point_info = 0

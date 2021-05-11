@@ -270,7 +270,7 @@ contains
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_elec_look_and_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr, sys%kpoints)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -381,7 +381,9 @@ contains
     !%End
     call parse_variable(sys%namespace, 'CasidaTransitionDensities', "0", cas%trandens)
 
-    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%namespace, sys%outp%how)
+    if (cas%trandens /= "0") then
+      call io_function_read_how(sys%namespace, sys%space, sys%outp%how)
+    end if
 
     !%Variable CasidaMomentumTransfer
     !%Type block

@@ -237,16 +237,16 @@ program oct_unfold
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, global_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr, sys%kpoints, &
-                            ierr, label = ": unfold")
+    if(ierr == 0) then
+      call states_elec_load(restart, global_namespace, sys%space, sys%st, sys%gr%mesh, sys%kpoints, ierr, label = ": unfold")
+    end if
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
     end if
     call restart_end(restart)  
 
-    call cube_init(zcube, sys%gr%mesh%idx%ll, sys%gr%sb, global_namespace, sys%space, &
-      fft_type = FFT_COMPLEX, dont_optimize = .true.)
+    call cube_init(zcube, sys%gr%mesh%idx%ll, global_namespace, sys%space, fft_type = FFT_COMPLEX, dont_optimize = .true.)
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
 

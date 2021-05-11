@@ -457,7 +457,7 @@ contains
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_elec_dt(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, nt, ions_dyn, ions, outp, &
-    scsteps, update_energy, qcchi, move_ions)
+    scsteps, update_energy, qcchi)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
     type(space_t),                               intent(in)    :: space
@@ -474,17 +474,17 @@ contains
     type(output_t),                              intent(in)    :: outp
     integer,                   optional,         intent(out)   :: scsteps
     logical,                   optional,         intent(in)    :: update_energy
-    logical,                   optional,         intent(in)    :: move_ions
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    logical :: generate, update_energy_, move_ions_
+    logical :: generate, update_energy_, move_ions
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
     PUSH_SUB(propagator_elec_dt)
 
+    move_ions = ion_dynamics_ions_move(ions_dyn)
+
     update_energy_ = optional_default(update_energy, .true.)
-    move_ions_ = optional_default(move_ions, .false.)
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
@@ -499,17 +499,17 @@ contains
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
-        call td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_, &
+        call td_etrs_sc(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions, &
           tr%scf_threshold, scsteps)
       else
-        call td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+        call td_etrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
       end if
     case(PROP_AETRS)
-      call td_aetrs(namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+      call td_aetrs(namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     case(PROP_CAETRS)
-      call td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+      call td_caetrs(ks, namespace, space, hm, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, namespace, space, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions_)
+      call exponential_midpoint(hm, namespace, space, gr, st, tr, time, dt, ionic_scale, ions_dyn, ions, move_ions)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, namespace, space, gr, st, tr, time, dt, ions_dyn, ions, .false.)
     case(PROP_RUNGE_KUTTA4)
@@ -533,7 +533,7 @@ contains
     end select
 
     generate = .false.
-    if(move_ions_) then
+    if(move_ions) then
       if(.not. propagator_elec_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions_dyn, ions, abs(nt*dt), ionic_scale*dt, namespace)
         generate = .true.
@@ -553,7 +553,7 @@ contains
     if(update_energy_) call energy_calc_total(namespace, space, hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
-    if(move_ions_ .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
+    if(move_ions .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, namespace, ions, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions_dyn, ions, atoms_moved = generate)
       if(generate) call hamiltonian_elec_epot_generate(hm, namespace, space, gr, ions, st, time = abs(nt*dt))

@@ -32,7 +32,6 @@ module cube_oct_m
   use pfft_oct_m
   use pnfft_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use space_oct_m
 
   implicit none
@@ -90,11 +89,10 @@ module cube_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, namespace, space, fft_type, fft_library, dont_optimize, nn_out, &
+  subroutine cube_init(cube, nn, namespace, space, fft_type, fft_library, dont_optimize, nn_out, &
                        mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
-    type(simul_box_t), intent(in)  :: sb
     type(namespace_t), intent(in)  :: namespace
     type(space_t),     intent(in)  :: space
     integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?

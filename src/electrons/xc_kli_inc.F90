@@ -18,8 +18,7 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
-  type(namespace_t),        intent(in)    :: namespace
+subroutine X(xc_KLI_solve) (mesh, hm, st, is, oep, first)
   type(mesh_t),             intent(in)    :: mesh
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st

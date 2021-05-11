@@ -42,7 +42,6 @@ module boundary_op_oct_m
   public ::               &
     bc_init,              &
     bc_end,               &
-    bc_write_info,        &
     bc_t
 
   type bc_t

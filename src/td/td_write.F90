@@ -494,7 +494,7 @@ contains
         
       end if
  
-      call states_elec_load(restart_gs, namespace, space, writ%gs_st, gr, hm%kpoints, ierr, label = ': gs for TDOutput')
+      call states_elec_load(restart_gs, namespace, space, writ%gs_st, gr%mesh, hm%kpoints, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -773,7 +773,9 @@ contains
       call io_mkdir(outp%iter_dir, namespace)
     end if
 
-    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp%how)
+    if (outp%how == 0 .and. writ%out(OUT_N_EX)%write) then
+      call io_function_read_how(namespace, space, outp%how)
+    end if
 
     !%Variable TDOutputDFTU
     !%Type flag
@@ -3484,10 +3486,10 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_dump_mxll(restart, space, gr, st, hm, iter, ierr, bc_plane_waves)
+  subroutine td_dump_mxll(restart, space, mesh, st, hm, iter, ierr, bc_plane_waves)
     type(restart_t),            intent(in)  :: restart
     type(space_t),              intent(in)  :: space
-    type(grid_t),               intent(in)  :: gr
+    type(mesh_t),               intent(in)  :: mesh
     type(states_mxll_t),        intent(in)  :: st
     type(hamiltonian_mxll_t),   intent(in)  :: hm
     integer,                    intent(in)  :: iter
@@ -3518,12 +3520,12 @@ contains
       zff_dim = zff_dim + 18
     end if
 
-    SAFE_ALLOCATE(zff(1:gr%mesh%np,1:zff_dim))
+    SAFE_ALLOCATE(zff(1:mesh%np,1:zff_dim))
     zff = M_z0
 
     if (bc_plane_waves) then
-      zff(1:gr%mesh%np, 1:st%dim)   = st%rs_state(1:gr%mesh%np, 1:st%dim)
-      zff(1:gr%mesh%np, st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:gr%mesh%np, 1:st%dim)
+      zff(1:mesh%np, 1:st%dim)   = st%rs_state(1:mesh%np, 1:st%dim)
+      zff(1:mesh%np, st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:mesh%np, 1:st%dim)
       if (pml_check) then
         id = 0
         do id1 = 1, 3
@@ -3537,7 +3539,7 @@ contains
         end do
        end if
     else
-      zff(1:gr%mesh%np, 1:st%dim) = st%rs_state(1:gr%mesh%np, 1:st%dim)
+      zff(1:mesh%np, 1:st%dim) = st%rs_state(1:mesh%np, 1:st%dim)
       if (pml_check) then
         id = 0
         do id1 = 1, 3
@@ -3552,7 +3554,7 @@ contains
       end if
     end if
 
-    call states_mxll_dump(restart, st, space, gr, zff, zff_dim, err, iter)
+    call states_mxll_dump(restart, st, space, mesh, zff, zff_dim, err, iter)
     if (err /= 0) ierr = ierr + 1
 
     if (debug%info) then

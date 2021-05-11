@@ -778,7 +778,7 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, namespace, space, Lk, ll, how, sb, pmesh)
+subroutine pes_mask_output_full_mapM(pesK, file, namespace, space, Lk, ll, how, pmesh)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
@@ -786,7 +786,6 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, space, Lk, ll, how, 
   FLOAT,             intent(in) :: Lk(:,:)
   integer,           intent(in) :: ll(:)  
   integer,           intent(in) :: how
-  type(simul_box_t), intent(in) :: sb 
   FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
   
   integer :: iunit
@@ -799,7 +798,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, space, Lk, ll, how, 
 
   PUSH_SUB(pes_mask_output_full_mapM)
 
-  call cube_init(cube, ll, sb, namespace, space)
+  call cube_init(cube, ll, namespace, space)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
   

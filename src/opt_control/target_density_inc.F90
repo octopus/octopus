@@ -82,7 +82,7 @@
         if(parse_block(namespace, 'OCTTargetDensityFromState', blk) == 0) then
           call states_elec_copy(tmp_st, tg%st)
           call states_elec_deallocate_wfns(tmp_st)
-          call states_elec_look_and_load(restart, namespace, space, tmp_st, gr, kpoints)
+          call states_elec_look_and_load(restart, namespace, space, tmp_st, gr%mesh, kpoints)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 
@@ -341,11 +341,11 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_density(tg, namespace, space, gr, dir, ions, outp)
+  subroutine target_output_density(tg, namespace, space, mesh, dir, ions, outp)
     type(target_t),    intent(in) :: tg
     type(namespace_t), intent(in) :: namespace
     type(space_t),     intent(in) :: space
-    type(grid_t),      intent(in) :: gr
+    type(mesh_t),      intent(in) :: mesh
     character(len=*),  intent(in) :: dir
     type(ions_t),      intent(in) :: ions
     type(output_t),    intent(in) :: outp
@@ -356,7 +356,7 @@
     call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, space, gr%mesh, &
+        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, space, mesh, &
           tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
       end if
     end if

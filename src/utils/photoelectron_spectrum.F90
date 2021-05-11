@@ -666,7 +666,7 @@ program photoelectron_spectrum
 
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
-        call io_function_read_how(sb, global_namespace, how, ignore_error = .true.)
+        call io_function_read_how(global_namespace, space, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
         if ( .not. (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) .and. &
@@ -686,10 +686,10 @@ program photoelectron_spectrum
           if(bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) then
              call pes_flux_out_vmap(pflux, pesP_out, filename, global_namespace, llp, pmesh, space%dim)
           else            
-            call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how, sb, pmesh)
+            call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how, pmesh)
           end if
         else
-          call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how, sb)
+          call pes_out_velocity_map(pesP_out, filename, global_namespace, space, Lg, llp, how)
         end if
         
       end if
@@ -709,7 +709,7 @@ program photoelectron_spectrum
         how = io_function_fill_how("VTK")
 
         call pes_out_velocity_map(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-                                  global_namespace, space, Lg, llp, how, sb, pmesh)
+                                  global_namespace, space, Lg, llp, how, pmesh)
       end if
       
       

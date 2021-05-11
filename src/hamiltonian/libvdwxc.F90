@@ -184,10 +184,10 @@ contains
     end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace, space)
+      call cube_init(this%cube, mesh%idx%ll, namespace, space)
     else
 #ifdef HAVE_MPI
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace, space, mpi_grp = mesh%mpi_grp, &
+      call cube_init(this%cube, mesh%idx%ll, namespace, space, mpi_grp = mesh%mpi_grp, &
         need_partition = .true., blocksize = blocksize)
       call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
 #endif

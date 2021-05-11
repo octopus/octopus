@@ -56,12 +56,12 @@ end subroutine X(phonons_lr_infrared)
 
 ! ---------------------------------------------------------
 !> calculate the wavefunction associated with each normal mode
-subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, gr, kpoints, vib, restart_load, restart_dump)
+subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, mesh, kpoints, vib, restart_load, restart_dump)
   type(lr_t),         intent(inout) :: lr
   type(namespace_t),  intent(in)    :: namespace
   type(space_t),      intent(in)    :: space
   type(states_elec_t),intent(inout) :: st !< not changed, just because of restart_read intent
-  type(grid_t),       intent(in)    :: gr
+  type(mesh_t),       intent(in)    :: mesh
   type(kpoints_t),    intent(in)    :: kpoints
   type(vibrations_t), intent(in)    :: vib
   type(restart_t),    intent(inout) :: restart_load
@@ -73,7 +73,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, gr, kpoints, vi
   PUSH_SUB(X(phonons_lr_wavefunctions))
 
   call lr_init(lrtmp)
-  call lr_allocate(lrtmp, st, gr%mesh)
+  call lr_allocate(lrtmp, st, mesh)
 
   lr%X(dl_psi) = M_ZERO
 
@@ -86,7 +86,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, gr, kpoints, vi
 
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
         if (ierr == 0) then
-          call states_elec_load(restart_load, namespace, space, st, gr, kpoints, ierr, lr = lrtmp)
+          call states_elec_load(restart_load, namespace, space, st, mesh, kpoints, ierr, lr = lrtmp)
         end if
         call restart_close_dir(restart_load)
 
@@ -99,7 +99,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, gr, kpoints, vi
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
 
-              call lalg_axpy(gr%mesh%np, vib%normal_mode(imat, inm), &
+              call lalg_axpy(mesh%np, vib%normal_mode(imat, inm), &
                 lrtmp%X(dl_psi)(:, idim, ist, ik), lr%X(dl_psi)(:, idim, ist, ik))
                   
             end do
@@ -110,7 +110,9 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, space, st, gr, kpoints, vi
     end do
 
     call restart_open_dir(restart_dump, phn_nm_wfs_tag(inm), ierr)
-    if (ierr == 0) call states_elec_dump(restart_dump, space, st, gr, kpoints, ierr, lr = lr)
+    if (ierr == 0) then
+      call states_elec_dump(restart_dump, space, st, mesh, kpoints, ierr, lr = lr)
+    end if
     if (ierr /= 0) then
       message(1) = "Unable to write response wavefunctions to '"//trim(phn_nm_wfs_tag(inm))//"'."
       call messages_warning(1)

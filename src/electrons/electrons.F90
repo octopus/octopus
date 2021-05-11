@@ -220,7 +220,7 @@ contains
       call mesh_check_symmetries(this%gr%mesh, this%gr%symm, this%ions%space%periodic_dim)
     end if
 
-    call output_init(this%outp, this%namespace, this%space, this%gr%sb, this%st, this%st%nst, this%ks)
+    call output_init(this%outp, this%namespace, this%space, this%st, this%st%nst, this%ks)
     call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 

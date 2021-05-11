@@ -23,7 +23,6 @@ module scissor_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use global_oct_m
-  use grid_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
@@ -67,12 +66,12 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, namespace, space, st, gr, d, kpoints, gap, mc)
+ subroutine scissor_init(this, namespace, space, st, mesh, d, kpoints, gap, mc)
   type(scissor_t),          intent(inout) :: this
   type(namespace_t),        intent(in)    :: namespace
   type(space_t),            intent(in)    :: space
   type(states_elec_t),      intent(in)    :: st
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
   type(kpoints_t),          intent(in)    :: kpoints
   type(states_elec_dim_t),  intent(in)    :: d
   FLOAT,                    intent(in)    :: gap
@@ -93,7 +92,7 @@ contains
   call messages_print_stress(stdout, "TDScissor", namespace=namespace)
 
   if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
+  if(mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
   this%gap = gap
@@ -103,13 +102,13 @@ contains
   !We need to load GS states and to store them in this%gs_st
   call states_elec_copy(this%gs_st, st)
   
-  call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+  call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
      call messages_fatal(1, namespace=namespace)
   end if
 
-  call states_elec_load(restart_gs, namespace, space, this%gs_st, gr, kpoints, ierr, label = ': gs for TDScissor')
+  call states_elec_load(restart_gs, namespace, space, this%gs_st, mesh, kpoints, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
     call messages_fatal(1, namespace=namespace)
@@ -121,20 +120,20 @@ contains
     write(message(1),'(a)')    'Adding the phase for GS states.'
     call messages_info(1)
   
-    SAFE_ALLOCATE(temp_state(1:gr%mesh%np_part, 1:this%gs_st%d%dim))
-    SAFE_ALLOCATE(phase(1:gr%mesh%np))
+    SAFE_ALLOCATE(temp_state(1:mesh%np_part, 1:this%gs_st%d%dim))
+    SAFE_ALLOCATE(phase(1:mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
 
       kpoint(1:space%dim) = kpoints%get_point(d%get_kpoint_index(ik))
-      do ip = 1, gr%mesh%np
-        phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:space%dim) * kpoint(1:space%dim)))
+      do ip = 1, mesh%np
+        phase(ip) = exp(-M_zI * sum(mesh%x(ip, 1:space%dim) * kpoint(1:space%dim)))
       end do
 
       do ist = this%gs_st%st_start, this%gs_st%st_end
-        call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
-        call states_elec_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
-        call states_elec_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
+        call states_elec_get_state(this%gs_st, mesh, ist, ik, temp_state )
+        call states_elec_set_phase(this%gs_st%d, temp_state, phase, mesh%np, .false.)
+        call states_elec_set_state(this%gs_st, mesh, ist, ik,temp_state )
       end do
    
     end do

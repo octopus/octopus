@@ -102,7 +102,7 @@ contains
       call restart_init(restart_load, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, &
         exact = (ks%theory_level == RDMFT))
       if (ierr == 0) then
-        call states_elec_load(restart_load, namespace, space, st, gr, hm%kpoints, ierr)
+        call states_elec_load(restart_load, namespace, space, st, gr%mesh, hm%kpoints, ierr)
       end if
 
       if (ierr /= 0) then

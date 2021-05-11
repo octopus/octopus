@@ -160,7 +160,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, der, sb, hm, st, sp
 
   if (st%d%ispin==SPINORS) then
     call xc_oep_AnalyzeEigen(oep, st, 1)
-    call xc_KLI_Pauli_solve(der%mesh, namespace, st, oep)
+    call xc_KLI_Pauli_solve(der%mesh, st, oep)
     if(present(vxc)) then
       vxc(1:der%mesh%np, 1:4) = vxc(1:der%mesh%np,1:4) + oep%vxc(1:der%mesh%np,1:4)
     end if
@@ -177,7 +177,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, der, sb, hm, st, sp
           if(oep%has_photons) then
             call X(xc_KLI_solve_photon) (namespace, der%mesh, hm, st, is, oep, first)
           else
-            call X(xc_KLI_solve) (namespace, der%mesh, hm, st, is, oep, first)
+            call X(xc_KLI_solve) (der%mesh, hm, st, is, oep, first)
           end if 
           if(present(vxc)) then
             vxc(1:der%mesh%np, is) = vxc(1:der%mesh%np, is) + oep%vxc(1:der%mesh%np, is)
