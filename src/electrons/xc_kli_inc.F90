@@ -64,25 +64,25 @@ subroutine X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
   ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
   ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
 
-  oep%vxc(1:mesh%np, 1) = CNST(0.0)
+  oep%vxc(1:mesh%np, is) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
     do ip = 1, mesh%np
-      oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
+      oep%vxc(ip, is) = oep%vxc(ip, is) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
     end do
   end do
 
   do ip = 1, mesh%np
-    oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
+    oep%vxc(ip, is) = oep%vxc(ip, is)/rho_sigma(ip)
   end do
 
   SAFE_DEALLOCATE_A(psi)
   
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    oep%vxc(1:mesh%np,1) = dd(1:mesh%np)
+    call MPI_Allreduce(oep%vxc(1,is), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    oep%vxc(1:mesh%np,is) = dd(1:mesh%np)
     SAFE_DEALLOCATE_A(dd)
   end if
 #endif
@@ -93,7 +93,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
   v_bar_S = M_ZERO
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then
-      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
+      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,is), reduce = .false.)
     end if
   end do
   if(mesh%parallel_in_domains) call mesh%allreduce(v_bar_S, dim = st%st_end)
@@ -157,7 +157,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, hm, st, is, oep, first)
 
     do ist = 1, eigen_n
       kssi = oep%eigen_index(ist)
-      oep%vxc(1:mesh%np,1) = oep%vxc(1:mesh%np,1) + &
+      oep%vxc(1:mesh%np,is) = oep%vxc(1:mesh%np,is) + &
         oep%socc * st%occ(kssi, is) * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
     end do
 
@@ -262,7 +262,7 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
     if (.not.first) then
       call xc_oep_pt_rhs(mesh, st, is, oep, phi1, ist, bb)
     end if
-    oep%vxc(:, 1) = oep%vxc(:, 1) + oep%socc*st%occ(ist, is)*bb(:, 1)*psi(:, 1)
+    oep%vxc(:, is) = oep%vxc(:, is) + oep%socc*st%occ(ist, is)*bb(:, 1)*psi(:, 1)
 #else
     ! Photons with OEP are only implemented for real states
     ASSERT(.false.)
@@ -276,15 +276,15 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
   end if
 
   do ip = 1, mesh%np
-    oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
+    oep%vxc(ip, is) = oep%vxc(ip, is)/rho_sigma(ip)
   end do
 
   SAFE_DEALLOCATE_A(psi)
   
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    oep%vxc(1:mesh%np,1) = dd(1:mesh%np)
+    call MPI_Allreduce(oep%vxc(1,is), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    oep%vxc(1:mesh%np,is) = dd(1:mesh%np)
     SAFE_DEALLOCATE_A(dd)
   end if
 #endif
@@ -295,7 +295,7 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
   v_bar_S = M_ZERO
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then
-      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
+      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,is), reduce = .false.)
     end if
   end do
   if(mesh%parallel_in_domains) call mesh%allreduce(v_bar_S, dim = st%st_end)
@@ -359,7 +359,7 @@ subroutine X(xc_KLI_solve_photon) (namespace, mesh, hm, st, is, oep, first)
 
     do ist = 1, eigen_n
       kssi = oep%eigen_index(ist)
-      oep%vxc(1:mesh%np,1) = oep%vxc(1:mesh%np,1) + &
+      oep%vxc(1:mesh%np,is) = oep%vxc(1:mesh%np,is) + &
         oep%socc * st%occ(kssi, is) * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
     end do
 

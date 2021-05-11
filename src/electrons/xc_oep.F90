@@ -234,7 +234,7 @@ contains
       if ((st%d%ispin==3) .or. oep%level == XC_OEP_FULL) then
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,st%d%nspin))
       else
-        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
+        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:min(st%d%nspin, 2)))
       end if
       oep%vxc = M_ZERO
 
