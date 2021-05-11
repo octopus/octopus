@@ -28,7 +28,6 @@
     use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
-    use space_oct_m
     use spectrum_oct_m
     use unit_oct_m
     use unit_system_oct_m
@@ -38,7 +37,6 @@
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvaf, nvel, ivel
     FLOAT, allocatable :: vaf(:), time(:), velocities(:, :), ftvaf(:)
     type(ions_t),     pointer :: ions 
-    type(space_t)     :: space
     type(spectrum_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
     FLOAT :: ww, curtime, vaftime, deltat
@@ -82,8 +80,7 @@
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space, global_namespace)
-    ions => ions_t(global_namespace, space)
+    ions => ions_t(global_namespace)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', global_namespace, action='read')
@@ -125,7 +122,7 @@
 
     call io_close(iunit)
 
-    nvel = ions%natoms*space%dim
+    nvel = ions%natoms*ions%space%dim
 
     SAFE_ALLOCATE(time(1:ntime))
     SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
@@ -158,7 +155,7 @@
         time(ntime) = curtime
         ivel = 1
         do ii = 1, ions%natoms
-          do jj = 1, space%dim
+          do jj = 1, ions%space%dim
             velocities(ivel, ntime) = units_to_atomic(units_out%velocity, ions%atom(ii)%v(jj))
             ivel = ivel + 1
           end do

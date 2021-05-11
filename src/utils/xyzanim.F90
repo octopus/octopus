@@ -27,7 +27,6 @@ program xyzanim
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use space_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -65,7 +64,6 @@ contains
     logical :: multifiles
     FLOAT :: time
     type(ions_t),     pointer :: ions
-    type(space_t)     :: space
 
     ! Sets the filenames
     coords_file = 'td.general/coordinates'
@@ -93,13 +91,12 @@ contains
     !%End
     call parse_variable(global_namespace, 'AnimationMultiFiles', .false., multifiles)
 
-    call space_init(space, global_namespace)
-    ions => ions_t(global_namespace, space)
+    ions => ions_t(global_namespace)
 
     record_length = 100 + ions%space%dim*ions%natoms*3*20
 
     ! Opens the coordinates file
-    coords_unit = io_open(coords_file, global_namespace, action='read', recl = record_length)
+    coords_unit = io_open(coords_file, ions%namespace, action='read', recl = record_length)
 
     call io_skip_header(coords_unit)
     ierr = 0
@@ -115,11 +112,11 @@ contains
         write(comment, '(i10,f20.6)') iter, time
         if(.not.multifiles)then
           call io_mkdir('td.general', global_namespace)
-          call ions%write_xyz('td.general/movie', global_namespace, append = .true., comment = trim(comment))
+          call ions%write_xyz('td.general/movie', append = .true., comment = trim(comment))
         else
-          call io_mkdir('td.general/movie/', global_namespace)
+          call io_mkdir('td.general/movie/', ions%namespace)
           write(coords_file,'(i7.7)')iter
-          call ions%write_xyz('td.general/movie/geo-' + trim(coords_file), global_namespace, append = .false.)
+          call ions%write_xyz('td.general/movie/geo-' + trim(coords_file), append = .false.)
         end if
       end if
     end do

@@ -21,9 +21,11 @@
 
 module ions_oct_m
   use atom_oct_m
+  use classical_particles_oct_m
   use iso_c_binding
   use distributed_oct_m
   use global_oct_m
+  use interaction_oct_m
   use io_oct_m
   use ion_interaction_oct_m
   use lalg_adv_oct_m
@@ -48,10 +50,8 @@ module ions_oct_m
   private
   public :: ions_t
 
-  type ions_t
+  type, extends(classical_particles_t) :: ions_t
     ! Components are public by default
-
-    type(space_t), pointer :: space
 
     type(lattice_vectors_t) :: latt
 
@@ -80,6 +80,12 @@ module ions_oct_m
     procedure :: copy => ions_copy
     generic   :: assignment(=) => copy
     procedure :: partition => ions_partition
+    procedure :: init_interaction => ions_init_interaction
+    procedure :: initial_conditions => ions_initial_conditions
+    procedure :: iteration_info => ions_iteration_info
+    procedure :: update_quantity => ions_update_quantity
+    procedure :: update_exposed_quantity => ions_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => ions_copy_quantities_to_interaction
     procedure :: write_xyz => ions_write_xyz
     procedure :: read_xyz => ions_read_xyz
     procedure :: fold_atoms_into_cell => ions_fold_atoms_into_cell
@@ -110,14 +116,15 @@ module ions_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function ions_constructor(namespace, space, print_info) result(ions)
+  function ions_constructor(namespace, print_info) result(ions)
     type(namespace_t),          intent(in)    :: namespace
-    type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
     class(ions_t), pointer :: ions
 
+    type(read_coords_info) :: xyz
+    integer :: ia, ierr
+    logical :: move
     character(len=100)  :: function_name
-    integer :: ierr
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
 
@@ -125,14 +132,77 @@ contains
 
     SAFE_ALLOCATE(ions)
 
-    ions%space => space
+    ions%namespace = namespace
+
+    call space_init(ions%space, namespace)
 
     call species_init_global(namespace)
     
     ! initialize geometry
-    call ions_init_xyz(ions, namespace)
+    call read_coords_init(xyz)
+
+    ! load positions of the atoms
+    call read_coords_read('Coordinates', xyz, ions%space, namespace)
+
+    if (xyz%n < 1) then
+      message(1) = "Coordinates have not been defined."
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    ! Initialize parent class
+    call classical_particles_init(ions, xyz%n)
+
+    ! copy information from xyz to ions
+    ions%natoms = xyz%n
+    SAFE_ALLOCATE(ions%atom(1:ions%natoms))
+    do ia = 1, ions%natoms
+      move=.true.
+      if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
+      call atom_init(ions%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
+    end do
+
+    if (allocated(xyz%latvec)) then
+      ! Build lattice vectors from the XSF input
+      ions%latt = lattice_vectors_t(namespace, ions%space, xyz%latvec)
+    else
+      ! Build lattice vectors from input file
+      ions%latt = lattice_vectors_t(namespace, ions%space)
+    end if
+
+    ! Convert coordinates to Cartesian in case we have reduced coordinates
+    if (xyz%source == READ_COORDS_REDUCED) then
+      do ia = 1, ions%natoms
+        ions%atom(ia)%x(1:ions%space%dim) = ions%latt%red_to_cart(ions%atom(ia)%x(1:ions%space%dim))
+      end do
+    end if
+
+    call read_coords_end(xyz)
+
+    ! load positions of the classical atoms, if any
+    call read_coords_init(xyz)
+    ions%ncatoms = 0
+    call read_coords_read('Classical', xyz, ions%space, namespace)
+    if (xyz%source /= READ_COORDS_ERR) then ! found classical atoms
+      if (.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
+        message(1) = "Need to know charge for the classical atoms."
+        message(2) = "Please use a .pdb"
+        call messages_fatal(2, namespace=namespace)
+      end if
+      ions%ncatoms = xyz%n
+      write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', ions%ncatoms
+      call messages_info(1)
+      if (ions%ncatoms>0) then
+        SAFE_ALLOCATE(ions%catom(1:ions%ncatoms))
+        do ia = 1, ions%ncatoms
+          call atom_classical_init(ions%catom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, xyz%atom(ia)%charge)
+        end do
+      end if
+      call read_coords_end(xyz)
+    end if
+
+
     call ions_fold_atoms_into_cell(ions)
-    call ions_init_species(ions, namespace, print_info=print_info)
+    call ions_init_species(ions, print_info=print_info)
     call distributed_nullify(ions%atoms_dist, ions%natoms)
 
     ! Check that atoms are not too close
@@ -147,7 +217,7 @@ contains
 
         ! then write out the geometry, whether asked for or not in Output variable
         call io_mkdir(STATIC_DIR, namespace)
-        call ions%write_xyz(trim(STATIC_DIR)//'/geometry', namespace)
+        call ions%write_xyz(trim(STATIC_DIR)//'/geometry')
       end if
 
       if (ions_min_distance(ions, real_atoms_only = .true.) < threshold) then
@@ -203,86 +273,9 @@ contains
     POP_SUB(ions_constructor)
   end function ions_constructor
 
-  ! ---------------------------------------------------------------
-  !> initializes the xyz positions of the atoms in the ions structure 
-  subroutine ions_init_xyz(ions, namespace)
-    type(ions_t),      intent(inout) :: ions
-    type(namespace_t), intent(in)    :: namespace
-
-    type(read_coords_info) :: xyz
-    integer :: ia
-    logical :: move
-
-    PUSH_SUB(ions_init_xyz)
-
-    call read_coords_init(xyz)
-
-    ! load positions of the atoms
-    call read_coords_read('Coordinates', xyz, ions%space, namespace)
-
-    if (xyz%n < 1) then
-      message(1) = "Coordinates have not been defined."
-      call messages_fatal(1, namespace=namespace)
-    end if
-
-    ! copy information from xyz to ions
-    ions%natoms = xyz%n
-    if (ions%natoms>0) then
-      SAFE_ALLOCATE(ions%atom(1:ions%natoms))
-      do ia = 1, ions%natoms
-        move=.true.
-        if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
-        call atom_init(ions%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
-      end do
-    end if
-
-    
-    if (allocated(xyz%latvec)) then
-      ! Build lattice vectors from the XSF input
-      ions%latt = lattice_vectors_t(namespace, ions%space, xyz%latvec)
-    else
-      ! Build lattice vectors from input file
-      ions%latt = lattice_vectors_t(namespace, ions%space)
-    end if
-
-    ! Convert coordinates to Cartesian in case we have reduced coordinates
-    if (xyz%source == READ_COORDS_REDUCED) then
-      do ia = 1, ions%natoms
-        ions%atom(ia)%x(1:ions%space%dim) = ions%latt%red_to_cart(ions%atom(ia)%x(1:ions%space%dim))
-      end do
-    end if
-
-    call read_coords_end(xyz)
-
-    ! load positions of the classical atoms, if any
-    call read_coords_init(xyz)
-    ions%ncatoms = 0
-    call read_coords_read('Classical', xyz, ions%space, namespace)
-    if (xyz%source /= READ_COORDS_ERR) then ! found classical atoms
-      if (.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
-        message(1) = "Need to know charge for the classical atoms."
-        message(2) = "Please use a .pdb"
-        call messages_fatal(2, namespace=namespace)
-      end if
-      ions%ncatoms = xyz%n
-      write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', ions%ncatoms
-      call messages_info(1)
-      if (ions%ncatoms>0) then
-        SAFE_ALLOCATE(ions%catom(1:ions%ncatoms))
-        do ia = 1, ions%ncatoms
-          call atom_classical_init(ions%catom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, xyz%atom(ia)%charge)
-        end do
-      end if
-      call read_coords_end(xyz)
-    end if
-
-    POP_SUB(ions_init_xyz)
-  end subroutine ions_init_xyz
-
   ! ---------------------------------------------------------
-  subroutine ions_init_species(ions, namespace, print_info)
+  subroutine ions_init_species(ions, print_info)
     type(ions_t),      intent(inout) :: ions
-    type(namespace_t), intent(in)    :: namespace
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_, spec_user_defined
@@ -315,19 +308,19 @@ contains
       end do
       k = k + 1
       call species_init(ions%species(k), atom_get_label(ions%atom(j)), k)
-      call species_read(ions%species(k), namespace)
+      call species_read(ions%species(k), ions%namespace)
       ! these are the species which do not represent atoms
       ions%only_user_def = ions%only_user_def .and. .not. species_represents_real_atom(ions%species(k))
       
       if (species_is_ps(ions%species(k)) .and. ions%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
-        call messages_fatal(1, namespace=namespace)
+        call messages_fatal(1, namespace=ions%namespace)
       end if
 
       if (species_type(ions%species(k)) == SPECIES_JELLIUM_SLAB) then
         if (ions%space%is_periodic() .and. ions%space%periodic_dim /= 2) then
           message(1) = "Periodic jelium slab can only be used if PeriodicDim = 2"
-          call messages_fatal(1, namespace=namespace)
+          call messages_fatal(1, namespace=ions%namespace)
         end if
       end if
 
@@ -335,18 +328,18 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call parse_variable(namespace, 'SpinComponents', 1, ispin)
-    if (.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error(namespace, 'SpinComponents')
+    call parse_variable(ions%namespace, 'SpinComponents', 1, ispin)
+    if (.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error(ions%namespace, 'SpinComponents')
     ispin = min(2, ispin)
 
     if (print_info_) then
-      call messages_print_stress(stdout, "Species", namespace=namespace)
+      call messages_print_stress(stdout, "Species", namespace=ions%namespace)
     end if
     do i = 1, ions%nspecies
-      call species_build(ions%species(i), namespace, ispin, ions%space%dim, print_info=print_info_)
+      call species_build(ions%species(i), ions%namespace, ispin, ions%space%dim, print_info=print_info_)
     end do
     if (print_info_) then
-      call messages_print_stress(stdout, namespace=namespace)
+      call messages_print_stress(stdout, namespace=ions%namespace)
     end if
 
     !%Variable SpeciesTimeDependent
@@ -358,7 +351,7 @@ contains
     !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
     !% type of species to use this.
     !%End
-    call parse_variable(namespace, 'SpeciesTimeDependent', .false., ions%species_time_dependent)
+    call parse_variable(ions%namespace, 'SpeciesTimeDependent', .false., ions%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,ions%nspecies
       if (species_type(ions%species(i)) == SPECIES_USDEF) then
@@ -366,7 +359,7 @@ contains
       end if
     end do
     if (ions%species_time_dependent .and. .not. spec_user_defined) then
-      call messages_input_error(namespace, 'SpeciesTimeDependent')
+      call messages_input_error(ions%namespace, 'SpeciesTimeDependent')
     end if
 
     !  assign species
@@ -428,10 +421,97 @@ contains
   end subroutine ions_partition
 
   ! ---------------------------------------------------------
-  subroutine ions_write_xyz(this, fname, namespace, append, comment)
-    class(ions_t),               intent(in) :: this
+  subroutine ions_init_interaction(this, interaction)
+    class(ions_t),        target, intent(inout) :: this
+    class(interaction_t),         intent(inout) :: interaction
+
+    PUSH_SUB(ions_init_interaction)
+
+    select type (interaction)
+    class default
+      call classical_particles_init_interaction(this, interaction)
+    end select
+
+    POP_SUB(ions_init_interaction)
+  end subroutine ions_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine ions_initial_conditions(this, from_scratch)
+    class(ions_t), intent(inout) :: this
+    logical,       intent(in)    :: from_scratch
+
+    PUSH_SUB(ions_initial_conditions)
+
+    POP_SUB(ions_initial_conditions)
+  end subroutine ions_initial_conditions
+
+  ! ---------------------------------------------------------
+  subroutine ions_iteration_info(this)
+    class(ions_t), intent(in) :: this
+
+    PUSH_SUB(ions_iteration_info)
+
+    POP_SUB(ions_iteration_info)
+  end subroutine ions_iteration_info
+
+  ! ---------------------------------------------------------
+  subroutine ions_update_quantity(this, iq)
+    class(ions_t), intent(inout) :: this
+    integer,       intent(in)    :: iq
+
+    PUSH_SUB(ions_update_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      ! Other quantities should be handled by the parent class
+      call classical_particles_update_quantity(this, iq)
+    end select
+
+    POP_SUB(ions_update_quantity)
+  end subroutine ions_update_quantity
+
+  ! ---------------------------------------------------------
+  subroutine ions_update_exposed_quantity(partner, iq)
+    class(ions_t), intent(inout) :: partner
+    integer,       intent(in)    :: iq
+
+    PUSH_SUB(ions_update_exposed_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. partner%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      ! Other quantities should be handled by the parent class
+      call classical_particles_update_exposed_quantity(partner, iq)
+    end select
+
+    POP_SUB(ions_update_exposed_quantity)
+  end subroutine ions_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine ions_copy_quantities_to_interaction(partner, interaction)
+    class(ions_t),          intent(inout) :: partner
+    class(interaction_t),   intent(inout) :: interaction
+
+    PUSH_SUB(ions_copy_quantities_to_interaction)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1, namespace=partner%namespace)
+    end select
+
+    POP_SUB(ions_copy_quantities_to_interaction)
+  end subroutine ions_copy_quantities_to_interaction
+  
+  ! ---------------------------------------------------------
+  subroutine ions_write_xyz(this, fname, append, comment)
+    class(ions_t),              intent(in) :: this
     character(len=*),           intent(in) :: fname
-    type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: append
     character(len=*), optional, intent(in) :: comment
 
@@ -446,7 +526,7 @@ contains
     if (present(append)) then
       if (append) position = 'append'
     end if
-    iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
+    iunit = io_open(trim(fname)//'.xyz', this%namespace, action='write', position=position)
 
     write(iunit, '(i4)') this%natoms
     if (present(comment)) then
@@ -460,7 +540,7 @@ contains
     call io_close(iunit)
 
     if (this%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', this%namespace, action='write', position=position)
       write(iunit, '(i4)') this%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, this%ncatoms
@@ -473,17 +553,16 @@ contains
   end subroutine ions_write_xyz
 
   ! ---------------------------------------------------------
-  subroutine ions_read_xyz(this, fname, namespace, comment)
+  subroutine ions_read_xyz(this, fname, comment)
     class(ions_t),              intent(inout) :: this
     character(len=*),           intent(in)    :: fname
-    type(namespace_t),          intent(in)    :: namespace
     character(len=*), optional, intent(in)    :: comment
 
     integer :: iatom, iunit
 
     PUSH_SUB(ions_read_xyz)
 
-    iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
+    iunit = io_open(trim(fname)//'.xyz', this%namespace, action='read', position='rewind')
 
     read(iunit, '(i4)') this%natoms
     if (present(comment)) then
@@ -497,7 +576,7 @@ contains
     call io_close(iunit)
 
     if (this%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
+      iunit = io_open(trim(fname)//'_classical.xyz', this%namespace, action='read', position='rewind')
       read(iunit, '(i4)') this%ncatoms
       read(iunit, *)
       do iatom = 1, this%ncatoms
@@ -806,9 +885,8 @@ contains
   end subroutine ions_translate
 
   ! ---------------------------------------------------------
-  subroutine ions_rotate(this, namespace, from, from2, to)
+  subroutine ions_rotate(this, from, from2, to)
     class(ions_t),     intent(inout) :: this
-    type(namespace_t), intent(in)    :: namespace
     FLOAT,             intent(in)    :: from(this%space%dim)   !< assumed to be normalized
     FLOAT,             intent(in)    :: from2(this%space%dim)  !< assumed to be normalized
     FLOAT,             intent(in)    :: to(this%space%dim)     !< assumed to be normalized
@@ -821,7 +899,7 @@ contains
     PUSH_SUB(ions_rotate)
 
     if (this%space%dim /= 3) then
-      call messages_not_implemented("ions_rotate in other than 3 dimensions", namespace=namespace)
+      call messages_not_implemented("ions_rotate in other than 3 dimensions", namespace=this%namespace)
     end if
 
     ! initialize matrices
@@ -1028,10 +1106,9 @@ contains
   ! ----------------------------------------------------------------
   !> This subroutine creates a crystal by replicating the geometry and
   !! writes the result to dir//'crystal.xyz'
-  subroutine ions_write_crystal(this, dir, namespace)
+  subroutine ions_write_crystal(this, dir)
     class(ions_t),           intent(in) :: this 
     character(len=*),        intent(in) :: dir
-    type(namespace_t),       intent(in) :: namespace 
     
     type(lattice_iterator_t) :: latt_iter
     FLOAT :: radius, pos(this%space%dim)
@@ -1044,7 +1121,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       
-      iunit = io_open(trim(dir)//'/crystal.xyz', namespace, action='write')
+      iunit = io_open(trim(dir)//'/crystal.xyz', this%namespace, action='write')
       
       write(iunit, '(i9)') this%natoms*latt_iter%n_cells
       write(iunit, '(a)') '#generated by Octopus'
@@ -1067,6 +1144,8 @@ contains
     type(ions_t),     intent(inout) :: ions
 
     PUSH_SUB(ions_finalize)
+
+    call classical_particles_end(ions)
 
     call distributed_end(ions%atoms_dist)
 

@@ -107,13 +107,14 @@ contains
 
     this%namespace = namespace
 
-    call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
-
-    call classical_particles_init(this, namespace, 1)
-
+    call space_init(this%space, namespace)
     if (this%space%periodic_dim > 0) then
       call messages_not_implemented('Classical particle for periodic systems')
     end if
+
+    call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
+
+    call classical_particles_init(this, 1)
 
     !%Variable ParticleMass
     !%Type float

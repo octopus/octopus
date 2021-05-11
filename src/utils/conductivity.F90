@@ -76,6 +76,8 @@
 
     call unit_system_init(global_namespace)
 
+    call space_init(space, global_namespace)
+
     call spectrum_init(spectrum, global_namespace, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
@@ -107,8 +109,7 @@
     
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space, global_namespace)
-    ions => ions_t(global_namespace, space)
+    ions => ions_t(global_namespace)
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
@@ -126,7 +127,7 @@
       call spectrum_count_time_steps(global_namespace, iunit, ntime, deltat)
       call io_close(iunit)
 
-      nvel = ions%natoms*space%dim
+      nvel = ions%natoms*ions%space%dim
 
       SAFE_ALLOCATE(time(1:ntime))
       SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
@@ -159,7 +160,7 @@
           time(ntime) = curtime
           ivel = 1
           do ii = 1, ions%natoms
-            do jj = 1, space%dim
+            do jj = 1, ions%space%dim
               velocities(ivel, ntime) = units_to_atomic(units_out%velocity, ions%atom(ii)%v(jj))
               ivel = ivel + 1
             end do

@@ -138,7 +138,7 @@ contains
       call messages_experimental('Support for mixed periodicity systems')
     end if
 
-    sys%ions => ions_t(sys%namespace, sys%space)
+    sys%ions => ions_t(sys%namespace)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%ions, sys%space)
     if (sys%space%is_periodic()) then
       call sys%ions%latt%write_info(stdout)
