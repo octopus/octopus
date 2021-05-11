@@ -106,8 +106,6 @@ dist_share_DATA = \
         23-go-na2.05-constrains.inp                  \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
-	27-fine_mesh.test                            \
-	27-fine_mesh.01-gs.inp \
         29-pcm_chlorine_anion.01-ground_state-n60.inp \
         29-pcm_chlorine_anion.02-td_prop-n60.inp      \
         29-pcm_chlorine_anion.03-ground_state-n60-poisson.inp \

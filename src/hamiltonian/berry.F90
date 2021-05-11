@@ -164,7 +164,7 @@ contains
     dipole(1:space%dim) = M_ZERO
 
     do ispin = 1, st%d%nspin
-      call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+      call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
     end do
 
     n_dip = ions%dipole()

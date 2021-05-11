@@ -276,10 +276,8 @@ contains
     
     ! Handle mixing now...
     select case(scf%mix_field)
-    case(OPTION__MIXFIELD__POTENTIAL)
+    case(OPTION__MIXFIELD__POTENTIAL, OPTION__MIXFIELD__DENSITY)
       scf%mixdim1 = gr%mesh%np
-    case(OPTION__MIXFIELD__DENSITY)
-      scf%mixdim1 = gr%fine%mesh%np
     case(OPTION__MIXFIELD__STATES)
       ! we do not really need the mixer, except for the value of the mixing coefficient
       scf%mixdim1 = 1
@@ -287,9 +285,7 @@ contains
 
     mix_type = TYPE_FLOAT
 
-    if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, namespace, space, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
-    else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
+    if (scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, namespace, space, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
@@ -582,12 +578,9 @@ contains
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
-        select case (scf%mix_field)
-        case (OPTION__MIXFIELD__DENSITY)
-          call mix_load(restart_load, scf%smix, space, gr%fine%mesh, ierr)
-        case (OPTION__MIXFIELD__POTENTIAL)
+        if(scf%mix_field == OPTION__MIXFIELD__DENSITY .or. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
           call mix_load(restart_load, scf%smix, space, gr%mesh, ierr)
-        end select
+        end if
         if (ierr /= 0) then
           message(1) = "Unable to read mixing information. Mixing will start from scratch."
           call messages_warning(1)
@@ -603,10 +596,10 @@ contains
       end if 
     end if
 
-    SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
-    SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoout(1:gr%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:gr%mesh%np, 1:1, 1:nspin))
 
-    rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+    rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
@@ -705,7 +698,7 @@ contains
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
 
-      rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+      rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
@@ -769,9 +762,9 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, st%rho)
         ! for spinors, having components 3 or 4 be negative is not unphysical
-        if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
+        if(minval(st%rho(1:gr%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
           write(message(1),*) 'Negative density after mixing. Minimum value = ', &
-            minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
+            minval(st%rho(1:gr%mesh%np, 1:st%d%spin_channels))
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
@@ -835,7 +828,7 @@ contains
 
           select case (scf%mix_field)
           case (OPTION__MIXFIELD__DENSITY)
-            call mix_dump(restart_dump, scf%smix, space, gr%fine%mesh, ierr)
+            call mix_dump(restart_dump, scf%smix, space, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
@@ -876,7 +869,7 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+      rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
 
       ! restart mixing
       if (scf%mix_field /= OPTION__MIXFIELD__NONE) then
@@ -1154,7 +1147,7 @@ contains
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(hirshfeld_charges(1:ions%natoms))
 
-        call partial_charges_calculate(namespace, gr%fine%mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
+        call partial_charges_calculate(namespace, gr%mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 
@@ -1369,10 +1362,10 @@ contains
 
     type is (density_criterion_t)
       scf%abs_dens_diff = M_ZERO
-      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
-        tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
-        scf%abs_dens_diff = scf%abs_dens_diff + dmf_integrate(gr%fine%mesh, tmp)
+        tmp = abs(rhoin(1:gr%mesh%np, 1, is) - rhoout(1:gr%mesh%np, 1, is))
+        scf%abs_dens_diff = scf%abs_dens_diff + dmf_integrate(gr%mesh, tmp)
       end do
       SAFE_DEALLOCATE_A(tmp)
 

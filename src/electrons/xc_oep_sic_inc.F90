@@ -18,10 +18,9 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, mesh, fine, psolver, namespace, space, st, kpoints, is, oep, ex, ec)
+subroutine X(oep_sic) (xcs, der, psolver, namespace, space, st, kpoints, is, oep, ex, ec)
   type(xc_t),          intent(inout) :: xcs
-  type(mesh_t),        intent(in)    :: mesh
-  type(multigrid_level_t), intent(in):: fine
+  type(derivatives_t), intent(in)    :: der
   type(poisson_t),     intent(in)    :: psolver
   type(namespace_t),   intent(in)    :: namespace
   type(space_t),       intent(in)    :: space
@@ -44,10 +43,10 @@ subroutine X(oep_sic) (xcs, mesh, fine, psolver, namespace, space, st, kpoints, 
 
   ASSERT(st%d%dim == 1)
 
-  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(rho(1:mesh%np, 1:2))
-  SAFE_ALLOCATE(Vxc(1:mesh%np, 1:2))
-  rho(1:mesh%np, 2) = M_ZERO
+  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(rho(1:der%mesh%np, 1:2))
+  SAFE_ALLOCATE(Vxc(1:der%mesh%np, 1:2))
+  rho(1:der%mesh%np, 2) = M_ZERO
 
   ! loop over states
   ex_ = M_ZERO
@@ -55,10 +54,10 @@ subroutine X(oep_sic) (xcs, mesh, fine, psolver, namespace, space, st, kpoints, 
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then ! we only need the occupied states
 
-      call states_elec_get_state(st, mesh, ist, is, psi)
+      call states_elec_get_state(st, der%mesh, ist, is, psi)
 
       ! get orbital density
-      rho(1:mesh%np, 1) = oep%socc*st%occ(ist, is)*R_REAL(psi(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)))
+      rho(1:der%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_REAL(psi(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)))
 
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -66,22 +65,22 @@ subroutine X(oep_sic) (xcs, mesh, fine, psolver, namespace, space, st, kpoints, 
       ec2  = M_ZERO
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
-      call xc_get_vxc(fine%der, xcs, st, kpoints, psolver, namespace, space, rho, SPIN_POLARIZED, vxc, ex=ex2, ec=ec2)
+      call xc_get_vxc(der, xcs, st, kpoints, psolver, namespace, space, rho, SPIN_POLARIZED, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%X(lxc)(1:mesh%np, ist, is) = oep%X(lxc)(1:mesh%np, ist, is) - vxc(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1))
+      oep%X(lxc)(1:der%mesh%np, ist, is) = oep%X(lxc)(1:der%mesh%np, ist, is) - vxc(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1))
 
       ! calculate the Hartree contribution using Poisson equation
-      vxc(1:mesh%np, 1) = M_ZERO
+      vxc(1:der%mesh%np, 1) = M_ZERO
       call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
-      ex_ = ex_ - M_HALF*oep%sfact*dmf_dotp(mesh, vxc(1:mesh%np, 1), rho(1:mesh%np, 1))
+      ex_ = ex_ - M_HALF*oep%sfact*dmf_dotp(der%mesh, vxc(1:der%mesh%np, 1), rho(1:der%mesh%np, 1))
 
-      oep%X(lxc)(1:mesh%np, ist, is) = oep%X(lxc)(1:mesh%np, ist, is) - &
-        vxc(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1))
+      oep%X(lxc)(1:der%mesh%np, ist, is) = oep%X(lxc)(1:der%mesh%np, ist, is) - &
+        vxc(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1))
     end if
   end do
 

@@ -503,7 +503,7 @@ subroutine pes_mask_output_states(namespace, space, st, gr, ions, dir, outp, mas
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, namespace, space, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, &
         RhoAB(:, is), fn_unit, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if

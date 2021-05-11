@@ -135,7 +135,6 @@ module hamiltonian_elec_oct_m
     FLOAT :: exx_coef !< how much of EXX to mix
 
     type(poisson_t)          :: psolver      !< Poisson solver
-    type(poisson_t), pointer :: psolver_fine !< Poisson solver on the fine grid
 
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
@@ -320,15 +319,6 @@ contains
       call multigrid_init(hm%psolver%mgrid, namespace, space, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
     end if
 
-
-    nullify(hm%psolver_fine)
-    if (gr%have_fine_mesh) then
-      SAFE_ALLOCATE(hm%psolver_fine)
-      call poisson_init(hm%psolver_fine, namespace, space, gr%fine%der, mc, st%qtot, label = " (fine mesh)")
-    else
-      hm%psolver_fine => hm%psolver
-    end if
-  
     ! Initialize external potential
     call epot_init(hm%ep, namespace, space, gr, hm%ions, hm%psolver, hm%d%ispin, hm%xc%family, mc, hm%kpoints)
 
@@ -336,7 +326,7 @@ contains
     call hm%v_ie_loc%init(gr%mesh, hm%psolver, hm%ions, namespace)
     if(hm%ep%nlcc) then
       call hm%nlcc%init(gr%mesh, hm%ions)
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
 
@@ -782,7 +772,6 @@ contains
       call pcm_init(hm%pcm, namespace, space, ions, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
       if (hm%pcm%run_pcm) then
         if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= kohn_sham", namespace=namespace)
-        if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
       end if
 
       POP_SUB(hamiltonian_elec_init.build_interactions)
@@ -828,12 +817,6 @@ contains
       SAFE_DEALLOCATE_A(hm%vtau)
     end if
 
-    if (associated(hm%psolver_fine, hm%psolver)) then
-      nullify(hm%psolver_fine)
-    else
-      call poisson_end(hm%psolver_fine)
-      SAFE_DEALLOCATE_P(hm%psolver_fine)
-    end if
     call poisson_end(hm%psolver)
 
     nullify(hm%xc)

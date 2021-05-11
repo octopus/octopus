@@ -91,7 +91,7 @@ contains
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(stress_calculate)
 
-    SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:st%d%nspin))
 
     if(hm%kpoints%use_symmetries) then
       call messages_not_implemented("Stress tensors with k-point symmetries", namespace=namespace)
@@ -113,8 +113,8 @@ contains
     stress(:,:) = M_ZERO
 
     call calculate_density()
-    call fourier_space_init(hm%psolver_fine)
-    call density_rs2fs(hm%psolver_fine)
+    call fourier_space_init(hm%psolver)
+    call density_rs2fs(hm%psolver)
     
     ! Stress from kinetic energy of electrons    
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
@@ -160,22 +160,22 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      call states_elec_total_density(st, gr%fine%mesh, rho)
+      call states_elec_total_density(st, gr%mesh, rho)
 
       nullify(rho_total)
 
       if (allocated(st%rho_core) .or. hm%d%spin_channels > 1) then
          total_density_alloc = .true.
          
-         SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
+         SAFE_ALLOCATE(rho_total(1:gr%mesh%np))
          
-         do ip = 1, gr%fine%mesh%np
+         do ip = 1, gr%mesh%np
             rho_total(ip) = sum(rho(ip, 1:hm%d%spin_channels))
          end do
          
          ! remove non-local core corrections
          if (allocated(st%rho_core)) then
-            do ip = 1, gr%fine%mesh%np
+            do ip = 1, gr%mesh%np
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
             end do
          end if
@@ -292,7 +292,7 @@ contains
          
       else if(cube%fft%library == FFTLIB_FFTW) then
 
-         temp(1:3) = M_TWO*M_PI/(db(1:3)*gr%fine%der%mesh%spacing(1:3))
+         temp(1:3) = M_TWO*M_PI/(db(1:3)*gr%der%mesh%spacing(1:3))
 
          do ix = 1, cube%rs_n_global(1)
             ixx(1) = pad_feq(ix, db(1), .true.)
@@ -301,7 +301,7 @@ contains
                do iz = 1, cube%rs_n_global(3)
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
-                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, gg, modg2)
+                  call poisson_fft_gg_transform_l(ixx, temp, gr%der%mesh%sb, gg, modg2)
 
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
@@ -407,9 +407,9 @@ contains
   
 ! -------------------------------------------------------
   subroutine stress_from_Hartree(hm, stress, stress_Hartree)
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    FLOAT,                    intent(inout) :: stress(:, :)
-    FLOAT,                    intent(out)   :: stress_Hartree(3, 3) ! temporal
+    type(hamiltonian_elec_t), target, intent(in)    :: hm
+    FLOAT,                            intent(inout) :: stress(:, :)
+    FLOAT,                            intent(out)   :: stress_Hartree(3, 3) ! temporal
 
     FLOAT :: stress_l(3, 3)
     type(cube_t), pointer :: cube
@@ -417,7 +417,7 @@ contains
     FLOAT :: ss
     type(profile_t), save :: prof
 
-    cube => hm%psolver_fine%cube
+    cube => hm%psolver%cube
     
     call profiling_in(prof, "STRESS_FROM_HARTREE")    
     PUSH_SUB(stress_from_Hartree)
@@ -498,11 +498,12 @@ contains
 
   ! -------------------------------------------------------
   subroutine stress_from_pseudo(gr, hm, st, ions, stress, stress_ps)
-    type(grid_t),      target,        intent(in) :: gr !< grid
-    type(hamiltonian_elec_t),  intent(inout)    :: hm
-    type(states_elec_t),    intent(inout) :: st
-    type(ions_t),              intent(in) :: ions !< geometry
-    type(cube_t),    pointer             :: cube
+    type(grid_t),      target,           intent(in) :: gr !< grid
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(states_elec_t),              intent(inout) :: st
+    type(ions_t),                        intent(in) :: ions !< ions
+
+    type(cube_t),    pointer      :: cube
     type(derivatives_t),  pointer :: der
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_ps(3, 3) ! temporal
@@ -524,7 +525,7 @@ contains
 
     stress_l = M_ZERO
     
-    cube => hm%psolver_fine%cube
+    cube => hm%psolver%cube
     der => gr%der
 
 

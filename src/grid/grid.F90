@@ -57,10 +57,8 @@ module grid_oct_m
     ! Components are public by default
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
-    type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
-    logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
 
     type(symmetries_t)          :: symm
@@ -88,24 +86,6 @@ contains
     call simul_box_init(gr%sb, namespace, ions, space)
 
     call symmetries_init(gr%symm, namespace, ions, space)
-
-
-    !%Variable UseFineMesh
-    !%Type logical
-    !%Default no
-    !%Section Mesh
-    !%Description
-    !% If enabled, <tt>Octopus</tt> will use a finer mesh for the calculation
-    !% of the forces or other sensitive quantities.
-    !% Experimental, and incompatible with domain-parallelization.
-    !%End
-    if (space%dim == 3) then 
-      call parse_variable(namespace, 'UseFineMesh', .false., gr%have_fine_mesh)
-    else
-      gr%have_fine_mesh = .false.
-    end if
-
-    if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call ions%grid_defaults(def_h, def_rsize)
     
@@ -231,58 +211,12 @@ contains
     call mesh_init_stage_3(gr%mesh, namespace, space, gr%stencil, mc)
 
     call nl_operator_global_init(namespace)
-    if(gr%have_fine_mesh) then
-      message(1) = "Info: coarse mesh"
-      call messages_info(1)
-    end if
     call derivatives_build(gr%der, namespace, space, gr%mesh)
-
-    ! initialize a finer mesh to hold the density, for this we use the
-    ! multigrid routines
-    
-    if(gr%have_fine_mesh) then
-      if(gr%mesh%parallel_in_domains) then
-        message(1) = 'UseFineMesh does not work with domain parallelization.'
-        call messages_fatal(1)
-      end if
-
-      call initialize_fine_grid()
-    else
-      gr%fine%mesh => gr%mesh
-      gr%fine%der => gr%der
-    end if
 
     ! print info concerning the grid
     call grid_write_info(gr, stdout)
 
     POP_SUB(grid_init_stage_2)
-
-    contains
-      subroutine initialize_fine_grid()
-        PUSH_SUB(grid_init_stage_2.initialize_fine_grid)
-
-        SAFE_ALLOCATE(gr%fine%mesh)
-        SAFE_ALLOCATE(gr%fine%der)
-
-        call multigrid_mesh_double(space, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
-
-        call derivatives_init(gr%fine%der, namespace, space, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
-
-        call mesh_init_stage_3(gr%fine%mesh, namespace, space, gr%stencil, mc)
-
-        call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-
-        message(1) = "Info: fine mesh"
-        call messages_info(1)
-        call derivatives_build(gr%fine%der, namespace, space, gr%fine%mesh)
-
-        gr%fine%der%coarser => gr%der
-        gr%der%finer =>  gr%fine%der
-        gr%fine%der%to_coarser => gr%fine%tt
-        gr%der%to_finer => gr%fine%tt
-
-        POP_SUB(grid_init_stage_2.initialize_fine_grid)
-      end subroutine initialize_fine_grid
   end subroutine grid_init_stage_2
 
 
@@ -293,19 +227,6 @@ contains
     PUSH_SUB(grid_end)
 
     call nl_operator_global_end()
-
-    if(gr%have_fine_mesh) then
-      call derivatives_end(gr%fine%der)
-      call mesh_end(gr%fine%mesh)
-      SAFE_DEALLOCATE_P(gr%fine%mesh)
-      SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_A(gr%fine%tt%to_coarse)
-      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine1)
-      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine2)
-      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine4)
-      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine8)
-      SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
-    end if
 
     call derivatives_end(gr%der)
     call curvilinear_end(gr%cv)
@@ -338,16 +259,9 @@ contains
     call messages_info(1, iunit)
     call gr%sb%write_info(iunit)
 
-    if(gr%have_fine_mesh) then
-      message(1) = "Wave-functions mesh:"
-      call messages_info(1, iunit)
-      call mesh_write_info(gr%mesh, iunit)
-      message(1) = "Density mesh:"
-    else
-      message(1) = "Main mesh:"
-    end if
+    message(1) = "Main mesh:"
     call messages_info(1, iunit)
-    call mesh_write_info(gr%fine%mesh, iunit)
+    call mesh_write_info(gr%mesh, iunit)
 
     if (gr%mesh%use_curvilinear) then
       call curvilinear_write_info(gr%cv, iunit)
