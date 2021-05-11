@@ -569,7 +569,13 @@ contains
       end select
 
       !Apply mask absorbing boundaries
-      if (hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, hm, st)
+      if (hm%bc%abtype == MASK_ABSORBING) then
+        if (states_are_real(st)) then
+          call dvmask(gr%mesh, hm, st)
+        else
+          call zvmask(gr%mesh, hm, st)
+        endif
+      endif
 
       !Photoelectron stuff
       if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
