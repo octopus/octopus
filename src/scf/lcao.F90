@@ -1259,6 +1259,7 @@ contains
           end if
 
         elseif (ispin == SPINORS) then
+          ASSERT(lmag > M_ZERO)
           theta = acos(mag(3)/lmag)
           if (abs(mag(1)) <= M_EPSILON) then
             if (abs(mag(2)) <= M_EPSILON) then
