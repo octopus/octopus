@@ -291,7 +291,8 @@ contains
     type(restart_t),          intent(in)    :: restart_dump
 
     type(states_elec_t) :: states_save
-    integer :: iter, icount, ip, ist, ierr, maxcount, iorb, what_i
+    integer :: iter, icount, ip, ist, ierr, maxcount, iorb
+    integer(8) :: what_i
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv
@@ -449,10 +450,11 @@ contains
       ! write output for iterations if requested
       if(any(outp%what) .and. outp%duringscf) then
         do what_i = lbound(outp%what, 1), ubound(outp%what, 1)
-          if(outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
+          if(outp%what_now(what_i, iter)) then
             write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
             call output_all(outp, namespace, space, dirname, gr, ions, iter, st, hm, ks)
             call scf_write_static(dirname, "info")
+            exit
           end if
         end do
       end if

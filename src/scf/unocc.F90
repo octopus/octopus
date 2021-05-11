@@ -82,7 +82,8 @@ contains
     logical,              intent(in)    :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, iter, ierr_rho, ik, it
+    integer :: iunit, ierr, iter, ierr_rho, ik
+    integer(8) :: what_it
     logical :: read_gs, converged, forced_finish, showoccstates, is_orbital_dependent, occ_missing
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
@@ -332,12 +333,10 @@ contains
         end if
       end if 
 
-      do it = lbound(sys%outp%output_interval, 1), ubound(sys%outp%output_interval, 1)
-        if(sys%outp%output_interval(it) /= 0) then
-          if(mod(iter, sys%outp%output_interval(it)) == 0) then
+      do what_it = lbound(sys%outp%output_interval, 1), ubound(sys%outp%output_interval, 1)
+        if(sys%outp%what_now(what_it, iter)) then
             output_iter = .true.
             exit
-          end if
         end if
       end do
 

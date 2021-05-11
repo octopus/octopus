@@ -384,6 +384,22 @@ contains
     !% post-processing utility.
     !%End
 
+    !%Variable OutputInterval
+    !%Type integer
+    !%Default 50
+    !%Section Output
+    !%Description
+    !% The output requested by variable <tt>Output</tt> is written
+    !% to the directory <tt>OutputIterDir</tt>
+    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
+    !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
+    !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
+    !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
+    !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
+    !%End
+    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
+
 
     what_no_how = (/ OPTION__OUTPUT__MATRIX_ELEMENTS, OPTION__OUTPUT__BERKELEYGW, OPTION__OUTPUT__DOS, &
       OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW, OPTION__OUTPUT__OCC_MATRICES, &
@@ -595,14 +611,6 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
     end do
-
-    if(what_tag == 'Output') then
-      ! required for output_hamiltonian()
-      if(what(OPTION__OUTPUT__POTENTIAL_GRADIENT) .and. .not. what(OPTION__OUTPUT__POTENTIAL)) then
-        what(OPTION__OUTPUT__POTENTIAL) = .true.
-        output_interval(OPTION__OUTPUT__POTENTIAL) = output_interval(OPTION__OUTPUT__POTENTIAL_GRADIENT)
-      end if
-    end if
   
     POP_SUB(io_function_read_what_how_when)
   end subroutine io_function_read_what_how_when

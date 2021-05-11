@@ -506,7 +506,8 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, converged_current, converged_last, gs_run_
-    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn, what_i
+    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
+    integer(8) :: what_i
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
@@ -721,9 +722,8 @@ contains
       call energy_calc_total(namespace, space, hm, gr, st, iunit = 0)
 
       ! compute forces only if requested
-      if(outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES) &
-         .and. outp%output_interval(OPTION__OUTPUT__FORCES) /= 0 &
-         .and. gs_run_ .and. mod(iter, outp%output_interval(OPTION__OUTPUT__FORCES)) == 0) then
+      if(outp%duringscf .and. outp%what_now(OPTION__OUTPUT__FORCES, iter) &
+         .and. gs_run_ ) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
@@ -864,9 +864,10 @@ contains
 
       if(any(outp%what) .and. outp%duringscf .and. gs_run_) then
           do what_i = lbound(outp%what, 1), ubound(outp%what, 1)
-            if (outp%output_interval(what_i) /= 0 .and. mod(iter, outp%output_interval(what_i)) == 0) then
+            if (outp%what_now(what_i, iter)) then
               write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
               call output_all(outp, namespace, space, dirname, gr, ions, iter, st, hm, ks)
+              exit
             end if
           end do
       end if
@@ -888,7 +889,7 @@ contains
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
           call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
-        case (OPTION__MIXFIELD__DENSITY)
+        case(OPTION__MIXFIELD__DENSITY)
           call mixfield_set_vin(scf%mixfield, rhoin)
       end select
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)

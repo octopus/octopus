@@ -629,7 +629,8 @@ contains
     logical,                  intent(in)    :: stopping
     logical,                  intent(inout) :: from_scratch
 
-    integer :: ierr, it
+    integer :: ierr
+    integer(8) :: what_it
     logical :: output_iter
 
     PUSH_SUB(td_check_point)
@@ -641,12 +642,10 @@ contains
     etime = loct_clock()
 
     output_iter = .false.
-    do it = lbound(outp%output_interval, 1), ubound(outp%output_interval, 1)
-      if(outp%output_interval(it) /= 0) then
-        if(mod(iter, outp%output_interval(it)) == 0) then
-          output_iter = .true.
-          exit
-        end if
+    do what_it = lbound(outp%output_interval, 1), ubound(outp%output_interval, 1)
+      if(outp%what_now(what_it, iter)) then
+        output_iter = .true.
+        exit
       end if
     end do
 

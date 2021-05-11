@@ -215,11 +215,6 @@ subroutine output_current_flow(outp, namespace, dir, gr, st, kpoints)
 
   PUSH_SUB(output_current_flow)
 
-  if(.not. outp%what(OPTION__OUTPUT__J_FLOW)) then
-    POP_SUB(output_current_flow)
-    return
-  end if
-
   if(mpi_grp_is_root(mpi_world)) then
 
     call io_mkdir(dir, namespace)
