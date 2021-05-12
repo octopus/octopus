@@ -125,7 +125,7 @@ contains
           
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-            if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
+            if(volume_in_volume(space, volume, xx)) rerho = M_ONE
           else
             call parse_expression(rerho, imrho, space%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
@@ -716,7 +716,7 @@ contains
 
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-            if(volume_in_volume(mesh%sb, volume, xx)) rerho = M_ONE
+            if(volume_in_volume(space, volume, xx)) rerho = M_ONE
           else
             call parse_expression(rerho, imrho1, space%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if

@@ -26,7 +26,7 @@ module volume_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -130,21 +130,20 @@ contains
   end subroutine volume_read_from_block
 
 
-  logical function volume_in_volume(sb, vol, xx) result(in_vol)
-    type(simul_box_t), intent(in) :: sb
+  logical function volume_in_volume(space, vol, xx) result(in_vol)
+    type(space_t),     intent(in) :: space
     type(volume_t),    intent(in) :: vol
-    FLOAT,             intent(in) :: xx(:)
+    FLOAT,             intent(in) :: xx(1:space%dim)
 
     logical :: in_partial_volume
     integer :: i
-    FLOAT   :: r, x(MAX_DIM)
+    FLOAT   :: r
 
     in_vol = .false.
     do i = 1, vol%n_elements
       select case(vol%type(i))
       case(OPTION__VOLUME__VOL_SPHERE)
-        x(1:sb%dim) = xx(1:sb%dim) - vol%params(1:sb%dim, i)
-        r = sqrt(dot_product(x(1:sb%dim), x(1:sb%dim)))
+        r = norm2(xx - vol%params(1:space%dim, i))
         in_partial_volume = (r <= vol%params(4, i))
 
       case(OPTION__VOLUME__VOL_SLAB)
