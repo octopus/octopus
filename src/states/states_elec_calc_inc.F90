@@ -1930,7 +1930,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, space, gr, kpoints, psolve
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         call poisson_build_kernel(psolver, namespace, space, coulb, qq, M_ZERO, &
-                  -(kpoints%full%npoints-npath)*gr%sb%latt%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+                  -(kpoints%full%npoints-npath)*kpoints%latt%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
 #ifndef R_TCOMPLEX

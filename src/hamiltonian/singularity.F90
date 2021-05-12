@@ -59,12 +59,11 @@ module singularity_oct_m
  
 contains
 
-  subroutine singularity_init(this, namespace, space, st, latt, kpoints)
+  subroutine singularity_init(this, namespace, space, st, kpoints)
     type(singularity_t),       intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
-    type(lattice_vectors_t),   intent(in)    :: latt
     type(kpoints_t),           intent(in)    :: kpoints
 
     integer :: default
@@ -108,7 +107,7 @@ contains
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
-        call singularity_correction(this, namespace, space, st, latt, kpoints)
+        call singularity_correction(this, namespace, space, st, kpoints)
       end if
     end if
 
@@ -128,12 +127,11 @@ contains
 
   !This routine implements the general tratment of the singularity for periodic solids,
   !as described in Carrier et al. PRB 75, 205126 (2007)
-  subroutine singularity_correction(this, namespace, space, st, latt, kpoints)
+  subroutine singularity_correction(this, namespace, space, st, kpoints)
     type(singularity_t),       intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
     type(space_t),             intent(in)    :: space
     type(states_elec_t),       intent(in)    :: st
-    type(lattice_vectors_t),   intent(in)    :: latt
     type(kpoints_t),           intent(in)    :: kpoints
 
     integer :: ik, ik2, ikpoint, Nk, Nsteps
@@ -175,7 +173,7 @@ contains
 
         this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint) * kpoints%full%weight(ik2)
       end do
-      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/latt%rcell_volume
+      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/kpoints%latt%rcell_volume
     end do
 
     if(dist_kpt%parallel) then
@@ -212,7 +210,7 @@ contains
 
       this%FF = M_ZERO
       length = M_ONE
-      kvol_element = (M_ONE/(M_TWO*Nk+M_ONE))**3*((M_TWO*M_PI)**3)/latt%rcell_volume
+      kvol_element = (M_ONE/(M_TWO*Nk+M_ONE))**3*((M_TWO*M_PI)**3)/kpoints%latt%rcell_volume
       do istep = 1, Nsteps
 
         do ikx = 0, Nk
@@ -240,17 +238,17 @@ contains
       !We multiply by 4*pi/((2*pi)^3)
       this%FF = this%FF*CNST(8.0)*M_PI/((M_TWO*M_PI)**3)
       !The remaining part is treated as a spherical BZ
-      this%FF = this%FF + SINGUL_CNST*(latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/latt%rcell_volume*length
+      this%FF = this%FF + SINGUL_CNST*(kpoints%latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/kpoints%latt%rcell_volume*length
 
     else if(this%coulomb_singularity == SINGULARITY_GYGI) then
       !See Eq. (7) of PRB 34, 4405 (1986)
       !Here we use the fact that the fcc volume is a^3/4
-      this%FF = CNST(4.423758)*(latt%rcell_volume*CNST(4.0))**(CNST(2.0/3.0))/M_PI/latt%rcell_volume
+      this%FF = CNST(4.423758)*(kpoints%latt%rcell_volume*CNST(4.0))**(CNST(2.0/3.0))/M_PI/kpoints%latt%rcell_volume
 
     else
       !The constant is 4*pi*(3/(4*pi))^1/3
       !We multiply by 4*pi/(2*pi^3)
-      this%FF = SINGUL_CNST*(latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/latt%rcell_volume
+      this%FF = SINGUL_CNST*(kpoints%latt%rcell_volume)**(CNST(2.0/3.0))/M_PI/kpoints%latt%rcell_volume
     end if
 
     if(debug%info) then
@@ -284,15 +282,15 @@ contains
       if(this%coulomb_singularity == SINGULARITY_GENERAL) then
         !See Eq. (16) of PRB 75, 205126 (2007)
         ff = (M_TWO*M_PI)**2/(M_TWO*(                                                             &
-           (M_TWO*sin(qq(1)*M_PI)*sin(qq(1)*M_PI)*dot_product(latt%klattice(:,1), latt%klattice(:,1)) &
-         + sin(qq(1)*M_TWO*M_PI)*sin(qq(2)*M_TWO*M_PI)*dot_product(latt%klattice(:,1), latt%klattice(:,2))) &
-          + (M_TWO*sin(qq(2)*M_PI)*sin(qq(2)*M_PI)*dot_product(latt%klattice(:,2), latt%klattice(:,2)) &
-         + sin(qq(2)*M_TWO*M_PI)*sin(qq(3)*M_TWO*M_PI)*dot_product(latt%klattice(:,2), latt%klattice(:,3))) &
-          + (M_TWO*sin(qq(3)*M_PI)*sin(qq(3)*M_PI)*dot_product(latt%klattice(:,3), latt%klattice(:,3)) &
-         + sin(qq(3)*M_TWO*M_PI)*sin(qq(1)*M_TWO*M_PI)*dot_product(latt%klattice(:,3), latt%klattice(:,1)))))
+           (M_TWO*sin(qq(1)*M_PI)*sin(qq(1)*M_PI)*dot_product(kpoints%latt%klattice(:,1), kpoints%latt%klattice(:,1)) &
+         + sin(qq(1)*M_TWO*M_PI)*sin(qq(2)*M_TWO*M_PI)*dot_product(kpoints%latt%klattice(:,1), kpoints%latt%klattice(:,2))) &
+          + (M_TWO*sin(qq(2)*M_PI)*sin(qq(2)*M_PI)*dot_product(kpoints%latt%klattice(:,2), kpoints%latt%klattice(:,2)) &
+         + sin(qq(2)*M_TWO*M_PI)*sin(qq(3)*M_TWO*M_PI)*dot_product(kpoints%latt%klattice(:,2), kpoints%latt%klattice(:,3))) &
+          + (M_TWO*sin(qq(3)*M_PI)*sin(qq(3)*M_PI)*dot_product(kpoints%latt%klattice(:,3), kpoints%latt%klattice(:,3)) &
+         + sin(qq(3)*M_TWO*M_PI)*sin(qq(1)*M_TWO*M_PI)*dot_product(kpoints%latt%klattice(:,3), kpoints%latt%klattice(:,1)))))
       else
-        half_a = M_HALF*(latt%rcell_volume*CNST(4.0))**(CNST(1.0/3.0))
-        call kpoints_to_absolute(latt, qq, qq_abs)
+        half_a = M_HALF*(kpoints%latt%rcell_volume*CNST(4.0))**(CNST(1.0/3.0))
+        call kpoints_to_absolute(kpoints%latt, qq, qq_abs)
         !See Eq. (6) of PRB 34, 4405 (1986)
         ff = (half_a)**2/(M_THREE-cos(qq_abs(1)*half_a)*cos(qq_abs(2)*half_a) &
                             -cos(qq_abs(1)*half_a)*cos(qq_abs(3)*half_a)         &

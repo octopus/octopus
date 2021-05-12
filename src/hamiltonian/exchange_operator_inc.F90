@@ -149,7 +149,7 @@ subroutine X(exchange_operator_apply_standard)(this, namespace, space, mesh, st_
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
         call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
-          -(kpoints%full%npoints - npath)*mesh%sb%latt%rcell_volume*(this%singul%Fk(ik2) - this%singul%FF))
+          -(kpoints%full%npoints - npath)*kpoints%latt%rcell_volume*(this%singul%Fk(ik2) - this%singul%FF))
       end if
 
       
@@ -300,12 +300,11 @@ end subroutine X(exchange_operator_apply_ACE)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, latt, st, xst, kpoints, ex, F_out)
+subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh, st, xst, kpoints, ex, F_out)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(space_t),             intent(in)    :: space
   type(mesh_t),              intent(in)    :: mesh
-  type(lattice_vectors_t),   intent(in)    :: latt
   type(states_elec_t),       intent(in)    :: st 
   type(states_elec_t),       intent(inout) :: xst
   type(kpoints_t),           intent(in)    :: kpoints
@@ -667,7 +666,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, space, mesh,
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
           call poisson_build_kernel(this%psolver, namespace, space, coulb, qq, this%cam_omega, &
-                  -(kpoints%full%npoints-npath)*latt%rcell_volume  &
+                  -(kpoints%full%npoints-npath)*kpoints%latt%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if
 

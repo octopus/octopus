@@ -1309,8 +1309,7 @@ contains
       !
       ! only used to calculate total energy
       call xst%nullify()
-      call dexchange_operator_compute_potentials(hm%exxop, namespace, space, gr%mesh, gr%sb%latt, &
-                                                 st, xst, hm%kpoints, F_out = v_ij)
+      call dexchange_operator_compute_potentials(hm%exxop, namespace, space, gr%mesh, st, xst, hm%kpoints, F_out = v_ij)
       call states_elec_end(xst)
 
       do ist = 1, st%nst

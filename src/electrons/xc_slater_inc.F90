@@ -17,10 +17,9 @@
 !!
 !!
 !------------------------------------------------------------
-subroutine X(slater_calc) (namespace, mesh, latt, space, exxop, st, kpoints, ex, vxc)
+subroutine X(slater_calc) (namespace, mesh, space, exxop, st, kpoints, ex, vxc)
   type(namespace_t),           intent(in)    :: namespace
   type(mesh_t),                intent(in)    :: mesh
-  type(lattice_vectors_t),     intent(in)    :: latt
   type(space_t),               intent(in)    :: space
   type(exchange_operator_t),   intent(in)    :: exxop
   type(states_elec_t),         intent(in)    :: st
@@ -44,7 +43,7 @@ subroutine X(slater_calc) (namespace, mesh, latt, space, exxop, st, kpoints, ex,
   !We first apply the exchange operator to all the states
   call xst%nullify()
   eig = M_ZERO
-  call X(exchange_operator_compute_potentials)(exxop, namespace, space, mesh, latt, st, xst, kpoints)
+  call X(exchange_operator_compute_potentials)(exxop, namespace, space, mesh, st, xst, kpoints)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(xpsi(1:mesh%np, 1:st%d%dim))

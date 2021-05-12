@@ -25,13 +25,12 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, der, sb, hm, st, space, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, der, hm, st, space, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
   type(xc_t),               intent(inout) :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(derivatives_t),      intent(in)    :: der
-  type(simul_box_t),        intent(in)    :: sb
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(inout) :: st
   type(space_t),            intent(in)    :: space
@@ -66,7 +65,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, der, sb, hm, st, sp
     if(xcs%functional(ixc, 1)%family /= XC_FAMILY_OEP) cycle
     select case(xcs%functional(ixc,1)%id)
     case(XC_OEP_X)
-      call X(exchange_operator_compute_potentials)(hm%exxop, namespace, space, der%mesh, sb%latt, st, xst, hm%kpoints, eig)
+      call X(exchange_operator_compute_potentials)(hm%exxop, namespace, space, der%mesh, st, xst, hm%kpoints, eig)
       ex = ex + eig
       exx = .true.
     end select

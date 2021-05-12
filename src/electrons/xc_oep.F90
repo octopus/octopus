@@ -42,7 +42,6 @@ module xc_oep_oct_m
   use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use states_abst_oct_m
   use states_elec_oct_m

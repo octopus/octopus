@@ -1052,11 +1052,11 @@ contains
 
           if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
             if (states_are_real(st)) then
-              call  dslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
-                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  dslater_calc(namespace, ks%gr%mesh, space, hm%exxop, st, hm%kpoints, ks%calc%energy%exchange, &
+                vxc = ks%calc%vxc)
             else
-              call  zslater_calc(namespace, ks%gr%mesh, ks%gr%sb%latt, space, hm%exxop, st, &
-                                       hm%kpoints, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+              call  zslater_calc(namespace, ks%gr%mesh, space, hm%exxop, st, hm%kpoints, ks%calc%energy%exchange, &
+                vxc = ks%calc%vxc)
             end if
           else if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_FBE) then
             if (states_are_real(st)) then
@@ -1068,10 +1068,10 @@ contains
           else
 
             if (states_are_real(st)) then
-              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%der, ks%gr%sb, &
+              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%der, &
               hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             else
-              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%der, ks%gr%sb, &
+              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr%der, &
               hm, st, space, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
             end if
             if( bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
@@ -1298,12 +1298,10 @@ contains
               .and. family_is_hybrid(ks%xc))) .and. hm%exxop%useACE) then
           call xst%nullify()
           if(states_are_real(ks%calc%hf_st)) then
-            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
-                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%calc%hf_st, xst, hm%kpoints)
             call dexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst)
           else
-            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, &
-                    ks%gr%sb%latt, ks%calc%hf_st, xst, hm%kpoints)
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, space, ks%gr%mesh, ks%calc%hf_st, xst, hm%kpoints)
             if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%mesh, ks%calc%hf_st, xst, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
