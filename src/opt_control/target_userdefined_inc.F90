@@ -130,7 +130,7 @@
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm)
+    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm, -1)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

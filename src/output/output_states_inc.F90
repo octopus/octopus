@@ -17,7 +17,7 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
+subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
   type(output_t),           intent(in) :: outp
   type(namespace_t),        intent(in) :: namespace
   type(space_t),            intent(in) :: space
@@ -26,6 +26,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
   type(grid_t),             intent(in) :: gr
   type(ions_t),             intent(in) :: ions
   type(hamiltonian_elec_t), intent(in) :: hm
+  integer,                  intent(in) :: iter
 
   integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
@@ -36,7 +37,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
 
   PUSH_SUB(output_states)
 
-  if(outp%what(OPTION__OUTPUT__DENSITY)) then
+  if(outp%what_now(OPTION__OUTPUT__DENSITY, iter)) then
     fn_unit = units_out%length**(-space%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -49,7 +50,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     end do
   end if
 
-  if(outp%what(OPTION__OUTPUT__POL_DENSITY)) then
+  if(outp%what_now(OPTION__OUTPUT__POL_DENSITY, iter)) then
     fn_unit = units_out%length**(1 - space%dim)
     SAFE_ALLOCATE(polarization(1:gr%mesh%np, 1:space%dim))
 
@@ -73,7 +74,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(polarization)
   end if
 
-  if(outp%what(OPTION__OUTPUT__WFS)) then
+  if(outp%what_now(OPTION__OUTPUT__WFS, iter)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
 
     if (states_are_real(st)) then
@@ -118,7 +119,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
+  if(outp%what_now(OPTION__OUTPUT__WFS_SQMOD, iter)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if(states_are_complex(st)) then
@@ -149,7 +150,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
-            call dio_function_output (outp%how(OPTION__OUTPUT__WFS_SQMOD), dir, fname, namespace, space, gr%mesh, &
+            call dio_function_output(outp%how(OPTION__OUTPUT__WFS_SQMOD), dir, fname, namespace, space, gr%mesh, &
               dtmp, fn_unit, ierr, ions = ions)
           end do
         end do
@@ -159,7 +160,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(outp%what(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY)) then
+  if(outp%what_now(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY, iter)) then
     fn_unit = units_out%energy * units_out%length**(-space%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = elf)
@@ -178,16 +179,16 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm)
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(outp%what(OPTION__OUTPUT__DOS)) then
+  if(outp%what_now(OPTION__OUTPUT__DOS, iter)) then
     call dos_init(dos, namespace, st, hm%kpoints)
     call dos_write_dos(dos, trim(dir), st, gr%sb, ions, gr%mesh, hm, namespace)
   end if
 
-  if(outp%what(OPTION__OUTPUT__TPA)) then
+  if(outp%what_now(OPTION__OUTPUT__TPA, iter)) then
     call states_elec_write_tpa(trim(dir), namespace, gr, st)
   end if
 
-  if(outp%what(OPTION__OUTPUT__MMB_DEN) .or. outp%what(OPTION__OUTPUT__MMB_WFS)) then
+  if(outp%what_now(OPTION__OUTPUT__MMB_DEN, iter) .or. outp%what_now(OPTION__OUTPUT__MMB_WFS, iter)) then
     if(states_are_real(st)) then
       call doutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     else

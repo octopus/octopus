@@ -180,7 +180,7 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(sys%outp, sys%namespace, sys%space, OCT_DIR//'initial', psi, sys%gr, sys%ions, sys%hm)
+    call output_states(sys%outp, sys%namespace, sys%space, OCT_DIR//'initial', psi, sys%gr, sys%ions, sys%hm, -1)
     call target_output(oct_target, sys%namespace, sys%space, sys%gr, OCT_DIR//'target', sys%ions, sys%hm, sys%outp)
     call states_elec_end(psi)
 

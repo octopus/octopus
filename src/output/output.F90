@@ -464,7 +464,7 @@ contains
       end do
     end if
     
-    call output_states(outp, namespace, space, dir, st, gr, ions, hm)
+    call output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, iter, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
 
