@@ -27,7 +27,6 @@ module hirshfeld_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -62,9 +61,8 @@ module hirshfeld_oct_m
     
 contains
 
-  subroutine hirshfeld_init(this, namespace, mesh, ions, st)
+  subroutine hirshfeld_init(this, mesh, ions, st)
     type(hirshfeld_t),           intent(out)   :: this
-    type(namespace_t),           intent(in)    :: namespace
     type(mesh_t),        target, intent(in)    :: mesh
     type(ions_t),        target, intent(in)    :: ions
     type(states_elec_t), target, intent(in)    :: st
@@ -153,9 +151,8 @@ contains
 
   ! -----------------------------------------------
   
-  subroutine hirshfeld_charge(this, namespace, iatom, density, charge)
+  subroutine hirshfeld_charge(this, iatom, density, charge)
     type(hirshfeld_t),         intent(in)    :: this
-    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
@@ -272,9 +269,8 @@ contains
 
   ! -----------------------------------------------
   !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-  subroutine hirshfeld_position_derivative(this, namespace, iatom, jatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
-    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     integer,                   intent(in)    :: jatom
     FLOAT,                     intent(in)    :: density(:, :)

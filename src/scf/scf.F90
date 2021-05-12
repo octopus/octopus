@@ -1147,7 +1147,7 @@ contains
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(hirshfeld_charges(1:ions%natoms))
 
-        call partial_charges_calculate(namespace, gr%mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
+        call partial_charges_calculate(gr%mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 

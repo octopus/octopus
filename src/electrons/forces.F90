@@ -295,7 +295,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
     ! if we use vdw TS, we need to compute it now
     if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
-      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, ions, gr%mesh, st, st%rho)
+      call vdw_ts_force_calculate(ks%vdw_ts, hm%ep%vdw_forces, ions, gr%mesh, st, st%rho)
     end if
 
     do iatom = 1, ions%natoms
@@ -328,12 +328,12 @@ contains
     end if
 
     if (allocated(st%rho_core)) then
-      call forces_from_nlcc(gr, ions, hm, st, force_nlcc)
+      call forces_from_nlcc(gr%mesh, ions, hm, st, force_nlcc)
     else 
       force_nlcc(:, :) = M_ZERO
     end if
     if(present(vhxc_old)) then
-      call forces_from_scf(gr, ions, hm, force_scf, vhxc_old)
+      call forces_from_scf(gr%mesh, ions, hm, force_scf, vhxc_old)
     else
       force_scf = M_ZERO
     end if
@@ -525,10 +525,10 @@ contains
  ! ----------------------------------------------------------------------
  ! This routine add the contribution to the forces from the nonlinear core correction
  ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
-subroutine forces_from_nlcc(gr, ions, hm, st, force_nlcc)
-  type(grid_t),                   intent(in)    :: gr
+subroutine forces_from_nlcc(mesh, ions, hm, st, force_nlcc)
+  type(mesh_t),                   intent(in)    :: mesh
   type(ions_t),                   intent(inout) :: ions
-  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   type(states_elec_t),            intent(inout) :: st
   FLOAT,                          intent(out)   :: force_nlcc(:, :)
 
@@ -541,19 +541,18 @@ subroutine forces_from_nlcc(gr, ions, hm, st, force_nlcc)
 
   call profiling_in(prof, "FORCES_NLCC")
 
-  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:ions%space%dim))
+  SAFE_ALLOCATE(drho(1:mesh%np, 1:ions%space%dim))
 
   force_nlcc = M_ZERO
 
   do iatom = ions%atoms_dist%start, ions%atoms_dist%end
     call species_get_nlcc_grad(ions%atom(iatom)%species, ions%space, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), &
-      gr%mesh, drho)
+      mesh, drho)
 
     do idir = 1, ions%space%dim
       do is = 1, hm%d%spin_channels
         force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
-                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is), reduce = .false.)&
-                          /st%d%spin_channels
+          - dmf_dotp(mesh, drho(:,idir), hm%vxc(1:mesh%np, is), reduce = .false.)/st%d%spin_channels
       end do
     end do
   end do
@@ -562,9 +561,9 @@ subroutine forces_from_nlcc(gr, ions, hm, st, force_nlcc)
 
   if(ions%atoms_dist%parallel) call dforces_gather(ions, force_nlcc)
 
-  if(gr%mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call gr%mesh%allreduce(force_nlcc)
+    call mesh%allreduce(force_nlcc)
     call profiling_out(prof_comm)
   end if
  
@@ -578,8 +577,8 @@ end subroutine forces_from_nlcc
  ! from the pseudopotential.  
  ! NTD : No idea if this is good or bad, but this is easy to implement 
  !       and works well in practice
-subroutine forces_from_scf(gr, ions, hm, force_scf, vhxc_old)
-  type(grid_t),                   intent(in)    :: gr
+subroutine forces_from_scf(mesh, ions, hm, force_scf, vhxc_old)
+  type(mesh_t),                   intent(in)    :: mesh
   type(ions_t),                   intent(inout) :: ions
   type(hamiltonian_elec_t),       intent(in)    :: hm
   FLOAT,                          intent(out)   :: force_scf(:, :)
@@ -593,12 +592,12 @@ subroutine forces_from_scf(gr, ions, hm, force_scf, vhxc_old)
 
   call profiling_in(prof, "FORCES_SCF")
 
-  SAFE_ALLOCATE(dvhxc(1:gr%mesh%np, 1:hm%d%spin_channels))
-  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:hm%d%spin_channels, 1:ions%space%dim))
+  SAFE_ALLOCATE(dvhxc(1:mesh%np, 1:hm%d%spin_channels))
+  SAFE_ALLOCATE(drho(1:mesh%np, 1:hm%d%spin_channels, 1:ions%space%dim))
 
   !We average over spin channels
   do is = 1, hm%d%spin_channels
-    dvhxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - vhxc_old(1:gr%mesh%np, is)
+    dvhxc(1:mesh%np, is) = hm%vhxc(1:mesh%np, is) - vhxc_old(1:mesh%np, is)
   end do
 
   force_scf = M_ZERO
@@ -610,12 +609,12 @@ subroutine forces_from_scf(gr, ions, hm, force_scf, vhxc_old)
       if(ps_has_density(species_ps(ions%atom(iatom)%species))) then
 
         call species_atom_density_grad(ions%atom(iatom)%species, ions%namespace, ions%space, ions%latt, &
-          ions%atom(iatom)%x(1:ions%space%dim), gr%mesh, hm%d%spin_channels, drho)
+          ions%atom(iatom)%x(1:ions%space%dim), mesh, hm%d%spin_channels, drho)
 
         do idir = 1, ions%space%dim
           do is = 1, hm%d%spin_channels
             force_scf(idir, iatom) = force_scf(idir, iatom) &
-                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is), reduce = .false.)
+              - dmf_dotp(mesh, drho(:,is,idir), dvhxc(:,is), reduce = .false.)
           end do
         end do
       end if
@@ -627,9 +626,9 @@ subroutine forces_from_scf(gr, ions, hm, force_scf, vhxc_old)
 
   if(ions%atoms_dist%parallel) call dforces_gather(ions, force_scf) 
 
-  if(gr%mesh%parallel_in_domains) then
+  if (mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call gr%mesh%allreduce(force_scf)
+    call mesh%allreduce(force_scf)
     call profiling_out(prof_comm)
   end if
 
