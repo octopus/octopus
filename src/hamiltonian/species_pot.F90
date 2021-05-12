@@ -61,7 +61,7 @@ module species_pot_oct_m
   FLOAT, allocatable :: rho_p(:)
   FLOAT, allocatable :: grho_p(:, :)
   FLOAT :: alpha_p
-  FLOAT :: pos_p(MAX_DIM)
+  FLOAT, pointer :: pos_p(:)
 
 contains
 
@@ -77,7 +77,7 @@ contains
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, icell
-    FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
+    FLOAT :: rr, x, pos(space%dim), nrm, rmax
     FLOAT :: xx(space%dim), yy(space%dim), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
@@ -227,7 +227,6 @@ contains
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
       
-      pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
       if(ps_has_density(ps)) then
@@ -241,7 +240,7 @@ contains
         
         latt_iter = lattice_iterator_t(sb%latt, rmax)
         do icell = 1, latt_iter%n_cells
-          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -260,7 +259,7 @@ contains
 
         latt_iter = lattice_iterator_t(sb%latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
-          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, R_SMALL)
@@ -297,7 +296,7 @@ contains
     type(mesh_t),         intent(in)    :: mesh
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
-    FLOAT,                intent(in)    :: pos(:) !< (Max dim)
+    FLOAT,                intent(in)    :: pos(:)
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     integer :: isp, ip
@@ -382,7 +381,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: icell
-    FLOAT :: pos(1:MAX_DIM), range
+    FLOAT :: pos(space%dim), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
@@ -400,7 +399,6 @@ contains
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
       
-      pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
       if(ps_has_density(ps)) then
@@ -410,7 +408,7 @@ contains
         latt_iter = lattice_iterator_t(sb%latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos = atom%x(1:space%dim) + latt_iter%get(icell)
           call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
       end if
@@ -475,7 +473,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
-    FLOAT :: rr, pos(1:MAX_DIM), range, spline
+    FLOAT :: rr, pos(space%dim), range, spline
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
@@ -493,7 +491,6 @@ contains
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
       
-      pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
       if(ps_has_density(ps)) then
@@ -503,7 +500,7 @@ contains
         latt_iter = lattice_iterator_t(sb%latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos(1:space%dim) = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos = atom%x(1:space%dim) + latt_iter%get(icell)
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
@@ -514,7 +511,7 @@ contains
               spline = spline_eval(ps%density_der(isp), rr)
 
               do idir = 1, space%dim
-                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir)-pos(idir))/rr
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir) - pos(idir))/rr
               end do
            end do
           end do
@@ -541,14 +538,13 @@ contains
     type(species_t),    target, intent(in)  :: species
     type(space_t),              intent(in)  :: space
     type(namespace_t),          intent(in)  :: namespace
-    FLOAT,                      intent(in)  :: pos(:)
+    FLOAT,              target, intent(in)  :: pos(1:space%dim)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
 
     type(root_solver_t) :: rs
     logical :: conv
-    integer :: dim
-    FLOAT   :: x(1:MAX_DIM+1), startval(MAX_DIM + 1)
+    FLOAT   :: x(space%dim+1), startval(space%dim + 1)
     FLOAT   :: delta, alpha, beta, xx(space%dim), yy(space%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
@@ -605,7 +601,7 @@ contains
 
         rho(ip) = M_ZERO
 
-        dist2 = sum((mesh%x(ip, 1:space%dim) - pos(1:space%dim))**2)
+        dist2 = sum((mesh%x(ip, :) - pos)**2)
         if (dist2 < dist2_min) then
           ipos = ip
           dist2_min = dist2
@@ -653,13 +649,11 @@ contains
       ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
       ! section II.B
       ! --------------------------------------------------------------
-      dim = space%dim
-
       SAFE_ALLOCATE(rho_p(1:mesh%np))
-      SAFE_ALLOCATE(grho_p(1:mesh%np, 1:dim+1))
+      SAFE_ALLOCATE(grho_p(1:mesh%np, 1:space%dim+1))
 
       mesh_p => mesh
-      pos_p = pos
+      pos_p => pos
 
       ! Initial guess.
       delta   = mesh%spacing(1)
@@ -668,19 +662,18 @@ contains
       beta    = M_ONE
 
       ! the first dim variables are the position of the delta function
-      startval(1:dim) = CNST(1.0)
+      startval(1:space%dim) = CNST(1.0)
 
       ! the dim+1 variable is the normalization of the delta function
-      startval(dim+1) = beta
+      startval(space%dim+1) = beta
 
       ! get a better estimate for beta
-      call getrho(startval)
+      call getrho(space%dim, startval)
       beta = M_ONE / dmf_integrate(mesh, rho_p)
-      startval(dim+1) = beta
+      startval(space%dim + 1) = beta
 
       ! solve equation
-      call root_solver_init(rs, namespace, dim+1, &
-        solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
+      call root_solver_init(rs, namespace, space%dim+1, solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
       call droot_solver_run(rs, func, x, conv, startval=startval)
 
       if(.not.conv) then
@@ -692,6 +685,7 @@ contains
       rho = -species_z(species)*rho_p
 
       nullify(mesh_p)
+      nullify(pos_p)
       SAFE_DEALLOCATE_A(grho_p)
       SAFE_DEALLOCATE_A(rho_p)
 
@@ -749,7 +743,7 @@ contains
 
     dim = mesh_p%sb%dim
 
-    call getrho(xin)
+    call getrho(dim, xin(1:dim+1))
     SAFE_ALLOCATE(xrho(1:mesh_p%np))
 
     ! First, we calculate the function ff.
@@ -779,7 +773,7 @@ contains
   subroutine species_get_nlcc(species, space, pos, mesh, rho_core, accumulate)
     type(species_t), target, intent(in)    :: species
     type(space_t),           intent(in)    :: space
-    FLOAT,                   intent(in)    :: pos(MAX_DIM)
+    FLOAT,                   intent(in)    :: pos(1:space%dim)
     type(mesh_t),            intent(in)    :: mesh
     FLOAT,                   intent(inout) :: rho_core(:)
     logical, optional,       intent(in)    :: accumulate
@@ -798,7 +792,7 @@ contains
 
       latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, latt_iter%n_cells
-        center = pos(1:space%dim) + latt_iter%get(icell)
+        center = pos + latt_iter%get(icell)
         do ip = 1, mesh%np
           rr = norm2(mesh%x(ip, 1:space%dim) - center)
           if(rr < spline_range_max(ps%core)) then
@@ -817,7 +811,7 @@ contains
   subroutine species_get_nlcc_grad(species, space, pos, mesh, rho_core_grad)
     type(species_t), target, intent(in)  :: species
     type(space_t),           intent(in)  :: space
-    FLOAT,                   intent(in)  :: pos(MAX_DIM)
+    FLOAT,                   intent(in)  :: pos(1:space%dim)
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
 
@@ -836,7 +830,7 @@ contains
 
         latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
-          center = pos(1:space%dim) + latt_iter%get(icell)
+          center = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
             rr = max(rr, R_SMALL)
@@ -857,21 +851,21 @@ contains
   end subroutine species_get_nlcc_grad
 
   ! ---------------------------------------------------------
-  subroutine getrho(xin)
-    FLOAT, intent(in) :: xin(:)
+  subroutine getrho(dim, xin)
+    integer, intent(in) :: dim
+    FLOAT,   intent(in) :: xin(1:dim+1)
 
-    integer :: ip, idir, dim, idx(MAX_DIM)
-    FLOAT   :: r, chi(MAX_DIM)
+    integer :: ip, idir, idx(dim)
+    FLOAT   :: r, chi(dim)
 
     PUSH_SUB(getrho)
 
-    dim = mesh_p%sb%dim
     rho_p = M_ZERO
     do ip = 1, mesh_p%np
       call mesh_local_index_to_coords(mesh_p, ip, idx)
       chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
-      r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
+      r = norm2(chi - xin(1:dim))
 
       if( (r/alpha_p)**2 < CNST(10.0)) then
         grho_p(ip, dim+1) = exp(-(r/alpha_p)**2)
@@ -882,7 +876,7 @@ contains
       end if
 
       do idir = 1, dim
-        grho_p(ip, idir) = (M_TWO/alpha_p**2) * (chi(idir)-xin(idir)) * rho_p(ip)
+        grho_p(ip, idir) = (M_TWO/alpha_p**2) * (chi(idir) - xin(idir)) * rho_p(ip)
       end do
     end do
 
