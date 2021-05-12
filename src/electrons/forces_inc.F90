@@ -85,7 +85,7 @@ subroutine X(forces_from_local_potential)(mesh, namespace, ions, ep, gdensity, f
   do iatom = ions%atoms_dist%start, ions%atoms_dist%end
 
     vloc(1:mesh%np) = M_ZERO
-    call epot_local_potential(ep, namespace, ions%space, mesh, ions%atom(iatom), iatom, vloc)
+    call epot_local_potential(ep, namespace, ions%space, ions%latt, mesh, ions%atom(iatom), iatom, vloc)
 
     do ip = 1, mesh%np
       zvloc(ip) = vloc(ip)

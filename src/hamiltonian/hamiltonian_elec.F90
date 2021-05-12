@@ -45,6 +45,7 @@ module hamiltonian_elec_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lattice_vectors_oct_m
   use lda_u_oct_m
   use linked_list_oct_m
   use mesh_oct_m
@@ -1367,10 +1368,11 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_elec_apply_atom (hm, namespace, space, atom, mesh, ia, psi, vpsi)
+  subroutine zhamiltonian_elec_apply_atom (hm, namespace, space, latt, atom, mesh, ia, psi, vpsi)
     type(hamiltonian_elec_t), intent(in)  :: hm
     type(namespace_t),        intent(in)  :: namespace
     type(space_t),            intent(in)  :: space
+    type(lattice_vectors_t),  intent(in)  :: latt
     type(atom_t),             intent(in)  :: atom
     type(mesh_t),             intent(in)  :: mesh
     integer,                  intent(in)  :: ia
@@ -1383,7 +1385,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, space, mesh, atom, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, space, latt, mesh, atom, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:mesh%np, idim) = vlocal(1:mesh%np) * psi(1:mesh%np, idim)

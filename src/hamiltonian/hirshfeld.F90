@@ -174,7 +174,7 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, this%ions%space, namespace, this%mesh%sb, &
+    call species_atom_density(this%mesh, this%ions%space, namespace, this%ions%latt, &
                                   this%ions%atom(iatom), this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np

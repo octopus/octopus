@@ -34,7 +34,6 @@ module species_pot_oct_m
   use profiling_oct_m
   use ps_oct_m
   use root_solver_oct_m
-  use simul_box_oct_m
   use space_oct_m
   use species_oct_m
   use splines_oct_m
@@ -67,14 +66,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_atom_density(mesh, space, namespace, sb, atom, spin_channels, rho)
-    type(mesh_t),         intent(in)    :: mesh
-    type(space_t),        intent(in)    :: space
-    type(namespace_t),    intent(in)    :: namespace
-    type(simul_box_t),    intent(in)    :: sb
-    type(atom_t), target, intent(in)    :: atom
-    integer,              intent(in)    :: spin_channels
-    FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
+  subroutine species_atom_density(mesh, space, namespace, latt, atom, spin_channels, rho)
+    type(mesh_t),            intent(in)    :: mesh
+    type(space_t),           intent(in)    :: space
+    type(namespace_t),       intent(in)    :: namespace
+    type(lattice_vectors_t), intent(in)    :: latt
+    type(atom_t),    target, intent(in)    :: atom
+    integer,                 intent(in)    :: spin_channels
+    FLOAT,                   intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, icell
     FLOAT :: rr, x, pos(space%dim), nrm, rmax
@@ -114,7 +113,7 @@ contains
         call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
 
-      latt_iter = lattice_iterator_t(sb%latt, maxval(norm2(sb%latt%rlattice, dim=1)))
+      latt_iter = lattice_iterator_t(latt, maxval(norm2(latt%rlattice, dim=1)))
       rho = M_ZERO
       do icell = 1, latt_iter%n_cells
         yy = latt_iter%get(icell)
@@ -238,7 +237,7 @@ contains
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
         
-        latt_iter = lattice_iterator_t(sb%latt, rmax)
+        latt_iter = lattice_iterator_t(latt, rmax)
         do icell = 1, latt_iter%n_cells
           pos = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
@@ -257,7 +256,7 @@ contains
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
-        latt_iter = lattice_iterator_t(sb%latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+        latt_iter = lattice_iterator_t(latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
           pos = atom%x(1:space%dim) + latt_iter%get(icell)
           do ip = 1, mesh%np
@@ -371,14 +370,14 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_atom_density_derivative(mesh, space, sb, atom, namespace, spin_channels, drho)
-    type(mesh_t),         intent(in)    :: mesh
-    type(space_t),        intent(in)    :: space
-    type(simul_box_t),    intent(in)    :: sb
-    type(atom_t), target, intent(in)    :: atom
-    type(namespace_t),    intent(in)    :: namespace
-    integer,              intent(in)    :: spin_channels
-    FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
+  subroutine species_atom_density_derivative(mesh, space, latt, atom, namespace, spin_channels, drho)
+    type(mesh_t),            intent(in)    :: mesh
+    type(space_t),           intent(in)    :: space
+    type(lattice_vectors_t), intent(in)    :: latt
+    type(atom_t),    target, intent(in)    :: atom
+    type(namespace_t),       intent(in)    :: namespace
+    integer,                 intent(in)    :: spin_channels
+    FLOAT,                   intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: icell
     FLOAT :: pos(space%dim), range
@@ -405,7 +404,7 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        latt_iter = lattice_iterator_t(sb%latt, range)
+        latt_iter = lattice_iterator_t(latt, range)
 
         do icell = 1, latt_iter%n_cells
           pos = atom%x(1:space%dim) + latt_iter%get(icell)
@@ -463,14 +462,14 @@ contains
 
   ! ---------------------------------------------------------
   ! Gradient of the atomic density, if available
-  subroutine species_atom_density_grad(mesh, space, sb, atom, namespace, spin_channels, drho)
-    type(mesh_t),         intent(in)    :: mesh
-    type(space_t),        intent(in)    :: space
-    type(simul_box_t),    intent(in)    :: sb
-    type(atom_t), target, intent(in)    :: atom
-    type(namespace_t),    intent(in)    :: namespace
-    integer,              intent(in)    :: spin_channels
-    FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
+  subroutine species_atom_density_grad(mesh, space, latt, atom, namespace, spin_channels, drho)
+    type(mesh_t),            intent(in)    :: mesh
+    type(space_t),           intent(in)    :: space
+    type(lattice_vectors_t), intent(in)    :: latt
+    type(atom_t),    target, intent(in)    :: atom
+    type(namespace_t),       intent(in)    :: namespace
+    integer,                 intent(in)    :: spin_channels
+    FLOAT,                   intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
     FLOAT :: rr, pos(space%dim), range, spline
@@ -497,7 +496,7 @@ contains
 
         range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold)
         if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density_der(2), ps%projectors_sphere_threshold))
-        latt_iter = lattice_iterator_t(sb%latt, range)
+        latt_iter = lattice_iterator_t(latt, range)
 
         do icell = 1, latt_iter%n_cells
           pos = atom%x(1:space%dim) + latt_iter%get(icell)
@@ -534,10 +533,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_long_range_density(species, space, namespace, pos, mesh, rho)
+  subroutine species_get_long_range_density(species, space, namespace, latt, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     type(space_t),              intent(in)  :: space
     type(namespace_t),          intent(in)  :: namespace
+    type(lattice_vectors_t),    intent(in)  :: latt
     FLOAT,              target, intent(in)  :: pos(1:space%dim)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
@@ -697,7 +697,7 @@ contains
         call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
        
-      latt_iter = lattice_iterator_t(mesh%sb%latt, maxval(norm2(mesh%sb%latt%rlattice, dim=1)))
+      latt_iter = lattice_iterator_t(latt, maxval(norm2(latt%rlattice, dim=1)))
 
       rho = M_ZERO
       do icell = 1, latt_iter%n_cells
@@ -770,9 +770,10 @@ contains
   end subroutine func
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc(species, space, pos, mesh, rho_core, accumulate)
+  subroutine species_get_nlcc(species, space, latt, pos, mesh, rho_core, accumulate)
     type(species_t), target, intent(in)    :: species
     type(space_t),           intent(in)    :: space
+    type(lattice_vectors_t), intent(in)    :: latt
     FLOAT,                   intent(in)    :: pos(1:space%dim)
     type(mesh_t),            intent(in)    :: mesh
     FLOAT,                   intent(inout) :: rho_core(:)
@@ -790,7 +791,7 @@ contains
       ps => species_ps(species)
       if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
 
-      latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
+      latt_iter = lattice_iterator_t(latt, spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, latt_iter%n_cells
         center = pos + latt_iter%get(icell)
         do ip = 1, mesh%np
@@ -808,9 +809,10 @@ contains
   end subroutine species_get_nlcc
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc_grad(species, space, pos, mesh, rho_core_grad)
+  subroutine species_get_nlcc_grad(species, space, latt, pos, mesh, rho_core_grad)
     type(species_t), target, intent(in)  :: species
     type(space_t),           intent(in)  :: space
+    type(lattice_vectors_t), intent(in)  :: latt
     FLOAT,                   intent(in)  :: pos(1:space%dim)
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
@@ -828,7 +830,7 @@ contains
       rho_core_grad = M_ZERO
       if(ps_has_nlcc(ps)) then
 
-        latt_iter = lattice_iterator_t(mesh%sb%latt, spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
+        latt_iter = lattice_iterator_t(latt, spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
           center = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
@@ -886,8 +888,9 @@ contains
 
   ! ---------------------------------------------------------
   !> used when the density is not available, or otherwise the Poisson eqn would be used instead
-  subroutine species_get_local(species, space, mesh, namespace, x_atom, vl)
+  subroutine species_get_local(species, space, latt, mesh, namespace, x_atom, vl)
     type(species_t), target, intent(in)  :: species
+    type(lattice_vectors_t), intent(in)  :: latt
     type(space_t),           intent(in)  :: space
     type(mesh_t),            intent(in)  :: mesh
     type(namespace_t),       intent(in)  :: namespace
@@ -915,7 +918,7 @@ contains
 
         !Assuming that we want to take the contribution from all replica that contributes up to 0.001
         ! to the center of the cell, we arrive to a range of 1000 a.u.. 
-        latt_iter = lattice_iterator_t(mesh%sb%latt, species_zval(species) / threshold)
+        latt_iter = lattice_iterator_t(latt, species_zval(species) / threshold)
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
           x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)
@@ -928,7 +931,7 @@ contains
 
       case(SPECIES_USDEF)
         !TODO: we should control the value of 5 by a variable.
-        latt_iter = lattice_iterator_t(mesh%sb%latt, CNST(5.0) * maxval(norm2(mesh%sb%latt%rlattice, dim=1)))
+        latt_iter = lattice_iterator_t(latt, CNST(5.0) * maxval(norm2(latt%rlattice, dim=1)))
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
           x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)

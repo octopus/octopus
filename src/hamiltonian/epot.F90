@@ -30,6 +30,7 @@ module epot_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -423,10 +424,11 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, space, mesh, atom, iatom, vpsl)
+  subroutine epot_local_potential(ep, namespace, space, latt, mesh, atom, iatom, vpsl)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
+    type(lattice_vectors_t),  intent(in)    :: latt
     type(mesh_t),             intent(in)    :: mesh
     type(atom_t),             intent(in)    :: atom
     integer,                  intent(in)    :: iatom
@@ -456,7 +458,7 @@ contains
       if(local_potential_has_density(space, atom)) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
-        call species_get_long_range_density(atom%species, space, namespace, atom%x, mesh, rho)
+        call species_get_long_range_density(atom%species, space, namespace, latt, atom%x, mesh, rho)
 
         SAFE_ALLOCATE(vl(1:mesh%np))
           
@@ -473,7 +475,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:mesh%np))
-        call species_get_local(atom%species, space, mesh, namespace, atom%x(1:space%dim), vl)
+        call species_get_local(atom%species, space, latt, mesh, namespace, atom%x(1:space%dim), vl)
 
       end if
 
@@ -571,7 +573,7 @@ contains
 
     do iatom = 1, ions%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, ions%space, gr%mesh, ions%atom(iatom), iatom, &
+      call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom), iatom, &
                 ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
