@@ -548,7 +548,7 @@ contains
     type(root_solver_t) :: rs
     logical :: conv
     integer :: dim
-    FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
+    FLOAT   :: x(1:MAX_DIM+1), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta, xx(space%dim), yy(space%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
@@ -662,7 +662,6 @@ contains
       pos_p = pos
 
       ! Initial guess.
-      call curvilinear_x2chi(mesh%sb, mesh%cv, pos, chi0)
       delta   = mesh%spacing(1)
       alpha   = sqrt(M_TWO)*species_sigma(species)*delta
       alpha_p = alpha  ! global copy of alpha
