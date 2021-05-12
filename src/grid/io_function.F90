@@ -137,9 +137,10 @@ contains
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
     call messages_obsolete_variable(namespace, 'Output_KPT', 'Output')
     call messages_obsolete_variable(namespace, 'OutputLDA_U' , 'Output')
+    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     
     !%Variable Output
-    !%Type integer
+    !%Type block
     !%Default none
     !%Section Output
     !%Description
@@ -398,7 +399,6 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
     !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
     !%End
-    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
 
 
     what_no_how = (/ OPTION__OUTPUT__MATRIX_ELEMENTS, OPTION__OUTPUT__BERKELEYGW, OPTION__OUTPUT__DOS, &
@@ -495,7 +495,7 @@ contains
                 ! Unknown output_column_marker
                 call messages_input_error(namespace, what_tag)
               else
-                ! no output_column_marker -> full info is not in the block
+                ! no output_column_marker -> full output info is not in this block
                 if(output_interval(what_i) == 0) then
                   call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
                 end if

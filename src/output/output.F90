@@ -1417,16 +1417,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  function what_now(this, what_tag, iter) result(write_now)
+  function what_now(this, what_id, iter) result(write_now)
     class(output_t), intent(in) :: this
-    integer(8),      intent(in) :: what_tag
+    integer(8),      intent(in) :: what_id
     integer,         intent(in) :: iter
 
     logical :: write_now
 
     write_now = .false.
-    if((what_tag > 0) .and. (this%output_interval(what_tag) > 0)) then
-      if(this%what(what_tag) .and. (iter == -1 .or. mod(iter, this%output_interval(what_tag)) == 0)) then
+    if((what_id > 0) .and. (this%output_interval(what_id) > 0)) then
+      if(this%what(what_id) .and. (iter == -1 .or. mod(iter, this%output_interval(what_id)) == 0)) then
         write_now = .true.
       end if
     end if
