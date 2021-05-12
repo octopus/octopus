@@ -190,7 +190,7 @@ contains
 
     select type (interaction)
     type is (linear_medium_em_field_t)
-      call interaction%init()
+      call interaction%init(this%gr)
     class default
       message(1) = "Trying to initialize an unsupported interaction by Maxwell."
       call messages_fatal(1)

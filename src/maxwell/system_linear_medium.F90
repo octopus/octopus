@@ -312,8 +312,6 @@ contains
     end if
     call messages_info(1)
 
-    !call generate_medium_boxes(this, gr, 1, namespace)
-
     call this%supported_interactions_as_partner%add(LINEAR_MEDIUM_EM_FIELD)
 
     call profiling_out(prof)
@@ -469,14 +467,35 @@ contains
     class(system_linear_medium_t),          intent(inout) :: partner
     class(interaction_t),                 intent(inout) :: interaction
 
+    integer :: ip_in_max
+
     PUSH_SUB(system_linear_medium_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (linear_medium_em_field_t)
-      interaction%partner_ep(:) = partner%ep(:)
-      interaction%partner_mu(:) = partner%mu(:)
-      interaction%partner_sigma_e(:) = partner%sigma_e(:)
-      interaction%partner_sigma_m(:) = partner%sigma_m(:)
+      if (.not. interaction%allocated_partner_arrays) then
+        call generate_medium_box(partner, interaction%system_gr)
+        ip_in_max = size(partner%points_map)
+
+        SAFE_ALLOCATE(interaction%partner_aux_ep(ip_in_max,1:3))
+        SAFE_ALLOCATE(interaction%partner_aux_mu(ip_in_max,1:3))
+        SAFE_ALLOCATE(interaction%partner_c(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_ep(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_mu(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_sigma_e(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_sigma_m(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_points_map(ip_in_max))
+        interaction%allocated_partner_arrays = .true.
+
+        interaction%partner_points_number = ip_in_max
+        interaction%partner_points_map(1:ip_in_max) = partner%points_map(1:ip_in_max)
+        interaction%partner_ep(1:ip_in_max) = partner%ep(1:ip_in_max)
+        interaction%partner_mu(1:ip_in_max) = partner%mu(1:ip_in_max)
+        interaction%partner_sigma_e(1:ip_in_max) = partner%sigma_e(1:ip_in_max)
+        interaction%partner_sigma_m(1:ip_in_max) = partner%sigma_m(1:ip_in_max)
+        interaction%partner_aux_ep(1:ip_in_max,1:3) = partner%aux_ep(1:ip_in_max,1:3)
+        interaction%partner_aux_mu(1:ip_in_max,1:3) = partner%aux_mu(1:ip_in_max,1:3)
+      end if
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -514,13 +533,12 @@ contains
   end subroutine system_linear_medium_finalize
 
 
-  ! Specific routines for this type:
+  ! Specific routines for this system:
 
   ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(this, gr, namespace)
+  subroutine generate_medium_box(this, gr)
     type(system_linear_medium_t),  intent(inout)      :: this
     type(grid_t),        intent(in)         :: gr
-    type(namespace_t),   intent(in)         :: namespace
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
     integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
@@ -574,10 +592,11 @@ contains
           tmp_bdry_map(ip_bd) = ip
         end if
       end do
-      if (ip_in > ip_in_max) ip_in_max = ip_in
-      if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      this%points_number = ip_in
-      this%bdry_number = ip_bd
+
+      ip_in_max = ip_in
+      ip_bd_max = ip_bd
+      this%points_number = ip_in_max
+      this%bdry_number = ip_bd_max
 
       SAFE_ALLOCATE(this%points_map(ip_in_max))
       SAFE_ALLOCATE(this%bdry_map(ip_bd_max))
@@ -591,7 +610,7 @@ contains
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
-    ! TODO: add some check that medium boxes do not overlap, like this:
+    ! TODO: add some check that medium boxes do not overlap (now they are different systems), like this:
     !do ip_in = 1, this%points_number - 1
     !  if (any(this%points_map(ip_in+1:) == this%points_map(ip_in)) .or. &
     !      any(this%points_map(:, il+1:) == this%points_map(ip_in, il))) then
@@ -711,7 +730,7 @@ contains
 
     end function check_point_on_bounds
 
-  end subroutine generate_medium_boxes
+  end subroutine generate_medium_box
 
   ! ----------------------------------------------------------
   !> Populate list of point indices for points inside the polyhedron
