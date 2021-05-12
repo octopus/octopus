@@ -85,6 +85,7 @@
           f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
           ifactor = ifactor + 1
         end do
+        dd(idir) = -dd(idir)
       end do
 
     end do
