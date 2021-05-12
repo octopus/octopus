@@ -106,7 +106,7 @@ contains
         pos = this%ions%atom(iatom)%x(1:ions%space%dim) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(mesh, ions%atom(iatom), namespace, pos, st%d%nspin, atom_density)
+        call species_atom_density_np(ions%atom(iatom)%species, ions%namespace, pos, mesh, st%d%nspin, atom_density)
 
         do ip = 1, mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
@@ -174,8 +174,8 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, this%ions%space, namespace, this%ions%latt, &
-                                  this%ions%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%ions%atom(iatom)%species, this%ions%namespace, this%ions%space, this%ions%latt, &
+      this%ions%atom(iatom)%x(1:this%ions%space%dim), this%mesh, this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -323,9 +323,8 @@ contains
 
       pos_j = this%ions%atom(jatom)%x(1:this%ions%space%dim) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%ions%atom(jatom), namespace, &
-                                              pos_j, this%st%d%spin_channels, &
-                                              atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+      call species_atom_density_derivative_np(this%ions%atom(jatom)%species, this%ions%namespace, pos_j, this%mesh, &
+        this%st%d%spin_channels, atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
       latt_iter_i = lattice_iterator_t(this%ions%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
@@ -341,9 +340,8 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%ions%atom(iatom), namespace, &
-                                         pos_i, this%st%d%nspin, &
-                                         atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+          call species_atom_density_np(this%ions%atom(iatom)%species, this%ions%namespace, pos_i, this%mesh, this%st%d%nspin, &
+            atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle

@@ -169,16 +169,16 @@ contains
       if(local_potential_has_density(this%space, this%atom(ia))) then
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
-        call species_get_long_range_density(this%atom(ia)%species, this%space, this%namespace, this%latt, &
-                                               this%atom(ia)%x, this%mesh, rho)
+        call species_get_long_range_density(this%atom(ia)%species, this%namespace, this%space, this%latt, &
+          this%atom(ia)%x(1:this%space%dim), this%mesh, rho)
         call lalg_axpy(this%mesh%np, M_ONE, rho, density)
         SAFE_DEALLOCATE_A(rho)
 
       else
 
         SAFE_ALLOCATE(vl(1:this%mesh%np))
-        call species_get_local(this%atom(ia)%species, this%space, this%latt, this%mesh, this%namespace, &
-                                               this%atom(ia)%x(1:this%mesh%sb%dim), vl)
+        call species_get_local(this%atom(ia)%species, this%namespace, this%space, this%latt, &
+          this%atom(ia)%x(1:this%space%dim), this%mesh, vl)
         call lalg_axpy(this%mesh%np, M_ONE, vl, this%potential(:,1))
         SAFE_DEALLOCATE_A(vl)
 

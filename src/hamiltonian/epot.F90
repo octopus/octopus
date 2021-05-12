@@ -458,7 +458,7 @@ contains
       if(local_potential_has_density(space, atom)) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
-        call species_get_long_range_density(atom%species, space, namespace, latt, atom%x, mesh, rho)
+        call species_get_long_range_density(atom%species, namespace, space, latt, atom%x(1:space%dim), mesh, rho)
 
         SAFE_ALLOCATE(vl(1:mesh%np))
           
@@ -475,7 +475,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:mesh%np))
-        call species_get_local(atom%species, space, latt, mesh, namespace, atom%x(1:space%dim), vl)
+        call species_get_local(atom%species, namespace, space, latt, atom%x(1:space%dim), mesh, vl)
 
       end if
 

@@ -19,7 +19,6 @@
 #include "global.h"
 
 module species_pot_oct_m
-  use atom_oct_m
   use curvilinear_oct_m
   use global_oct_m
   use io_function_oct_m
@@ -66,19 +65,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_atom_density(mesh, space, namespace, latt, atom, spin_channels, rho)
-    type(mesh_t),            intent(in)    :: mesh
-    type(space_t),           intent(in)    :: space
+  subroutine species_atom_density(species, namespace, space, latt, pos, mesh, spin_channels, rho)
+    type(species_t),         intent(in)    :: species
     type(namespace_t),       intent(in)    :: namespace
+    type(space_t),           intent(in)    :: space
     type(lattice_vectors_t), intent(in)    :: latt
-    type(atom_t),    target, intent(in)    :: atom
+    FLOAT,                   intent(in)    :: pos(1:space%dim)
+    type(mesh_t),            intent(in)    :: mesh
     integer,                 intent(in)    :: spin_channels
     FLOAT,                   intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, icell
-    FLOAT :: rr, x, pos(space%dim), nrm, rmax
+    FLOAT :: rr, x, pos_pc(space%dim), nrm, rmax
     FLOAT :: xx(space%dim), yy(space%dim), rerho, imrho
-    type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(volume_t) :: volume
 
@@ -91,7 +90,6 @@ contains
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
-    species => atom%species
     rho = M_ZERO
 
     ! build density ...
@@ -118,7 +116,7 @@ contains
       do icell = 1, latt_iter%n_cells
         yy = latt_iter%get(icell)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
+          call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx = xx + yy
           rr = norm2(xx)
           
@@ -150,7 +148,7 @@ contains
     case (SPECIES_JELLIUM) ! ... from jellium
       in_points = 0
       do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, origin = atom%x)
+        call mesh_r(mesh, ip, rr, origin = pos)
         if(rr <= species_jradius(species)) then
           in_points = in_points + 1
         end if
@@ -168,7 +166,7 @@ contains
  
         if (mesh%use_curvilinear) then
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = atom%x)
+            call mesh_r(mesh, ip, rr, origin = pos)
             if(rr <= species_jradius(species)) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
                 (mesh%vol_pp(ip)*TOFLOAT(in_points*spin_channels))
@@ -176,7 +174,7 @@ contains
           end do
         else
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = atom%x)
+            call mesh_r(mesh, ip, rr, origin = pos)
             if(rr <= species_jradius(species)) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
                 (mesh%vol_pp(1)*TOFLOAT(in_points*spin_channels))
@@ -239,9 +237,9 @@ contains
         
         latt_iter = lattice_iterator_t(latt, rmax)
         do icell = 1, latt_iter%n_cells
-          pos = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos_pc = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = pos)
+            call mesh_r(mesh, ip, rr, origin = pos_pc)
             rr = max(rr, R_SMALL)
             
             do isp = 1, spin_channels
@@ -258,9 +256,9 @@ contains
 
         latt_iter = lattice_iterator_t(latt, spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
         do icell = 1, latt_iter%n_cells
-          pos = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos_pc = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = pos)
+            call mesh_r(mesh, ip, rr, origin = pos_pc)
             rr = max(rr, R_SMALL)
 
             if(rr >= spline_range_max(ps%vl)) cycle
@@ -291,23 +289,22 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, atom, namespace, pos,  spin_channels, rho)
-    type(mesh_t),         intent(in)    :: mesh
-    type(atom_t), target, intent(in)    :: atom
+ subroutine species_atom_density_np(species, namespace, pos, mesh, spin_channels, rho)
+    type(species_t),      intent(in)    :: species
     type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:)
+    type(mesh_t),         intent(in)    :: mesh
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
+
     integer :: isp, ip
     FLOAT :: rr, nrm, rmax
-    type(species_t), pointer :: species
     type(ps_t), pointer :: ps
 
 
     PUSH_SUB(species_atom_density_np)
  
     rho = M_ZERO
-    species => atom%species
     ps => species_ps(species)
     select case (species_type(species))
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
@@ -370,18 +367,18 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_atom_density_derivative(mesh, space, latt, atom, namespace, spin_channels, drho)
-    type(mesh_t),            intent(in)    :: mesh
+  subroutine species_atom_density_derivative(species, namespace, space, latt, pos, mesh, spin_channels, drho)
+    type(species_t),         intent(in)    :: species
+    type(namespace_t),       intent(in)    :: namespace
     type(space_t),           intent(in)    :: space
     type(lattice_vectors_t), intent(in)    :: latt
-    type(atom_t),    target, intent(in)    :: atom
-    type(namespace_t),       intent(in)    :: namespace
+    FLOAT,                   intent(in)    :: pos(1:space%dim)
+    type(mesh_t),            intent(in)    :: mesh
     integer,                 intent(in)    :: spin_channels
     FLOAT,                   intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: icell
-    FLOAT :: pos(space%dim), range
-    type(species_t), pointer :: species
+    FLOAT :: pos_pc(space%dim), range
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
 
@@ -389,7 +386,6 @@ contains
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
-    species => atom%species
     drho = M_ZERO
 
     ! build density ...
@@ -407,8 +403,8 @@ contains
         latt_iter = lattice_iterator_t(latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos = atom%x(1:space%dim) + latt_iter%get(icell)
-          call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
+          pos_pc = pos + latt_iter%get(icell)
+          call species_atom_density_derivative_np(species, namespace, pos_pc, mesh, spin_channels, drho)
         end do
       end if
        
@@ -420,11 +416,11 @@ contains
     POP_SUB(species_atom_density_derivative)
   end subroutine species_atom_density_derivative
 
-  subroutine species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
-    type(mesh_t),         intent(in)    :: mesh
-    type(atom_t),         intent(in)    :: atom
+  subroutine species_atom_density_derivative_np(species, namespace, pos, mesh, spin_channels, drho)
+    type(species_t),      intent(in)    :: species
     type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:)
+    type(mesh_t),         intent(in)    :: mesh
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
@@ -434,8 +430,7 @@ contains
 
     PUSH_SUB(species_atom_density_derivative_np)
 
-
-    ps => species_ps(atom%species)
+    ps => species_ps(species)
 
     if(ps_has_density(ps)) then
 
@@ -451,7 +446,7 @@ contains
       end do
     else
       call messages_write('The pseudopotential for')
-      call messages_write(species_label(atom%species))
+      call messages_write(species_label(species))
       call messages_write(' does not contain the density.')
       call messages_fatal(namespace=namespace)
     end if
@@ -462,18 +457,18 @@ contains
 
   ! ---------------------------------------------------------
   ! Gradient of the atomic density, if available
-  subroutine species_atom_density_grad(mesh, space, latt, atom, namespace, spin_channels, drho)
-    type(mesh_t),            intent(in)    :: mesh
+  subroutine species_atom_density_grad(species, namespace, space, latt, pos, mesh, spin_channels, drho)
+    type(species_t),         intent(in)    :: species
+    type(namespace_t),       intent(in)    :: namespace
     type(space_t),           intent(in)    :: space
     type(lattice_vectors_t), intent(in)    :: latt
-    type(atom_t),    target, intent(in)    :: atom
-    type(namespace_t),       intent(in)    :: namespace
+    FLOAT,                   intent(in)    :: pos(1:space%dim)
+    type(mesh_t),            intent(in)    :: mesh
     integer,                 intent(in)    :: spin_channels
     FLOAT,                   intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
-    FLOAT :: rr, pos(space%dim), range, spline
-    type(species_t), pointer :: species
+    FLOAT :: rr, pos_pc(space%dim), range, spline
     type(ps_t), pointer :: ps
     type(lattice_iterator_t) :: latt_iter
 
@@ -481,7 +476,6 @@ contains
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
-    species => atom%species
     drho = M_ZERO
 
     ! build density ...
@@ -499,10 +493,10 @@ contains
         latt_iter = lattice_iterator_t(latt, range)
 
         do icell = 1, latt_iter%n_cells
-          pos = atom%x(1:space%dim) + latt_iter%get(icell)
+          pos_pc = pos + latt_iter%get(icell)
         
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = pos)
+            call mesh_r(mesh, ip, rr, origin = pos_pc)
             rr = max(rr, R_SMALL)
 
             do isp = 1, spin_channels
@@ -510,7 +504,7 @@ contains
               spline = spline_eval(ps%density_der(isp), rr)
 
               do idir = 1, space%dim
-                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir) - pos(idir))/rr
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir) - pos_pc(idir))/rr
               end do
            end do
           end do
@@ -533,10 +527,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_long_range_density(species, space, namespace, latt, pos, mesh, rho)
-    type(species_t),    target, intent(in)  :: species
-    type(space_t),              intent(in)  :: space
+  subroutine species_get_long_range_density(species, namespace, space, latt, pos, mesh, rho)
+    type(species_t),            intent(in)  :: species
     type(namespace_t),          intent(in)  :: namespace
+    type(space_t),              intent(in)  :: space
     type(lattice_vectors_t),    intent(in)  :: latt
     FLOAT,              target, intent(in)  :: pos(1:space%dim)
     type(mesh_t),       target, intent(in)  :: mesh
@@ -888,17 +882,17 @@ contains
 
   ! ---------------------------------------------------------
   !> used when the density is not available, or otherwise the Poisson eqn would be used instead
-  subroutine species_get_local(species, space, latt, mesh, namespace, x_atom, vl)
+  subroutine species_get_local(species, namespace, space, latt, pos, mesh, vl)
     type(species_t), target, intent(in)  :: species
-    type(lattice_vectors_t), intent(in)  :: latt
-    type(space_t),           intent(in)  :: space
-    type(mesh_t),            intent(in)  :: mesh
     type(namespace_t),       intent(in)  :: namespace
-    FLOAT,                   intent(in)  :: x_atom(:)
+    type(space_t),           intent(in)  :: space
+    type(lattice_vectors_t), intent(in)  :: latt
+    FLOAT,                   intent(in)  :: pos(1:space%dim)
+    type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(space%dim), x_atom_per(space%dim), r, r2, threshold
+    FLOAT :: xx(space%dim), pos_pc(space%dim), r, r2, threshold
     integer :: ip, err, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
@@ -921,9 +915,9 @@ contains
         latt_iter = lattice_iterator_t(latt, species_zval(species) / threshold)
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
-          x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)
+          pos_pc = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, origin = x_atom_per)
+            call mesh_r(mesh, ip, r, origin = pos_pc)
             r2 = r*r
             vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
           end do
@@ -934,9 +928,9 @@ contains
         latt_iter = lattice_iterator_t(latt, CNST(5.0) * maxval(norm2(latt%rlattice, dim=1)))
         vl = M_ZERO
         do icell = 1, latt_iter%n_cells
-          x_atom_per = x_atom(1:space%dim) + latt_iter%get(icell)
+          pos_pc = pos + latt_iter%get(icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
+            call mesh_r(mesh, ip, r, origin = pos_pc, coords = xx)
 
             ! Note that as the spec%user_def is in input units, we have to convert
             ! the units back and forth
@@ -968,7 +962,7 @@ contains
         
         do ip = 1, mesh%np
           
-          xx = mesh%x(ip, :) - x_atom(1:space%dim)
+          xx = mesh%x(ip, :) - pos(1:space%dim)
           r = norm2(xx)
           
           if(r <= species_jradius(species)) then
@@ -1001,7 +995,7 @@ contains
         ps => species_ps(species)
 
         do ip = 1, mesh%np
-          r2 = sum((mesh%x(ip, 1:space%dim) - x_atom(1:space%dim))**2)
+          r2 = sum((mesh%x(ip, :) - pos)**2)
           if(r2 < spline_range_max(ps%vlr_sq)) then
             vl(ip) = spline_eval(ps%vlr_sq, r2)
           else
