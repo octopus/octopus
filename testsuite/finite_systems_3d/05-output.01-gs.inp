@@ -13,10 +13,10 @@ Spacing = 0.5
 %
 
 %Output 
- density | axis_x + plane_x + dx
- geometry | xyz + xcrysden
- wfs | axis_x + plane_x + xcrysden
- potential_gradient |  plane_x
+ density             | "output_format" | axis_x + plane_x + dx       | "output_interval" | 2
+ geometry           | "output_format"  | xyz + xcrysden
+ wfs                | "output_format"  | axis_x + plane_x + xcrysden
+ potential_gradient | "output_format"  | plane_x
 %
 
 OutputInterval = 4

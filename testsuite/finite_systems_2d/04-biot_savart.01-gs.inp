@@ -34,9 +34,9 @@ P_c = 137.036
 %
 
 %Output 
- density | axis_y
- current | axis_y
- potential | axis_y
+ density   | "output_format" | axis_y
+ current   | "output_format" | axis_y
+ potential | "output_format" | axis_y
 %
 FlushMessages = yes
 

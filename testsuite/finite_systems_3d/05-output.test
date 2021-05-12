@@ -103,6 +103,11 @@ match ; wf-st0001 plane_x  36 value ; LINEFIELD(static/wf-st0001.x\=0, 36, 3 ) ;
 match ; wf-st0001 plane_x  78 value ; LINEFIELD(static/wf-st0001.x\=0, 78, 3 ) ;  8.79657172129439E-002
 match ; wf-st0001 plane_x 328 value ; LINEFIELD(static/wf-st0001.x\=0,328, 3 ) ;  1.91798194418790E-002
 
+# Test files count on different output interval
+match ; timestep 2 density.dx ; SHELL(test -f output_iter/scf.0002/density.dx && echo "1" || echo "0") ;   1
+match ; timestep 2 files      ; SHELL(ls -A  output_iter/scf.0002/ | wc -l) ; 3
+match ; timestep 4 files      ; SHELL(ls -A  output_iter/scf.0004/ | wc -l) ; 14
+
 
 # Convert the density from obf to dx format and check it. This utility runs in parallel.
 Program : oct-convert

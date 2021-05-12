@@ -49,9 +49,8 @@ TDExpOrder = 16
 TDTimeStep = dt
 
 %Output
- density | xcrysden
+ density | "output_format" | xcrysden | "output_interval" | 25
 % 
-OutputInterval = 25
 %TDOutput 
  energy 
  multipoles 
