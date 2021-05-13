@@ -717,7 +717,7 @@ contains
 
        radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-       call submesh_init(sphere, ions%space, mesh%sb, mesh, ions%atom(iatom)%x, radius)
+       call submesh_init(sphere, ions%space, mesh, ions%latt, ions%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
 
        do ip = 1, sphere%np

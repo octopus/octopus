@@ -126,13 +126,13 @@ contains
 
 ! -------------------------------------------------------------
 
-  subroutine submesh_init(this, space, sb, mesh, center, rc)
-    type(submesh_t),      intent(inout)  :: this
-    type(space_t),        intent(in)     :: space
-    type(simul_box_t),    intent(in)     :: sb
-    type(mesh_t), target, intent(in)     :: mesh
-    FLOAT,                intent(in)     :: center(:)
-    FLOAT,                intent(in)     :: rc
+  subroutine submesh_init(this, space, mesh, latt, center, rc)
+    type(submesh_t),         intent(inout)  :: this
+    type(space_t),           intent(in)     :: space
+    type(mesh_t), target,    intent(in)     :: mesh
+    type(lattice_vectors_t), intent(in)     :: latt
+    FLOAT,                   intent(in)     :: center(:)
+    FLOAT,                   intent(in)     :: rc
     
     FLOAT :: r2, rc2, xx(space%dim), rc_norm_n
     FLOAT, allocatable :: center_copies(:,:), xtmp(:, :)
@@ -231,7 +231,7 @@ contains
 
       ! this requires some optimization
 
-      latt_iter = lattice_iterator_t(sb%latt, rc)
+      latt_iter = lattice_iterator_t(latt, rc)
 
       SAFE_ALLOCATE(center_copies(1:space%dim, 1:latt_iter%n_cells))
       do icell = 1, latt_iter%n_cells

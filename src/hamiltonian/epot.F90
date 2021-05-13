@@ -392,7 +392,7 @@ contains
     do ia = ions%atoms_dist%start, ions%atoms_dist%end
       if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(ions%atom(ia)%species)
-      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh%sb, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1))
+      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh, ions%latt, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
 
     if(ions%atoms_dist%parallel) then
@@ -491,7 +491,7 @@ contains
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-        call submesh_init(sphere, space, mesh%sb, mesh, atom%x, radius)
+        call submesh_init(sphere, space, mesh, latt, atom%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np
