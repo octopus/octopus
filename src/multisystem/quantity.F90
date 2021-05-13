@@ -37,11 +37,12 @@ module quantity_oct_m
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
     CHARGE                       = 10,  &
-    PERMITTIVITY                 = 11,  &
-    PERMEABILITY                 = 12,  &
-    E_CONDUCTIVITY               = 13,  &
-    M_CONDUCTIVITY               = 14,  &
-    MAX_QUANTITIES               = 14
+    GRID                         = 11,  &
+    PERMITTIVITY                 = 12,  &
+    PERMEABILITY                 = 13,  &
+    E_CONDUCTIVITY               = 14,  &
+    M_CONDUCTIVITY               = 15,  &
+    MAX_QUANTITIES               = 15
 
   character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &
     "position        ", &
@@ -52,6 +53,7 @@ module quantity_oct_m
     "vector potential", &
     "E field         ", &
     "B field         ", &
+    "grid            ", &
     "mass            ", &
     "charge          ", &
     "permittivity    ", &

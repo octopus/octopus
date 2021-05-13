@@ -89,10 +89,9 @@ contains
     this%label = "linear_medium_em_field"
     this%partner => partner
 
-    this%n_system_quantities = 0
     this%n_system_quantities = 1
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
-    this%system_quantities(1) = E_FIELD
+    this%system_quantities(1) = GRID
     nullify(this%system_gr)
 
     this%n_partner_quantities = 4

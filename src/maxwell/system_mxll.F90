@@ -111,6 +111,8 @@ module system_mxll_oct_m
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
     procedure :: output_finish => system_mxll_output_finish
+    procedure :: update_interactions_start => system_mxll_update_interactions_start
+    procedure :: update_interactions_finish => system_mxll_update_interactions_finish
     final :: system_mxll_finalize
   end type system_mxll_t
 
@@ -175,6 +177,9 @@ contains
     call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
 
     call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
+    call this%supported_interactions%add(LINEAR_MEDIUM_EM_FIELD)
+    this%quantities(GRID)%required = .true.
+    this%quantities(GRID)%protected = .true.
 
     call profiling_out(prof)
 
@@ -322,6 +327,7 @@ contains
 
     this%energy_update_iter = 1
 
+    write(*,*)'should have it by now'
     call propagator_mxll_init(this%gr, this%namespace, this%st, this%hm, this%tr_mxll)
     call states_mxll_allocate(this%st, this%gr%mesh)
     call external_current_init(this%st, this%namespace, this%gr%mesh)
@@ -516,6 +522,10 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
+    case (GRID)
+      ! The grid does not change with time, no need to update it
+      ! We still need to set its clock.
+      this%quantities(GRID)%clock = this%quantities(GRID)%clock + CLOCK_TICK
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -663,6 +673,37 @@ contains
 
     POP_SUB(system_mxll_output_finish)
   end subroutine system_mxll_output_finish
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_start(this)
+    class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_update_interactions_start)
+
+    POP_SUB(system_mxll_update_interactions_start)
+  end subroutine system_mxll_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_finish(this)
+    class(system_mxll_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+    integer :: int_counter
+    
+    PUSH_SUB(system_mxll_update_interactions_finish)
+
+    int_counter = 0
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      select type (interaction => iter%get_next())
+      class is (linear_medium_em_field_t)
+        int_counter = int_counter + 1
+        write(*,*)'int counter',int_counter
+      end select
+    end do
+
+    POP_SUB(system_mxll_update_interactions_finish)
+  end subroutine system_mxll_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine system_mxll_finalize(this)

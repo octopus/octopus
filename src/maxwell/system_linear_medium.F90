@@ -35,6 +35,8 @@ module system_linear_medium_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use propagator_exp_mid_oct_m
+  use propagator_oct_m
   use profiling_oct_m
   use quantity_oct_m
   use system_oct_m
@@ -313,6 +315,14 @@ contains
     call messages_info(1)
 
     call this%supported_interactions_as_partner%add(LINEAR_MEDIUM_EM_FIELD)
+    this%quantities(PERMITTIVITY)%required = .true.
+    this%quantities(PERMITTIVITY)%protected = .true.
+    this%quantities(PERMEABILITY)%required = .true.
+    this%quantities(PERMEABILITY)%protected = .true.
+    this%quantities(E_CONDUCTIVITY)%required = .true.
+    this%quantities(E_CONDUCTIVITY)%protected = .true.
+    this%quantities(M_CONDUCTIVITY)%required = .true.
+    this%quantities(M_CONDUCTIVITY)%protected = .true.
 
     call profiling_out(prof)
 
@@ -352,7 +362,34 @@ contains
 
     PUSH_SUB(system_linear_medium_do_td)
 
-   POP_SUB(system_linear_medium_do_td)
+    select case (operation%id)
+    case (SKIP)
+      ! Do nothing
+    case (STORE_CURRENT_STATUS)
+      ! For the moment we do nothing
+    case (EXPMID_START)
+      ! Empty for the moment
+    case (EXPMID_FINISH)
+      ! Empty for the momen
+    case (EXPMID_PREDICT_DT_2)
+      this%quantities(PERMITTIVITY)%clock = this%quantities(PERMITTIVITY)%clock + CLOCK_TICK
+      this%quantities(PERMEABILITY)%clock = this%quantities(PERMEABILITY)%clock + CLOCK_TICK
+      this%quantities(E_CONDUCTIVITY)%clock = this%quantities(E_CONDUCTIVITY)%clock + CLOCK_TICK
+      this%quantities(M_CONDUCTIVITY)%clock = this%quantities(M_CONDUCTIVITY)%clock + CLOCK_TICK
+    case (UPDATE_HAMILTONIAN)
+      ! Empty for the moment
+    case (EXPMID_PREDICT_DT)
+      this%quantities(PERMITTIVITY)%clock = this%quantities(PERMITTIVITY)%clock + CLOCK_TICK
+      this%quantities(PERMEABILITY)%clock = this%quantities(PERMEABILITY)%clock + CLOCK_TICK
+      this%quantities(E_CONDUCTIVITY)%clock = this%quantities(E_CONDUCTIVITY)%clock + CLOCK_TICK
+      this%quantities(M_CONDUCTIVITY)%clock = this%quantities(M_CONDUCTIVITY)%clock + CLOCK_TICK
+    case default
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
+
+
+    POP_SUB(system_linear_medium_do_td)
   end subroutine system_linear_medium_do_td
 
   ! ---------------------------------------------------------
