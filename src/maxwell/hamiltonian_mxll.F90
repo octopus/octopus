@@ -66,6 +66,18 @@ module hamiltonian_mxll_oct_m
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field
 
+  type single_medium_box_t
+     FLOAT, allocatable            :: ep(:) !< permitivity of the linear media
+     FLOAT, allocatable            :: mu(:) !< permeability of the linear media
+     FLOAT, allocatable            :: c(:) !< speed of light in the linear media
+     FLOAT, allocatable            :: sigma_e(:) !< electric conductivy of (lossy) medium
+     FLOAT, allocatable            :: sigma_m(:) !< magnetic conductivy of (lossy) medium
+     integer, allocatable          :: points_number
+     integer, allocatable          :: points_map(:)
+     FLOAT, allocatable            :: aux_ep(:,:) !< auxiliary array for the epsilon derivative profile
+     FLOAT, allocatable            :: aux_mu(:,:) !< auxiliary array for the softened mu profile
+   end type single_medium_box_t
+
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     integer                        :: dim
     !> absorbing boundaries
@@ -124,6 +136,8 @@ module hamiltonian_mxll_oct_m
 
     logical                        :: calc_medium_box = .false.
     type(medium_box_t)             :: medium_box
+    type(single_medium_box_t), allocatable  :: medium_boxes(:)
+    logical                         :: medium_boxes_initialized = .false.
 
     !> maxwell hamiltonian_mxll
     integer                        :: operator

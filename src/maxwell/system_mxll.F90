@@ -678,19 +678,10 @@ contains
   subroutine system_mxll_update_interactions_start(this)
     class(system_mxll_t), intent(inout) :: this
 
-    PUSH_SUB(system_mxll_update_interactions_start)
-
-    POP_SUB(system_mxll_update_interactions_start)
-  end subroutine system_mxll_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_update_interactions_finish(this)
-    class(system_mxll_t), intent(inout) :: this
-
     type(interaction_iterator_t) :: iter
     integer :: int_counter
-    
-    PUSH_SUB(system_mxll_update_interactions_finish)
+
+    PUSH_SUB(system_mxll_update_interactions_start)
 
     int_counter = 0
     call iter%start(this%interactions)
@@ -701,6 +692,55 @@ contains
         write(*,*)'int counter',int_counter
       end select
     end do
+
+    if (int_counter /= 0 .and. .not. allocated(this%hm%medium_boxes)) then
+       SAFE_ALLOCATE(this%hm%medium_boxes(int_counter))
+       write(*,*)'allocated medium boxes'
+    end if
+
+    POP_SUB(system_mxll_update_interactions_start)
+  end subroutine system_mxll_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_finish(this)
+    class(system_mxll_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+    integer :: iint, n_points
+    
+    PUSH_SUB(system_mxll_update_interactions_finish)
+
+    iint = 0
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      select type (interaction => iter%get_next())
+      class is (linear_medium_em_field_t)
+        if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
+          iint = iint + 1
+          n_points = interaction%partner_points_number
+          this%hm%medium_boxes(iint)%points_number = n_points
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%ep(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%mu(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%c(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%sigma_e(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%sigma_m(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%points_map(n_points))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%aux_ep(n_points,3))
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%aux_mu(n_points,3))
+
+          this%hm%medium_boxes(iint)%points_map(1:n_points) = interaction%partner_points_map(1:n_points)
+          this%hm%medium_boxes(iint)%ep(1:n_points) = interaction%partner_ep(1:n_points)
+          this%hm%medium_boxes(iint)%mu(1:n_points) = interaction%partner_mu(1:n_points)
+          this%hm%medium_boxes(iint)%sigma_e(1:n_points) = interaction%partner_sigma_e(1:n_points)
+          this%hm%medium_boxes(iint)%sigma_m(1:n_points) = interaction%partner_sigma_m(1:n_points)
+          this%hm%medium_boxes(iint)%aux_ep(1:n_points,1:3) = interaction%partner_aux_ep(1:n_points,1:3)
+          this%hm%medium_boxes(iint)%aux_mu(1:n_points,1:3) = interaction%partner_aux_mu(1:n_points,1:3)
+
+          this%hm%medium_boxes_initialized = .true.
+        end if
+      end select
+    end do
+
 
     POP_SUB(system_mxll_update_interactions_finish)
   end subroutine system_mxll_update_interactions_finish
