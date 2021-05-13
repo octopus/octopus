@@ -467,7 +467,7 @@ contains
     class(system_linear_medium_t),          intent(inout) :: partner
     class(interaction_t),                 intent(inout) :: interaction
 
-    integer :: ip_in_max
+    integer :: n_points
 
     PUSH_SUB(system_linear_medium_copy_quantities_to_interaction)
 
@@ -475,26 +475,26 @@ contains
     type is (linear_medium_em_field_t)
       if (.not. interaction%allocated_partner_arrays) then
         call generate_medium_box(partner, interaction%system_gr)
-        ip_in_max = size(partner%points_map)
+        n_points = partner%points_number
 
-        SAFE_ALLOCATE(interaction%partner_aux_ep(ip_in_max,1:3))
-        SAFE_ALLOCATE(interaction%partner_aux_mu(ip_in_max,1:3))
-        SAFE_ALLOCATE(interaction%partner_c(ip_in_max))
-        SAFE_ALLOCATE(interaction%partner_ep(ip_in_max))
-        SAFE_ALLOCATE(interaction%partner_mu(ip_in_max))
-        SAFE_ALLOCATE(interaction%partner_sigma_e(ip_in_max))
-        SAFE_ALLOCATE(interaction%partner_sigma_m(ip_in_max))
-        SAFE_ALLOCATE(interaction%partner_points_map(ip_in_max))
+        SAFE_ALLOCATE(interaction%partner_aux_ep(n_points,1:3))
+        SAFE_ALLOCATE(interaction%partner_aux_mu(n_points,1:3))
+        SAFE_ALLOCATE(interaction%partner_c(n_points))
+        SAFE_ALLOCATE(interaction%partner_ep(n_points))
+        SAFE_ALLOCATE(interaction%partner_mu(n_points))
+        SAFE_ALLOCATE(interaction%partner_sigma_e(n_points))
+        SAFE_ALLOCATE(interaction%partner_sigma_m(n_points))
+        SAFE_ALLOCATE(interaction%partner_points_map(n_points))
         interaction%allocated_partner_arrays = .true.
 
-        interaction%partner_points_number = ip_in_max
-        interaction%partner_points_map(1:ip_in_max) = partner%points_map(1:ip_in_max)
-        interaction%partner_ep(1:ip_in_max) = partner%ep(1:ip_in_max)
-        interaction%partner_mu(1:ip_in_max) = partner%mu(1:ip_in_max)
-        interaction%partner_sigma_e(1:ip_in_max) = partner%sigma_e(1:ip_in_max)
-        interaction%partner_sigma_m(1:ip_in_max) = partner%sigma_m(1:ip_in_max)
-        interaction%partner_aux_ep(1:ip_in_max,1:3) = partner%aux_ep(1:ip_in_max,1:3)
-        interaction%partner_aux_mu(1:ip_in_max,1:3) = partner%aux_mu(1:ip_in_max,1:3)
+        interaction%partner_points_number = n_points
+        interaction%partner_points_map(1:n_points) = partner%points_map(1:n_points)
+        interaction%partner_ep(1:n_points) = partner%ep(1:n_points)
+        interaction%partner_mu(1:n_points) = partner%mu(1:n_points)
+        interaction%partner_sigma_e(1:n_points) = partner%sigma_e(1:n_points)
+        interaction%partner_sigma_m(1:n_points) = partner%sigma_m(1:n_points)
+        interaction%partner_aux_ep(1:n_points,1:3) = partner%aux_ep(1:n_points,1:3)
+        interaction%partner_aux_mu(1:n_points,1:3) = partner%aux_mu(1:n_points,1:3)
       end if
     class default
       message(1) = "Unsupported interaction."
@@ -540,7 +540,7 @@ contains
     type(system_linear_medium_t),  intent(inout)      :: this
     type(grid_t),        intent(in)         :: gr
 
-    integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
+    integer :: il, ip, ip_in, n_points, ip_bd, ip_bd_max, ipp, idim
     integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
@@ -558,19 +558,19 @@ contains
     tmp_points_map = 0
     tmp_bdry_map = 0
 
-    ip_in_max = 0
+    n_points = 0
     ip_bd_max = 0
 
     if (this%box_shape == MEDIUM_BOX_FILE) then
 
-      call get_points_map_from_file(this, ip_in_max, gr%mesh, tmp_points_map)
+      call get_points_map_from_file(this, n_points, gr%mesh, tmp_points_map)
 
-      SAFE_ALLOCATE(this%points_map(ip_in_max))
+      SAFE_ALLOCATE(this%points_map(n_points))
 
       this%points_map = 0
       this%bdry_map = 0
 
-      this%points_map(:) = tmp_points_map(1:ip_in_max)
+      this%points_map(:) = tmp_points_map(1:n_points)
 
     else
 
@@ -593,17 +593,17 @@ contains
         end if
       end do
 
-      ip_in_max = ip_in
+      n_points = ip_in
       ip_bd_max = ip_bd
-      this%points_number = ip_in_max
+      this%points_number = n_points
       this%bdry_number = ip_bd_max
 
-      SAFE_ALLOCATE(this%points_map(ip_in_max))
+      SAFE_ALLOCATE(this%points_map(n_points))
       SAFE_ALLOCATE(this%bdry_map(ip_bd_max))
 
       this%points_map = 0
       this%bdry_map = 0
-      this%points_map = tmp_points_map(1:ip_in_max)
+      this%points_map = tmp_points_map(1:n_points)
       this%bdry_map = tmp_bdry_map(1:ip_bd_max)
 
     end if
@@ -619,13 +619,13 @@ contains
     !  end if
     !end do
 
-    SAFE_ALLOCATE(this%aux_ep(ip_in_max,1:3))
-    SAFE_ALLOCATE(this%aux_mu(ip_in_max,1:3))
-    SAFE_ALLOCATE(this%c(ip_in_max))
-    SAFE_ALLOCATE(this%ep(ip_in_max))
-    SAFE_ALLOCATE(this%mu(ip_in_max))
-    SAFE_ALLOCATE(this%sigma_e(ip_in_max))
-    SAFE_ALLOCATE(this%sigma_m(ip_in_max))
+    SAFE_ALLOCATE(this%aux_ep(n_points,1:3))
+    SAFE_ALLOCATE(this%aux_mu(n_points,1:3))
+    SAFE_ALLOCATE(this%c(n_points))
+    SAFE_ALLOCATE(this%ep(n_points))
+    SAFE_ALLOCATE(this%mu(n_points))
+    SAFE_ALLOCATE(this%sigma_e(n_points))
+    SAFE_ALLOCATE(this%sigma_m(n_points))
 
 
     do ip_in = 1, this%points_number
@@ -734,9 +734,9 @@ contains
 
   ! ----------------------------------------------------------
   !> Populate list of point indices for points inside the polyhedron
-  subroutine get_points_map_from_file(this, ip_in_max, mesh, tmp_map, scale_factor)
+  subroutine get_points_map_from_file(this, n_points, mesh, tmp_map, scale_factor)
     type(system_linear_medium_t),       intent(inout) :: this
-    integer,                  intent(inout) :: ip_in_max
+    integer,                  intent(inout) :: n_points
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(inout) :: tmp_map(:)
     FLOAT, optional,          intent(in)    :: scale_factor
@@ -764,7 +764,7 @@ contains
         tmp_map(ip_in) = ip
       end if
     end do
-    if (ip_in > ip_in_max) ip_in_max = ip_in
+    if (ip_in > n_points) n_points = ip_in
     this%points_number = ip_in
     call cgal_polyhedron_end(cgal_poly)
 
