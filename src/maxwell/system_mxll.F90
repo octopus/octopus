@@ -742,6 +742,7 @@ contains
     end do
 
     if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
+       call set_medium_rs_state(this%st, this%gr, this%hm)
       write(*,*)'medium boxes initialized'
       this%hm%medium_boxes_initialized = .true.
     end if

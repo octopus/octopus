@@ -73,7 +73,8 @@ module propagator_mxll_oct_m
     mxll_propagation_step,                   &
     transform_rs_densities,                  &
     energy_mxll_calc,                        &
-    spatial_constant_calculation
+    spatial_constant_calculation,            &
+    set_medium_rs_state
 
   ! The following routines are currently unused, but will be used in the near future.
   ! In order not to generate warnings about them, we declared them as public
@@ -231,8 +232,6 @@ contains
       st%rs_state_const = M_z0
     end if
 
-    call medium_box_init(namespace, hm%medium_box, hm%calc_medium_box, gr)
-
     !%Variable MaxwellTDETRSApprox
     !%Type integer
     !%Default no
@@ -289,7 +288,6 @@ contains
     !% not doing any numerical propagation of Maxwells equations.
     !%End
     call parse_variable(namespace, 'MaxwellPlaneWavesInBox', .false., tr%plane_waves_in_box)
-    call set_medium_rs_state(st, gr, hm)
 
     call derivatives_boundary_mask(hm%bc, gr%mesh, hm)
 
@@ -532,11 +530,11 @@ contains
     st%ep = P_ep
     st%mu = P_mu
     if (hm%calc_medium_box) then
-      do il = 1, hm%medium_box%number
-        do ip_in = 1, hm%medium_box%points_number(il)
-          ip = hm%medium_box%points_map(ip_in, il)
-          st%ep(ip) = hm%medium_box%ep(ip_in, il)
-          st%mu(ip) = hm%medium_box%mu(ip_in, il)
+      do il = 1, size(hm%medium_boxes)
+        do ip_in = 1, hm%medium_boxes(il)%points_number
+          ip = hm%medium_boxes(il)%points_map(ip_in)
+          st%ep(ip) = hm%medium_boxes(il)%ep(ip_in)
+          st%mu(ip) = hm%medium_boxes(il)%mu(ip_in)
         end do
       end do
     end if

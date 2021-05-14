@@ -226,6 +226,7 @@ contains
     if (hm%operator == FARADAY_AMPERE_GAUSS) then
       hm%dim = hm%dim+1
     else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      ! TODO: this hm%operator should also be selected automatically if there is a linear medium system present 
       hm%dim = 2*hm%dim
       hm%calc_medium_box = .true.
     end if
