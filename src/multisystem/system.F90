@@ -447,6 +447,9 @@ contains
       select type (interaction)
       type is (ghost_interaction_t)
         ! Skip the ghost interactions
+      class is (interaction_with_partner_t)
+        call this%init_interaction(interaction)
+        call interaction%partner%init_interaction_as_partner(interaction)
       class default
         call this%init_interaction(interaction)
       end select

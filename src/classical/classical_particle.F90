@@ -65,6 +65,7 @@ module classical_particle_oct_m
     procedure :: output_finish => classical_particle_output_finish
     procedure :: update_quantity => classical_particle_update_quantity
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
+    procedure :: init_interaction_as_partner => classical_particle_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
     final :: classical_particle_finalize
   end type classical_particle_t
@@ -362,6 +363,27 @@ contains
   end subroutine classical_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
+  subroutine classical_particle_init_interaction_as_partner(partner, interaction)
+    class(classical_particle_t), intent(in)    :: partner
+    class(interaction_t),        intent(inout) :: interaction
+
+    PUSH_SUB(classical_particle_init_interaction_as_partner)
+
+    select type (interaction)
+    type is (gravity_t)
+      interaction%partner_np = 1
+      SAFE_ALLOCATE(interaction%partner_mass(1))
+      SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
+
+    class default
+      ! Other interactions should be handled by the parent class
+      call classical_particles_init_interaction_as_partner(partner, interaction)
+    end select
+
+    POP_SUB(classical_particle_init_interaction_as_partner)
+  end subroutine classical_particle_init_interaction_as_partner
+
+  ! ---------------------------------------------------------
   subroutine classical_particle_copy_quantities_to_interaction(partner, interaction)
     class(classical_particle_t),          intent(inout) :: partner
     class(interaction_t),                 intent(inout) :: interaction
@@ -370,16 +392,7 @@ contains
 
     select type (interaction)
     type is (gravity_t)
-      interaction%partner_np = 1
-
-      if (.not. allocated(interaction%partner_mass)) then
-        SAFE_ALLOCATE(interaction%partner_mass(1))
-      end if
       interaction%partner_mass(1) = partner%mass(1)
-
-      if (.not. allocated(interaction%partner_pos)) then
-        SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
-      end if
       interaction%partner_pos(:,1) = partner%pos(:,1)
 
     class default

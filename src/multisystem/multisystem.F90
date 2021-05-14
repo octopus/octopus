@@ -63,6 +63,7 @@ module multisystem_oct_m
     procedure :: is_tolerance_reached => multisystem_is_tolerance_reached
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
+    procedure :: init_interaction_as_partner => multisystem_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
     procedure :: process_is_slave => multisystem_process_is_slave
   end type multisystem_t
@@ -373,6 +374,9 @@ contains
       select type (interaction)
       type is (ghost_interaction_t)
         ! Skip the ghost interactions
+      class is (interaction_with_partner_t)
+        call this%init_interaction(interaction)
+        call interaction%partner%init_interaction_as_partner(interaction)
       class default
         call this%init_interaction(interaction)
       end select
@@ -547,6 +551,22 @@ contains
 
     POP_SUB(multisystem_update_exposed_quantity)
   end subroutine multisystem_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine multisystem_init_interaction_as_partner(partner, interaction)
+    class(multisystem_t),         intent(in)    :: partner
+    class(interaction_t),         intent(inout) :: interaction
+
+    PUSH_SUB(multisystem_init_interaction_as_partner)
+
+    ! The multitystem class should never know about any specific interaction.
+    ! Only classes that extend it can know about specific interactions.
+    ! Such classes should override this method to add new supported interactions.
+    message(1) = "Trying to initialize an interaction as partner in the multisystem class"
+    call messages_fatal(1)
+
+    POP_SUB(multisystem_init_interaction_as_partner)
+  end subroutine multisystem_init_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine multisystem_copy_quantities_to_interaction(partner, interaction)

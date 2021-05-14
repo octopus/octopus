@@ -99,6 +99,7 @@ module lasers_oct_m
   contains
     procedure :: update_exposed_quantities => lasers_update_exposed_quantities
     procedure :: update_exposed_quantity => lasers_update_exposed_quantity
+    procedure :: init_interaction_as_partner => lasers_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => lasers_copy_quantities_to_interaction
     final :: lasers_finalize
   end type
@@ -428,9 +429,25 @@ contains
   end subroutine lasers_update_exposed_quantity
 
   ! ---------------------------------------------------------
+  subroutine lasers_init_interaction_as_partner(partner, interaction)
+    class(lasers_t),      intent(in)    :: partner
+    class(interaction_t), intent(inout) :: interaction
+
+    PUSH_SUB(lasers_init_interaction_as_partner)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(lasers_init_interaction_as_partner)
+  end subroutine lasers_init_interaction_as_partner
+
+  ! ---------------------------------------------------------
   subroutine lasers_copy_quantities_to_interaction(partner, interaction)
-    class(lasers_t),     intent(inout) :: partner
-    class(interaction_t),            intent(inout) :: interaction
+    class(lasers_t),      intent(inout) :: partner
+    class(interaction_t), intent(inout) :: interaction
 
     PUSH_SUB(lasers_copy_quantities_to_interaction)
 

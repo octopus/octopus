@@ -85,6 +85,7 @@ module ions_oct_m
     procedure :: iteration_info => ions_iteration_info
     procedure :: update_quantity => ions_update_quantity
     procedure :: update_exposed_quantity => ions_update_exposed_quantity
+    procedure :: init_interaction_as_partner => ions_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => ions_copy_quantities_to_interaction
     procedure :: write_xyz => ions_write_xyz
     procedure :: read_xyz => ions_read_xyz
@@ -491,6 +492,21 @@ contains
 
     POP_SUB(ions_update_exposed_quantity)
   end subroutine ions_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine ions_init_interaction_as_partner(partner, interaction)
+    class(ions_t),                intent(in)    :: partner
+    class(interaction_t),         intent(inout) :: interaction
+
+    PUSH_SUB(ions_init_interaction_as_partner)
+
+    select type (interaction)
+    class default
+      call classical_particles_init_interaction_as_partner(partner, interaction)
+    end select
+
+    POP_SUB(ions_init_interaction_as_partner)
+  end subroutine ions_init_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine ions_copy_quantities_to_interaction(partner, interaction)

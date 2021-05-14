@@ -72,6 +72,7 @@ module external_potential_oct_m
     procedure :: deallocate_memory => external_potential_deallocate
     procedure :: update_exposed_quantities => external_potential_update_exposed_quantities
     procedure :: update_exposed_quantity => external_potential_update_exposed_quantity
+    procedure :: init_interaction_as_partner => external_potential_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => external_potential_copy_quantities_to_interaction
     final :: external_potential_finalize
   end type external_potential_t
@@ -204,6 +205,24 @@ contains
   end subroutine external_potential_update_exposed_quantity
 
   ! ---------------------------------------------------------
+  subroutine external_potential_init_interaction_as_partner(partner, interaction)
+    class(external_potential_t),     intent(in)    :: partner
+    class(interaction_t),            intent(inout) :: interaction
+
+    PUSH_SUB(external_potential_init_interaction_as_partner)
+
+    select type (interaction)
+    type is (lorentz_force_t)
+      ! Nothing to be initialized for the Lorentz force.
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(external_potential_init_interaction_as_partner)
+  end subroutine external_potential_init_interaction_as_partner
+
+    ! ---------------------------------------------------------
   subroutine external_potential_copy_quantities_to_interaction(partner, interaction)
     class(external_potential_t),     intent(inout) :: partner
     class(interaction_t),            intent(inout) :: interaction

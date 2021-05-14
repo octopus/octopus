@@ -55,7 +55,8 @@ module classical_particles_oct_m
     classical_particles_end,                     &
     classical_particles_init_interaction,        &
     classical_particles_update_quantity,         &
-    classical_particles_update_exposed_quantity
+    classical_particles_update_exposed_quantity, &
+    classical_particles_init_interaction_as_partner
 
   type, extends(system_t), abstract :: classical_particles_t
     integer :: np
@@ -374,6 +375,22 @@ contains
 
     POP_SUB(classical_particles_update_exposed_quantity)
   end subroutine classical_particles_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine classical_particles_init_interaction_as_partner(partner, interaction)
+    class(classical_particles_t), intent(in)    :: partner
+    class(interaction_t),         intent(inout) :: interaction
+
+    PUSH_SUB(classical_particles_init_interaction_as_partner)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(classical_particles_init_interaction_as_partner)
+  end subroutine classical_particles_init_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine classical_particles_copy_quantities_to_interaction(partner, interaction)

@@ -52,6 +52,7 @@ module interaction_partner_oct_m
   contains
     procedure(interaction_partner_update_exposed_quantities),      deferred :: update_exposed_quantities
     procedure(interaction_partner_update_exposed_quantity),        deferred :: update_exposed_quantity
+    procedure(interaction_partner_init_interaction_as_partner),    deferred :: init_interaction_as_partner
     procedure(interaction_partner_copy_quantities_to_interaction), deferred :: copy_quantities_to_interaction
   end type interaction_partner_t
 
@@ -73,6 +74,14 @@ module interaction_partner_oct_m
       class(interaction_partner_t),      intent(inout) :: partner
       integer,                           intent(in)    :: iq
     end subroutine interaction_partner_update_exposed_quantity
+
+    ! ---------------------------------------------------------
+    subroutine interaction_partner_init_interaction_as_partner(partner, interaction)
+      import interaction_partner_t
+      import interaction_t
+      class(interaction_partner_t),     intent(in)    :: partner
+      class(interaction_t),             intent(inout) :: interaction
+    end subroutine interaction_partner_init_interaction_as_partner
 
     ! ---------------------------------------------------------
     subroutine interaction_partner_copy_quantities_to_interaction(partner, interaction)
