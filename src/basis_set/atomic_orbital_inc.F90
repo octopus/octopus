@@ -100,7 +100,7 @@ subroutine X(get_atomic_orbital) (ions, mesh, sm, iatom, ii, ll, jj, os, orbind,
     end select
 
     !We initialise the submesh corresponding to the orbital 
-    call submesh_init(sm, ions%space, mesh, ions%latt, ions%atom(iatom)%x, radius)
+    call submesh_init(sm, ions%space, mesh, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), radius)
 
   end if
 
