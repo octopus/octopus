@@ -689,12 +689,12 @@ contains
       select type (interaction => iter%get_next())
       class is (linear_medium_em_field_t)
         int_counter = int_counter + 1
-        write(*,*)'int counter',int_counter
       end select
     end do
 
     if (int_counter /= 0 .and. .not. allocated(this%hm%medium_boxes)) then
        SAFE_ALLOCATE(this%hm%medium_boxes(int_counter))
+       this%hm%calc_medium_box = .true.
        write(*,*)'allocated medium boxes'
     end if
 
@@ -716,6 +716,7 @@ contains
       select type (interaction => iter%get_next())
       class is (linear_medium_em_field_t)
         if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
+          write(*,*)'here only once'
           iint = iint + 1
           n_points = interaction%partner_points_number
           this%hm%medium_boxes(iint)%points_number = n_points
@@ -736,11 +737,14 @@ contains
           this%hm%medium_boxes(iint)%aux_ep(1:n_points,1:3) = interaction%partner_aux_ep(1:n_points,1:3)
           this%hm%medium_boxes(iint)%aux_mu(1:n_points,1:3) = interaction%partner_aux_mu(1:n_points,1:3)
 
-          this%hm%medium_boxes_initialized = .true.
         end if
       end select
     end do
 
+    if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
+      write(*,*)'medium boxes initialized'
+      this%hm%medium_boxes_initialized = .true.
+    end if
 
     POP_SUB(system_mxll_update_interactions_finish)
   end subroutine system_mxll_update_interactions_finish

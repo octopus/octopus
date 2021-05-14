@@ -513,7 +513,6 @@ contains
       if (.not. interaction%allocated_partner_arrays) then
         call generate_medium_box(partner, interaction%system_gr)
         n_points = partner%points_number
-
         SAFE_ALLOCATE(interaction%partner_aux_ep(n_points,1:3))
         SAFE_ALLOCATE(interaction%partner_aux_mu(n_points,1:3))
         SAFE_ALLOCATE(interaction%partner_c(n_points))

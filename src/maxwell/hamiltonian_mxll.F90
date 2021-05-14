@@ -72,7 +72,7 @@ module hamiltonian_mxll_oct_m
      FLOAT, allocatable            :: c(:) !< speed of light in the linear media
      FLOAT, allocatable            :: sigma_e(:) !< electric conductivy of (lossy) medium
      FLOAT, allocatable            :: sigma_m(:) !< magnetic conductivy of (lossy) medium
-     integer, allocatable          :: points_number
+     integer                       :: points_number
      integer, allocatable          :: points_map(:)
      FLOAT, allocatable            :: aux_ep(:,:) !< auxiliary array for the epsilon derivative profile
      FLOAT, allocatable            :: aux_mu(:,:) !< auxiliary array for the softened mu profile
@@ -458,8 +458,11 @@ contains
 
       if (hm%calc_medium_box .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
-        do il = 1, hm%medium_box%number
-          call apply_medium_box(hm%medium_box, il)
+!        do il = 1, hm%medium_box%number
+!          call apply_medium_box(hm%medium_box, il)
+         !        end do
+        do il = 1, size(hm%medium_boxes)
+          call apply_medium_box_2(hm%medium_boxes(il))
         end do
       end if
     end if
@@ -647,6 +650,55 @@ contains
         call profiling_out(prof_medium_box)
         POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
       end subroutine apply_medium_box
+
+      subroutine apply_medium_box_2(medium)
+        type(single_medium_box_t),  intent(in) :: medium
+
+        integer :: ifield
+        type(profile_t), save :: prof_medium_box
+
+        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_medium_box_2)
+        call profiling_in(prof_medium_box, "MEDIUM_BOX")
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
+        !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, ifield, coeff_real, coeff_imag)
+        do ip_in = 1, medium%points_number
+          ip          = medium%points_map(ip_in)
+          cc          = medium%c(ip_in)/P_c
+          aux_ep(1:3) = medium%aux_ep(ip_in, 1:3)
+          aux_mu(1:3) = medium%aux_mu(ip_in, 1:3)
+          sigma_e     = medium%sigma_e(ip_in)
+          sigma_m     = medium%sigma_m(ip_in)
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            ff_plus(1:3)  = psib%zff_linear(ip, 1:3)
+            ff_minus(1:3) = psib%zff_linear(ip, 4:6)
+            hpsi(1:6) = hpsib%zff_linear(ip, 1:6)
+          case(BATCH_PACKED)
+            ff_plus(1:3)  = psib%zff_pack(1:3, ip)
+            ff_minus(1:3) = psib%zff_pack(4:6, ip)
+            hpsi(1:6) = hpsib%zff_pack(1:6, ip)
+          end select
+          ff_real = TOFLOAT(ff_plus+ff_minus)
+          ff_imag = aimag(ff_plus-ff_minus)
+          aux_ep = dcross_product(aux_ep, ff_real)
+          aux_mu = dcross_product(aux_mu, ff_imag)
+          do ifield = 1, 3
+            coeff_real = - cc * aux_ep(ifield) + sigma_m * ff_imag(ifield)
+            coeff_imag = - cc * aux_mu(ifield) - sigma_e * ff_real(ifield)
+            hpsi(ifield) = cc * hpsi(ifield) + TOCMPLX(coeff_real, coeff_imag)
+            hpsi(ifield+3) = cc * hpsi(ifield+3) + TOCMPLX(-coeff_real, coeff_imag)
+          end do
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
+          case(BATCH_PACKED)
+            hpsib%zff_pack(1:6, ip) = hpsi(1:6)
+          end select
+        end do
+        call profiling_out(prof_medium_box)
+        POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box_2)
+      end subroutine apply_medium_box_2
+
   end subroutine hamiltonian_mxll_apply_batch
 
 
