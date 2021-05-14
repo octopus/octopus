@@ -541,10 +541,10 @@ contains
 
     do idim = 1, st%dim
       if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
-        do ip_in = 1, hm%bc%medium%points_number(idim)
-          ip = hm%bc%medium%points_map(ip_in, idim)
-          st%ep(ip) = hm%bc%medium%ep(ip_in, idim)
-          st%mu(ip) = hm%bc%medium%mu(ip_in, idim)
+        do ip_in = 1, hm%bc%medium(idim)%points_number
+          ip = hm%bc%medium(idim)%points_map(ip_in)
+          st%ep(ip) = hm%bc%medium(idim)%ep(ip_in)
+          st%mu(ip) = hm%bc%medium(idim)%mu(ip_in)
         end do
       end if
     end do

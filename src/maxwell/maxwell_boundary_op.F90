@@ -39,6 +39,7 @@ module maxwell_boundary_op_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use string_oct_m
+  use system_linear_medium_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use simul_box_oct_m
@@ -109,7 +110,7 @@ module maxwell_boundary_op_oct_m
     FLOAT,   allocatable :: der_bndry_mask(:)
 
     type(pml_t)          :: pml       !< attributes of PML absorbing boundaries
-    type(medium_box_t)   :: medium    !< attributes of linear medium boundaries
+    type(single_medium_box_t)   :: medium(3)    !< attributes of linear medium boundaries
 
     integer              :: constant_points_number
     integer, allocatable :: constant_points_map(:)
@@ -162,6 +163,7 @@ contains
     logical             :: plane_waves_check = .false., ab_mask_check = .false., ab_pml_check = .false.
     logical             :: constant_check = .false., zero_check = .false.
     type(profile_t), save :: prof
+    FLOAT :: ep_factor, mu_factor, sigma_e_factor, sigma_m_factor
 
     PUSH_SUB(bc_mxll_init)
 
@@ -253,9 +255,9 @@ contains
         bc%do_plane_waves = .true.
 
       case (MXLL_BC_MEDIUM)
-        call bc_mxll_medium_init(bc%medium, gr, namespace, bounds, idim)
+        call bc_mxll_medium_init(gr, namespace, bounds, idim, ep_factor, mu_factor, sigma_e_factor, sigma_m_factor)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds)
-        call bc_mxll_generate_medium(bc, gr, bounds)
+        call bc_mxll_generate_medium(bc, gr, bounds, ep_factor, mu_factor, sigma_e_factor, sigma_m_factor)
 
       end select
 
@@ -410,6 +412,8 @@ contains
   subroutine bc_mxll_end(bc)
     type(bc_mxll_t),   intent(inout) :: bc
 
+    integer :: idim
+
     PUSH_SUB(bc_mxll_end)
 
     SAFE_DEALLOCATE_A(bc%ab_ufn)
@@ -421,7 +425,9 @@ contains
     SAFE_DEALLOCATE_A(bc%der_bndry_mask_points_map)
 
     call pml_end(bc%pml)
-    call medium_box_end(bc%medium)
+    do idim = 1, 3
+      call single_medium_box_end(bc%medium(idim))
+    end do
 
     SAFE_DEALLOCATE_A(bc%constant_points_map)
     SAFE_DEALLOCATE_A(bc%constant_rs_state)
@@ -479,23 +485,22 @@ contains
   end subroutine plane_wave_end
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_medium_init(medium, gr, namespace, bounds, idim)
-    type(medium_box_t),  intent(inout) :: medium
+  subroutine bc_mxll_medium_init(gr, namespace, bounds, idim, ep_factor, mu_factor, sigma_e_factor, sigma_m_factor)
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:)
     integer,             intent(in)    :: idim
+    FLOAT,               intent(out)   :: ep_factor
+    FLOAT,               intent(out)   :: mu_factor
+    FLOAT,               intent(out)   :: sigma_e_factor
+    FLOAT,               intent(out)   :: sigma_m_factor
 
+    FLOAT :: width
     type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_medium_init)
 
     call profiling_in(prof, 'BC_MXLL_MEDIUM_INIT')
-
-    SAFE_ALLOCATE(medium%ep_factor(1))
-    SAFE_ALLOCATE(medium%mu_factor(1))
-    SAFE_ALLOCATE(medium%sigma_e_factor(1))
-    SAFE_ALLOCATE(medium%sigma_m_factor(1))
 
     !%Variable MediumWidth
     !%Type float
@@ -504,9 +509,9 @@ contains
     !%Description
     !% Width of the boundary region with medium
     !%End
-    call parse_variable(namespace, 'MediumWidth', M_ZERO, medium%width, units_inp%length)
+    call parse_variable(namespace, 'MediumWidth', M_ZERO, width, units_inp%length)
     bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-    bounds(1,idim) = bounds(1,idim) - medium%width
+    bounds(1,idim) = bounds(1,idim) - width
     bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
 
     !%Variable MediumEpsilonFactor
@@ -516,7 +521,7 @@ contains
     !%Description
     !% Linear medium electric susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, medium%ep_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, ep_factor, unit_one)
 
     !%Variable MediumMuFactor
     !%Type float
@@ -525,7 +530,7 @@ contains
     !%Description
     !% Linear medium magnetic susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumMuFactor', M_ONE, medium%mu_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumMuFactor', M_ONE, mu_factor, unit_one)
 
     !%Variable MediumElectricSigma
     !%Type float
@@ -535,7 +540,7 @@ contains
     !% Electric conductivity of the linear medium.
     !%End
 
-    call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, medium%sigma_e_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, sigma_e_factor, unit_one)
     !%Variable MediumMagneticSigma
     !%Type float
     !%Default 0.
@@ -543,7 +548,7 @@ contains
     !%Description
     !% Magnetic conductivity of the linear medium.
     !%End
-    call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, medium%sigma_m_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, sigma_m_factor, unit_one)
 
     call profiling_out(prof)
 
@@ -627,7 +632,7 @@ contains
     type(namespace_t),     intent(in) :: namespace
     type(space_t),         intent(in) :: space
 
-    integer :: err, idim
+    integer :: err, idim, idim2
     FLOAT, allocatable :: tmp(:)
     logical :: mask_check, pml_check, medium_check
     character(1) :: dim_label(3)
@@ -691,29 +696,30 @@ contains
    
     if (medium_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
-      ! medium epsilon
-      tmp(:) = P_ep
-      call get_medium_io_function(bc%medium%ep, bc, tmp)
-      call write_files("maxwell_ep", tmp)
-      ! medium mu
-      tmp(:) = P_mu
-      call get_medium_io_function(bc%medium%mu, bc, tmp)
-      call write_files("maxwell_mu", tmp)
-      ! medium epsilon
-      tmp(:) = P_c
-      call get_medium_io_function(bc%medium%c, bc, tmp)
-      call write_files("maxwell_c", tmp)
-
       do idim = 1, 3
-        ! medium epsilon aux field dim = idim
-        tmp(:) = M_ZERO
-        call get_medium_io_function(bc%medium%aux_ep(:, idim, :), bc, tmp)
-        call write_files("maxwell_aux_ep-"//dim_label(idim), tmp)
+        ! medium epsilon
+        tmp(:) = P_ep
+        call get_medium_io_function(bc%medium(idim)%ep, bc, tmp, idim)
+        call write_files("maxwell_ep"//dim_label(idim), tmp)
+        ! medium mu
+        tmp(:) = P_mu
+        call get_medium_io_function(bc%medium(idim)%mu, bc, tmp, idim)
+        call write_files("maxwell_mu"//dim_label(idim), tmp)
+        ! medium epsilon
+        tmp(:) = P_c
+        call get_medium_io_function(bc%medium(idim)%c, bc, tmp, idim)
+        call write_files("maxwell_c"//dim_label(idim), tmp)
+        do idim2 = 1, 3
+          ! medium epsilon aux field dim = idim
+          tmp(:) = M_ZERO
+          call get_medium_io_function(bc%medium(idim)%aux_ep(:, idim2), bc, tmp, idim)
+          call write_files("maxwell_aux_ep-"//dim_label(idim)//"-"//dim_label(idim2), tmp)
 
-        ! medium mu aux field dim = idim
-        tmp(:) = M_ZERO
-        call get_medium_io_function(bc%medium%aux_mu(:, idim, :), bc, tmp)
-        call write_files("maxwell_aux_mu-"//dim_label(idim), tmp)
+          ! medium mu aux field dim = idim
+          tmp(:) = M_ZERO
+          call get_medium_io_function(bc%medium(idim)%aux_mu(:, idim2), bc, tmp, idim)
+          call write_files("maxwell_aux_mu-"//dim_label(idim)//"-"//dim_label(idim2), tmp)
+        end do
       end do
 
       SAFE_DEALLOCATE_A(tmp)
@@ -753,18 +759,17 @@ contains
 
     end subroutine get_mask_io_function
 
-    subroutine get_medium_io_function(medium_func, bc, io_func)
-      FLOAT,              intent(in)    :: medium_func(:,:)
+    subroutine get_medium_io_function(medium_func, bc, io_func, idim)
+      FLOAT,              intent(in)    :: medium_func(:)
       type(bc_mxll_t),    intent(in)    :: bc
       FLOAT,              intent(inout) :: io_func(:)
+      integer,            intent(in)    :: idim
 
-      integer :: ip, ip_in, idim
+      integer :: ip, ip_in
 
-      do idim = 1, 3
-        do ip_in = 1, bc%medium%points_number(idim)
-          ip          = bc%medium%points_map(ip_in, idim)
-          io_func(ip) = medium_func(ip_in, idim)
-        end do
+      do ip_in = 1, bc%medium(idim)%points_number
+        ip          = bc%medium(idim)%points_map(ip_in)
+        io_func(ip) = medium_func(ip_in)
       end do
 
     end subroutine get_medium_io_function
@@ -1040,14 +1045,16 @@ contains
             ip_bd = ip_bd + 1
           end if
         end do
-        bc%medium%points_number(idim) = ip_in
-        bc%medium%bdry_number(idim) = ip_bd
+        bc%medium(idim)%points_number = ip_in
+        bc%medium(idim)%bdry_number = ip_bd
       end if
     end do
-    SAFE_ALLOCATE(bc%medium%aux_ep(1:ip_in, 1:st%dim, 3))
-    SAFE_ALLOCATE(bc%medium%aux_mu(1:ip_in, 1:st%dim, 3))
-    SAFE_ALLOCATE(bc%medium%points_map(1:ip_in_max, 3))
-    SAFE_ALLOCATE(bc%medium%bdry_map(1:ip_bd_max, 3))
+    do idim = 1, 3
+      SAFE_ALLOCATE(bc%medium(idim)%aux_ep(1:ip_in, st%dim))
+      SAFE_ALLOCATE(bc%medium(idim)%aux_mu(1:ip_in, st%dim))
+      SAFE_ALLOCATE(bc%medium(idim)%points_map(1:ip_in_max))
+      SAFE_ALLOCATE(bc%medium(idim)%bdry_map(1:ip_bd_max))
+    end do
 
     ip_in = 0
     ip_bd = 0
@@ -1058,11 +1065,11 @@ contains
           call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
-            bc%medium%points_map(ip_in,idim) = ip
+            bc%medium(idim)%points_map(ip_in) = ip
           end if
           if ((boundary_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_bd = ip_bd + 1
-           bc%medium%bdry_map(ip_bd, idim) = ip
+           bc%medium(idim)%bdry_map(ip_bd) = ip
           end if
         end do
       end if
@@ -1254,11 +1261,15 @@ contains
   end subroutine bc_mxll_generate_mask
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_generate_medium(bc, gr, bounds)
+  subroutine bc_mxll_generate_medium(bc, gr, bounds, ep_factor, mu_factor, sigma_e_factor, sigma_m_factor)
     type(bc_mxll_t),         intent(inout) :: bc
     type(grid_t),            intent(in)    :: gr
     FLOAT,                   intent(in)    :: bounds(:,:)
-
+    FLOAT,                   intent(in)    :: ep_factor
+    FLOAT,                   intent(in)    :: mu_factor
+    FLOAT,                   intent(in)    :: sigma_e_factor
+    FLOAT,                   intent(in)    :: sigma_m_factor
+    
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
     FLOAT   :: dd, dd_min, dd_max, xx(3), xxp(3)
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
@@ -1268,44 +1279,43 @@ contains
 
     call profiling_in(prof, 'BC_MXLL_GENERATE_MEDIUM')
 
-    ip_in_max = maxval(bc%medium%points_number(:))
-
-    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%sb%dim, 3))
-    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%sb%dim, 3))
-    SAFE_ALLOCATE(bc%medium%ep(ip_in_max, 3))
-    SAFE_ALLOCATE(bc%medium%mu(ip_in_max, 3))
-    SAFE_ALLOCATE(bc%medium%sigma_e(ip_in_max, 3))
-    SAFE_ALLOCATE(bc%medium%sigma_m(ip_in_max, 3))
-    SAFE_ALLOCATE(bc%medium%c(ip_in_max, 3))
-    SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
-    bc%medium%aux_ep = M_ZERO
-    bc%medium%aux_mu = M_ZERO
-    bc%medium%c = P_c
-
+    ip_in_max = max(bc%medium(1)%points_number, bc%medium(2)%points_number, bc%medium(3)%points_number)
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     do idim = 1, 3
+      SAFE_ALLOCATE(bc%medium(idim)%aux_ep(ip_in_max,gr%sb%dim))
+      SAFE_ALLOCATE(bc%medium(idim)%aux_mu(ip_in_max,gr%sb%dim))
+      SAFE_ALLOCATE(bc%medium(idim)%ep(ip_in_max))
+      SAFE_ALLOCATE(bc%medium(idim)%mu(ip_in_max))
+      SAFE_ALLOCATE(bc%medium(idim)%sigma_e(ip_in_max))
+      SAFE_ALLOCATE(bc%medium(idim)%sigma_m(ip_in_max))
+      SAFE_ALLOCATE(bc%medium(idim)%c(ip_in_max))
+      SAFE_ALLOCATE(tmp(gr%mesh%np_part))
+      SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
+      bc%medium(idim)%aux_ep = M_ZERO
+      bc%medium(idim)%aux_mu = M_ZERO
+      bc%medium(idim)%c = P_c
+
       tmp = P_ep
       do  ip = 1, gr%mesh%np_part
         call maxwell_box_point_info(bc, gr%mesh, ip, bounds, point_info)
         if ((point_info /= 0) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
-          do ip_bd = 1, bc%medium%bdry_number(idim)
-            ipp = bc%medium%bdry_map(ip_bd, idim)
+          do ip_bd = 1, bc%medium(idim)%bdry_number
+            ipp = bc%medium(idim)%bdry_map(ip_bd)
             xxp(:) = gr%mesh%x(ipp, :)
             dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
             if (dd < dd_min) dd_min = dd
           end do
-          tmp(ip) = P_ep * (M_ONE + bc%medium%ep_factor(1) * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min-M_TWO*dd_max))))
+          tmp(ip) = P_ep * (M_ONE + ep_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min-M_TWO*dd_max))))
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, bc%medium%points_number(idim)
-        ip = bc%medium%points_map(ip_in, idim)
-        bc%medium%aux_ep(ip_in, :, idim) = &
-          tmp_grad(ip, :)/(M_FOUR*P_ep*bc%medium%ep_factor(1) * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
+      do ip_in = 1, bc%medium(idim)%points_number
+        ip = bc%medium(idim)%points_map(ip_in)
+        bc%medium(idim)%aux_ep(ip_in, :) = &
+          tmp_grad(ip, :)/(M_FOUR*P_ep*ep_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
       end do
     end do
 
@@ -1316,43 +1326,43 @@ contains
         if ((point_info == 1) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
-          do ip_bd = 1, bc%medium%bdry_number(idim)
-            ipp = bc%medium%bdry_map(ip_bd, idim)
+          do ip_bd = 1, bc%medium(idim)%bdry_number
+            ipp = bc%medium(idim)%bdry_map(ip_bd)
             xxp(:) = gr%mesh%x(ipp,:)
             dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
             if (dd < dd_min) dd_min = dd
           end do
-          tmp(ip) = P_mu * (M_ONE + bc%medium%mu_factor(1) * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
+          tmp(ip) = P_mu * (M_ONE + mu_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, bc%medium%points_number(idim)
-        ip = bc%medium%points_map(ip_in, idim)
-        bc%medium%aux_mu(ip_in, :, idim) = &
-          tmp_grad(ip, :)/(M_FOUR*P_mu*bc%medium%mu_factor(1) * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
+      do ip_in = 1, bc%medium(idim)%points_number
+        ip = bc%medium(idim)%points_map(ip_in)
+        bc%medium(idim)%aux_mu(ip_in, :) = &
+          tmp_grad(ip, :)/(M_FOUR*P_mu*mu_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
       end do
     end do
 
     do idim = 1, 3
-      do ip_in = 1, bc%medium%points_number(idim)
-        ip = bc%medium%points_map(ip_in,idim)
+      do ip_in = 1, bc%medium(idim)%points_number
+        ip = bc%medium(idim)%points_map(ip_in)
         xx(:) = gr%mesh%x(ip, :)
         dd_min = M_HUGE
-        do ip_bd = 1, bc%medium%bdry_number(idim)
-          ipp = bc%medium%bdry_map(ip_bd, idim)
+        do ip_bd = 1, bc%medium(idim)%bdry_number
+          ipp = bc%medium(idim)%bdry_map(ip_bd)
           xxp(:) = gr%mesh%x(ipp, :)
           dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
           if (dd < dd_min) dd_min = dd
         end do
-        bc%medium%ep(ip_in, idim) = P_ep * (M_ONE + bc%medium%ep_factor(1) &
+        bc%medium(idim)%ep(ip_in) = P_ep * (M_ONE + ep_factor &
              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
-        bc%medium%mu(ip_in, idim) = P_mu * (M_ONE + bc%medium%mu_factor(1) &
+        bc%medium(idim)%mu(ip_in) = P_mu * (M_ONE + mu_factor &
              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
-        bc%medium%sigma_e(ip_in, idim) = (M_ONE + bc%medium%sigma_e_factor(1) &
+        bc%medium(idim)%sigma_e(ip_in) = (M_ONE + sigma_e_factor &
              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
-        bc%medium%sigma_m(ip_in, idim) = (M_ONE + bc%medium%sigma_m_factor(1) &
+        bc%medium(idim)%sigma_m(ip_in) = (M_ONE + sigma_m_factor &
              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
-        bc%medium%c(ip_in, idim) = M_ONE/sqrt(bc%medium%ep(ip_in, idim)*bc%medium%mu(ip_in, idim))
+        bc%medium(idim)%c(ip_in) = M_ONE/sqrt(bc%medium(idim)%ep(ip_in)*bc%medium(idim)%mu(ip_in))
       end do
     end do
 

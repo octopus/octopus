@@ -47,35 +47,50 @@ module system_linear_medium_oct_m
   private
   public ::           &
     system_linear_medium_t,    &
-    system_linear_medium_init
+    system_linear_medium_init, &
+    single_medium_box_t,       &
+    single_medium_box_end
 
   integer, parameter :: &
     MEDIUM_PARALLELEPIPED = 1,         &
     MEDIUM_BOX_FILE       = 2
 
+  type single_medium_box_t
+    FLOAT, allocatable            :: ep(:) !< permitivity of the linear media
+    FLOAT, allocatable            :: mu(:) !< permeability of the linear media
+    FLOAT, allocatable            :: c(:) !< speed of light in the linear media
+    FLOAT, allocatable            :: sigma_e(:) !< electric conductivy of (lossy) medium
+    FLOAT, allocatable            :: sigma_m(:) !< magnetic conductivy of (lossy) medium
+    integer                       :: points_number
+    integer, allocatable          :: points_map(:)
+    integer                       :: bdry_number
+    integer, allocatable          :: bdry_map(:)
+    FLOAT, allocatable            :: aux_ep(:,:) !< auxiliary array for the epsilon derivative profile
+    FLOAT, allocatable            :: aux_mu(:,:) !< auxiliary array for the softened mu profile
+  end type single_medium_box_t
+
   type, extends(system_t) :: system_linear_medium_t
-     integer                         :: box_shape
+     integer            :: box_shape
      integer            :: edge_profile  !< edge shape profile (smooth or steep)
      FLOAT              :: center(3) !< center of a box
      FLOAT              :: lsize(3)  !< length in each direction of a box
-     FLOAT, allocatable              :: ep(:) !< permitivity of the linear media
-     FLOAT, allocatable              :: mu(:) !< permeability of the linear media
-     FLOAT, allocatable              :: c(:) !< speed of light in the linear media
+     FLOAT, allocatable :: ep(:) !< permitivity of the linear media
+     FLOAT, allocatable :: mu(:) !< permeability of the linear media
+     FLOAT, allocatable :: c(:) !< speed of light in the linear media
      FLOAT              :: ep_factor !< permitivity before applying edge profile
      FLOAT              :: mu_factor !< permeability before applying edge profile
      FLOAT              :: sigma_e_factor !< electric conductivy before applying edge profile
      FLOAT              :: sigma_m_factor !< magnetic conductivity before applying edge4 profile
-     FLOAT, allocatable              :: sigma_e(:) !< electric conductivy of (lossy) medium
-     FLOAT, allocatable              :: sigma_m(:) !< magnetic conductivy of (lossy) medium
+     FLOAT, allocatable :: sigma_e(:) !< electric conductivy of (lossy) medium
+     FLOAT, allocatable :: sigma_m(:) !< magnetic conductivy of (lossy) medium
      integer            :: points_number
      integer            :: global_points_number
-     integer, allocatable            :: points_map(:)
-     FLOAT, allocatable              :: aux_ep(:,:) !< auxiliary array for storing the epsilon derivative profile
-     FLOAT, allocatable              :: aux_mu(:,:) !< auxiliary array for storing the softened mu profile
+     integer, allocatable :: points_map(:)
+     FLOAT, allocatable :: aux_ep(:,:) !< auxiliary array for storing the epsilon derivative profile
+     FLOAT, allocatable :: aux_mu(:,:) !< auxiliary array for storing the softened mu profile
      integer            :: bdry_number
-     integer, allocatable            :: bdry_map(:)
-     character(len=256)  :: filename
-     FLOAT                           :: width !< width of medium medium when used as boundary condition
+     integer, allocatable :: bdry_map(:)
+     character(len=256)   :: filename
 
   contains
     procedure :: init_interaction => system_linear_medium_init_interaction
@@ -816,6 +831,33 @@ contains
     POP_SUB(get_points_map_from_file)
 
   end subroutine get_points_map_from_file
+
+  ! ---------------------------------------------------------
+  !> Deallocation of medium_box components
+  subroutine single_medium_box_end(medium_box)
+    type(single_medium_box_t),   intent(inout)    :: medium_box
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_end)
+
+    call profiling_in(prof, 'MEDIUM_BOX_END')
+
+    SAFE_DEALLOCATE_A(medium_box%points_map)
+    SAFE_DEALLOCATE_A(medium_box%bdry_map)
+    SAFE_DEALLOCATE_A(medium_box%aux_ep)
+    SAFE_DEALLOCATE_A(medium_box%aux_mu)
+    SAFE_DEALLOCATE_A(medium_box%c)
+    SAFE_DEALLOCATE_A(medium_box%ep)
+    SAFE_DEALLOCATE_A(medium_box%mu)
+    SAFE_DEALLOCATE_A(medium_box%sigma_e)
+    SAFE_DEALLOCATE_A(medium_box%sigma_m)
+
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_end)
+
+  end subroutine single_medium_box_end
 
 end module system_linear_medium_oct_m
 
