@@ -147,7 +147,7 @@ contains
     type(submesh_t) :: sphere
     type(ps_t), pointer :: ps
     integer :: ia, ip
-    FLOAT :: radius, r
+    FLOAT :: radius
     type(profile_t), save :: prof
 
     PUSH_SUB(ion_electron_local_potential_calculate)
@@ -195,8 +195,7 @@ contains
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np
-          r = sphere%x(ip, 0)
-          vl(ip) = spline_eval(ps%vl, r)
+          vl(ip) = spline_eval(ps%vl, sphere%r(ip))
         end do
 
         call submesh_add_to_mesh(sphere, vl, this%potential(:,1))

@@ -222,7 +222,7 @@ end subroutine X(get_atomic_orbital)
       ps => species_ps(species)
 
       do ip = 1, submesh%np
-        phi(ip) = submesh%x(ip, 0)
+        phi(ip) = submesh%r(ip)
       end do
 
       if(species_is_ps(species)) then
@@ -237,7 +237,7 @@ end subroutine X(get_atomic_orbital)
       else
         ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
         do ip = 1, submesh%np
-          ww = species_zval(species)*submesh%x(ip, 0)/ii
+          ww = species_zval(species)*submesh%r(ip)/ii
           phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
             exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, TOFLOAT(2*ll + 1), 2*ww)
         end do
@@ -276,7 +276,7 @@ end subroutine X(get_atomic_orbital)
       nn = (/ii, ll, mm/)
 
       do ip = 1, submesh%np
-        phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)
+        phi(ip) = exp(-ww*submesh%r(ip)**2/M_TWO)
         do idir = 1, submesh%mesh%sb%dim
           phi(ip) = phi(ip) * hermite(nn(idir) - 1, submesh%x(ip, idir)*sqrtw)
         end do
@@ -319,7 +319,7 @@ end subroutine X(get_atomic_orbital)
     if(species_is_ps(species)) then
       ps => species_ps(species)
       threshold = spline_range_max(ps%ur(ii, ispin))
-      if(any(submesh%x(1:submesh%np, 0) > threshold)) safe = .false.
+      if(any(submesh%r(1:submesh%np) > threshold)) safe = .false.
     end if
 
     if(safe) then
@@ -333,7 +333,7 @@ end subroutine X(get_atomic_orbital)
 
       is = 0
       do ip = 1, submesh%np
-        if(submesh%x(ip, 0) <= threshold) then
+        if(submesh%r(ip) <= threshold) then
           is = is + 1
         end if
       end do
@@ -342,14 +342,16 @@ end subroutine X(get_atomic_orbital)
       tmp_sm%mesh => submesh%mesh
       tmp_sm%np = is
       tmp_sm%np_part = is
-      SAFE_ALLOCATE(tmp_sm%x(1:tmp_sm%np_part, 0:submesh%mesh%sb%dim))
+      SAFE_ALLOCATE(tmp_sm%x(1:tmp_sm%np_part, 1:submesh%mesh%sb%dim))
+      SAFE_ALLOCATE(tmp_sm%r(1:tmp_sm%np_part))
       SAFE_ALLOCATE(phi_tmp(1:tmp_sm%np))
       is = 0
       do ip = 1, submesh%np
-        if(submesh%x(ip, 0) <= threshold) then
+        if(submesh%r(ip) <= threshold) then
           is = is + 1
           map(is) = ip
-          tmp_sm%x(is, 0:submesh%mesh%sb%dim) = submesh%x(ip, 0:submesh%mesh%sb%dim)
+          tmp_sm%x(is, :) = submesh%x(ip, :)
+          tmp_sm%r(is) = submesh%r(ip)
         end if
       end do
 

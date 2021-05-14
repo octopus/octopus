@@ -197,7 +197,7 @@ contains
     !   If a point of the submesh is inside the unit cell, diff(:,is) = 0.
     SAFE_ALLOCATE(diff(1:dim, 1:ns))
     do is = 1, ns
-      diff(1:dim, is) = this%sphere%x(is, 1:dim) - this%sphere%mesh%x(this%sphere%map(is), 1:dim)
+      diff(:, is) = this%sphere%x(is,:) - this%sphere%mesh%x(this%sphere%map(is), :)
     end do
 
     do iq = std%kpt%start, std%kpt%end
@@ -221,7 +221,7 @@ contains
           end if
 
           if(present(vec_pot_var)) then
-            if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:dim, this%sphere%map(is))*this%sphere%x(is, 1:dim))
+            if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:dim, this%sphere%map(is))*this%sphere%x(is, :))
           end if
 
           if(bnd%spiralBC .and. iphase > 1) then

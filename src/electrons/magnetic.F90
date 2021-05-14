@@ -187,7 +187,7 @@ contains
       if(boundaries%spiral) then 
         SAFE_ALLOCATE(phase_spiral(1:sphere%np))
         do is = 1, sphere%np
-          phase_spiral(is) = exp(+M_zI*sum((sphere%x(is,1:mesh%sb%dim)-mesh%x(sphere%map(is),1:mesh%sb%dim)) &
+          phase_spiral(is) = exp(+M_zI*sum((sphere%x(is,:) - mesh%x(sphere%map(is),:)) &
                                        *boundaries%spiral_q(1:mesh%sb%dim)))
         end do
 

@@ -1119,7 +1119,7 @@ contains
         if(w90_proj_lmr(iw,3) == 1) then
           ! apply radial function
           do ip = 1,orbitals(iw)%sphere%np
-            ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%x(ip,0))
+            ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%r(ip))
           end do
         else
           call messages_not_implemented("oct-wannier90: r/=1 for the radial part")

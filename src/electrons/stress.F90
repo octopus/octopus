@@ -700,7 +700,7 @@ contains
     FLOAT,                    intent(inout) :: rvpsl(:,:)
       
     integer :: ip
-    FLOAT :: radius, r
+    FLOAT :: radius
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
@@ -721,8 +721,7 @@ contains
        SAFE_ALLOCATE(vl(1:sphere%np))
 
        do ip = 1, sphere%np
-         r = sphere%x(ip, 0)
-         vl(ip) = spline_eval(ps%vl, r)
+         vl(ip) = spline_eval(ps%vl, sphere%r(ip))
        end do
 
        nullify(ps) 
