@@ -543,7 +543,7 @@ contains
     if(this%intersite) then
       this%maxneighbors = 0
       do ios = 1, this%norbsets
-        call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, gr%sb, ions, gr%der, psolver, &
+        call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, ions, gr%der, psolver, &
           this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase, this%sm_poisson)
         this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
       end do
