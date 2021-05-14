@@ -1003,8 +1003,8 @@ contains
     case(POISSON_ISF)
       !TODO: Add support for domain parrallelization
       ASSERT(.not. der%mesh%parallel_in_domains)
-      call submesh_get_cube_dim(sm, box, space%dim)
-      call submesh_init_cube_map(sm, space%dim)
+      call submesh_get_cube_dim(sm, space, box)
+      call submesh_init_cube_map(sm, space)
       call cube_init(this%cube, box, namespace, space, fft_type = FFT_NONE, need_partition=.not.der%mesh%parallel_in_domains)
       call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
 
@@ -1016,8 +1016,8 @@ contains
       else
         this%cube%mpi_grp = this%der%mesh%mpi_grp
       end if
-      call submesh_get_cube_dim(sm, box, space%dim)
-      call submesh_init_cube_map(sm, space%dim)
+      call submesh_get_cube_dim(sm, space, box)
+      call submesh_init_cube_map(sm, space)
       call cube_init(this%cube, box, namespace, space, fft_type = FFT_NONE, need_partition=.not.der%mesh%parallel_in_domains)
       qq = M_ZERO
       call poisson_psolver_init(this%psolver_solver, namespace, space, this%der%mesh, this%cube, M_ZERO, qq, force_isolated=.true.)
@@ -1028,8 +1028,8 @@ contains
       !We need to parse this, in case this routine is called before poisson_init
       call parse_variable(namespace, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
 
-      call submesh_get_cube_dim(sm, box, space%dim)
-      call submesh_init_cube_map(sm, space%dim)
+      call submesh_get_cube_dim(sm, space, box)
+      call submesh_init_cube_map(sm, space)
       !We double the size of the cell
       !Maybe the factor of two should be controlled as a variable
       do idir = 1, space%dim

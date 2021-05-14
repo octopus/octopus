@@ -66,7 +66,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
     norbs = os%norbs
     np_sphere = os%sphere%np
 
-    call submesh_build_global(os%sphere)
+    call submesh_build_global(os%sphere, space)
 
     select case (this%sm_poisson)
     case(SM_POISSON_DIRECT)

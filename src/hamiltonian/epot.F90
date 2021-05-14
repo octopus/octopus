@@ -400,7 +400,7 @@ contains
       do ia = 1, ions%natoms
         if(ep%proj(ia)%type == PROJ_NONE) cycle
         ps => species_ps(ions%atom(ia)%species)
-        call submesh_broadcast(ep%proj(ia)%sphere, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
+        call submesh_broadcast(ep%proj(ia)%sphere, ions%space, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
           ions%atoms_dist%node(ia), ions%atoms_dist%mpi_grp)
       end do
     end if
