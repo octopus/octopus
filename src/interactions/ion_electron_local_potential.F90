@@ -121,8 +121,8 @@ contains
     SAFE_ALLOCATE(this%potential(1:mesh%np, 1:1))
 
     this%have_density = .false.
-    do ia = 1, ions%natoms
-      if(local_potential_has_density(ions%space, ions%atom(ia))) then
+    do ia = 1, ions%nspecies
+      if(local_potential_has_density(ions%space, ions%species(ia))) then
         this%have_density = .true.
         exit
       end if
@@ -166,7 +166,7 @@ contains
       ! (for all-electron species or pseudopotentials in periodic
       ! systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(this%space, this%atom(ia))) then
+      if(local_potential_has_density(this%space, this%atom(ia)%species)) then
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
         call species_get_long_range_density(this%atom(ia)%species, this%namespace, this%space, this%latt, &

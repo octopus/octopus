@@ -19,7 +19,6 @@
 #include "global.h"
 
 module epot_oct_m
-  use atom_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use gauge_field_oct_m
@@ -293,8 +292,8 @@ contains
     
 
     ep%have_density = .false.
-    do ia = 1, ions%natoms
-      if (local_potential_has_density(ions%space, ions%atom(ia))) then
+    do ia = 1, ions%nspecies
+      if (local_potential_has_density(ions%space, ions%species(ia))) then
         ep%have_density = .true.
         exit
       end if
@@ -416,22 +415,23 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical pure function local_potential_has_density(space, atom) result(has_density)
+  logical pure function local_potential_has_density(space, species) result(has_density)
     type(space_t),        intent(in)    :: space
-    type(atom_t),         intent(in)    :: atom
+    type(species_t),         intent(in)    :: species
     
-    has_density = species_has_density(atom%species) .or. (species_is_ps(atom%species) .and. space%is_periodic())
+    has_density = species_has_density(species) .or. (species_is_ps(species) .and. space%is_periodic())
 
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, space, latt, mesh, atom, iatom, vpsl)
+  subroutine epot_local_potential(ep, namespace, space, latt, mesh, species, pos, iatom, vpsl)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
     type(mesh_t),             intent(in)    :: mesh
-    type(atom_t),             intent(in)    :: atom
+    type(species_t),          intent(in)    :: species
+    FLOAT,                    intent(in)    :: pos(1:space%dim)
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
 
@@ -456,10 +456,10 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(space, atom)) then
+      if(local_potential_has_density(space, species)) then
         SAFE_ALLOCATE(rho(1:mesh%np))
 
-        call species_get_long_range_density(atom%species, namespace, space, latt, atom%x(1:space%dim), mesh, rho)
+        call species_get_long_range_density(species, namespace, space, latt, pos, mesh, rho)
 
         SAFE_ALLOCATE(vl(1:mesh%np))
           
@@ -476,7 +476,7 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:mesh%np))
-        call species_get_local(atom%species, namespace, space, latt, atom%x(1:space%dim), mesh, vl)
+        call species_get_local(species, namespace, space, latt, pos, mesh, vl)
 
       end if
 
@@ -486,13 +486,13 @@ contains
       end if
 
       !the localized part
-      if(species_is_ps(atom%species)) then
+      if(species_is_ps(species)) then
 
-        ps => species_ps(atom%species)
+        ps => species_ps(species)
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-        call submesh_init(sphere, space, mesh, latt, atom%x(1:space%dim), radius)
+        call submesh_init(sphere, space, mesh, latt, pos, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np
@@ -573,8 +573,8 @@ contains
 
     do iatom = 1, ions%natoms
       ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
-      call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom), iatom, &
-                ep%local_potential(1:gr%mesh%np, iatom))!, time)
+      call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom)%species, &
+        ions%atom(iatom)%x(1:ions%space%dim), iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 
