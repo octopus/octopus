@@ -59,15 +59,18 @@ module classical_particles_oct_m
     classical_particles_init_interaction_as_partner
 
   type, extends(system_t), abstract :: classical_particles_t
-    integer :: np
-    FLOAT, allocatable :: mass(:)
-    FLOAT, allocatable :: pos(:,:)
-    FLOAT, allocatable :: vel(:,:)
-    FLOAT, allocatable :: acc(:,:)
+    private
+    integer, public :: np                        !< Number of particles in the system
+    FLOAT, allocatable, public :: mass(:)        !< Mass of the particles
+    FLOAT, allocatable, public :: pos(:,:)       !< Position of the particles
+    FLOAT, allocatable, public :: vel(:,:)       !< Velocity of the particles
+    FLOAT, allocatable, public :: tot_force(:,:) !< Total force acting on each particle
+
+    !> The following variables are work arrays used by the different propagators:
+    FLOAT, allocatable :: acc(:,:)        !< Acceleration of the particles
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT, allocatable :: save_pos(:,:)   !< A storage for the SCF loops
     FLOAT, allocatable :: save_vel(:,:)   !< A storage for the SCF loops
-    FLOAT, allocatable :: tot_force(:,:)  !< Total force acting on each particle
     FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     FLOAT, allocatable :: prev_pos(:,:,:) !< Used for extrapolation
     FLOAT, allocatable :: prev_vel(:,:,:) !< Used for extrapolation
@@ -98,8 +101,6 @@ contains
     SAFE_ALLOCATE(this%mass(1:np))
     SAFE_ALLOCATE(this%pos(1:this%space%dim, 1:np))
     SAFE_ALLOCATE(this%vel(1:this%space%dim, 1:np))
-    SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:np))
-    SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:np))
     SAFE_ALLOCATE(this%tot_force(1:this%space%dim, 1:np))
 
     this%quantities(POSITION)%required = .true.
@@ -147,15 +148,21 @@ contains
       this%save_vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np)
 
     case (VERLET_START)
+      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:np))
+      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:np))
       SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1))
       do ip = 1, this%np
         this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
       end do
 
     case (VERLET_FINISH)
+      SAFE_DEALLOCATE_A(this%acc)
+      SAFE_DEALLOCATE_A(this%prev_tot_force)
       SAFE_DEALLOCATE_A(this%prev_acc)
 
     case (BEEMAN_FINISH)
+      SAFE_DEALLOCATE_A(this%acc)
+      SAFE_DEALLOCATE_A(this%prev_tot_force)
       SAFE_DEALLOCATE_A(this%prev_acc)
       SAFE_DEALLOCATE_A(this%save_pos)
       SAFE_DEALLOCATE_A(this%save_vel)
@@ -187,6 +194,8 @@ contains
         SAFE_ALLOCATE(this%save_pos(1:this%space%dim, 1:this%np))
         SAFE_ALLOCATE(this%save_vel(1:this%space%dim, 1:this%np))
       end if
+      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:np))
+      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:np))
       SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1:2))
       do ip = 1, this%np
         this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
@@ -455,11 +464,7 @@ contains
     SAFE_DEALLOCATE_A(this%mass)
     SAFE_DEALLOCATE_A(this%pos)
     SAFE_DEALLOCATE_A(this%vel)
-    SAFE_DEALLOCATE_A(this%acc)
-    SAFE_DEALLOCATE_A(this%prev_tot_force)
     SAFE_DEALLOCATE_A(this%tot_force)
-    SAFE_DEALLOCATE_A(this%save_pos)
-    SAFE_DEALLOCATE_A(this%save_vel)
 
     call system_end(this)
 
