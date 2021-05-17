@@ -29,7 +29,6 @@ module maxwell_boundary_op_oct_m
   use io_function_oct_m
   use ions_oct_m
   use maxwell_function_oct_m
-  use medium_mxll_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
