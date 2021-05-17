@@ -496,7 +496,7 @@ contains
     end if
 
     if(outp%what_now(OPTION__OUTPUT__MATRIX_ELEMENTS, iter)) then
-      call output_me(outp%me, namespace, space, dir, st, gr, geo, hm)
+      call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
     do iout = lbound(outp%how, 1), ubound(outp%how, 1)
@@ -552,7 +552,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, geo, iter)
+  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
