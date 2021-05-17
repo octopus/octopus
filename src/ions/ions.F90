@@ -124,7 +124,6 @@ contains
 
     type(read_coords_info) :: xyz
     integer :: ia, ierr
-    logical :: move
     character(len=100)  :: function_name
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
@@ -157,10 +156,11 @@ contains
     ions%natoms = xyz%n
     SAFE_ALLOCATE(ions%atom(1:ions%natoms))
     do ia = 1, ions%natoms
-      move=.true.
-      if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
-      call atom_init(ions%atom(ia), xyz%atom(ia)%label, move=move)
+      call atom_init(ions%atom(ia), xyz%atom(ia)%label)
       ions%pos(:,ia) = xyz%atom(ia)%x(1:ions%space%dim)
+      if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) then
+        ions%fixed(ia) = .not. xyz%atom(ia)%move
+      end if
     end do
 
     if (allocated(xyz%latvec)) then
@@ -206,6 +206,11 @@ contains
     call ions_fold_atoms_into_cell(ions)
     call ions_init_species(ions, print_info=print_info)
     call distributed_nullify(ions%atoms_dist, ions%natoms)
+
+    ! Set the masses. This needs to be done after initializing the species.
+    do ia = 1, ions%natoms
+      ions%mass(ia) = species_mass(ions%atom(ia)%species)
+    end do
 
     ! Check that atoms are not too close
     if (ions%natoms > 1) then
@@ -745,7 +750,7 @@ contains
         if (.not. mask(ia)) cycle
       end if
       if (.not. optional_default(pseudo, .false.)) then
-        mass = species_mass(this%atom(ia)%species)
+        mass = this%mass(ia)
       end if
       pos = pos + mass*this%pos(:, ia)
       total_mass = total_mass + mass
@@ -768,7 +773,7 @@ contains
     vel = M_ZERO
     total_mass = M_ZERO
     do iatom = 1, this%natoms
-      mass = species_mass(this%atom(iatom)%species)
+      mass = this%mass(iatom)
       total_mass = total_mass + mass
       vel = vel + mass*this%vel(:, iatom)
     end do
@@ -856,7 +861,7 @@ contains
     tinertia = M_ZERO
     mass = M_ONE
     do iatom = 1, this%natoms
-      if (.not.pseudo) mass = species_mass(this%atom(iatom)%species)
+      if (.not.pseudo) mass = this%mass(iatom)
       do ii = 1, this%space%dim
         tinertia(ii, :) = tinertia(ii, :) - mass*this%pos(ii, iatom)*this%pos(:, iatom)
         tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(this%pos(:, iatom)**2)

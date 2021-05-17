@@ -166,7 +166,7 @@ contains
       if(propagate_chi) then
         do iatom = 1, ions%natoms
           pos0t(1:ions%space%dim, iatom) = q(iatom, 1:ions%space%dim)
-          vel0t(1:ions%space%dim, iatom) = p(iatom, 1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+          vel0t(1:ions%space%dim, iatom) = p(iatom, 1:ions%space%dim) / ions%mass(iatom)
         end do
         posfinalt = pos0t
         velfinalt = vel0t
@@ -306,7 +306,7 @@ contains
       if(propagate_chi) then
         do iatom = 1, ions%natoms
           q(iatom, 1:ions%space%dim) = posfinalt(1:ions%space%dim, iatom)
-          p(iatom, 1:ions%space%dim) = species_mass(ions%atom(iatom)%species) * velfinalt(1:ions%space%dim, iatom)
+          p(iatom, 1:ions%space%dim) = ions%mass(iatom) * velfinalt(1:ions%space%dim, iatom)
         end do
       end if
     end if
@@ -374,13 +374,13 @@ contains
       call forces_calculate(gr, namespace, ions, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, ions%natoms
         posk(:, iatom) = dt * vel(:, iatom)
-        velk(:, iatom) = dt * ions%tot_force(:, iatom) / species_mass(ions%atom(iatom)%species)
+        velk(:, iatom) = dt * ions%tot_force(:, iatom) / ions%mass(iatom)
       end do
       if(propagate_chi) then
         call forces_costate_calculate(gr, namespace, ions, hm, stphi, stchi, coforce, transpose(post))
         do iatom = 1, ions%natoms
           poskt(:, iatom) = dt * velt(:, iatom)
-          velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(ions%atom(iatom)%species)
+          velkt(:, iatom) = dt * coforce(iatom, :) / ions%mass(iatom)
         end do
       end if
     end subroutine f_ions

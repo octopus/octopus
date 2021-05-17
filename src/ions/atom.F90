@@ -28,7 +28,6 @@ module atom_oct_m
     character(len=LABEL_LEN)  :: label = ""
     type(species_t), pointer  :: species  =>null() !< pointer to species
     integer, dimension(MAX_DIM) :: c   = 0      !< Constrain on te atom (0 or 1)
-    logical                   :: move  = .true. !< should I move this atom in the optimization mode
 
     !Components of the force
     FLOAT, dimension(MAX_DIM) :: f_ii     = M_ZERO !< Ion-Ion part
@@ -58,11 +57,10 @@ module atom_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine atom_init(this, label, species, move)
+  subroutine atom_init(this, label, species)
     type(atom_t),                      intent(out) :: this
     character(len=*),                  intent(in)  :: label
     type(species_t), target, optional, intent(in)  :: species
-    logical,                 optional, intent(in)  :: move
 
     PUSH_SUB(atom_init)
 
@@ -76,9 +74,6 @@ contains
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
     this%f_u       = M_ZERO
-
-    this%move  = .true.
-    if(present(move))this%move=move
 
     POP_SUB(atom_init)
   end subroutine atom_init
@@ -96,8 +91,6 @@ contains
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    
     this%f_u       = M_ZERO
-
-    this%move  = .true.
 
   end subroutine atom_end
 

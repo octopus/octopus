@@ -76,8 +76,6 @@ contains
     character (len=2),         intent(in)  :: suffix
     type(namespace_t), target, intent(in)  :: namespace
 
-    integer :: iatom
-
     PUSH_SUB(vibrations_init)
 
     this%ndim = ions%space%dim
@@ -89,10 +87,7 @@ contains
     SAFE_ALLOCATE(this%normal_mode(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%freq(1:this%num_modes))
 
-    this%total_mass = M_ZERO
-    do iatom = 1, ions%natoms
-      this%total_mass = this%total_mass + species_mass(ions%atom(iatom)%species)
-    end do
+    this%total_mass = sum(ions%mass)
 
     ! Since frequencies are reported as invcm, the matrix they are derived from can be expressed in invcm**2.
     ! However, that matrix is the dynamical matrix divided by the total mass, so it has a different unit.
@@ -205,7 +200,7 @@ contains
     integer,            intent(in) :: jatom
 
     vibrations_norm_factor = this%total_mass / &
-      sqrt(species_mass(ions%atom(iatom)%species) * species_mass(ions%atom(jatom)%species))
+      sqrt(ions%mass(iatom) * ions%mass(jatom))
 
   end function vibrations_norm_factor
 

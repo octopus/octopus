@@ -312,7 +312,7 @@ contains
       do i = 1, ions%natoms
         !generate the velocities in the root node
         if( mpi_grp_is_root(mpi_world)) then
-          sigma = sqrt(temperature / species_mass(ions%atom(i)%species) )
+          sigma = sqrt(temperature / ions%mass(i))
           do j = 1, 3
              ions%vel(j, i) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
@@ -514,12 +514,12 @@ contains
     if(this%thermostat /= THERMO_NH) then
       ! integrate using verlet
       do iatom = 1, ions%natoms
-        if(.not. ions%atom(iatom)%move) cycle
+        if (ions%fixed(iatom)) cycle
 
         if(.not. this%drive_ions) then
 
           ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%vel(:, iatom) + &
-            M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * ions%tot_force(:, iatom)
+            M_HALF*dt**2 / ions%mass(iatom) * ions%tot_force(:, iatom)
           
           this%oldforce(:, iatom) = ions%tot_force(:, iatom)
           
@@ -627,10 +627,10 @@ contains
       ! velocity verlet
       
       do iatom = 1, ions%natoms
-        if(.not. ions%atom(iatom)%move) cycle
+        if (ions%fixed(iatom)) cycle
         
         ions%vel(:, iatom) = ions%vel(:, iatom) &
-          + this%dt/species_mass(ions%atom(iatom)%species) * M_HALF * (this%oldforce(:, iatom) + &
+          + this%dt/ions%mass(iatom) * M_HALF * (this%oldforce(:, iatom) + &
           ions%tot_force(:, iatom))
         
       end do
@@ -638,7 +638,7 @@ contains
     else
       ! the nose-hoover integration
       do iatom = 1, ions%natoms
-        ions%vel(:, iatom) = ions%vel(:, iatom) + this%dt*ions%tot_force(:, iatom) / species_mass(ions%atom(iatom)%species)
+        ions%vel(:, iatom) = ions%vel(:, iatom) + this%dt*ions%tot_force(:, iatom) / ions%mass(iatom)
         ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*this%dt*ions%vel(:, iatom)
       end do
       
@@ -671,20 +671,19 @@ contains
 
     ! First transform momenta to velocities
     do iatom = 1, ions%natoms
-      v(iatom, 1:ions%space%dim) = v(iatom, 1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+      v(iatom, 1:ions%space%dim) = v(iatom, 1:ions%space%dim) / ions%mass(iatom)
     end do
 
     ! integrate using verlet
     do iatom = 1, ions%natoms
-      if(.not. ions%atom(iatom)%move) cycle
-      q(iatom, 1:ions%space%dim) = q(iatom, 1:ions%space%dim) &
-        + dt * v(iatom, 1:ions%space%dim) + &
-        M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * fold(iatom, 1:ions%space%dim)
+      if (ions%fixed(iatom)) cycle
+      q(iatom, 1:ions%space%dim) = q(iatom, 1:ions%space%dim) + dt * v(iatom, 1:ions%space%dim) + &
+        M_HALF*dt**2 / ions%mass(iatom) * fold(iatom, 1:ions%space%dim)
     end do
 
     ! And back to momenta.
     do iatom = 1, ions%natoms
-      v(iatom, 1:ions%space%dim) = species_mass(ions%atom(iatom)%species) * v(iatom, 1:ions%space%dim)
+      v(iatom, 1:ions%space%dim) = ions%mass(iatom) * v(iatom, 1:ions%space%dim)
     end do
 
     POP_SUB(ion_dynamics_verlet_step1)
@@ -707,20 +706,19 @@ contains
 
     ! First transform momenta to velocities
     do iatom = 1, ions%natoms
-      v(iatom, 1:ions%space%dim) = v(iatom, 1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+      v(iatom, 1:ions%space%dim) = v(iatom, 1:ions%space%dim) / ions%mass(iatom)
     end do
 
     ! velocity verlet
     do iatom = 1, ions%natoms
-      if(.not. ions%atom(iatom)%move) cycle
+      if (ions%fixed(iatom)) cycle
       v(iatom, 1:ions%space%dim) = v(iatom, 1:ions%space%dim) &
-        + dt / species_mass(ions%atom(iatom)%species) * M_HALF * (fold(iatom, 1:ions%space%dim) + &
-        fnew(iatom, 1:ions%space%dim))
+        + dt / ions%mass(iatom) * M_HALF * (fold(iatom, 1:ions%space%dim) + fnew(iatom, 1:ions%space%dim))
     end do
 
     ! And back to momenta.
     do iatom = 1, ions%natoms
-      v(iatom, 1:ions%space%dim) = species_mass(ions%atom(iatom)%species) * v(iatom, 1:ions%space%dim)
+      v(iatom, 1:ions%space%dim) = ions%mass(iatom) * v(iatom, 1:ions%space%dim)
     end do
 
     POP_SUB(ion_dynamics_verlet_step2)
@@ -799,7 +797,7 @@ contains
     kinetic_energy = M_ZERO
     do iatom = 1, ions%natoms
       kinetic_energy = kinetic_energy + &
-        M_HALF * species_mass(ions%atom(iatom)%species) * sum(ions%vel(:, iatom)**2)
+        M_HALF * ions%mass(iatom) * sum(ions%vel(:, iatom)**2)
     end do
 
   end function ion_dynamics_kinetic_energy

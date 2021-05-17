@@ -321,7 +321,7 @@
          do jj = 1, space%dim
            velcm(jj) = velcm(jj) + velocities(ivel, iter)/TOFLOAT(ions%natoms)
            current(jj) = current(jj) + &
-             species_mass(ions%atom(ii)%species)/ions%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
+             ions%mass(ii)/ions%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
            ivel = ivel + 1
          end do
        end do

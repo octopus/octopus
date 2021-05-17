@@ -189,9 +189,9 @@ contains
     this%labels(1) = trim(this%ions%atom(1)%label)
 
     this%coords = this%ions%pos
+    ! mass is read from the default pseudopotential files
+    this%mass = this%ions%mass
     do ii = 1, this%n_atom
-      ! mass is read from the default pseudopotential files
-      this%mass(ii) = species_mass(this%ions%atom(ii)%species)
       if ((ii > 1) .and. .not. (any(this%labels(1:ispec) == this%ions%atom(ii)%label))) then
         ispec = ispec + 1
         this%labels(ispec) = trim(this%ions%atom(ii)%label)

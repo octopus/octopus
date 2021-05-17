@@ -1213,7 +1213,7 @@ contains
           do iatom = 1, ions%natoms
             ions%vel(:, iatom) = ions%vel(:, iatom) + &
               kick%delta_strength * kick%pol(1:ions%space%dim, kick%pol_dir) * &
-              P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / species_mass(ions%atom(iatom)%species)
+              P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / ions%mass(iatom)
           end do
         end if
       end if
