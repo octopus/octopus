@@ -39,7 +39,11 @@ b = 0.1
 "electron"      | 1 | -1
 %
 
-Output = mmb_den + mmb_wfs + density
+%Output
+ mmb_den
+ mmb_wfs
+ density
+%
 OutputFormat = plane_z + axis_x
 
 TDTimeStep = 0.05
