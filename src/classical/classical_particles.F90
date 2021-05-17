@@ -135,30 +135,28 @@ contains
     class(classical_particles_t),    intent(inout) :: this
     class(algorithmic_operation_t),  intent(in)    :: operation
 
-    integer :: ii, sdim, ip
+    integer :: ii, ip
     FLOAT, allocatable :: tmp_pos(:,:,:), tmp_vel(:,:,:)
     FLOAT :: factor
 
     PUSH_SUB(classical_particles_do_td)
 
-    sdim = this%space%dim
-
     select case (operation%id)
     case (SKIP)
       ! Do nothing
     case (STORE_CURRENT_STATUS)
-      this%save_pos(1:sdim, 1:this%np) = this%pos(1:sdim, 1:this%np)
-      this%save_vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np)
+      this%save_pos(:, 1:this%np) = this%pos(:, 1:this%np)
+      this%save_vel(:, 1:this%np) = this%vel(:, 1:this%np)
 
     case (VERLET_START)
       SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:this%np))
       SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:this%np))
-      SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1))
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1:this%np, 1))
       do ip = 1, this%np
         if (this%fixed(ip)) then
-          this%acc(1:sdim, ip) = M_ZERO
+          this%acc(:, ip) = M_ZERO
         else
-          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+          this%acc(:, ip) = this%tot_force(:, ip) / this%mass(ip)
         end if
       end do
 
@@ -175,28 +173,27 @@ contains
       SAFE_DEALLOCATE_A(this%save_vel)
 
     case (VERLET_UPDATE_POS)
-      this%pos(1:sdim, 1:this%np) = this%pos(1:sdim, 1:this%np) + &
-        this%prop%dt * this%vel(1:sdim, 1:this%np) &
-        + M_HALF * this%prop%dt**2 * this%acc(1:sdim, 1:this%np)
+      this%pos(:, 1:this%np) = this%pos(:, 1:this%np) + this%prop%dt * this%vel(:, 1:this%np) &
+        + M_HALF * this%prop%dt**2 * this%acc(:, 1:this%np)
 
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC, BEEMAN_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-        this%prev_acc(1:sdim, 1:this%np, ii + 1) = this%prev_acc(1:sdim, 1:this%np, ii)
+        this%prev_acc(:, 1:this%np, ii + 1) = this%prev_acc(:, 1:this%np, ii)
       end do
       do ip = 1, this%np
         this%prev_acc(:, ip, 1) = this%acc(:, ip)
         if (this%fixed(ip)) then
-          this%acc(1:sdim, ip) = M_ZERO
+          this%acc(:, ip) = M_ZERO
         else
-          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+          this%acc(:, ip) = this%tot_force(:, ip) / this%mass(ip)
         end if
       end do
 
     case (VERLET_COMPUTE_VEL)
-      this%vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np) &
-        + M_HALF * this%prop%dt * (this%prev_acc(1:sdim, 1:this%np, 1) + this%acc(1:sdim, 1:this%np))
+      this%vel(:, 1:this%np) = this%vel(:, 1:this%np) &
+        + M_HALF * this%prop%dt * (this%prev_acc(:, 1:this%np, 1) + this%acc(:, 1:this%np))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
@@ -207,41 +204,40 @@ contains
       end if
       SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:this%np))
       SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:this%np))
-      SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1:2))
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1:this%np, 1:2))
       do ip = 1, this%np
         if (this%fixed(ip)) then
-          this%acc(1:sdim, ip) = M_ZERO
+          this%acc(:, ip) = M_ZERO
         else
-          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+          this%acc(:, ip) = this%tot_force(:, ip) / this%mass(ip)
         end if
-        this%prev_acc(1:sdim, ip, 1) = this%acc(1:sdim, ip)
+        this%prev_acc(:, ip, 1) = this%acc(:, ip)
       end do
 
     case (BEEMAN_PREDICT_POS)
-      this%pos(1:sdim, 1:this%np) = this%pos(1:sdim, 1:this%np) + this%prop%dt * this%vel(1:sdim, 1:this%np) + &
-        M_ONE/CNST(6.0) * this%prop%dt**2 * (M_FOUR*this%acc(1:sdim, 1:this%np) - this%prev_acc(1:sdim, 1:this%np, 1))
+      this%pos(:, 1:this%np) = this%pos(:, 1:this%np) + this%prop%dt * this%vel(:, 1:this%np) + &
+        M_ONE/CNST(6.0) * this%prop%dt**2 * (M_FOUR*this%acc(:, 1:this%np) - this%prev_acc(:, 1:this%np, 1))
 
       if (.not. this%prop%predictor_corrector) then
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
       end if
 
     case (BEEMAN_PREDICT_VEL)
-      this%vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np)  &
-        + M_ONE/CNST(6.0) * this%prop%dt * ( M_TWO * this%acc(1:sdim, 1:this%np) + &
-        CNST(5.0) * this%prev_acc(1:sdim, 1:this%np, 1) - this%prev_acc(1:sdim, 1:this%np, 2))
+      this%vel(:, 1:this%np) = this%vel(:, 1:this%np) + M_ONE/CNST(6.0) * this%prop%dt * ( M_TWO * this%acc(:, 1:this%np) + &
+        CNST(5.0) * this%prev_acc(:, 1:this%np, 1) - this%prev_acc(:, 1:this%np, 2))
 
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (BEEMAN_CORRECT_POS)
-      this%pos(1:sdim, 1:this%np) = this%save_pos(1:sdim, 1:this%np) + this%prop%dt * this%save_vel(1:sdim, 1:this%np) &
-        + M_ONE/CNST(6.0) * this%prop%dt**2 * (this%acc(1:sdim, 1:this%np) + M_TWO * this%prev_acc(1:sdim, 1:this%np, 1))
+      this%pos(:, 1:this%np) = this%save_pos(:, 1:this%np) + this%prop%dt * this%save_vel(:, 1:this%np) &
+        + M_ONE/CNST(6.0) * this%prop%dt**2 * (this%acc(:, 1:this%np) + M_TWO * this%prev_acc(:, 1:this%np, 1))
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
     case (BEEMAN_CORRECT_VEL)
-      this%vel(1:sdim, 1:this%np) = this%save_vel(1:sdim, 1:this%np) &
-        + M_HALF * this%prop%dt * (this%acc(1:sdim, 1:this%np) + this%prev_acc(1:sdim, 1:this%np, 1))
+      this%vel(:, 1:this%np) = this%save_vel(:, 1:this%np) &
+        + M_HALF * this%prop%dt * (this%acc(:, 1:this%np) + this%prev_acc(:, 1:this%np, 1))
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
@@ -249,11 +245,11 @@ contains
     case (EXPMID_START)
       SAFE_ALLOCATE(this%save_pos(1:this%space%dim, 1:this%np))
       SAFE_ALLOCATE(this%save_vel(1:this%space%dim, 1:this%np))
-      SAFE_ALLOCATE(this%hamiltonian_elements(1:sdim, 1:this%np))
-      SAFE_ALLOCATE(this%prev_pos(1:sdim, 1:this%np, 1))
-      SAFE_ALLOCATE(this%prev_vel(1:sdim, 1:this%np, 1))
-      this%prev_pos(1:sdim, 1:this%np, 1) = this%pos(1:sdim, 1:this%np)
-      this%prev_vel(1:sdim, 1:this%np, 1) = this%vel(1:sdim, 1:this%np)
+      SAFE_ALLOCATE(this%hamiltonian_elements(1:this%space%dim, 1:this%np))
+      SAFE_ALLOCATE(this%prev_pos(1:this%space%dim, 1:this%np, 1))
+      SAFE_ALLOCATE(this%prev_vel(1:this%space%dim, 1:this%np, 1))
+      this%prev_pos(:, 1:this%np, 1) = this%pos(:, 1:this%np)
+      this%prev_vel(:, 1:this%np, 1) = this%vel(:, 1:this%np)
 
     case (EXPMID_FINISH)
       SAFE_DEALLOCATE_A(this%save_pos)
@@ -263,48 +259,48 @@ contains
       SAFE_DEALLOCATE_A(this%prev_vel)
 
     case (EXPMID_PREDICT_DT_2)
-      this%pos(1:sdim, 1:this%np) = CNST(1.5)*this%save_pos(1:sdim, 1:this%np) - CNST(0.5)*this%prev_pos(1:sdim, 1:this%np, 1)
-      this%vel(1:sdim, 1:this%np) = CNST(1.5)*this%save_vel(1:sdim, 1:this%np) - CNST(0.5)*this%prev_vel(1:sdim, 1:this%np, 1)
-      this%prev_pos(1:sdim, 1:this%np, 1) = this%save_pos(1:sdim, 1:this%np)
-      this%prev_vel(1:sdim, 1:this%np, 1) = this%save_vel(1:sdim, 1:this%np)
+      this%pos(:, 1:this%np) = CNST(1.5)*this%save_pos(:, 1:this%np) - CNST(0.5)*this%prev_pos(:, 1:this%np, 1)
+      this%vel(:, 1:this%np) = CNST(1.5)*this%save_vel(:, 1:this%np) - CNST(0.5)*this%prev_vel(:, 1:this%np, 1)
+      this%prev_pos(:, 1:this%np, 1) = this%save_pos(:, 1:this%np)
+      this%prev_vel(:, 1:this%np, 1) = this%save_vel(:, 1:this%np)
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
       this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (UPDATE_HAMILTONIAN)
       do ip = 1, this%np
         if (this%fixed(ip)) then
-          this%hamiltonian_elements(1:sdim, ip) = M_ZERO
+          this%hamiltonian_elements(:, ip) = M_ZERO
         else
-          this%hamiltonian_elements(1:sdim, ip) = this%tot_force(1:sdim, ip) / (this%mass(ip) * this%pos(1:sdim, ip))
+          this%hamiltonian_elements(:, ip) = this%tot_force(:, ip) / (this%mass(ip) * this%pos(:, ip))
         end if
       end do
 
     case (EXPMID_PREDICT_DT)
-      SAFE_ALLOCATE(tmp_pos(1:sdim, 1:this%np, 2))
-      SAFE_ALLOCATE(tmp_vel(1:sdim, 1:this%np, 2))
+      SAFE_ALLOCATE(tmp_pos(1:this%space%dim, 1:this%np, 2))
+      SAFE_ALLOCATE(tmp_vel(1:this%space%dim, 1:this%np, 2))
       ! apply exponential - at some point this could use the machinery of
       !   exponential_apply (but this would require a lot of boilerplate code
       !   like a Hamiltonian class etc)
       ! save_pos/vel contain the state at t - this is the state we want to
       !   apply the Hamiltonian to
-      tmp_pos(1:sdim, 1:this%np, 1) = this%save_pos(1:sdim, 1:this%np)
-      tmp_vel(1:sdim, 1:this%np, 1) = this%save_vel(1:sdim, 1:this%np)
-      this%pos(1:sdim, 1:this%np) = this%save_pos(1:sdim, 1:this%np)
-      this%vel(1:sdim, 1:this%np) = this%save_vel(1:sdim, 1:this%np)
+      tmp_pos(:, 1:this%np, 1) = this%save_pos(:, 1:this%np)
+      tmp_vel(:, 1:this%np, 1) = this%save_vel(:, 1:this%np)
+      this%pos(:, 1:this%np) = this%save_pos(:, 1:this%np)
+      this%vel(:, 1:this%np) = this%save_vel(:, 1:this%np)
       ! compute exponential with Taylor expansion
       factor = M_ONE
       do ii = 1, 4
         factor = factor * this%prop%dt / ii
         do ip = 1, this%np          
           ! apply hamiltonian
-          tmp_pos(1:sdim, ip, 2) = tmp_vel(1:sdim, ip, 1)
-          tmp_vel(1:sdim, ip, 2) = this%hamiltonian_elements(1:sdim, ip) * tmp_pos(1:sdim, ip, 1)
+          tmp_pos(:, ip, 2) = tmp_vel(:, ip, 1)
+          tmp_vel(:, ip, 2) = this%hamiltonian_elements(:, ip) * tmp_pos(:, ip, 1)
           ! swap temporary variables
-          tmp_pos(1:sdim, ip, 1) = tmp_pos(1:sdim, ip, 2)
-          tmp_vel(1:sdim, ip, 1) = tmp_vel(1:sdim, ip, 2)
+          tmp_pos(:, ip, 1) = tmp_pos(:, ip, 2)
+          tmp_vel(:, ip, 1) = tmp_vel(:, ip, 2)
           ! accumulate components of Taylor expansion
-          this%pos(1:sdim, ip) = this%pos(1:sdim, ip) + factor * tmp_pos(1:sdim, ip, 1)
-          this%vel(1:sdim, ip) = this%vel(1:sdim, ip) + factor * tmp_vel(1:sdim, ip, 1)
+          this%pos(:, ip) = this%pos(:, ip) + factor * tmp_pos(:, ip, 1)
+          this%vel(:, ip) = this%vel(:, ip) + factor * tmp_vel(:, ip, 1)
         end do
       end do
       SAFE_DEALLOCATE_A(tmp_pos)
@@ -315,8 +311,8 @@ contains
     case (EXPMID_CORRECT_DT_2)
       ! only correct for dt/2 if not converged yet
       if (.not. this%is_tolerance_reached(this%prop%scf_tol)) then
-        this%pos(1:sdim, 1:this%np) = CNST(0.5)*(this%pos(1:sdim, 1:this%np) + this%save_pos(1:sdim, 1:this%np))
-        this%vel(1:sdim, 1:this%np) = CNST(0.5)*(this%vel(1:sdim, 1:this%np) + this%save_vel(1:sdim, 1:this%np))
+        this%pos(:, 1:this%np) = CNST(0.5)*(this%pos(:, 1:this%np) + this%save_pos(:, 1:this%np))
+        this%vel(:, 1:this%np) = CNST(0.5)*(this%vel(:, 1:this%np) + this%save_vel(:, 1:this%np))
         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
         this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
       end if
