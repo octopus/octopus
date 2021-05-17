@@ -205,7 +205,7 @@ contains
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, ions%natoms
-          forces0(jatom, 1:space%dim) = ions%atom(jatom)%f(1:space%dim)
+          forces0(jatom, 1:space%dim) = ions%tot_force(:, jatom)
         end do
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
@@ -221,7 +221,7 @@ contains
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, ions%natoms
-          forces(jatom, 1:ions%space%dim) = ions%atom(jatom)%f(1:ions%space%dim)
+          forces(jatom, 1:ions%space%dim) = ions%tot_force(:, jatom)
         end do
 
         ions%pos(alpha, iatom) = ions%pos(alpha, iatom) + vib%disp

@@ -374,7 +374,7 @@ contains
       call forces_calculate(gr, namespace, ions, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, ions%natoms
         posk(:, iatom) = dt * vel(:, iatom)
-        velk(:, iatom) = dt * ions%atom(iatom)%f(1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+        velk(:, iatom) = dt * ions%tot_force(:, iatom) / species_mass(ions%atom(iatom)%species)
       end do
       if(propagate_chi) then
         call forces_costate_calculate(gr, namespace, ions, hm, stphi, stchi, coforce, transpose(post))

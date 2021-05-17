@@ -300,7 +300,7 @@ contains
     end if
 
     do iatom = 1, ions%natoms
-      ions%atom(iatom)%f(1:ions%space%dim) = hm%ep%fii(1:ions%space%dim, iatom) + hm%ep%vdw_forces(1:ions%space%dim, iatom)
+      ions%tot_force(:, iatom) = hm%ep%fii(1:ions%space%dim, iatom) + hm%ep%vdw_forces(1:ions%space%dim, iatom)
       ions%atom(iatom)%f_ii(1:ions%space%dim) = hm%ep%fii(1:ions%space%dim, iatom)
       ions%atom(iatom)%f_vdw(1:ions%space%dim) = hm%ep%vdw_forces(1:ions%space%dim, iatom)
     end do
@@ -310,7 +310,7 @@ contains
 
       ! the ion-ion term is already calculated
       do iatom = 1, ions%natoms
-        ions%atom(iatom)%f(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim) + global_force
+        ions%tot_force(:, iatom) = ions%tot_force(:, iatom) + global_force
         ions%atom(iatom)%f_ii(1:ions%space%dim) = ions%atom(iatom)%f_ii(1:ions%space%dim) + global_force
       end do
     end if
@@ -350,8 +350,8 @@ contains
 
     do iatom = 1, ions%natoms
       do idir = 1, ions%space%dim
-        ions%atom(iatom)%f(idir) = ions%atom(iatom)%f(idir) + force(idir, iatom) &
-            + force_scf(idir, iatom) + force_nlcc(idir, iatom)
+        ions%tot_force(idir, iatom) = ions%tot_force(idir, iatom) + force(idir, iatom) &
+          + force_scf(idir, iatom) + force_nlcc(idir, iatom)
         ions%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         ions%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
         ions%atom(iatom)%f_u(idir) = force_u(idir, iatom)
@@ -376,8 +376,7 @@ contains
           call laser_field(hm%ext_lasers%lasers(j), x(1:ions%space%dim), t)
           do iatom = 1, ions%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
-            ions%atom(iatom)%f(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim) &
-             + species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
+            ions%tot_force(:, iatom) = ions%tot_force(:, iatom) + species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
             ions%atom(iatom)%f_fields(1:ions%space%dim) = species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
           end do
     
@@ -392,8 +391,7 @@ contains
           call laser_electric_field(hm%ext_lasers%lasers(j), x(1:ions%space%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do iatom = 1, ions%natoms
             ! Also here the proton charge is +1
-            ions%atom(iatom)%f(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim) &
-             + species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
+            ions%tot_force(:, iatom) = ions%tot_force(:, iatom) + species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
             ions%atom(iatom)%f_fields(1:ions%space%dim) = ions%atom(iatom)%f_fields(1:ions%space%dim) &
                + species_zval(ions%atom(iatom)%species)*x(1:ions%space%dim)
           end do
@@ -409,7 +407,7 @@ contains
     if (allocated(hm%ep%E_field)) then
       do iatom = 1, ions%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
-        ions%atom(iatom)%f(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim) &
+        ions%tot_force(:, iatom) = ions%tot_force(:, iatom) &
           + species_zval(ions%atom(iatom)%species)*hm%ep%E_field(1:ions%space%dim)
         ions%atom(iatom)%f_fields(1:ions%space%dim) = ions%atom(iatom)%f_fields(1:ions%space%dim) &
                + species_zval(ions%atom(iatom)%species)*hm%ep%E_field(1:ions%space%dim)
@@ -479,13 +477,13 @@ contains
     write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, ions%space%dim)
     do iatom = 1, ions%natoms
       write(iunit,'(i4,a10,10e15.6)') iatom, trim(species_label(ions%atom(iatom)%species)), &
-              (units_from_atomic(units_out%force, ions%atom(iatom)%f(idir)), idir=1, ions%space%dim)
+        units_from_atomic(units_out%force, ions%tot_force(:, iatom))
     end do
     write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + ions%space%dim * 15)
     write(iunit,'(a14, 10e15.6)') " Max abs force", &
-            (units_from_atomic(units_out%force, maxval(abs(ions%atom(1:ions%natoms)%f(idir)))), idir=1, ions%space%dim)
+            (units_from_atomic(units_out%force, maxval(abs(ions%tot_force(idir, 1:ions%natoms)))), idir=1, ions%space%dim)
     write(iunit,'(a14, 10e15.6)') " Total force", &
-            (units_from_atomic(units_out%force, sum(ions%atom(1:ions%natoms)%f(idir))), idir=1, ions%space%dim)
+            (units_from_atomic(units_out%force, sum(ions%tot_force(idir, 1:ions%natoms))), idir=1, ions%space%dim)
 
     if(ions%space%dim == 2 .or. ions%space%dim == 3) then
       rr = M_ZERO
@@ -493,7 +491,7 @@ contains
       torque = M_ZERO
       do iatom = 1, ions%natoms
         rr(1:ions%space%dim) = ions%pos(:, iatom)
-        ff(1:ions%space%dim) = ions%atom(iatom)%f(1:ions%space%dim)
+        ff(1:ions%space%dim) = ions%tot_force(:, iatom)
         torque(1:3) = torque(1:3) + dcross_product(rr, ff)
       end do
       write(iunit,'(a14, 10e15.6)') ' Total torque', &
@@ -507,7 +505,7 @@ contains
       ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'
     do iatom = 1, ions%natoms
        write(iunit2,'(i4,a10,27e15.6)') iatom, trim(species_label(ions%atom(iatom)%species)), &
-           (units_from_atomic(units_out%force, ions%atom(iatom)%f(idir)), idir=1, ions%space%dim), &
+           (units_from_atomic(units_out%force, ions%tot_force(idir, iatom)), idir=1, ions%space%dim), &
            (units_from_atomic(units_out%force, ions%atom(iatom)%f_ii(idir)), idir=1, ions%space%dim), &
            (units_from_atomic(units_out%force, ions%atom(iatom)%f_vdw(idir)), idir=1, ions%space%dim), &
            (units_from_atomic(units_out%force, ions%atom(iatom)%f_loc(idir)), idir=1, ions%space%dim), &

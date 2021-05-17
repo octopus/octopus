@@ -348,7 +348,7 @@ contains
     center = units_from_atomic(units_out%length, ions%pos)
     do iatom = 1, ions%natoms
       do idir = 1, ions%space%dim
-        forces(iatom, idir) = units_from_atomic(units_out%force, ions%atom(iatom)%f(idir))
+        forces(iatom, idir) = units_from_atomic(units_out%force, ions%tot_force(idir, iatom))
       end do
     end do
     write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
@@ -449,7 +449,7 @@ contains
       SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
       do iatom = 1, ions%natoms
         do idir = 1, ions%space%dim
-          forces(iatom, idir) = units_from_atomic(units_out%force, ions%atom(iatom)%f(idir))
+          forces(iatom, idir) = units_from_atomic(units_out%force, ions%tot_force(idir, iatom))
         end do
       end do
       call write_xsf_geometry(iunit, ions, mesh, forces = forces)

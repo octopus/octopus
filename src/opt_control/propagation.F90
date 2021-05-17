@@ -146,7 +146,6 @@ contains
     type(td_write_t)           :: write_handler
     FLOAT, allocatable :: x_initial(:,:)
     logical :: vel_target_ = .false.
-    integer :: iatom
     type(states_elec_t), pointer :: psi
 
     FLOAT :: init_time, final_time
@@ -191,10 +190,8 @@ contains
       SAFE_ALLOCATE_SOURCE_A(x_initial, sys%ions%pos)
       vel_target_ = .true.
       sys%ions%vel = M_ZERO
-      do iatom = 1, sys%ions%natoms
-        sys%ions%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-      end do
-     end if
+      sys%ions%tot_force = M_ZERO
+    end if
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%ions)
 

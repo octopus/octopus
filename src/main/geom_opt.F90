@@ -654,7 +654,7 @@ contains
       objective = M_ZERO
       do iatom = 1, g_opt%ions%natoms
         if(.not.g_opt%ions%atom(iatom)%move) cycle
-        objective = objective + sum(g_opt%ions%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
+        objective = objective + sum(g_opt%ions%tot_force(:, iatom)**2)
       end do
       objective = sqrt(objective)
     else
@@ -809,11 +809,13 @@ contains
       if(.not. gopt%ions%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) then
-          grad(icoord) = -gopt%ions%atom(iatom)%f(idir)
+          grad(icoord) = -gopt%ions%tot_force(idir, iatom)
         else
           grad(icoord) = M_ZERO
         end if
-        if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%ions%atom(gopt%fixed_atom)%f(idir)
+        if (gopt%fixed_atom /= 0) then
+          grad(icoord) = grad(icoord) + gopt%ions%tot_force(idir, gopt%fixed_atom)
+        end if
         icoord = icoord + 1
       end do
     end do

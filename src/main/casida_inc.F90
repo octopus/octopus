@@ -1045,7 +1045,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%ions%natoms
         do idir = 1, sys%space%dim
-          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%ions%atom(iatom)%f(idir)
+          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%ions%tot_force(idir, iatom)
         end do
       end do
     end do

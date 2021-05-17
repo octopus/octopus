@@ -1012,8 +1012,8 @@ contains
       ions%vel(:, iatom) = units_to_atomic(units_out%velocity, ions%vel(:, iatom))
     end do
     do iatom = 1, ions%natoms
-      read(iunit, '(3es20.12)', advance='no') ions%atom(iatom)%f(1:ions%space%dim)
-      ions%atom(iatom)%f(:) = units_to_atomic(units_out%force, ions%atom(iatom)%f(:))
+      read(iunit, '(3es20.12)', advance='no') ions%tot_force(:, iatom)
+      ions%tot_force(:, iatom) = units_to_atomic(units_out%force, ions%tot_force(:, iatom))
     end do
 
     call io_close(iunit)

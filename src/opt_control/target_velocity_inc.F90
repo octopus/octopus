@@ -298,13 +298,13 @@
     opsi = M_z0
     ! WARNING This does not work for spinors.
     do iatom = 1, ions%natoms
-      ions%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+      ions%tot_force(:, iatom) = hm%ep%fii(1:gr%sb%dim, iatom)
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
             call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
-            ions%atom(iatom)%f(idim) = ions%atom(iatom)%f(idim) &
+            ions%tot_force(idim, iatom) = ions%tot_force(idim, iatom) &
               + TOFLOAT(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
           end do
         end do
@@ -316,8 +316,7 @@
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
     do iatom = 1, ions%natoms
-       ions%vel(:, iatom) = ions%vel(:, iatom) + &
-         ions%atom(iatom)%f(1:ions%space%dim) * dt / species_mass(ions%atom(iatom)%species)
+      ions%vel(:, iatom) = ions%vel(:, iatom) + ions%tot_force(:, iatom) * dt / species_mass(ions%atom(iatom)%species)
     end do
 
     POP_SUB(target_tdcalc_velocity)

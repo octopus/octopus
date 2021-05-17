@@ -519,9 +519,9 @@ contains
         if(.not. this%drive_ions) then
 
           ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%vel(:, iatom) + &
-            M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * ions%atom(iatom)%f(1:ions%space%dim)
+            M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * ions%tot_force(:, iatom)
           
-          this%oldforce(1:ions%space%dim, iatom) = ions%atom(iatom)%f(1:ions%space%dim)
+          this%oldforce(:, iatom) = ions%tot_force(:, iatom)
           
         else
           if(this%constant_velocity) then
@@ -630,16 +630,15 @@ contains
         if(.not. ions%atom(iatom)%move) cycle
         
         ions%vel(:, iatom) = ions%vel(:, iatom) &
-          + this%dt/species_mass(ions%atom(iatom)%species) * M_HALF * (this%oldforce(1:ions%space%dim, iatom) + &
-          ions%atom(iatom)%f(1:ions%space%dim))
+          + this%dt/species_mass(ions%atom(iatom)%species) * M_HALF * (this%oldforce(:, iatom) + &
+          ions%tot_force(:, iatom))
         
       end do
       
     else
       ! the nose-hoover integration
       do iatom = 1, ions%natoms
-        ions%vel(:, iatom) = ions%vel(:, iatom) + &
-          this%dt*ions%atom(iatom)%f(1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+        ions%vel(:, iatom) = ions%vel(:, iatom) + this%dt*ions%tot_force(:, iatom) / species_mass(ions%atom(iatom)%species)
         ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*this%dt*ions%vel(:, iatom)
       end do
       
