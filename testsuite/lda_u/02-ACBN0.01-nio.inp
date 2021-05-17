@@ -51,8 +51,11 @@ ExtraStates = 10
 
 FilterPotentials = filter_none
 AOThreshold = 0.05
+
 %Output
   occ_matrices
   effectiveU
   kanamoriU
 %
+
+DFTUPoissonSolver = dft_u_poisson_direct

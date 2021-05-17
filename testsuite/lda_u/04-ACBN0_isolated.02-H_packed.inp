@@ -18,7 +18,9 @@ DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 SkipSOrbitals = no
 AOThreshold = 0.05
+
 %Output
   occ_matrices
   effectiveU
 %
+DFTUPoissonSolver = dft_u_poisson_direct

@@ -51,3 +51,4 @@ AOSubmesh = yes
 %
 ACBN0Screening = 0.5
 
+DFTUPoissonSolver = dft_u_poisson_direct

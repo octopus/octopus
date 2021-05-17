@@ -58,4 +58,6 @@ AOTruncation = ao_box
   occ_matrices
 %
 
+DFTUPoissonSolver = dft_u_poisson_direct
+
 StatesPack = yes

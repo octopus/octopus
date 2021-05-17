@@ -60,7 +60,11 @@ ExtraStates = 6
 ConvRelDens = 1e-6
 
 AOTruncation = ao_box
+
 %Output
   occ_matrices
 %
+
+DFTUPoissonSolver = dft_u_poisson_direct
+
 StatesPack = yes
