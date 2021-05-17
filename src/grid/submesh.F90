@@ -79,12 +79,13 @@ module submesh_oct_m
   !! It contains points on a regular mesh confined to a sphere of a given radius. 
   type submesh_t
     ! Components are public by default
-    FLOAT                 :: center(1:MAX_DIM)
+    FLOAT, allocatable    :: center(:)
     FLOAT                 :: radius = M_ZERO
     integer               :: np = -1        !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
     integer,  allocatable :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
-    FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
+    FLOAT,    allocatable :: x(:,:)         !< x(1:np_part, 1:space%dim)
+    FLOAT,    allocatable :: r(:)           !< distance from centre of the submesh.
     type(mesh_t), pointer :: mesh => NULL() !< pointer to the underlying mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
                                             !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
@@ -107,12 +108,10 @@ module submesh_oct_m
 contains
   
   ! -------------------------------------------------------------
-
   ! Multipliers for recursive formulation of n-ellipsoid volume 
   ! simplifying the Gamma function
   ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
   recursive FLOAT function f_n(dims) result(fn)
-
     integer :: dims
 
     if (dims == 0) then
@@ -122,34 +121,36 @@ contains
     else
       fn = 2.0 * f_n(dims - 2) / dims
     end if
+
   end function f_n
 
-! -------------------------------------------------------------
-
-  subroutine submesh_init(this, space, sb, mesh, center, rc)
-    type(submesh_t),      intent(inout)  :: this
-    type(space_t),        intent(in)     :: space
-    type(simul_box_t),    intent(in)     :: sb
-    type(mesh_t), target, intent(in)     :: mesh
-    FLOAT,                intent(in)     :: center(:)
-    FLOAT,                intent(in)     :: rc
+  ! -------------------------------------------------------------
+  subroutine submesh_init(this, space, mesh, latt, center, rc)
+    type(submesh_t),         intent(inout)  :: this
+    type(space_t),           intent(in)     :: space
+    type(mesh_t), target,    intent(in)     :: mesh
+    type(lattice_vectors_t), intent(in)     :: latt
+    FLOAT,                   intent(in)     :: center(1:space%dim)
+    FLOAT,                   intent(in)     :: rc
     
     FLOAT :: r2, rc2, xx(space%dim), rc_norm_n
-    FLOAT, allocatable :: center_copies(:,:), xtmp(:, :)
+    FLOAT, allocatable :: center_copies(:,:), xtmp(:, :), rtmp(:)
     integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
     type(lattice_iterator_t) :: latt_iter
     integer, allocatable :: map_inv(:), map_temp(:)
-    integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
+    integer :: nmax(3), nmin(3)
     integer, allocatable :: order(:)
 
-    
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
+    ASSERT(space%dim <= 3)
+
     this%mesh => mesh
 
-    this%center(1:space%dim) = center(1:space%dim)
+    SAFE_ALLOCATE(this%center(1:space%dim))
+    this%center = center
 
     this%radius = rc
     rc2 = rc**2
@@ -181,7 +182,7 @@ contains
           do ix = nmin(1), nmax(1)
             ip = mesh_local_index_from_coords(mesh, [ix, iy, iz])
             if(ip == 0) cycle
-            r2 = sum((mesh%x(ip, 1:space%dim) - center(1:space%dim))**2)
+            r2 = sum((mesh%x(ip, :) - center)**2)
             if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
@@ -199,7 +200,8 @@ contains
       this%np_part = is + isb
       
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:space%dim))
+      SAFE_ALLOCATE(xtmp(1:this%np_part, 1:space%dim))
+      SAFE_ALLOCATE(rtmp(1:this%np_part))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
@@ -215,8 +217,8 @@ contains
               map_inv(ip) = is
             end if
             this%map(is) = ip
-            xtmp(is, 1:space%dim) = mesh%x(ip, 1:space%dim) - center(1:space%dim)
-            xtmp(is, 0) = sqrt(sum(xtmp(is, 1:space%dim)**2))
+            xtmp(is, :) = mesh%x(ip, :) - center
+            rtmp(is) = norm2(xtmp(is,:))
           end do
         end do
       end do
@@ -231,11 +233,11 @@ contains
 
       ! this requires some optimization
 
-      latt_iter = lattice_iterator_t(sb%latt, rc)
+      latt_iter = lattice_iterator_t(latt, rc)
 
       SAFE_ALLOCATE(center_copies(1:space%dim, 1:latt_iter%n_cells))
       do icell = 1, latt_iter%n_cells
-        center_copies(1:space%dim, icell) = center(1:space%dim) + latt_iter%get(icell)
+        center_copies(:, icell) = center + latt_iter%get(icell)
       end do
 
       !Recursive formulation for the volume of n-ellipsoid 
@@ -245,18 +247,19 @@ contains
       max_elements_count = 3**space%dim * int(M_PI**floor(0.5 * space%dim) * rc_norm_n * f_n(space%dim)) 
 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
-      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:space%dim))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 1:space%dim))
+      SAFE_ALLOCATE(rtmp(1:max_elements_count))
             
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, latt_iter%n_cells
-          xx = mesh%x(ip, 1:space%dim) - center_copies(1:space%dim, icell)
+          xx = mesh%x(ip, :) - center_copies(:, icell)
           r2 = sum(xx**2)
           if(r2 > rc2) cycle
           is = is + 1
           map_temp(is) = ip
-          xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:space%dim) = xx
+          rtmp(is) = sqrt(r2)
+          xtmp(is, :) = xx
           ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
@@ -275,7 +278,8 @@ contains
     ! now order points for better locality
 
     SAFE_ALLOCATE(order(1:this%np_part))
-    SAFE_ALLOCATE(this%x(1:this%np_part, 0:space%dim))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 1:space%dim))
+    SAFE_ALLOCATE(this%r(1:this%np_part))
 
     do ip = 1, this%np_part
       order(ip) = ip
@@ -284,7 +288,8 @@ contains
     call sort(this%map, order)
 
     do ip = 1, this%np_part
-      this%x(ip, 0:space%dim) = xtmp(order(ip), 0:space%dim)
+      this%x(ip, :) = xtmp(order(ip), :)
+      this%r(ip) = rtmp(order(ip))
     end do
 
     !check whether points overlap (i.e. whetehr a submesh contains the same point more than once)
@@ -300,6 +305,7 @@ contains
 
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(xtmp)
+    SAFE_DEALLOCATE_A(rtmp)
 
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init)
@@ -308,9 +314,9 @@ contains
   ! --------------------------------------------------------------
   !This routine takes two submeshes and merge them into a bigger submesh
   !The grid is centered on the first center
-  subroutine submesh_merge(this, sb, mesh, sm1, sm2, shift)
+  subroutine submesh_merge(this, space, mesh, sm1, sm2, shift)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
-    type(simul_box_t),    intent(in)     :: sb
+    type(space_t),        intent(in)     :: space
     type(mesh_t), target, intent(in)     :: mesh
     type(submesh_t),      intent(in)     :: sm1
     type(submesh_t),      intent(in)     :: sm2
@@ -319,18 +325,19 @@ contains
     FLOAT :: r2 
     integer :: ip, is
     type(profile_t), save :: prof
-    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM)
+    FLOAT :: xx(space%dim), diff_centers(space%dim)
     
     PUSH_SUB(submesh_merge)
     call profiling_in(prof, "SUBMESH_MERGE")
 
     this%mesh => mesh
 
-    this%center(1:sb%dim)  = sm1%center(1:sb%dim)
+    SAFE_ALLOCATE(this%center(1:space%dim))
+    this%center  = sm1%center
     this%radius = sm1%radius
 
-    diff_centers(1:sb%dim) = sm1%center(1:sb%dim)-sm2%center(1:sb%dim)
-    if(present(shift)) diff_centers(1:sb%dim) = diff_centers(1:sb%dim) - shift(1:sb%dim)
+    diff_centers = sm1%center - sm2%center
+    if(present(shift)) diff_centers = diff_centers - shift
 
     !As we take the union of the two submeshes, we know that we have all the points from the first one included.
     !The extra points from the second submesh are those which are not included in the first one
@@ -338,29 +345,31 @@ contains
     is = sm1%np
     do ip = 1, sm2%np
       !sm2%x contains points coordinates defined with respect to sm2%center
-      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim)-diff_centers(1:sb%dim)
+      xx = sm2%x(ip, :) - diff_centers
       !If the point is not in sm1, we add it
-      if(sum(xx(1:sb%dim)**2) > sm1%radius**2) is = is + 1
+      if (sum(xx**2) > sm1%radius**2) is = is + 1
     end do 
 
     this%np = is
     this%np_part = this%np
 
     SAFE_ALLOCATE(this%map(1:this%np_part))
-    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 1:space%dim))
+    SAFE_ALLOCATE(this%r(1:this%np_part))
     this%map(1:sm1%np) = sm1%map(1:sm1%np)
-    this%x(1:sm1%np, 0:sb%dim) = sm1%x(1:sm1%np, 0:sb%dim)
+    this%x(1:sm1%np, :) = sm1%x(1:sm1%np, :)
+    this%r(1:sm1%np) = sm1%r(1:sm1%np)
 
     !iterate again to fill the tables
     is = sm1%np
     do ip = 1, sm2%np
-      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
-      r2 = sum(xx(1:sb%dim)**2)
+      xx = sm2%x(ip, :) - diff_centers
+      r2 = sum(xx**2)
       if(r2 > sm1%radius**2) then
         is = is + 1
         this%map(is) = sm2%map(ip)
-        this%x(is, 0) = sqrt(r2)
-        this%x(is, 1:sb%dim) = xx(1:sb%dim)
+        this%r(is) = sqrt(r2)
+        this%x(is, :) = xx
       end if
     end do
 
@@ -370,43 +379,39 @@ contains
 
   ! --------------------------------------------------------------
   !This routine shifts the center of a submesh, without changing the grid points
-  subroutine submesh_shift_center(this, sb, newcenter)
+  subroutine submesh_shift_center(this, space, newcenter)
     type(submesh_t),      intent(inout)  :: this 
-    type(simul_box_t),    intent(in)     :: sb
+    type(space_t),        intent(in)     :: space
     FLOAT,                intent(in)     :: newcenter(:)
     
-    FLOAT :: r2
+    FLOAT :: xx(space%dim), diff_centers(space%dim), oldcenter(space%dim)
     integer :: ip
     type(profile_t), save :: prof
-    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM), oldcenter(1:MAX_DIM)
     
     PUSH_SUB(submesh_shift_center)
     call profiling_in(prof, "SUBMESH_SHIFT")
 
-    oldcenter(1:sb%dim) = this%center(1:sb%dim)
-    this%center(1:sb%dim)  = newcenter(1:sb%dim)
-   
+    oldcenter = this%center
+    this%center  = newcenter
 
-    diff_centers(1:sb%dim) = newcenter(1:sb%dim)-oldcenter(1:sb%dim)
+    diff_centers = newcenter - oldcenter
 
     do ip = 1, this%np
-      xx(1:sb%dim) = this%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
-      r2 = sum(xx(1:sb%dim)**2)
-      this%x(ip, 0) = sqrt(r2)
-      this%x(ip, 1:sb%dim) = xx(1:sb%dim)
+      xx = this%x(ip, :) - diff_centers
+      this%r(ip) = norm2(xx)
+      this%x(ip, :) = xx
     end do
 
     call profiling_out(prof)
     POP_SUB(submesh_shift_center)
   end subroutine submesh_shift_center
 
-
   ! --------------------------------------------------------------
-
-  subroutine submesh_broadcast(this, mesh, center, radius, root, mpi_grp)
+  subroutine submesh_broadcast(this, space, mesh, center, radius, root, mpi_grp)
     type(submesh_t),      intent(inout)  :: this
+    type(space_t),        intent(in)     :: space
     type(mesh_t), target, intent(in)     :: mesh
-    FLOAT,                intent(in)     :: center(:)
+    FLOAT,                intent(in)     :: center(1:space%dim)
     FLOAT,                intent(in)     :: radius
     integer,              intent(in)     :: root
     type(mpi_grp_t),      intent(in)     :: mpi_grp
@@ -417,9 +422,9 @@ contains
     PUSH_SUB(submesh_broadcast)
     call profiling_in(prof, 'SUBMESH_BCAST')
     
-    if(root /= mpi_grp%rank) then    
+    if(root /= mpi_grp%rank) then
       this%mesh => mesh
-      this%center(1:mesh%sb%dim) = center(1:mesh%sb%dim)
+      this%center = center
       this%radius = radius
     end if
 
@@ -444,13 +449,15 @@ contains
 
       if(root /= mpi_grp%rank) then
         SAFE_ALLOCATE(this%map(1:this%np_part))
-        SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
+        SAFE_ALLOCATE(this%x(1:this%np_part, 1:space%dim))
+        SAFE_ALLOCATE(this%r(1:this%np_part))
       end if
 
 #ifdef HAVE_MPI
       if(this%np_part > 0) then
         call MPI_Bcast(this%map(1), this%np_part, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-        call MPI_Bcast(this%x(1, 0), this%np_part*(mesh%sb%dim + 1), MPI_FLOAT, root, mpi_grp%comm, mpi_err)
+        call MPI_Bcast(this%x(1, 1), this%np_part*space%dim, MPI_FLOAT, root, mpi_grp%comm, mpi_err)
+        call MPI_Bcast(this%r(1), this%np_part, MPI_FLOAT, root, mpi_grp%comm, mpi_err)
       end if
 #endif
 
@@ -461,7 +468,6 @@ contains
   end subroutine submesh_broadcast
    
   ! --------------------------------------------------------------
-
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
     
@@ -470,15 +476,16 @@ contains
     if( this%np /= -1 ) then
       nullify(this%mesh)
       this%np = -1
+      SAFE_DEALLOCATE_A(this%center)
       SAFE_DEALLOCATE_A(this%map)
       SAFE_DEALLOCATE_A(this%x)
+      SAFE_DEALLOCATE_A(this%r)
     end if
 
     POP_SUB(submesh_end)
   end subroutine submesh_end
 
   ! --------------------------------------------------------------
-
   subroutine submesh_copy(sm_in, sm_out)
     type(submesh_t), target,  intent(in)    :: sm_in
     type(submesh_t),          intent(inout) :: sm_out
@@ -495,17 +502,14 @@ contains
     sm_out%np = sm_in%np
     sm_out%np_part = sm_in%np_part
     
-    SAFE_ALLOCATE(sm_out%map(1:sm_out%np_part))
-    SAFE_ALLOCATE(sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)))
-
-    sm_out%map(1:sm_out%np_part) = sm_in%map(1:sm_in%np_part)
-    sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)) = sm_in%x(1:sm_in%np_part, 0:ubound(sm_in%x, 2))
+    SAFE_ALLOCATE_SOURCE(sm_out%map, sm_in%map)
+    SAFE_ALLOCATE_SOURCE(sm_out%x, sm_in%x)
+    SAFE_ALLOCATE_SOURCE(sm_out%r, sm_in%r)
 
     POP_SUB(submesh_copy)
   end subroutine submesh_copy
 
   ! --------------------------------------------------------------
-
   subroutine submesh_get_inv(this, map_inv)
     type(submesh_t),      intent(in)   :: this
     integer,              intent(out)  :: map_inv(:)
@@ -523,7 +527,6 @@ contains
   end subroutine submesh_get_inv
 
   ! --------------------------------------------------------------
-
   logical function submesh_overlap(sm1, sm2, space) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
@@ -536,7 +539,7 @@ contains
 
     if (.not. space%is_periodic()) then
       !first check the distance
-      distance = sum((sm1%center(1:space%dim) - sm2%center(1:space%dim))**2)
+      distance = sum((sm1%center - sm2%center)**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
       
       ! if they are very far, no need to check in detail
@@ -565,13 +568,13 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
     end if
 #endif
-    
+
   end function submesh_overlap
 
   ! -------------------------------------------------------------
-
-    subroutine submesh_build_global(this)
-    type(submesh_t),      intent(inout)   :: this
+  subroutine submesh_build_global(this, space)
+    type(submesh_t),      intent(inout) :: this
+    type(space_t),        intent(in)    :: space
 
     integer, allocatable :: part_np(:)
     integer :: ipart, ind, ip
@@ -590,10 +593,10 @@ contains
     call this%mesh%allreduce(part_np)
     this%np_global = sum(part_np)
 
-    SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
+    SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:space%dim))
     SAFE_ALLOCATE(this%part_v(1:this%np_global))
     SAFE_ALLOCATE(this%global2local(1:this%np_global))
-    this%x_global(1:this%np_global, 1:this%mesh%sb%dim) = M_ZERO
+    this%x_global(1:this%np_global, 1:space%dim) = M_ZERO
     this%part_v(1:this%np_global) = 0
     this%global2local(1:this%np_global) = 0
 
@@ -601,7 +604,7 @@ contains
     do ipart = 1, this%mesh%vp%npart
       if(ipart == this%mesh%vp%partno) then
         do ip = 1, this%np
-          this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
+          this%x_global(ind + ip, :) = this%x(ip,:)
           this%part_v(ind + ip) = this%mesh%vp%partno
           this%global2local(ind + ip) = ip
         end do
@@ -618,7 +621,7 @@ contains
     POP_SUB(submesh_build_global)
   end subroutine submesh_build_global
 
-
+  ! -----------------------------------------------------------
   subroutine submesh_end_global(this)
     type(submesh_t),      intent(inout)   :: this
 
@@ -634,7 +637,6 @@ contains
 
   
   ! -----------------------------------------------------------
-  
   subroutine zzsubmesh_add_to_mesh(this, sphi, phi, factor)
     type(submesh_t),  intent(in)    :: this
     CMPLX,            intent(in)    :: sphi(:)
@@ -677,9 +679,7 @@ contains
     POP_SUB(zzdsubmesh_add_to_mesh)
   end subroutine zzsubmesh_add_to_mesh
 
-
   !------------------------------------------------------------
-
   CMPLX function zzsubmesh_to_mesh_dotp(this, sphi, phi, reduce) result(dotp)
     type(submesh_t),   intent(in) :: this
     CMPLX,             intent(in) :: sphi(:)
@@ -724,13 +724,13 @@ contains
 
   !------------------------------------------------------------
   !> finds the dimension of a box containing the submesh
-  subroutine submesh_get_cube_dim(sm, db, dim)
+  subroutine submesh_get_cube_dim(sm, space, db)
     type(submesh_t),   intent(in)  :: sm
-    integer,           intent(out) :: db(:)
-    integer,           intent(in)  :: dim
+    type(space_t),     intent(in)  :: space
+    integer,           intent(out) :: db(1:space%dim)
 
     integer :: ip, idir
-    FLOAT :: chi(1:MAX_DIM)
+    FLOAT :: chi(space%dim)
 
     PUSH_SUB(submesh_get_cube_dim)
 
@@ -738,47 +738,45 @@ contains
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi(1:dim) = matmul(sm%x(ip,1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
+      chi = matmul(sm%x(ip,:), sm%mesh%sb%latt%klattice_primitive)
       
-      do idir = 1, dim
+      do idir = 1, space%dim
         db(idir) = max(db(idir), nint(abs(chi(idir))/sm%mesh%spacing(idir) + M_HALF))
       end do
     end do
 
-    do idir = 1, dim
-      db(idir) = 2 * db(idir) + 1
-    end do
+    db = 2 * db + 1
 
     POP_SUB(submesh_get_cube_dim)
   end subroutine submesh_get_cube_dim
 
   !------------------------------------------------------------
-  subroutine submesh_init_cube_map(sm, dim)
-    type(submesh_t),   intent(inout)  :: sm
-    integer,           intent(in)     :: dim
+  subroutine submesh_init_cube_map(sm, space)
+    type(submesh_t),   intent(inout) :: sm
+    type(space_t),     intent(in)    :: space
 
     integer :: ip, idir
-    FLOAT :: chi(1:MAX_DIM), shift(1:MAX_DIM)
+    FLOAT :: chi(space%dim), shift(space%dim)
 
     PUSH_SUB(submesh_init_cube_map)
 
     sm%cube_map%nmap = sm%np
-    SAFE_ALLOCATE(sm%cube_map%map(1:dim, sm%cube_map%nmap))
+    SAFE_ALLOCATE(sm%cube_map%map(1:space%dim, sm%cube_map%nmap))
 
     !The center of the submesh does not belong to the mesh
     !So we first need to find the closest grid point, and center the cube to it
-    chi(1:dim) = matmul(sm%center(1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
-    do idir = 1, dim
+    chi = matmul(sm%center, sm%mesh%sb%latt%klattice_primitive)
+    do idir = 1, space%dim
       shift(idir) = nint(chi(idir)/sm%mesh%spacing(idir))*sm%mesh%spacing(idir)
     end do
-    shift(1:dim) = matmul(sm%mesh%sb%latt%rlattice_primitive(1:dim,1:dim), shift(1:dim)) 
-    shift(1:dim) = shift(1:dim) - sm%center(1:dim) 
+    shift = matmul(sm%mesh%sb%latt%rlattice_primitive, shift)
+    shift = shift - sm%center
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi(1:dim) = matmul(sm%x(ip,1:dim) - shift(1:dim), sm%mesh%sb%latt%klattice_primitive(1:dim, 1:dim))
-      do idir = 1, dim
-        sm%cube_map%map(idir,ip) = nint(chi(idir)/sm%mesh%spacing(idir))
+      chi = matmul(sm%x(ip,:) - shift, sm%mesh%sb%latt%klattice_primitive)
+      do idir = 1, space%dim
+        sm%cube_map%map(idir, ip) = nint(chi(idir)/sm%mesh%spacing(idir))
       end do
     end do
 
@@ -786,7 +784,6 @@ contains
       call accel_create_buffer(sm%cube_map%map_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, sm%cube_map%nmap*5)
       call accel_write_buffer(sm%cube_map%map_buffer, sm%cube_map%nmap*5, sm%cube_map%map)
     end if
-
 
     POP_SUB(submesh_init_cube_map)
   end subroutine submesh_init_cube_map

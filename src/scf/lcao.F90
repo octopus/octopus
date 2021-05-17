@@ -711,7 +711,7 @@ contains
     call lcao_init_orbitals(lcao, st, gr, ions, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, namespace, st, gr, hm, gr%sb, ions, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, hm, ions, st%qtot, st%d%ispin, st%d%spin_channels, st%rho)
 
       if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
@@ -946,12 +946,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, namespace, st, mesh, sb, ions, iatom, spin_channels, rho)
+  subroutine lcao_atom_density(this, st, mesh, ions, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
-    type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(in)    :: st
     type(mesh_t),             intent(in)    :: mesh
-    type(simul_box_t),        intent(in)    :: sb
     type(ions_t),     target, intent(in)    :: ions
     integer,                  intent(in)    :: iatom
     integer,                  intent(in)    :: spin_channels
@@ -1052,13 +1050,12 @@ contains
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, namespace, st, gr, hm, sb, ions, qtot, ispin, spin_channels, rho)
+  subroutine lcao_guess_density(this, namespace, st, gr, hm, ions, qtot, ispin, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
-    type(simul_box_t),        intent(in)    :: sb
     type(ions_t),             intent(in)    :: ions
     FLOAT,                    intent(in)    :: qtot  !< the total charge of the system
     integer,                  intent(in)    :: ispin, spin_channels
@@ -1124,7 +1121,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = ions%atoms_dist%start, ions%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, spin_channels, atom_rho)
+        call lcao_atom_density(this, st, gr%mesh, ions, ia, spin_channels, atom_rho)
         rho(1:gr%mesh%np, 1:spin_channels) = rho(1:gr%mesh%np, 1:spin_channels) + &
                                                   atom_rho(1:gr%mesh%np, 1:spin_channels)
       end do
@@ -1141,14 +1138,14 @@ contains
 
       rho = M_ZERO
       do ia = ions%atoms_dist%start, ions%atoms_dist%end
-        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho(1:gr%mesh%np, 1:2))
+        call lcao_atom_density(this, st, gr%mesh, ions, ia, 2, atom_rho(1:gr%mesh%np, 1:2))
         rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:2))
       do ia = 1, ions%natoms
-        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho)
+        call lcao_atom_density(this, st, gr%mesh, ions, ia, 2, atom_rho)
 
         if (ispin == SPIN_POLARIZED) then
           call quickrnd(iseed, rnd)
@@ -1216,7 +1213,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, namespace, st, gr%mesh, sb, ions, ia, 2, atom_rho)
+        call lcao_atom_density(this, st, gr%mesh, ions, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%mesh, atom_rho(:, 1))

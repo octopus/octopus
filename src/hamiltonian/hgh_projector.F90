@@ -68,7 +68,7 @@ contains
     FLOAT,                 intent(in)    :: so_strength
 
     integer :: is, i
-    FLOAT :: v, x(1:3)
+    FLOAT :: xx(1:3)
     type(ps_t), pointer :: ps
 
     PUSH_SUB(hgh_projector_init)
@@ -76,19 +76,16 @@ contains
     hgh_p%n_s = sm%np
     if(reltyp == 0) then
       SAFE_ALLOCATE(hgh_p%dp(1:hgh_p%n_s, 1:3))
-      x = M_ZERO
       do is = 1, hgh_p%n_s
-        x(1:3) = sm%x(is, 1:3)
-
+        xx(1:3) = sm%x(is, 1:3)
         do i = 1, 3
-          call species_real_nl_projector(a%species, x, l, lm, i, v)
-          hgh_p%dp (is, i) = v
+          call species_real_nl_projector(a%species, xx, sm%r(is), l, lm, i, hgh_p%dp(is, i))
         end do
       end do
     else
       SAFE_ALLOCATE(hgh_p%zp(1:hgh_p%n_s, 1:3))
       do i = 1, 3
-        call species_nl_projector(a%species, hgh_p%n_s, sm%x(:, 0:3), l, lm, i, hgh_p%zp(:, i)) 
+        call species_nl_projector(a%species, hgh_p%n_s, sm%x(:, 1:3), sm%r, l, lm, i, hgh_p%zp(:, i)) 
       end do
     end if
 

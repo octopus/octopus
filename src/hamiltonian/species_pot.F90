@@ -564,11 +564,11 @@ contains
     case(SPECIES_PSEUDO, SPECIES_PSPIO)
       ps => species_ps(species)
 
-      call submesh_init(sphere, space, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
+      call submesh_init(sphere, space, mesh, latt, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
 
       do ip = 1, sphere%np
-        rho_sphere(ip) = sphere%x(ip, 0)
+        rho_sphere(ip) = sphere%r(ip)
       end do
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 

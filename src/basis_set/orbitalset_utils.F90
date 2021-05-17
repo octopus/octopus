@@ -33,7 +33,6 @@ module orbitalset_utils_oct_m
   use orbitalset_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
   use unit_oct_m
@@ -78,12 +77,11 @@ contains
     end do
   end function orbitalset_utils_count
 
-  subroutine orbitalset_init_intersite(this, namespace, ind, sb, ions, der, psolver, os, nos, maxnorbs, &
+  subroutine orbitalset_init_intersite(this, namespace, ind, ions, der, psolver, os, nos, maxnorbs, &
                 rcut, kpt, has_phase, sm_poisson)
     type(orbitalset_t),           intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
     integer,                      intent(in)    :: ind
-    type(simul_box_t),            intent(in)    :: sb
     type(ions_t),                 intent(in)    :: ions
     type(derivatives_t),          intent(in)    :: der
     type(poisson_t),              intent(in)    :: psolver
@@ -184,7 +182,7 @@ contains
         ios = this%map_os(inn)
 
         !Init a submesh from the union of two submeshes
-        call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
+        call submesh_merge(sm, ions%space, der%mesh, this%sphere, os(ios)%sphere, &
                        shift = this%V_ij(inn, 1:ions%space%dim))
 
         write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', &
@@ -200,7 +198,7 @@ contains
                           1, orb(1:sm%np, ist,1))
         end do
          
-        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:ions%space%dim)+os(ios)%sphere%center(1:ions%space%dim))
+        call submesh_shift_center(sm, ions%space, this%V_ij(inn, 1:ions%space%dim)+os(ios)%sphere%center(1:ions%space%dim))
 
         do ist = 1, os(ios)%norbs
           call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
@@ -210,7 +208,7 @@ contains
         SAFE_ALLOCATE(tmp(1:sm%np))
 
         !Build information needed for the direct Poisson solver on the submesh
-        call submesh_build_global(sm)
+        call submesh_build_global(sm, ions%space)
 
         select case (sm_poisson)
         case(SM_POISSON_DIRECT)

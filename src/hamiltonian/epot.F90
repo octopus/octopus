@@ -392,14 +392,15 @@ contains
     do ia = ions%atoms_dist%start, ions%atoms_dist%end
       if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(ions%atom(ia)%species)
-      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh%sb, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1))
+      call submesh_init(ep%proj(ia)%sphere, ions%space, mesh, ions%latt, ions%atom(ia)%x(1:ions%space%dim), &
+        ps%rc_max + mesh%spacing(1))
     end do
 
     if(ions%atoms_dist%parallel) then
       do ia = 1, ions%natoms
         if(ep%proj(ia)%type == PROJ_NONE) cycle
         ps => species_ps(ions%atom(ia)%species)
-        call submesh_broadcast(ep%proj(ia)%sphere, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
+        call submesh_broadcast(ep%proj(ia)%sphere, ions%space, mesh, ions%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
           ions%atoms_dist%node(ia), ions%atoms_dist%mpi_grp)
       end do
     end if
@@ -435,7 +436,7 @@ contains
     FLOAT,                    intent(inout) :: vpsl(:)
 
     integer :: ip
-    FLOAT :: radius, r
+    FLOAT :: radius
     FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
@@ -491,12 +492,11 @@ contains
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + mesh%spacing(1)
 
-        call submesh_init(sphere, space, mesh%sb, mesh, atom%x, radius)
+        call submesh_init(sphere, space, mesh, latt, atom%x(1:space%dim), radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np
-          r = sphere%x(ip, 0)
-          vl(ip) = spline_eval(ps%vl, r)
+          vl(ip) = spline_eval(ps%vl, sphere%r(ip))
         end do
 
         call submesh_add_to_mesh(sphere, vl, vpsl)

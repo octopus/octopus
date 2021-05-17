@@ -1320,21 +1320,20 @@ contains
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector and its
   !! derivative, built using real spherical harmonics
-  subroutine species_real_nl_projector(spec, x, l, lm, i, uV, duV)
+  subroutine species_real_nl_projector(spec, x, r, l, lm, i, uV, duV)
     type(species_t),   intent(in)  :: spec
     FLOAT,             intent(in)  :: x(:)
+    FLOAT,             intent(in)  :: r
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV
     FLOAT, optional,   intent(out) :: duV(:)
 
-    FLOAT :: r, uVr0, duvr0, ylm, gylm(1:3)
+    FLOAT :: uVr0, duvr0, ylm, gylm(1:3)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     ! no push_sub because this function is called very frequently
 
     ASSERT(species_is_ps(spec))
-
-    r = sqrt(sum(x(1:3)**2))
 
     uVr0  = spline_eval(spec%ps%kb(l, i), r)
 
@@ -1371,10 +1370,11 @@ contains
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector, built using
   !! spherical harmonics
-  subroutine species_nl_projector(spec, np, x, l, lm, i, uV)
+  subroutine species_nl_projector(spec, np, x, r, l, lm, i, uV)
     type(species_t),   intent(in)  :: spec
     integer,           intent(in)  :: np
-    FLOAT,             intent(in)  :: x(:,0:) !< (np_part, 3)
+    FLOAT,             intent(in)  :: x(:,:) !< (np_part, 3)
+    FLOAT,             intent(in)  :: r(:) !< (np_part)
     integer,           intent(in)  :: l, lm, i
     CMPLX,             intent(out) :: uV(:) !< (np)
 
@@ -1384,7 +1384,7 @@ contains
     PUSH_SUB(species_nl_projector)
 
     if(np > 0) then
-      uv(1:np) = x(1:np, 0)
+      uv(1:np) = r(1:np)
       call spline_eval_vec(spec%ps%kb(l, i), np, uv)
 
       do ip = 1, np

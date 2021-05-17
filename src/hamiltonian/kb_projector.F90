@@ -65,7 +65,6 @@ contains
 
     integer :: n_c, ic, ip
     type(ps_t), pointer :: ps
-    FLOAT :: xx(3)
 
     PUSH_SUB(kb_projector_init)
 
@@ -87,8 +86,7 @@ contains
     
     do ic = 1, n_c
       do ip = 1, sm%np
-        xx(1:3) = sm%x(ip, 1:3)
-        call species_real_nl_projector(a%species, xx, l, lm, ic, kb_p%p(ip, ic))
+        call species_real_nl_projector(a%species, sm%x(ip, :), sm%r(ip), l, lm, ic, kb_p%p(ip, ic))
       end do
 
       kb_p%e(ic) = ps%h(l, ic, ic)

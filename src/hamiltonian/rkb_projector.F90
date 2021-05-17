@@ -75,17 +75,17 @@ contains
 
     !Build projectors
     do i = 1, 2
-      call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm, i, rkb_p%ket(:, i, 1, 1))
+      call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 1:3), sm%r, l, lm, i, rkb_p%ket(:, i, 1, 1))
       rkb_p%bra(:, i) = conjg(rkb_p%ket(:, i, 1, 1))
       rkb_p%ket(:, i, 2, 2) = rkb_p%ket(:, i, 1, 1)
 
       if (lm /= l) then
-        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm+1, i, rkb_p%ket(:, i, 2, 1))
+        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 1:3), sm%r, l, lm+1, i, rkb_p%ket(:, i, 2, 1))
       else
         rkb_p%ket(:, i, 2, 1) = M_z0
       end if
       if (lm /= -l) then
-        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 0:3), l, lm-1, i, rkb_p%ket(:, i, 1, 2))
+        call species_nl_projector(a%species, rkb_p%n_s, sm%x(:, 1:3), sm%r, l, lm-1, i, rkb_p%ket(:, i, 1, 2))
       else
         rkb_p%ket(:, i, 1, 2) = M_z0
       end if

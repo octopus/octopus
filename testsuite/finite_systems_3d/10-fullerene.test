@@ -10,43 +10,54 @@ ExtraFile  : 10-fullerene.geometry.xyz
 Input      : 10-fullerene.01-gs.inp
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -318.477942845
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  3706.61777045
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.51706131
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3988.93720093
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -137.61500129
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -91.98680709
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -13.26967141
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 225.40943511
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -8134.18574076
 
-match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.656764
-match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.572605
-match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.505687
-match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.393505
-match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.296596
-match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.225454
-match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.169664
-match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.158754
-match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.079495
-match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.064320
-match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; 0.007267
-match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; 0.057976
-match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ; 0.198754
-Precision : 0.0002
-match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ; 0.270494
+Precision: 4.69e-05
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -318.477949805
+Precision: 3.71e-12
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 3706.61777045
+Precision: 2.04e-05
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.5171345
+Precision: 3.23e-05
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3988.93711322
+Precision: 1.62e-06
+match ;  Int[n*v_xc]         ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -137.6149998
+Precision: 1.17e-06
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -91.98680602
+Precision: 6.05e-08
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -13.269671355
+Precision: 4.80e-06
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 225.40943375
+Precision: 3.25e-05
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -8134.1858020399995
 
-Precision : 0.002
 
-match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 4.000
-match ; Partial charge 10 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 11) ; 3.999
-match ; Partial charge 15 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 16) ; 4.000
-match ; Partial charge 20 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 21) ; 3.997
-match ; Partial charge 25 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 26) ; 3.998
-match ; Partial charge 30 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 31) ; 4.000
-match ; Partial charge 35 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 36) ; 4.003
-match ; Partial charge 40 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 41) ; 4.004
-match ; Partial charge 45 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 46) ; 3.996
-match ; Partial charge 50 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 51) ; 4.005
-match ; Partial charge 55 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 56) ; 3.997
-match ; Partial charge 60 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 61) ; 3.999
+Precision: 5.50e-07
+match ;  Eigenvalue  10      ; GREPFIELD(static/info, ' 10   --', 3) ; -0.6567645
+match ;  Eigenvalue  20      ; GREPFIELD(static/info, ' 20   --', 3) ; -0.5726045
+match ;  Eigenvalue  30      ; GREPFIELD(static/info, ' 30   --', 3) ; -0.505687
+match ;  Eigenvalue  40      ; GREPFIELD(static/info, ' 40   --', 3) ; -0.39350450000000003
+match ;  Eigenvalue  50      ; GREPFIELD(static/info, ' 50   --', 3) ; -0.296596
+match ;  Eigenvalue  60      ; GREPFIELD(static/info, ' 60   --', 3) ; -0.22545349999999997
+match ;  Eigenvalue  70      ; GREPFIELD(static/info, ' 70   --', 3) ; -0.16966350000000002
+match ;  Eigenvalue  80      ; GREPFIELD(static/info, ' 80   --', 3) ; -0.1587535
+match ;  Eigenvalue  90      ; GREPFIELD(static/info, ' 90   --', 3) ; -0.0794945
+match ;  Eigenvalue 100      ; GREPFIELD(static/info, '100   --', 3) ; -0.0643195
+match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.007267
+match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.0579765
+match ;  Eigenvalue 130      ; GREPFIELD(static/info, '130   --', 3) ; 0.198754
+Precision: 5.50e-06
+match ;  Eigenvalue 140      ; GREPFIELD(static/info, '140   --', 3) ; 0.27052299999999996
+
+Precision : 0.001
+match ;  Partial charge  5  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6) ; 4.0
+match ;  Partial charge 10  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 11) ; 3.999
+match ;  Partial charge 15  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 16) ; 4.0
+match ;  Partial charge 20  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 21) ; 3.997
+match ;  Partial charge 25  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 26) ; 3.998
+match ;  Partial charge 30  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 31) ; 4.0
+match ;  Partial charge 35  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 36) ; 4.003
+match ;  Partial charge 40  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 41) ; 4.004
+match ;  Partial charge 45  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 46) ; 3.996
+match ;  Partial charge 50  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 51) ; 4.005
+match ;  Partial charge 55  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 56) ; 3.997
+match ;  Partial charge 60  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 61) ; 3.999
