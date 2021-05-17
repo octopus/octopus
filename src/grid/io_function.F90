@@ -516,7 +516,7 @@ contains
       call parse_block_end(blk)
     else
 
-      call messages_variable_nowblock(namespace, what_tag)
+      call messages_variable_is_block(namespace, what_tag)
 
       ! Output block does not exist but we may have OutputHow/OutputInterval 
       call parse_variable(namespace, how_tag, 0, how(0))

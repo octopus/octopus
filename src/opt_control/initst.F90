@@ -214,7 +214,7 @@ contains
         end do
         SAFE_DEALLOCATE_A(zpsi)
       else
-        call messages_variable_nowblock(sys%namespace, 'OCTInitialUserdefined')
+        call messages_variable_is_block(sys%namespace, 'OCTInitialUserdefined')
       end if
       
     case default

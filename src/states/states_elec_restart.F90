@@ -1254,7 +1254,7 @@ contains
       call messages_print_stress(stdout, namespace=namespace)
 
     else
-      call messages_variable_nowblock(namespace, 'UserDefinedStates')
+      call messages_variable_is_block(namespace, 'UserDefinedStates')
     end if
 
     POP_SUB(states_elec_read_user_def_orbitals)
@@ -1481,7 +1481,7 @@ contains
         call states_elec_end(stin)
 
       else
-        call messages_variable_nowblock(namespace, trim(block_name))
+        call messages_variable_is_block(namespace, trim(block_name))
       end if
 
     end if

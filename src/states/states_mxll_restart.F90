@@ -273,7 +273,7 @@ contains
       !call messages_print_stress(stdout, namespace=namespace)
 
     else
-      call messages_variable_nowblock(namespace, 'UserDefineInitialdStates')
+      call messages_variable_is_block(namespace, 'UserDefineInitialdStates')
     end if
 
     call profiling_out(prof)

@@ -98,7 +98,7 @@
       call parse_block_end(blk)
       call density_calc(tg%st, gr, tg%st%rho)
     else
-      call messages_variable_nowblock(namespace, 'OCTTargetUserdefined')
+      call messages_variable_is_block(namespace, 'OCTTargetUserdefined')
     end if
 
     SAFE_DEALLOCATE_A(zpsi)

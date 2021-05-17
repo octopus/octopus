@@ -58,7 +58,7 @@ module messages_oct_m
     messages_print_var_option,  &
     messages_print_var_value,   &
     messages_obsolete_variable, &
-    messages_variable_nowblock, &
+    messages_variable_is_block, &
     messages_experimental,      &
     messages_check_def,         &
     messages_not_implemented,   &
@@ -1161,22 +1161,20 @@ contains
   end subroutine messages_obsolete_variable
 
   ! ---------------------------------------------------------
-  subroutine messages_variable_nowblock(namespace, name)
+  subroutine messages_variable_is_block(namespace, name)
     type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: name
 
     if(parse_is_defined(namespace, trim(name))) then
 
-      write(message(1), '(a)') 'Input variable `'//trim(name)//'` is obsolete.'
-      write(message(2), '(a)') ' '
-      write(message(3), '(a)') 'This variable must be defined as a block.'
-      write(message(4), '(a)') 'Check the documentation for details.'
-      write(message(5), '(a)') '(You can use the `oct-help -p '//trim(name)//'` command).'
-      call messages_fatal(5, only_root_writes = .true.)
+      write(message(1), '(a)') 'Input variable `'//trim(name)//'` must be defined as a block.'
+      write(message(2), '(a)') 'Please check the documentation for details.'
+      write(message(3), '(a)') '(You can use the `oct-help -p '//trim(name)//'` command).'
+      call messages_fatal(3, only_root_writes = .true.)
 
     end if
 
-  end subroutine messages_variable_nowblock
+  end subroutine messages_variable_is_block
 
   ! ---------------------------------------------------------
   subroutine messages_experimental(name)

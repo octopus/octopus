@@ -56,7 +56,7 @@
         tg%spin_matrix(2, 1) = alpha(1) + M_zI * alpha(2)
         
       else
-        call messages_variable_nowblock(namespace, 'OCTTargetSpin')
+        call messages_variable_is_block(namespace, 'OCTTargetSpin')
       end if
 
     else

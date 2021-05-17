@@ -380,7 +380,7 @@ contains
       do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
         if(outp%how(output_i) /= 0) then
           call dio_function_output(outp%how(output_i), trim(restart_folder)//trim(folder), & 
-           trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, ions = ions)
+           trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
         end if
       end do
       if(outp%what(OPTION__OUTPUT__POTENTIAL)) then
