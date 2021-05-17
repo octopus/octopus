@@ -1026,7 +1026,7 @@ contains
 
     do iout = 1, OUT_MAX
       if(iout == OUT_LASER) cycle
-      if(writ%out(iout)%write)  then
+      if(writ%out(iout)%write) then
         if(mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
           if(writ%out(iout)%resolve_states) then
             do ii = writ%out(iout)%hand_start, writ%out(iout)%hand_end
@@ -1041,7 +1041,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_DFTU_MAX
-        if(writ%out_dftu(iout)%write)  call write_iter_flush(writ%out_dftu(iout)%handle)
+        if(writ%out_dftu(iout)%write) call write_iter_flush(writ%out_dftu(iout)%handle)
       end do
     end if
 
