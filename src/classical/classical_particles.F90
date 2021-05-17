@@ -65,6 +65,7 @@ module classical_particles_oct_m
     FLOAT, allocatable, public :: pos(:,:)       !< Position of the particles
     FLOAT, allocatable, public :: vel(:,:)       !< Velocity of the particles
     FLOAT, allocatable, public :: tot_force(:,:) !< Total force acting on each particle
+    logical, allocatable, public :: fixed(:)     !< True if a giving particle is to be kept fixed during a propagation. The default is to let the particles move.
 
     !> The following variables are work arrays used by the different propagators:
     FLOAT, allocatable :: acc(:,:)        !< Acceleration of the particles
@@ -102,6 +103,8 @@ contains
     SAFE_ALLOCATE(this%pos(1:this%space%dim, 1:np))
     SAFE_ALLOCATE(this%vel(1:this%space%dim, 1:np))
     SAFE_ALLOCATE(this%tot_force(1:this%space%dim, 1:np))
+    SAFE_ALLOCATE(this%fixed(1:np))
+    this%fixed = .false. ! By default we let the particles move.
 
     this%quantities(POSITION)%required = .true.
     this%quantities(VELOCITY)%required = .true.
@@ -148,11 +151,15 @@ contains
       this%save_vel(1:sdim, 1:this%np) = this%vel(1:sdim, 1:this%np)
 
     case (VERLET_START)
-      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:np))
-      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:np))
+      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:this%np))
+      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:this%np))
       SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1))
       do ip = 1, this%np
-        this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        if (this%fixed(ip)) then
+          this%acc(1:sdim, ip) = M_ZERO
+        else
+          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        end if
       end do
 
     case (VERLET_FINISH)
@@ -179,8 +186,12 @@ contains
         this%prev_acc(1:sdim, 1:this%np, ii + 1) = this%prev_acc(1:sdim, 1:this%np, ii)
       end do
       do ip = 1, this%np
-        this%prev_acc(1:sdim, ip, 1) = this%acc(1:sdim, ip)
-        this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        this%prev_acc(:, ip, 1) = this%acc(:, ip)
+        if (this%fixed(ip)) then
+          this%acc(1:sdim, ip) = M_ZERO
+        else
+          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        end if
       end do
 
     case (VERLET_COMPUTE_VEL)
@@ -194,11 +205,15 @@ contains
         SAFE_ALLOCATE(this%save_pos(1:this%space%dim, 1:this%np))
         SAFE_ALLOCATE(this%save_vel(1:this%space%dim, 1:this%np))
       end if
-      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:np))
-      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:np))
+      SAFE_ALLOCATE(this%acc(1:this%space%dim, 1:this%np))
+      SAFE_ALLOCATE(this%prev_tot_force(1:this%space%dim, 1:this%np))
       SAFE_ALLOCATE(this%prev_acc(1:sdim, 1:this%np, 1:2))
       do ip = 1, this%np
-        this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        if (this%fixed(ip)) then
+          this%acc(1:sdim, ip) = M_ZERO
+        else
+          this%acc(1:sdim, ip) = this%tot_force(1:sdim, ip) / this%mass(ip)
+        end if
         this%prev_acc(1:sdim, ip, 1) = this%acc(1:sdim, ip)
       end do
 
@@ -257,7 +272,11 @@ contains
 
     case (UPDATE_HAMILTONIAN)
       do ip = 1, this%np
-        this%hamiltonian_elements(1:sdim, ip) = this%tot_force(1:sdim, ip) / (this%mass(ip) * this%pos(1:sdim, ip))
+        if (this%fixed(ip)) then
+          this%hamiltonian_elements(1:sdim, ip) = M_ZERO
+        else
+          this%hamiltonian_elements(1:sdim, ip) = this%tot_force(1:sdim, ip) / (this%mass(ip) * this%pos(1:sdim, ip))
+        end if
       end do
 
     case (EXPMID_PREDICT_DT)
@@ -465,6 +484,7 @@ contains
     SAFE_DEALLOCATE_A(this%pos)
     SAFE_DEALLOCATE_A(this%vel)
     SAFE_DEALLOCATE_A(this%tot_force)
+    SAFE_DEALLOCATE_A(this%fixed)
 
     call system_end(this)
 
