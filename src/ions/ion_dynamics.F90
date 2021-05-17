@@ -314,12 +314,12 @@ contains
         if( mpi_grp_is_root(mpi_world)) then
           sigma = sqrt(temperature / species_mass(ions%atom(i)%species) )
           do j = 1, 3
-             ions%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
+             ions%vel(j, i) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
         end if
 #ifdef HAVE_MPI
         !and send them to the others
-        call MPI_Bcast(ions%atom(i)%v, ions%space%dim, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
+        call MPI_Bcast(ions%vel(:, i), ions%space%dim, MPI_FLOAT, 0, mpi_world%comm, mpi_err)
 #endif
       end do
 
@@ -331,13 +331,13 @@ contains
 
       xx = ions%center_of_mass_vel()
       do i = 1, ions%natoms
-        ions%atom(i)%v(1:ions%space%dim) = ions%atom(i)%v(1:ions%space%dim) - xx
+        ions%vel(:, i) = ions%vel(:, i) - xx
       end do
 
       kin2 = ion_dynamics_kinetic_energy(ions)
 
       do i = 1, ions%natoms
-        ions%atom(i)%v(:) =  sqrt(kin1/kin2)*ions%atom(i)%v(:)
+        ions%vel(:, i) =  sqrt(kin1/kin2)*ions%vel(:, i)
       end do
 
       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities randomly distributed with T =', &
@@ -413,15 +413,13 @@ contains
 
         ! copy information and adjust units
         do i = 1, ions%natoms
-          ions%atom(i)%v = units_to_atomic(units_inp%velocity/units_inp%length, xyz%atom(i)%x)
+          ions%vel(:, i) = units_to_atomic(units_inp%velocity/units_inp%length, xyz%atom(i)%x(1:ions%space%dim))
         end do
 
         call read_coords_end(xyz)
 
       else
-        do i = 1, ions%natoms
-          ions%atom(i)%v = M_ZERO
-        end do
+        ions%vel = M_ZERO
       end if
     end if
 
@@ -520,14 +518,14 @@ contains
 
         if(.not. this%drive_ions) then
 
-          ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%atom(iatom)%v(1:ions%space%dim) + &
+          ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%vel(:, iatom) + &
             M_HALF*dt**2 / species_mass(ions%atom(iatom)%species) * ions%atom(iatom)%f(1:ions%space%dim)
           
           this%oldforce(1:ions%space%dim, iatom) = ions%atom(iatom)%f(1:ions%space%dim)
           
         else
           if(this%constant_velocity) then
-            ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%atom(iatom)%v(1:ions%space%dim)
+            ions%pos(:, iatom) = ions%pos(:, iatom) + dt*ions%vel(:, iatom)
           end if
 
 
@@ -554,7 +552,7 @@ contains
       call nh_chain(this, ions)
 
       do iatom = 1, ions%natoms
-        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*dt*ions%atom(iatom)%v(1:ions%space%dim)
+        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*dt*ions%vel(:, iatom)
       end do
 
     end if
@@ -572,7 +570,6 @@ contains
     type(ions_t),         intent(inout) :: ions
 
     FLOAT :: g1, g2, ss, uk, dt, temp
-    integer :: iatom
 
     PUSH_SUB(nh_chain)
 
@@ -594,9 +591,7 @@ contains
 
     ss = exp(-this%nh(1)%vel*dt/CNST(2.0))
     
-    do iatom = 1, ions%natoms
-      ions%atom(iatom)%v(1:ions%space%dim) = ss*ions%atom(iatom)%v(1:ions%space%dim)
-    end do
+    ions%vel = ss*ions%vel
     
     uk = uk*ss**2
 
@@ -634,7 +629,7 @@ contains
       do iatom = 1, ions%natoms
         if(.not. ions%atom(iatom)%move) cycle
         
-        ions%atom(iatom)%v(1:ions%space%dim) = ions%atom(iatom)%v(1:ions%space%dim) &
+        ions%vel(:, iatom) = ions%vel(:, iatom) &
           + this%dt/species_mass(ions%atom(iatom)%species) * M_HALF * (this%oldforce(1:ions%space%dim, iatom) + &
           ions%atom(iatom)%f(1:ions%space%dim))
         
@@ -643,9 +638,9 @@ contains
     else
       ! the nose-hoover integration
       do iatom = 1, ions%natoms
-        ions%atom(iatom)%v(1:ions%space%dim) = ions%atom(iatom)%v(1:ions%space%dim) + &
+        ions%vel(:, iatom) = ions%vel(:, iatom) + &
           this%dt*ions%atom(iatom)%f(1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
-        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*this%dt*ions%atom(iatom)%v(1:ions%space%dim)
+        ions%pos(:, iatom) = ions%pos(:, iatom) + M_HALF*this%dt*ions%vel(:, iatom)
       end do
       
       call nh_chain(this, ions)
@@ -655,9 +650,7 @@ contains
     if(this%thermostat == THERMO_SCAL) then
       scal = sqrt(this%current_temperature/ion_dynamics_temperature(ions))
 
-      do iatom = 1, ions%natoms
-        ions%atom(iatom)%v(1:ions%space%dim) = scal*ions%atom(iatom)%v(1:ions%space%dim)
-      end do
+      ions%vel = scal*ions%vel
     end if
 
     POP_SUB(ion_dynamics_propagate_vel)
@@ -741,8 +734,6 @@ contains
     type(ions_t),         intent(in)    :: ions
     type(ion_state_t),    intent(out)   :: state
 
-    integer :: iatom
-
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_save_state)
@@ -751,9 +742,7 @@ contains
     SAFE_ALLOCATE(state%vel(1:ions%space%dim, 1:ions%natoms))
 
     state%pos = ions%pos
-    do iatom = 1, ions%natoms
-      state%vel(1:ions%space%dim, iatom) = ions%atom(iatom)%v(1:ions%space%dim)
-    end do
+    state%vel = ions%vel
 
     if(this%thermostat == THERMO_NH) then
       SAFE_ALLOCATE(state%old_pos(1:ions%space%dim, 1:ions%natoms))
@@ -772,16 +761,12 @@ contains
     type(ions_t),         intent(inout) :: ions
     type(ion_state_t),    intent(inout) :: state
 
-    integer :: iatom
-
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_restore_state)
 
     ions%pos = state%pos
-    do iatom = 1, ions%natoms
-      ions%atom(iatom)%v(1:ions%space%dim) = state%vel(1:ions%space%dim, iatom)
-    end do
+    ions%vel = state%vel
 
     if(this%thermostat == THERMO_NH) then
       this%old_pos(1:ions%space%dim, 1:ions%natoms) = state%old_pos(1:ions%space%dim, 1:ions%natoms)
@@ -815,7 +800,7 @@ contains
     kinetic_energy = M_ZERO
     do iatom = 1, ions%natoms
       kinetic_energy = kinetic_energy + &
-        M_HALF * species_mass(ions%atom(iatom)%species) * sum(ions%atom(iatom)%v(1:ions%space%dim)**2)
+        M_HALF * species_mass(ions%atom(iatom)%species) * sum(ions%vel(:, iatom)**2)
     end do
 
   end function ion_dynamics_kinetic_energy

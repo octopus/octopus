@@ -770,7 +770,7 @@ contains
     do iatom = 1, this%natoms
       mass = species_mass(this%atom(iatom)%species)
       total_mass = total_mass + mass
-      vel = vel + mass*this%atom(iatom)%v(1:this%space%dim)
+      vel = vel + mass*this%vel(:, iatom)
     end do
     vel = vel/total_mass
 

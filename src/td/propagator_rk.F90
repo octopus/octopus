@@ -159,9 +159,7 @@ contains
 
     if(ion_dynamics_ions_move(ions_dyn)) then
       pos0 = ions%pos
-      do iatom = 1, ions%natoms
-        vel0(1:ions%space%dim, iatom) = ions%atom(iatom)%v(1:ions%space%dim)
-      end do
+      vel0 = ions%vel
       posfinal = pos0
       velfinal = vel0
 
@@ -300,9 +298,7 @@ contains
     call density_calc(st, gr, st%rho)
     if(ion_dynamics_ions_move(ions_dyn)) then
       ions%pos = posfinal
-      do iatom = 1, ions%natoms
-        ions%atom(iatom)%v(1:ions%space%dim) = velfinal(:, iatom)
-      end do
+      ions%vel = velfinal
       call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, st, time)
       !call forces_calculate(gr, namespace, ions, hm, stphi, time, dt)
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
@@ -358,9 +354,7 @@ contains
 
       if(ion_dynamics_ions_move(ions_dyn)) then
         ions%pos = pos
-        do iatom = 1, ions%natoms
-          ions%atom(iatom)%v(1:ions%space%dim) = vel(:, iatom)
-        end do
+        ions%vel = vel
         call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, stphi, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then

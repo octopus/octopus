@@ -27,7 +27,6 @@ module atom_oct_m
     !private
     character(len=LABEL_LEN)  :: label = ""
     type(species_t), pointer  :: species  =>null() !< pointer to species
-    FLOAT, dimension(MAX_DIM) :: v     = M_ZERO !< velocity of atom in real space
     FLOAT, dimension(MAX_DIM) :: f     = M_ZERO !< force on atom in real space
     integer, dimension(MAX_DIM) :: c   = 0      !< Constrain on te atom (0 or 1)
     logical                   :: move  = .true. !< should I move this atom in the optimization mode
@@ -71,7 +70,6 @@ contains
     this%label = trim(adjustl(label))
     this%species  =>null()
     if(present(species))this%species=>species
-    this%v     = M_ZERO
     this%f     = M_ZERO
 
     this%f_ii      = M_ZERO
@@ -93,7 +91,6 @@ contains
 
     this%label = ""
     this%species  =>null()
-    this%v     = M_ZERO
     this%f     = M_ZERO
 
     this%f_ii      = M_ZERO

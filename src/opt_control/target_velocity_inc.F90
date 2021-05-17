@@ -213,7 +213,7 @@
 
     SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
     do i = 1, ions%natoms
-      x(i, 1:ions%space%dim) = ions%atom(i)%v(1:ions%space%dim)
+      x(i, :) = ions%vel(:, i)
     end do
 
     f_re = M_ZERO
@@ -252,7 +252,7 @@
 
     SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
     do ip = 1, ions%natoms
-      x(ip, 1:ions%space%dim) = ions%atom(ip)%v(1:ions%space%dim)
+      x(ip, :) = ions%vel(:, ip)
     end do
 
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
@@ -316,8 +316,8 @@
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
     do iatom = 1, ions%natoms
-       ions%atom(iatom)%v(1:MAX_DIM) = ions%atom(iatom)%v(1:MAX_DIM) + &
-         ions%atom(iatom)%f(1:MAX_DIM) * dt / species_mass(ions%atom(iatom)%species)
+       ions%vel(:, iatom) = ions%vel(:, iatom) + &
+         ions%atom(iatom)%f(1:ions%space%dim) * dt / species_mass(ions%atom(iatom)%species)
     end do
 
     POP_SUB(target_tdcalc_velocity)

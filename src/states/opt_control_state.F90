@@ -128,7 +128,7 @@ contains
     do idim = 1, ions%space%dim
       do iatom = 1, ions%natoms
         ions%pos(idim, iatom) = ocs%q(iatom, idim)
-        ions%atom(iatom)%v(idim) = ocs%p(iatom, idim) / species_mass(ions%atom(iatom)%species)
+        ions%vel(idim, iatom) = ocs%p(iatom, idim) / species_mass(ions%atom(iatom)%species)
       end do
     end do
 
@@ -146,7 +146,7 @@ contains
     do idim = 1, ions%space%dim
       do iatom = 1, ions%natoms
         ocs%q(iatom, idim) = ions%pos(idim, iatom)
-        ocs%p(iatom, idim) = ions%atom(iatom)%v(idim) * species_mass(ions%atom(iatom)%species)
+        ocs%p(iatom, idim) = ions%vel(idim, iatom) * species_mass(ions%atom(iatom)%species)
       end do
     end do
 
@@ -176,7 +176,7 @@ contains
     do idim = 1, ions%space%dim
       do iatom = 1, ions%natoms
         ocs%q(iatom, idim) = ions%pos(idim, iatom)
-        ocs%p(iatom, idim) = species_mass(ions%atom(iatom)%species) * ions%atom(iatom)%v(idim)
+        ocs%p(iatom, idim) = species_mass(ions%atom(iatom)%species) * ions%vel(idim, iatom)
       end do
     end do
     

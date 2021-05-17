@@ -1639,7 +1639,7 @@ contains
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     do iatom = 1, ions%natoms
-      tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%atom(iatom)%v(1:ions%space%dim))
+      tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%vel(:, iatom))
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     do iatom = 1, ions%natoms
@@ -1719,7 +1719,7 @@ contains
         end do
       case (VELOCITIES)
         do iatom = 1, ions%natoms
-           tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%atom(iatom)%v(1:ions%space%dim))
+           tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%vel(:, iatom))
            call write_iter_double(out_coords, tmp, ions%space%dim)
         end do
       case (FORCES)

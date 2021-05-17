@@ -190,10 +190,10 @@ contains
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
       SAFE_ALLOCATE_SOURCE_A(x_initial, sys%ions%pos)
       vel_target_ = .true.
-       do iatom = 1, sys%ions%natoms
-          sys%ions%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-          sys%ions%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-       end do
+      sys%ions%vel = M_ZERO
+      do iatom = 1, sys%ions%natoms
+        sys%ions%atom(iatom)%f(1:MAX_DIM) = M_ZERO
+      end do
      end if
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%ions)
