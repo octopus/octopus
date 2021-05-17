@@ -82,7 +82,7 @@ else
   match ;  Force C1 (x)    ; GREPFIELD(static/info, '1         C', 3) ; -0.000276569
   Precision: 5.50e-10
   match ;  Force C1 (y)    ; GREPFIELD(static/info, '1         C', 4) ; 0.00015986750000000001
-  Precision: 1.e-12
+  Precision: 2.e-12
   match ;  Force C1 (z)    ; GREPFIELD(static/info, '1         C', 5) ; 3.597765e-11
   Precision: 2.38e-19
   match ;  Force C2 (x)    ; GREPFIELD(static/info, '2         C', 3) ; -0.000238215
