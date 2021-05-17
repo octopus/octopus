@@ -86,7 +86,7 @@
     
     call io_mkdir(trim(dir), namespace)
     call target_build_tdlocal(tg, gr, M_ZERO)
-    call dio_function_output(outp%how(0), trim(dir), 'td_local_target', namespace, space, mesh, &
+    call dio_function_output(outp%how(0), trim(dir), 'td_local_target', namespace, space, gr%mesh, &
       tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
 
     POP_SUB(target_output_tdlocal)

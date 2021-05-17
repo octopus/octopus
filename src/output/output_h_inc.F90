@@ -376,18 +376,16 @@
 
     PUSH_SUB(output_xc_torque)
 
-    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
-
+    if(outp%what(OPTION__OUTPUT__XC_TORQUE)) then
       SAFE_ALLOCATE(torque(1:mesh%np, 1:3))
 
       call calc_xc_torque(mesh, hm%vxc, st, torque)
 
       fn_unit = units_out%length**(1 - 2*space%dim)
-      call io_function_output_vector(outp%how, dir, 'xc_torque', namespace, space, mesh, &
+      call io_function_output_vector(outp%how(OPTION__OUTPUT__XC_TORQUE), dir, 'xc_torque', namespace, space, mesh, &
         torque, fn_unit, err, ions = ions, grp = st%dom_st_kpt_mpi_grp)
 
       SAFE_DEALLOCATE_A(torque)
-
     end if
 
     POP_SUB(output_xc_torque)

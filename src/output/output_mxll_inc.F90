@@ -472,7 +472,7 @@
       do idim = 1, space%dim
         write(fname, '(2a)') 'vector_potential-', index2axis(idim)
         call dio_function_output(outp%how(OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL),&
-          dir, fname, namespace, space, mesh, hm%vector_potential(1:gr%mesh%np, idim), fn_unit, &
+          dir, fname, namespace, space, mesh, hm%vector_potential(1:mesh%np, idim), fn_unit, &
           ierr, ions = ions)
       end do
     end if

@@ -660,7 +660,7 @@ contains
                 sys%namespace, sys%space, sys%gr%mesh, lr_elf(:, is), unit_one, ierr, ions = sys%ions)
             write(fname, '(a,i1,2a)') 'lr_elf_D-sp', is, '-', index2axis(ii)
             call dio_function_output(sys%outp%how(OPTION__OUTPUT__ELF), EM_RESP_FD_DIR, trim(fname),&
-                sys%namespace, sys%space, sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, ions = sys%ionso)
+                sys%namespace, sys%space, sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, ions = sys%ions)
           end do
         end if
 

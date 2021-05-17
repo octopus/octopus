@@ -88,7 +88,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
             else
               write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
             end if
-            call zio_function_output(outp%how(OPTION__OUTPUT__CURRENT), dir, fname, namespace, space &
+            call zio_function_output(outp%how(OPTION__OUTPUT__CURRENT), dir, fname, namespace, space, &
               mesh, lr%dl_j(:, idir2, is), fn_unit / pert_unit, ierr, ions = ions)
           end do
         end do

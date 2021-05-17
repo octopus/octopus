@@ -525,7 +525,7 @@ contains
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
       if(outp%what_now(OPTION__OUTPUT__LOCAL_ORBITALS, iter))&
-        call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, associated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
 
       if(outp%what_now(OPTION__OUTPUT__KANAMORIU, iter))&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
