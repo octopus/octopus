@@ -217,6 +217,11 @@ contains
     st%dim = gr%sb%dim
     st%nst = 1
 
+    SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
+    st%ep = P_ep
+    st%mu = P_mu
+
     SAFE_ALLOCATE(st%user_def_e_field(1:st%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%dim))
 

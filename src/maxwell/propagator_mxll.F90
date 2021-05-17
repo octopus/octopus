@@ -524,10 +524,6 @@ contains
 
     call profiling_in(prof, 'SET_MEDIUM_RS_STATE')
 
-    SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
-    st%ep = P_ep
-    st%mu = P_mu
     if (hm%calc_medium_box) then
       do il = 1, size(hm%medium_boxes)
         do ip_in = 1, hm%medium_boxes(il)%points_number
