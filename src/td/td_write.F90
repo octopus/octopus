@@ -346,7 +346,7 @@ contains
     if(hm%ext_lasers%no_lasers > 0) output_options(OUT_LASER) = .true.
     if(kick%qkick_mode /= QKICKMODE_NONE) output_options(OUT_FTCHD) = .true.
 
-    call io_function_read_what_how_when(gr%sb, namespace, output_options, how, output_interval, &
+    call io_function_read_what_how_when(namespace, space, output_options, how, output_interval, &
     'TDOutput')
 
     do iout = 1, OUT_MAX

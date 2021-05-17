@@ -170,7 +170,7 @@ contains
     PUSH_SUB(output_init)
     outp%what = .false.
     
-    call io_function_read_what_how_when(sb, namespace, outp%what, outp%how, outp%output_interval)
+    call io_function_read_what_how_when(namespace, space, outp%what, outp%how, outp%output_interval)
 
     if(outp%what(OPTION__OUTPUT__WFS_FOURIER)) then
       call messages_experimental("Wave-functions in Fourier space")

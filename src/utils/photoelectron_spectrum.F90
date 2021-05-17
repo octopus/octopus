@@ -285,7 +285,7 @@ program photoelectron_spectrum
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
   pesout%what = what
-  call io_function_read_what_how_when(sb, global_namespace, pesout%what, pesout%how, pesout%output_interval, &
+  call io_function_read_what_how_when(global_namespace, space, pesout%what, pesout%how, pesout%output_interval, &
     what_tag_in = 'PhotoelectronSpectrumOutput',  ignore_error = .true.)
   
   ! TODO: I think it would be better to move these options in the

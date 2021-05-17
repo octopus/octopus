@@ -126,7 +126,7 @@ contains
     !%End
 
     this%what = .false.
-    call io_function_read_what_how_when(sb, namespace, this%what, how, output_interval, &
+    call io_function_read_what_how_when(namespace, space, this%what, how, output_interval, &
     'OutputMatrixElements')
 
     if(st%parallel_in_states) then
