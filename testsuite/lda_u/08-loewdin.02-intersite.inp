@@ -43,3 +43,5 @@ ACBN0IntersiteCutoff = 7
 StatesPack = yes
 
 LCAOStart = lcao_full
+
+DFTUPoissonSolver = dft_u_poisson_direct

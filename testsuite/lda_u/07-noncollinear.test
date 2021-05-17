@@ -56,8 +56,8 @@ else
   match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.383971
   Precision: 1.40e-17
   match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -0.01398
-  Precision: 5.50e-07
-  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.0865865
+  Precision: 8.66e-17
+  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.086587
   Precision: 1.10e-16
   match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; 0.109796
 
