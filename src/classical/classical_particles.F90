@@ -311,6 +311,8 @@ contains
 
     PUSH_SUB(classical_particles_is_tolerance_reached)
 
+    ASSERT(this%prop%predictor_corrector)
+
     ! Here we put the criterion that maximum acceleration change is below the tolerance
     max_change = M_ZERO
     do ip = 1, this%np
@@ -415,7 +417,9 @@ contains
     PUSH_SUB(classical_particles_update_interactions_start)
 
     ! Store previous force, as it is used as SCF criterium
-    this%prev_tot_force(1:this%space%dim, 1:this%np) = this%tot_force(1:this%space%dim, 1:this%np)
+    if (this%prop%predictor_corrector) then
+      this%prev_tot_force(1:this%space%dim, 1:this%np) = this%tot_force(1:this%space%dim, 1:this%np)
+    end if
 
     POP_SUB(classical_particles_update_interactions_start)
   end subroutine classical_particles_update_interactions_start
