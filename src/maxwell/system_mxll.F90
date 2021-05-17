@@ -695,7 +695,6 @@ contains
     if (int_counter /= 0 .and. .not. allocated(this%hm%medium_boxes)) then
        SAFE_ALLOCATE(this%hm%medium_boxes(int_counter))
        this%hm%calc_medium_box = .true.
-       write(*,*)'allocated medium boxes'
     end if
 
     POP_SUB(system_mxll_update_interactions_start)
@@ -716,7 +715,6 @@ contains
       select type (interaction => iter%get_next())
       class is (linear_medium_em_field_t)
         if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
-          write(*,*)'here only once'
           iint = iint + 1
           n_points = interaction%partner_points_number
           this%hm%medium_boxes(iint)%points_number = n_points
@@ -743,7 +741,6 @@ contains
 
     if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
        call set_medium_rs_state(this%st, this%gr, this%hm)
-      write(*,*)'medium boxes initialized'
       this%hm%medium_boxes_initialized = .true.
     end if
 

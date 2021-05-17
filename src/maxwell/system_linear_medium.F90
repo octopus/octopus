@@ -91,6 +91,7 @@ module system_linear_medium_oct_m
      integer            :: bdry_number
      integer, allocatable :: bdry_map(:)
      character(len=256)   :: filename
+     logical            :: check_medium_points
 
   contains
     procedure :: init_interaction => system_linear_medium_init_interaction
@@ -141,11 +142,8 @@ contains
     class(system_linear_medium_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: nlines, ncols, idim, ip_in_max2
-    integer, allocatable :: tmp(:)
+    integer :: nlines, ncols, idim
     type(block_t) :: blk
-    class(system_linear_medium_t), allocatable :: medium_box_aux
-    logical :: checkmediumpoints
     type(profile_t), save :: prof
 
     PUSH_SUB(system_linear_medium_init)
@@ -240,29 +238,7 @@ contains
     !% 0.99 to check if the points inside the medium surface are properly detected. This works for only one
     !% medium surface which is centered in the origin of the coordinate system.
     !%End
-    call parse_variable(namespace, 'CheckPointsMediumFromFile', .false., checkmediumpoints)
-
-    if (checkmediumpoints .and. (nlines > 1)) then
-      message(1) = 'Check for points only works for one medium surface, centered at the origin.'
-      call messages_fatal(1, namespace=namespace)
-    end if
-
-    !if (checkmediumpoints) then
-    !  allocate(medium_box_aux, source=this)
-    !  AFE_ALLOCATE(tmp(gr%mesh%np))
-    !  ip_in_max2 = 0
-    !  write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(this%filename), ":"
-    !  call messages_info(1)
-    !  call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
-
-    !  write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', this%global_points_number
-    !  write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number
-    !  write(message(3), '(a)') ""
-    !  call messages_info(3)
-
-     ! deallocate(medium_box_aux)
-     ! AFE_DEALLOCATE_A(tmp)
-    !end if
+    call parse_variable(namespace, 'CheckPointsMediumFromFile', .false., this%check_medium_points)
 
     end select
 
@@ -321,10 +297,10 @@ contains
     !%Option smooth 2
     !% Medium box edged and softened for derivatives.
     !%End
-    call parse_variable(namespace, 'LinearMediumEdgeProfile', OPTION__LINEARMEDIUMBOX__EDGED, this%edge_profile)
-    if (this%edge_profile == OPTION__LINEARMEDIUMBOX__EDGED) then
+    call parse_variable(namespace, 'LinearMediumEdgeProfile', OPTION__LINEARMEDIUMEDGEPROFILE__EDGED, this%edge_profile)
+    if (this%edge_profile == OPTION__LINEARMEDIUMEDGEPROFILE__EDGED) then
       write(message(1),'(a,a)')   'Box shape:          ', 'edged'
-    else if (this%edge_profile == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+    else if (this%edge_profile == OPTION__LINEARMEDIUMEDGEPROFILE__SMOOTH) then
       write(message(1),'(a,a)')   'Box shape:          ', 'smooth'
     end if
     call messages_info(1)
@@ -519,7 +495,8 @@ contains
     class(system_linear_medium_t),          intent(inout) :: partner
     class(interaction_t),                 intent(inout) :: interaction
 
-    integer :: n_points
+    integer :: n_points, n_global_points
+    integer, allocatable :: tmp(:)
 
     PUSH_SUB(system_linear_medium_copy_quantities_to_interaction)
 
@@ -546,6 +523,20 @@ contains
         interaction%partner_sigma_m(1:n_points) = partner%sigma_m(1:n_points)
         interaction%partner_aux_ep(1:n_points,1:3) = partner%aux_ep(1:n_points,1:3)
         interaction%partner_aux_mu(1:n_points,1:3) = partner%aux_mu(1:n_points,1:3)
+
+        if (partner%check_medium_points) then
+          SAFE_ALLOCATE(tmp(interaction%system_gr%mesh%np))
+       !   n_global_points = 0
+       !   write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(partner%filename), ":"
+       !   call messages_info(1)
+       !   call get_points_map_from_file(partner%filename, interaction%system_gr%mesh, n_points, n_global_points, tmp, CNST(0.99))
+       !   write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', partner%global_points_number
+       !   write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', n_global_points
+       !   write(message(3), '(a)') ""
+       !   call messages_info(3)
+       !   SAFE_DEALLOCATE_A(tmp)
+        end if
+
       end if
     class default
       message(1) = "Unsupported interaction."
@@ -591,16 +582,16 @@ contains
     type(system_linear_medium_t),  intent(inout)      :: this
     type(grid_t),        intent(in)         :: gr
 
-    integer :: il, ip, ip_in, n_points, ip_bd, ip_bd_max, ipp, idim
+    integer :: il, ip, ip_in, n_points, ip_bd, ipp, idim
     integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     logical :: inside
     type(profile_t), save :: prof
 
-    PUSH_SUB(generate_medium_boxes)
+    PUSH_SUB(generate_medium_box)
 
-    call profiling_in(prof, 'GENERATE_MEDIUM_BOXES')
+    call profiling_in(prof, 'GENERATE_MEDIUM_BOX')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
@@ -609,19 +600,15 @@ contains
     tmp_points_map = 0
     tmp_bdry_map = 0
 
-    n_points = 0
-    ip_bd_max = 0
-
     if (this%box_shape == MEDIUM_BOX_FILE) then
 
-      call get_points_map_from_file(this, n_points, gr%mesh, tmp_points_map)
-
-      SAFE_ALLOCATE(this%points_map(n_points))
+      call get_points_map_from_file(this%filename, gr%mesh, this%points_number, this%global_points_number, tmp_points_map) 
+      SAFE_ALLOCATE(this%points_map(this%points_number))
 
       this%points_map = 0
       this%bdry_map = 0
 
-      this%points_map(:) = tmp_points_map(1:n_points)
+      this%points_map(:) = tmp_points_map(1:this%points_number)
 
     else
 
@@ -644,18 +631,15 @@ contains
         end if
       end do
 
-      n_points = ip_in
-      ip_bd_max = ip_bd
-      this%points_number = n_points
-      this%bdry_number = ip_bd_max
+      this%points_number = ip_in
+      this%bdry_number = ip_bd
 
-      SAFE_ALLOCATE(this%points_map(n_points))
-      SAFE_ALLOCATE(this%bdry_map(ip_bd_max))
-
+      SAFE_ALLOCATE(this%points_map(this%points_number))
+      SAFE_ALLOCATE(this%bdry_map(this%bdry_number))
       this%points_map = 0
       this%bdry_map = 0
-      this%points_map = tmp_points_map(1:n_points)
-      this%bdry_map = tmp_bdry_map(1:ip_bd_max)
+      this%points_map = tmp_points_map(1:this%points_number)
+      this%bdry_map = tmp_bdry_map(1:this%bdry_number)
 
     end if
 
@@ -670,6 +654,7 @@ contains
     !  end if
     !end do
 
+    n_points = this%points_number
     SAFE_ALLOCATE(this%aux_ep(n_points,1:3))
     SAFE_ALLOCATE(this%aux_mu(n_points,1:3))
     SAFE_ALLOCATE(this%c(n_points))
@@ -681,7 +666,7 @@ contains
 
     do ip_in = 1, this%points_number
       ip = this%points_map(ip_in)
-      if (this%edge_profile == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+      if (this%edge_profile == OPTION__LINEARMEDIUMEDGEPROFILE__SMOOTH) then
         xx(1:3) = gr%mesh%x(ip,1:3)
         dd_min = M_HUGE
 
@@ -702,7 +687,7 @@ contains
         this%sigma_m(ip_in) = this%sigma_m_factor &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
-      else if (this%edge_profile == OPTION__LINEARMEDIUMBOX__EDGED) then
+      else if (this%edge_profile == OPTION__LINEARMEDIUMEDGEPROFILE__EDGED) then
 
         this%ep(ip_in) = P_ep * this%ep_factor
         this%mu(ip_in) = P_mu * this%mu_factor
@@ -743,7 +728,7 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(generate_medium_boxes)
+    POP_SUB(generate_medium_box)
   contains
 
     logical pure function check_point_in_bounds(xx, bounds) result (check)
@@ -785,10 +770,11 @@ contains
 
   ! ----------------------------------------------------------
   !> Populate list of point indices for points inside the polyhedron
-  subroutine get_points_map_from_file(this, n_points, mesh, tmp_map, scale_factor)
-    type(system_linear_medium_t),       intent(inout) :: this
-    integer,                  intent(inout) :: n_points
+  subroutine get_points_map_from_file(filename, mesh, n_points, global_points_number, tmp_map, scale_factor)
+    character(len=256),       intent(in)    :: filename
     type(mesh_t),             intent(in)    :: mesh
+    integer,                  intent(out) :: n_points
+    integer,                  intent(out)   :: global_points_number
     integer,                  intent(inout) :: tmp_map(:)
     FLOAT, optional,          intent(in)    :: scale_factor
 
@@ -801,7 +787,7 @@ contains
 
     call profiling_in(prof, 'GET_POINTS_MAP_FROM_FILE')
 
-    call cgal_polyhedron_init(cgal_poly, trim(this%filename), verbose = .false.)
+    call cgal_polyhedron_init(cgal_poly, trim(filename), verbose = .false.)
 
     ip_in = 0
     do ip = 1, mesh%np
@@ -815,15 +801,14 @@ contains
         tmp_map(ip_in) = ip
       end if
     end do
-    if (ip_in > n_points) n_points = ip_in
-    this%points_number = ip_in
+    n_points = ip_in
     call cgal_polyhedron_end(cgal_poly)
 
 #ifdef HAVE_MPI
-    call MPI_Allreduce(ip_in, this%global_points_number, 1, &
+    call MPI_Allreduce(ip_in, global_points_number, 1, &
         MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
 #else
-    this%global_points_number = this%points_number
+    global_points_number = n_points
 #endif
 
     call profiling_out(prof)

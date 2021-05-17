@@ -284,9 +284,11 @@ contains
 
     call bc_mxll_end(hm%bc)
 
-    do il = 1, size(hm%medium_boxes)
-      call single_medium_box_end(hm%medium_boxes(il))
-    end do
+    if (allocated(hm%medium_boxes)) then
+      do il = 1, size(hm%medium_boxes)
+        call single_medium_box_end(hm%medium_boxes(il))
+      end do
+    end if
 
     call profiling_out(prof)
 
