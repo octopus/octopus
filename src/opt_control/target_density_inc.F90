@@ -125,7 +125,7 @@
           end do
           call parse_block_end(blk)
         else
-          call messages_input_error(namespace, 'OCTTargetDensityFromState', 'Has to be specified as block.')
+          call messages_variable_nowblock(namespace, 'OCTTargetDensityFromState')
         end if
 
       else

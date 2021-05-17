@@ -98,8 +98,7 @@
       call parse_block_end(blk)
       call density_calc(tg%st, gr, tg%st%rho)
     else
-      message(1) = '"OCTTargetUserdefined" has to be specified as block.'
-      call messages_fatal(1)
+      call messages_variable_nowblock(namespace, 'OCTTargetUserdefined')
     end if
 
     SAFE_DEALLOCATE_A(zpsi)

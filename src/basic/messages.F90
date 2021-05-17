@@ -1167,7 +1167,7 @@ contains
 
     if(parse_is_defined(namespace, trim(name))) then
 
-      write(message(1), '(a)') 'Input variable '//trim(name)//'is obsolete.'
+      write(message(1), '(a)') 'Input variable `'//trim(name)//'` is obsolete.'
       write(message(2), '(a)') ' '
       write(message(3), '(a)') 'This variable must be defined as a block.'
       write(message(4), '(a)') 'Check the documentation for details.'

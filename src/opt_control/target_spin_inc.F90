@@ -56,8 +56,7 @@
         tg%spin_matrix(2, 1) = alpha(1) + M_zI * alpha(2)
         
       else
-        message(1) = '"OCTTargetSpin" has to be specified as block.'
-        call messages_fatal(1)
+        call messages_variable_nowblock(namespace, 'OCTTargetSpin')
       end if
 
     else
