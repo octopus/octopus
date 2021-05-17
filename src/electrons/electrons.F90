@@ -99,6 +99,7 @@ module electrons_oct_m
     procedure :: iteration_info => electrons_iteration_info
     procedure :: update_quantity => electrons_update_quantity
     procedure :: update_exposed_quantity => electrons_update_exposed_quantity
+    procedure :: init_interaction_as_partner => electrons_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => electrons_copy_quantities_to_interaction
     procedure :: output_start => electrons_output_start
     procedure :: output_write => electrons_output_write
@@ -421,6 +422,22 @@ contains
 
     POP_SUB(electrons_update_exposed_quantity)
   end subroutine electrons_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine electrons_init_interaction_as_partner(partner, interaction)
+    class(electrons_t),   intent(in)    :: partner
+    class(interaction_t), intent(inout) :: interaction
+
+    PUSH_SUB(electrons_init_interaction_as_partner)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(electrons_init_interaction_as_partner)
+  end subroutine electrons_init_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine electrons_copy_quantities_to_interaction(partner, interaction)

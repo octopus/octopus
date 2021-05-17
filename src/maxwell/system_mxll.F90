@@ -105,6 +105,7 @@ module system_mxll_oct_m
     procedure :: is_tolerance_reached => system_mxll_is_tolerance_reached
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
+    procedure :: init_interaction_as_partner => system_mxll_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
@@ -539,6 +540,24 @@ contains
 
     POP_SUB(system_mxll_update_exposed_quantity)
   end subroutine system_mxll_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_init_interaction_as_partner(partner, interaction)
+    class(system_mxll_t),       intent(in)    :: partner
+    class(interaction_t),       intent(inout) :: interaction
+
+    PUSH_SUB(system_mxll_init_interaction_as_partner)
+
+    select type (interaction)
+    type is (lorentz_force_t)
+      ! Nothing to be initialized for the Lorentz force.
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_mxll_init_interaction_as_partner)
+  end subroutine system_mxll_init_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)

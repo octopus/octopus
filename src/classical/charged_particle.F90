@@ -59,6 +59,7 @@ module charged_particle_oct_m
     procedure :: is_tolerance_reached => charged_particle_is_tolerance_reached
     procedure :: update_quantity => charged_particle_update_quantity
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
+    procedure :: init_interaction_as_partner => charged_particle_init_interaction_as_partner
     procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
   end type charged_particle_t
 
@@ -222,6 +223,27 @@ contains
   end subroutine charged_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
+  subroutine charged_particle_init_interaction_as_partner(partner, interaction)
+    class(charged_particle_t), intent(in)    :: partner
+    class(interaction_t),      intent(inout) :: interaction
+
+    PUSH_SUB(charged_particle_init_interaction_as_partner)
+
+    select type (interaction)
+    type is (coulomb_force_t)
+      interaction%partner_np = 1
+      SAFE_ALLOCATE(interaction%partner_charge(1))
+      SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
+
+    class default
+      ! Other interactions should be handled by the parent class
+      call partner%classical_particle_t%init_interaction_as_partner(interaction)
+    end select
+
+    POP_SUB(charged_particle_init_interaction_as_partner)
+  end subroutine charged_particle_init_interaction_as_partner
+
+  ! ---------------------------------------------------------
   subroutine charged_particle_copy_quantities_to_interaction(partner, interaction)
     class(charged_particle_t), intent(inout) :: partner
     class(interaction_t),      intent(inout) :: interaction
@@ -230,16 +252,7 @@ contains
 
     select type (interaction)
     type is (coulomb_force_t)
-      interaction%partner_np = 1
-
-      if (.not. allocated(interaction%partner_charge)) then
-        SAFE_ALLOCATE(interaction%partner_charge(1))
-      end if
       interaction%partner_charge(1) = partner%charge(1)
-
-      if (.not. allocated(interaction%partner_pos)) then
-        SAFE_ALLOCATE(interaction%partner_pos(partner%space%dim, 1))
-      end if
       interaction%partner_pos(:,1) = partner%pos(:, 1)
 
     class default
