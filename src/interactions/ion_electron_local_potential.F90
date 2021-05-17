@@ -29,6 +29,7 @@ module ion_electron_local_potential_oct_m
   use interaction_partner_oct_m
   use ions_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -60,6 +61,7 @@ module ion_electron_local_potential_oct_m
     ! This is a temporary change here
     type(distributed_t), pointer, public :: atoms_dist
     type(atom_t), pointer, public :: atom(:)
+    type(lattice_vectors_t), pointer :: latt
 
     ! Temporary pointer to namespace
     type(namespace_t), pointer :: namespace
@@ -129,6 +131,7 @@ contains
     this%atoms_dist => ions%atoms_dist
     this%atom => ions%atom
     this%space => ions%space
+    this%latt => ions%latt
 
     this%namespace => namespace
 
@@ -166,16 +169,16 @@ contains
       if(local_potential_has_density(this%space, this%atom(ia))) then
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
-        call species_get_long_range_density(this%atom(ia)%species, this%space, this%namespace, &
-                                               this%atom(ia)%x, this%mesh, rho)
+        call species_get_long_range_density(this%atom(ia)%species, this%namespace, this%space, this%latt, &
+          this%atom(ia)%x(1:this%space%dim), this%mesh, rho)
         call lalg_axpy(this%mesh%np, M_ONE, rho, density)
         SAFE_DEALLOCATE_A(rho)
 
       else
 
         SAFE_ALLOCATE(vl(1:this%mesh%np))
-        call species_get_local(this%atom(ia)%species, this%space, this%mesh, this%namespace, &
-                                               this%atom(ia)%x(1:this%mesh%sb%dim), vl)
+        call species_get_local(this%atom(ia)%species, this%namespace, this%space, this%latt, &
+          this%atom(ia)%x(1:this%space%dim), this%mesh, vl)
         call lalg_axpy(this%mesh%np, M_ONE, vl, this%potential(:,1))
         SAFE_DEALLOCATE_A(vl)
 

@@ -203,7 +203,7 @@ contains
     energy=M_ZERO
     force(1:ions%space%dim, 1:ions%natoms) = M_ZERO
     this%derivative_coeff(1:ions%natoms) = M_ZERO
-    call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
+    call hirshfeld_init(hirshfeld, mesh, ions, st)
 
     do iatom = 1, ions%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
@@ -313,9 +313,8 @@ contains
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, ions, mesh, st, density)
+  subroutine vdw_ts_force_calculate(this, force_vdw, ions, mesh, st, density)
     type(vdw_ts_t),      intent(in)    :: this
-    type(namespace_t),   intent(in)    :: namespace
     type(ions_t),        intent(in)    :: ions
     FLOAT,               intent(inout) :: force_vdw(1:ions%space%dim, 1:ions%natoms)
     type(mesh_t),        intent(in)    :: mesh
@@ -351,7 +350,7 @@ contains
     vol_ratio(1:ions%natoms) = M_ZERO
 
 
-    call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
+    call hirshfeld_init(hirshfeld, mesh, ions, st)
 
 
     do iatom = 1, ions%natoms
@@ -416,7 +415,7 @@ contains
 
     do iatom = 1, ions%natoms
       do jatom = 1, ions%natoms
-        call hirshfeld_position_derivative(hirshfeld, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        call hirshfeld_position_derivative(hirshfeld, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         force_vdw(:, jatom)= force_vdw(:, jatom) + derivative_coeff(iatom)*dvadrr  ! ions%atom(jatom)%f_vdw = sum_i coeff_i * dvadrr_ij
       end do
     end do

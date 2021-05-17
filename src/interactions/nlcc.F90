@@ -30,6 +30,7 @@ module nlcc_oct_m
   use interaction_partner_oct_m
   use ions_oct_m
   use lalg_basic_oct_m
+  use lattice_vectors_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -59,6 +60,7 @@ module nlcc_oct_m
     ! This is a temporary change here
     type(distributed_t), pointer, public :: atoms_dist
     type(atom_t), pointer, public :: atom(:)
+    type(lattice_vectors_t), pointer :: latt
 
   contains
     procedure :: init => nlcc_init
@@ -110,6 +112,7 @@ contains
     this%atoms_dist => ions%atoms_dist
     this%atom => ions%atom
     this%space => ions%space
+    this%latt => ions%latt
 
     POP_SUB(nlcc_init)
   end subroutine nlcc_init
@@ -129,7 +132,7 @@ contains
 
     do ia = this%atoms_dist%start, this%atoms_dist%end
       if(species_has_nlcc(this%atom(ia)%species) .and. species_is_ps(this%atom(ia)%species)) then
-        call species_get_nlcc(this%atom(ia)%species, this%space, this%atom(ia)%x, this%mesh, &
+        call species_get_nlcc(this%atom(ia)%species, this%space, this%latt, this%atom(ia)%x, this%mesh, &
               this%density(:,1), accumulate=.true.)
       endif
     end do

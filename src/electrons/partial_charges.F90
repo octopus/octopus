@@ -24,7 +24,6 @@ module partial_charges_oct_m
   use ions_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use namespace_oct_m
   use profiling_oct_m
   use states_elec_oct_m
 
@@ -38,8 +37,7 @@ module partial_charges_oct_m
 contains
 
   !----------------------------------------------
-  subroutine partial_charges_calculate(namespace, mesh, st, ions, hirshfeld_charges)
-    type(namespace_t),       intent(in)    :: namespace
+  subroutine partial_charges_calculate(mesh, st, ions, hirshfeld_charges)
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
     type(ions_t),            intent(in)    :: ions
@@ -54,10 +52,10 @@ contains
 
     if(present(hirshfeld_charges)) then
 
-      call hirshfeld_init(hirshfeld, namespace, mesh, ions, st)
+      call hirshfeld_init(hirshfeld, mesh, ions, st)
       
       do iatom = 1, ions%natoms
-        call hirshfeld_charge(hirshfeld, namespace, iatom, st%rho, hirshfeld_charges(iatom))
+        call hirshfeld_charge(hirshfeld, iatom, st%rho, hirshfeld_charges(iatom))
       end do
       
       call hirshfeld_end(hirshfeld)

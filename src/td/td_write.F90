@@ -983,7 +983,7 @@ contains
     end if
     
     if (writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, gr%mesh, st, &
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, gr%mesh, st, &
         ions, iter)
     end if
     
@@ -3143,9 +3143,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, namespace, mesh, st, ions, iter)
+  subroutine td_write_partial_charges(out_partial_charges, mesh, st, ions, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
-    type(namespace_t),       intent(in)    :: namespace
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
     type(ions_t),            intent(in)    :: ions
@@ -3159,7 +3158,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:ions%natoms))
 
-    call partial_charges_calculate(namespace, mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(mesh, st, ions, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 

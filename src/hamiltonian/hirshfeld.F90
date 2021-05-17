@@ -27,7 +27,6 @@ module hirshfeld_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -62,9 +61,8 @@ module hirshfeld_oct_m
     
 contains
 
-  subroutine hirshfeld_init(this, namespace, mesh, ions, st)
+  subroutine hirshfeld_init(this, mesh, ions, st)
     type(hirshfeld_t),           intent(out)   :: this
-    type(namespace_t),           intent(in)    :: namespace
     type(mesh_t),        target, intent(in)    :: mesh
     type(ions_t),        target, intent(in)    :: ions
     type(states_elec_t), target, intent(in)    :: st
@@ -106,7 +104,7 @@ contains
         pos = this%ions%atom(iatom)%x(1:ions%space%dim) + latt_iter%get(icell)
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(mesh, ions%atom(iatom), namespace, pos, st%d%nspin, atom_density)
+        call species_atom_density_np(ions%atom(iatom)%species, ions%namespace, pos, mesh, st%d%nspin, atom_density)
 
         do ip = 1, mesh%np
           this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
@@ -153,9 +151,8 @@ contains
 
   ! -----------------------------------------------
   
-  subroutine hirshfeld_charge(this, namespace, iatom, density, charge)
+  subroutine hirshfeld_charge(this, iatom, density, charge)
     type(hirshfeld_t),         intent(in)    :: this
-    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
@@ -174,8 +171,8 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, this%ions%space, namespace, this%mesh%sb, &
-                                  this%ions%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%ions%atom(iatom)%species, this%ions%namespace, this%ions%space, this%ions%latt, &
+      this%ions%atom(iatom)%x(1:this%ions%space%dim), this%mesh, this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -272,9 +269,8 @@ contains
 
   ! -----------------------------------------------
   !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-  subroutine hirshfeld_position_derivative(this, namespace, iatom, jatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
-    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     integer,                   intent(in)    :: jatom
     FLOAT,                     intent(in)    :: density(:, :)
@@ -323,9 +319,8 @@ contains
 
       pos_j = this%ions%atom(jatom)%x(1:this%ions%space%dim) + latt_iter_j%get(jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%ions%atom(jatom), namespace, &
-                                              pos_j, this%st%d%spin_channels, &
-                                              atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+      call species_atom_density_derivative_np(this%ions%atom(jatom)%species, this%ions%namespace, pos_j, this%mesh, &
+        this%st%d%spin_channels, atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
       latt_iter_i = lattice_iterator_t(this%ions%latt, (rmax_j+rmax_i)) ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
       do icell = 1, latt_iter_i%n_cells
@@ -341,9 +336,8 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%ions%atom(iatom), namespace, &
-                                         pos_i, this%st%d%nspin, &
-                                         atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+          call species_atom_density_np(this%ions%atom(iatom)%species, this%ions%namespace, pos_i, this%mesh, this%st%d%nspin, &
+            atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle
