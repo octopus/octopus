@@ -558,12 +558,12 @@ contains
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
-    SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
+    SAFE_ALLOCATE(forces(1:ions%space%dim, 1:ions%natoms))
     do imat = 1, this%num_modes
       do jmat = 1, this%num_modes
         iatom = vibrations_get_atom(this, jmat)
         idir  = vibrations_get_dir (this, jmat)
-        forces(iatom, idir) = this%normal_mode(jmat, imat)
+        forces(idir, iatom) = this%normal_mode(jmat, imat)
       end do
       call write_xsf_geometry(iunit, ions, mesh, forces = forces, index = imat)
     end do

@@ -180,8 +180,8 @@ contains
     mesh => gr%mesh
 
     call scf_init(scf, namespace, gr, ions, st, mc, hm, ks, space)
-    SAFE_ALLOCATE(forces0(1:ions%natoms, 1:space%dim))
-    SAFE_ALLOCATE(forces (1:ions%natoms, 1:space%dim))
+    SAFE_ALLOCATE(forces0(1:space%dim, 1:ions%natoms))
+    SAFE_ALLOCATE(forces (1:space%dim, 1:ions%natoms))
     forces = M_ZERO
     forces0 = M_ZERO
 
@@ -204,9 +204,7 @@ contains
         call energy_calc_total (namespace, space, hm, gr, st)
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
-        do jatom = 1, ions%natoms
-          forces0(jatom, 1:space%dim) = ions%tot_force(:, jatom)
-        end do
+        forces0 = ions%tot_force
 
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
         call messages_info(1)
@@ -220,17 +218,14 @@ contains
         call energy_calc_total(namespace, space, hm, gr, st)
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, space, mc, gr, ions, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
-        do jatom = 1, ions%natoms
-          forces(jatom, 1:ions%space%dim) = ions%tot_force(:, jatom)
-        end do
+        forces = ions%tot_force
 
         ions%pos(alpha, iatom) = ions%pos(alpha, iatom) + vib%disp
 
         do jatom = 1, ions%natoms
           do beta = 1, space%dim
             jmat = vibrations_get_index(vib, jatom, beta)
-            vib%dyn_matrix(jmat, imat) = &
-              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &
+            vib%dyn_matrix(jmat, imat) = (forces0(beta, jatom) - forces(beta, jatom)) / (M_TWO*vib%disp) &
               * vibrations_norm_factor(vib, ions, iatom, jatom)
           end do
         end do

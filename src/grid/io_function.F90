@@ -343,23 +343,19 @@ contains
 
     write(frmt,'(a,i0,a)')'(a,2(', ions%space%dim,'f16.6,1x))'
 
-    SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
-    SAFE_ALLOCATE(center(1:ions%natoms, 1:ions%space%dim))
+    SAFE_ALLOCATE(forces(1:ions%space%dim, 1:ions%natoms))
+    SAFE_ALLOCATE(center(1:ions%space%dim, 1:ions%natoms))
     center = units_from_atomic(units_out%length, ions%pos)
-    do iatom = 1, ions%natoms
-      do idir = 1, ions%space%dim
-        forces(iatom, idir) = units_from_atomic(units_out%force, ions%tot_force(idir, iatom))
-      end do
-    end do
+    forces = units_from_atomic(units_out%force, ions%tot_force)
     write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
     write(iunit, *)
     write(iunit, '(a)')'.color red'
     write(iunit, *)
     do iatom = 1, ions%natoms
-      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(ions%atom(iatom)%label), & 
-                         'force:', sqrt(sum(forces(iatom,:)**2)),'['//trim(units_abbrev(units_out%force))//']'
-      write(iunit,fmt=trim(frmt))'.arrow',(center(iatom, idir), idir = 1, ions%space%dim), &
-                                 (center(iatom, idir) + forces(iatom, idir), idir = 1, ions%space%dim)
+      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)') '.comment :', iatom, trim(ions%atom(iatom)%label), & 
+                         'force:', norm2(forces(:, iatom)),'['//trim(units_abbrev(units_out%force))//']'
+      write(iunit,fmt=trim(frmt)) '.arrow', (center(idir, iatom), idir = 1, ions%space%dim), &
+                                 (center(idir, iatom) + forces(idir, iatom), idir = 1, ions%space%dim)
       write(iunit,*)
     end do
 
@@ -428,7 +424,7 @@ contains
     type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: write_forces
 
-    integer :: iunit, iatom, idir
+    integer :: iunit
     FLOAT, allocatable :: forces(:,:)
     logical :: write_forces_
 
@@ -446,12 +442,8 @@ contains
     end if
 
     if(write_forces_) then
-      SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
-      do iatom = 1, ions%natoms
-        do idir = 1, ions%space%dim
-          forces(iatom, idir) = units_from_atomic(units_out%force, ions%tot_force(idir, iatom))
-        end do
-      end do
+      SAFE_ALLOCATE(forces(1:ions%space%dim, 1:ions%natoms))
+      forces = units_from_atomic(units_out%force, ions%tot_force)
       call write_xsf_geometry(iunit, ions, mesh, forces = forces)
       SAFE_DEALLOCATE_A(forces)
     else
@@ -470,7 +462,7 @@ contains
     integer,           intent(in) :: iunit
     type(ions_t),      intent(in) :: ions
     type(mesh_t),      intent(in) :: mesh
-    FLOAT,   optional, intent(in) :: forces(:, :)
+    FLOAT,   optional, intent(in) :: forces(1:ions%space%dim, 1:ions%natoms)
     integer, optional, intent(in) :: index !< for use in writing animated files
 
     integer :: idir, idir2, iatom, index_
@@ -526,7 +518,7 @@ contains
       write(iunit, '(a10, 3f12.6)', advance='no') trim(ions%atom(iatom)%label), &
         (units_from_atomic(units_out%length, ions%pos(idir, iatom) - offset(idir)), idir = 1, ions%space%dim)
       if(present(forces)) then
-        write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, ions%space%dim)
+        write(iunit, '(5x, 3f12.6)', advance='no') forces(:, iatom)
       end if
       write(iunit, '()')
     end do

@@ -1021,7 +1021,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
       ! not available
       call lalg_eigensolve_parallel(cas%n_pairs, cas%X(mat2), cas%X(w2))
       do ia = 1, cas%n_pairs
-        cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
+        cas%forces(idir, iatom, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
       end do
     end do
   end do
@@ -1043,11 +1043,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   if(cas%calc_forces_scf) then
     call forces_calculate(sys%gr, sys%namespace, sys%ions, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
-      do iatom = 1, sys%ions%natoms
-        do idir = 1, sys%space%dim
-          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%ions%tot_force(idir, iatom)
-        end do
-      end do
+      cas%forces(:, :, ia) = cas%forces(:, :, ia) + sys%ions%tot_force
     end do
   end if
   
