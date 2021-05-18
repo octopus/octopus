@@ -34,7 +34,7 @@ KPointsUseSymmetries = no
 %
 
 %Output 
- bader | axis_x
+ bader   | axis_x
  density | axis_x
 %
 

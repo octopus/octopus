@@ -32,11 +32,12 @@ ExtraStates = 2
 
 ExperimentalFeatures = yes
 %Output 
- wfs | etsf + netcdf
- wfs_fourier | etsf + netcdf
- density | etsf + netcdf
- geometry | etsf + netcdf
+ wfs         | "output_format" | etsf + netcdf
+ wfs_fourier | "output_format" | etsf + netcdf
+ density     | "output_format" | etsf + netcdf
+ geometry
 %
+OutputFormat = etsf + netcdf
 OutputWfsNumber = "3-4"
 
 # ETSF_IO output is currently not compatible with k-point parallelization

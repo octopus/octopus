@@ -31,7 +31,7 @@ KPointsUseSymmetries = no
 
 %Output 
  density | xcrysden
- forces | xcrysden
+ forces  | xcrysden
 %
 
 FilterPotentials = filter_none

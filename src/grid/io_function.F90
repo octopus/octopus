@@ -452,6 +452,7 @@ contains
             if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
               .or. (what_tag /= 'Output')) then
               call parse_block_integer(blk, iout - 1, 1, how(what_i))
+              if(how(what_i) == 0) call parse_variable(namespace, how_tag, 0, how(what_i))
               if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
                 call messages_input_error(namespace, how_tag)
               end if
@@ -462,15 +463,15 @@ contains
       else 
         !new format, Type 2 (tagged)
         !%Output
-        !  density | output_interval | 10   | output_format   | cube + axis_z
-        !  wfs     | output_format   | cube | output_interval | 50
+        !  density | "output_interval" | 10   | "output_format"   | cube + axis_z
+        !  wfs     | "output_format"   | cube | "output_interval" | 50
         !%
         !
         ! OR
         !
         !%Output
-        !  density | output_interval | 10   | output_format   | cube + axis_z
-        !  wfs     | output_format   | cube
+        !  density | "output_interval" | 10   | "output_format" | cube + axis_z
+        !  wfs     | "output_format"   | cube
         !%
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)

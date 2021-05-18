@@ -33,7 +33,7 @@ ExtraStates= 1
 
 # Output
 %Output
- wfs | axis_x
+ wfs     | axis_x
  density | axis_x
 %
 

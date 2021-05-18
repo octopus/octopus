@@ -32,7 +32,7 @@ SCFinLCAO = yes
 ExperimentalFeatures = yes
 %Output 
  geometry | matlab + plane_z
- density | matlab + plane_z
+ density  | matlab + plane_z
 %
 
 SCFCalculatePartialCharges = yes

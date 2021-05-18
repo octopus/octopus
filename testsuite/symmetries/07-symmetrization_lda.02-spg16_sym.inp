@@ -27,9 +27,10 @@ KPointsUseSymmetries = yes
 %
 
 %Output 
- bader | axis_x
- density | axis_x
+ bader   | axis_x
+ density
 %
+OutputFormat = axis_x
 
 SCFCalculatePartialCharges = yes
 StatesPack = yes

@@ -30,7 +30,7 @@ TheoryLevel = independent_particles
 %
 
 %Output
- wfs | axis_x
+ wfs       | axis_x
  potential | axis_x
 %
 
