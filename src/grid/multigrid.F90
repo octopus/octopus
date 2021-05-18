@@ -26,9 +26,11 @@ module multigrid_oct_m
   use derivatives_oct_m
   use global_oct_m
   use index_oct_m
+  use io_function_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use namespace_oct_m
@@ -38,6 +40,7 @@ module multigrid_oct_m
   use stencil_oct_m
   use transfer_table_oct_m
   use profiling_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -58,7 +61,8 @@ module multigrid_oct_m
     zmultigrid_fine2coarse_batch,   &
     dmultigrid_coarse2fine_batch,   &
     zmultigrid_coarse2fine_batch,   &
-    multigrid_get_transfer_tables
+    multigrid_get_transfer_tables,  &
+    multigrid_test_interpolation
 
   integer, parameter, public :: &
     INJECTION  = 1,             &
@@ -432,6 +436,113 @@ contains
     end do
 
   end function multigrid_number_of_levels
+
+  ! ---------------------------------------------------------
+  subroutine multigrid_test_interpolation(mgrid, space)
+    type(multigrid_t), intent(in) :: mgrid
+    type(space_t),     intent(in) :: space
+
+    FLOAT, allocatable :: guess0(:), res0(:), guess1(:)
+    type(mesh_t), pointer :: mesh0, mesh1
+    FLOAT :: delta, xx(3,2), alpha, beta, rr
+    integer :: nn, ip, ierr, order
+
+    PUSH_SUB(multigrid_test_interpolation)
+
+    !%Variable InterpolationTestOrder
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-test
+    !%Description
+    !% This variable controls the order of the grid interpolation 
+    !% used in the corresponding unit test.
+    !%End
+    call parse_variable(global_namespace, 'InterpolationTestOrder', 1, order)
+
+    message(1) = 'Info: Testing the grid interpolation.'
+    message(2) = ''
+    call messages_info(2)
+
+    mesh0 => mgrid%level(0)%mesh
+    mesh1 => mgrid%level(1)%mesh
+
+    SAFE_ALLOCATE(guess0(1:mesh0%np_part))
+    SAFE_ALLOCATE(res0(1:mesh0%np))
+    SAFE_ALLOCATE(guess1(1:mesh1%np_part))
+
+    alpha = CNST(4.0)*mesh0%spacing(1)
+    beta = M_ONE / ( alpha**space%dim * sqrt(M_PI)**space%dim )
+
+    ! Set the centers of the Gaussians by hand
+    xx(1, 1) = M_ONE
+    xx(2, 1) = -M_HALF
+    xx(3, 1) = M_TWO
+    xx(1, 2) = -M_TWO
+    xx(2, 2) = M_ZERO
+    xx(3, 2) = -M_ONE
+    xx = xx * alpha
+
+    ! Density as sum of Gaussians
+    guess0 = M_ZERO
+    do nn = 1, 2
+      do ip = 1, mesh0%np
+        call mesh_r(mesh0, ip, rr, origin = xx(:, nn))
+        guess0(ip) = guess0(ip) + (-1)**nn * beta*exp(-(rr/alpha)**2)
+      end do
+    end do
+
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_target", global_namespace, &
+      mesh0, guess0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_target", global_namespace, &
+      mesh0, guess0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_target", global_namespace, &
+      mesh0, guess0, unit_one, ierr)
+
+    ! We start by testing the interpolation scheme. For this, we generate a function on the fine grid
+    ! and we inject it on the coarse grid. Then we interpolate it back to the fine grid and we compare
+    ! This allows for testing the quality of the interpolation scheme
+
+    ! move to level  1
+    call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, INJECTION)
+    ! back to level 0
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
+
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+
+    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
+    write(message(1),'(a,e13.6)') 'Interpolation test (abs.) = ', delta
+
+    ! Now we test if the restriction+interpolation combination returns the original result or not
+    ! This allows to test if restriction and interpolation are adjoint operators or not.
+
+    ! move to level  1
+    call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, FULLWEIGHT)
+    ! back to level 0
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
+
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "restriction_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisZ'), ".", "restriction_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('PlaneZ'), ".", "restriction_result", global_namespace, &
+      mesh0, res0, unit_one, ierr)
+
+    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
+    write(message(2),'(a,e13.6)')  'Restriction test (abs.) = ', delta
+    call messages_info(2)
+
+    SAFE_DEALLOCATE_A(guess0)
+    SAFE_DEALLOCATE_A(res0)
+    SAFE_DEALLOCATE_A(guess1)
+
+    POP_SUB(multigrid_test_interpolation)
+  end subroutine multigrid_test_interpolation
+
 
 
 #include "undef.F90"
