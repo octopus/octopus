@@ -6,7 +6,17 @@
 
 %Systems
   'Maxwell' | maxwell
+  'Medium'  | linear_medium
 %
+
+ LinearMediumBoxShape = medium_parallelepiped
+%LinearMediumBoxSize
+  0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0
+%
+%LinearMediumProperties
+ 2.0 | 2.0 | 100.0 | 100.0
+%
+ LinearMediumEdgeProfile = edged
 
  Maxwell.ParDomains = auto
  Maxwell.ParStates  = no
@@ -94,7 +104,3 @@ MaxwellABPMLReflectionError    = 1e-16
   3 | formula | electric_field | "      Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
   2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
  %
-
-% LinearMediumBox
- 0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 2.0 | 2.0 | 100.0 | 100.0 | edged
-%

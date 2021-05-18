@@ -6,7 +6,15 @@
 
 %Systems
   'Maxwell' | maxwell
+  'Medium'  | linear_medium
 %
+
+ LinearMediumBoxShape = medium_box_file
+ LinearMediumBoxFile = "04-linear-medium-from-file.01-cube.off"
+%LinearMediumProperties
+ 2.0 | 2.0 | 100.0 | 100.0
+%
+ CheckPointsMediumFromFile = yes
 
  Maxwell.ParDomains = auto
  Maxwell.ParStates  = no
@@ -89,9 +97,3 @@
   3 | formula | electric_field | "      Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
   2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
  %
-
-% LinearMediumFromFile
-  "04-linear-medium-from-file.01-cube.off" | 2.0 | 2.0 | 100.0 | 100.0 | edged
-% 
-
-CheckPointsMediumFromFile = yes
