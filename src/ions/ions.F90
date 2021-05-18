@@ -389,6 +389,8 @@ contains
 
     PUSH_SUB(ions_copy)
 
+    call classical_particles_copy(ions_out, ions_in)
+
     ions_out%latt = ions_in%latt
 
     ions_out%natoms = ions_in%natoms

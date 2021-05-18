@@ -52,6 +52,7 @@ module classical_particles_oct_m
   public ::                                      &
     classical_particles_t,                       &
     classical_particles_init,                    &
+    classical_particles_copy,                    &
     classical_particles_end,                     &
     classical_particles_init_interaction,        &
     classical_particles_update_quantity,         &
@@ -113,6 +114,36 @@ contains
 
     POP_SUB(classical_particles_init)
   end subroutine classical_particles_init
+
+  subroutine classical_particles_copy(this, cp_in)
+    class(classical_particles_t), intent(out) :: this
+    class(classical_particles_t), intent(in)  :: cp_in
+
+    PUSH_SUB(classical_particles_copy)
+
+    this%np = cp_in%np
+    SAFE_ALLOCATE_SOURCE_A(this%mass,      cp_in%mass)
+    SAFE_ALLOCATE_SOURCE_A(this%pos,       cp_in%pos)
+    SAFE_ALLOCATE_SOURCE_A(this%vel,       cp_in%vel)
+    SAFE_ALLOCATE_SOURCE_A(this%tot_force, cp_in%tot_force)
+    SAFE_ALLOCATE_SOURCE_A(this%fixed,     cp_in%fixed)
+
+    this%quantities(POSITION)%required = .true.
+    this%quantities(VELOCITY)%required = .true.
+    this%quantities(POSITION)%protected = .true.
+    this%quantities(VELOCITY)%protected = .true.
+
+    SAFE_ALLOCATE_SOURCE_A(this%acc,                  cp_in%acc)
+    SAFE_ALLOCATE_SOURCE_A(this%prev_acc,             cp_in%prev_acc)
+    SAFE_ALLOCATE_SOURCE_A(this%save_pos,             cp_in%save_pos)
+    SAFE_ALLOCATE_SOURCE_A(this%save_vel,             cp_in%save_vel)
+    SAFE_ALLOCATE_SOURCE_A(this%prev_tot_force,       cp_in%prev_tot_force)
+    SAFE_ALLOCATE_SOURCE_A(this%prev_pos,             cp_in%prev_pos)
+    SAFE_ALLOCATE_SOURCE_A(this%prev_vel,             cp_in%prev_vel)
+    SAFE_ALLOCATE_SOURCE_A(this%hamiltonian_elements, cp_in%hamiltonian_elements)
+
+    POP_SUB(classical_particles_copy)
+  end subroutine classical_particles_copy
 
   ! ---------------------------------------------------------
   subroutine classical_particles_init_interaction(this, interaction)
