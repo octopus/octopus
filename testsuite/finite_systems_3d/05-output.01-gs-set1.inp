@@ -1,0 +1,52 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+CalculationMode = gs
+fromScratch = yes
+
+UnitsOutput = ev_angstrom
+
+Radius = 5.0
+Spacing = 0.5
+
+%Coordinates
+  "H" | 0 | 0 | 0
+%
+
+%Output 
+  potential              | "output_interval" | 2
+  density                | "output_interval" | 3
+  wfs                    | "output_interval" | 5
+  wfs_sqmod              | "output_interval" | 7
+  geometry               | "output_interval" | 11
+  current                | "output_interval" | 13
+  ELF                    | "output_interval" | 17
+  ELF_basins             | "output_interval" | 19
+  Bader                  | "output_interval" | 23
+  el_pressure            | "output_interval" | 29
+  matrix_elements        | "output_interval" | 31
+  pol_density            | "output_interval" | 37
+  mesh_r                 | "output_interval" | 41
+  kinetic_energy_density | "output_interval" | 43
+  dos                    | "output_interval" | 47
+  tpa                    | "output_interval" | 53
+  forces                 | "output_interval" | 59
+  wfs_fourier            | "output_interval" | 61
+  xc_density             | "output_interval" | 67
+  PES_wfs                | "output_interval" | 71
+%
+%OutputMatrixElements
+ momentum 
+%
+OutputFormat = xcrysden
+
+OutputDuringSCF = yes
+ExperimentalFeatures = yes
+ConvRelDens= 1e-14
+EigensolverTolerance = 1e-15
+
+
+
+FilterPotentials = filter_none
+
+MixField = density
+StatesPack = yes
