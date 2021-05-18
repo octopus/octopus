@@ -234,34 +234,40 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
 
   R_TYPE, allocatable :: tmp(:)
   R_TYPE, pointer     :: ff_uvw(:,:)
-  integer             :: idir, ii, ip
+  integer             :: idir, ii, ip, np
   type(profile_t), save :: divergence_prof
+  logical             :: set_bc_
 
   PUSH_SUB(X(derivatives_div))
   call profiling_in(divergence_prof, TOSTRING(X(DIVERGENCE)))
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
+  set_bc_ = optional_default(set_bc, .true.)
+
+  ! If we ask for not setting the boundary conditions, we need to act on all the points
+  ! for non-orthogonal cells
+  np = der%mesh%np
+  if(.not. set_bc_ .and. .not. optional_default(ghost_update, .true.)) np = der%mesh%np_part
+
   ! div_xyw (F)= div_uvw (BF), where B
   if (der%mesh%sb%latt%nonorthogonal) then
     SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
-    do ip = 1, der%mesh%np_part
+    do ip = 1, np
       ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%latt%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
     end do
   else
     ff_uvw => ff
   end if
 
-  call X(derivatives_perform) (der%grad(1), der, ff_uvw(:, 1), op_ff, ghost_update, set_bc)
+  call X(derivatives_perform) (der%grad(1), der, ff_uvw(:, 1), op_ff, ghost_update, set_bc_)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
   do idir = 2, der%dim
-    call X(derivatives_perform) (der%grad(idir), der, ff_uvw(:, idir), tmp, ghost_update, set_bc)
+    call X(derivatives_perform) (der%grad(idir), der, ff_uvw(:, idir), tmp, ghost_update, set_bc_)
 
-    do ii = 1, der%mesh%np
-      op_ff(ii) = op_ff(ii) + tmp(ii)
-    end do
+    call lalg_axpy(der%mesh%np, M_ONE, tmp, op_ff)
   end do
 
   SAFE_DEALLOCATE_A(tmp)

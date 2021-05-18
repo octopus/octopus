@@ -25,6 +25,7 @@ module derivatives_oct_m
   use boundaries_oct_m
   use global_oct_m
   use iso_c_binding
+  use lalg_basic_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
   use math_oct_m
