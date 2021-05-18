@@ -45,6 +45,7 @@ module test_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
@@ -64,6 +65,7 @@ module test_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -136,6 +138,8 @@ contains
     !% Tests for cgal interface
     !%Option dense_eigensolver 21
     !% Tests for dense eigensolvers (especially parallel ones)
+    !%Option grid_interpolation 22
+    !% Tests for grid interpolation and multigrid methods.
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -244,6 +248,8 @@ contains
       call test_cgal()
     case(OPTION__TESTMODE__DENSE_EIGENSOLVER)
       call test_dense_eigensolver()
+    case(OPTION__TESTMODE__GRID_INTERPOLATION)
+      call test_grid_interpolation()
     end select
 
     POP_SUB(test_run)
@@ -1340,6 +1346,29 @@ contains
 
     POP_SUB(test_batch_set_gaussian)
   end subroutine test_batch_set_gaussian
+
+  ! ---------------------------------------------------------
+  subroutine test_grid_interpolation()
+    type(electrons_t), pointer :: sys
+    type(multigrid_t) :: mgrid
+
+    PUSH_SUB(test_grid_interpolation)
+
+    sys => electrons_t(global_namespace, generate_epot=.false.)
+    call sys%init_parallelization(mpi_world)
+
+    call multigrid_init(mgrid, global_namespace, sys%space, sys%gr%cv, sys%gr%mesh, sys%gr%der, &
+                          sys%gr%stencil, sys%mc, used_for_preconditioner = .true.)
+
+    call multigrid_test_interpolation(mgrid, sys%space)
+
+    call multigrid_end(mgrid)
+
+    SAFE_DEALLOCATE_P(sys)
+
+    POP_SUB(test_grid_interpolation)
+  end subroutine test_grid_interpolation
+
 
 end module test_oct_m
 
