@@ -77,10 +77,9 @@ contains
       ! Update was successful, so set new interaction time
       updated = .true.
       call this%clock%set_time(requested_time)
-      call multisystem_debug_write_marker(event = event_clock_update_t( clock = this%clock, &
-                                                    clock_name="interaction", &
-                                                    clock_detail=trim(this%label)//"-"//trim(this%partner%namespace%get()), & 
-                                                    action="set") )
+      call multisystem_debug_write_marker(event = event_clock_update_t( "interaction", &
+                                                    trim(this%label)//"-"//trim(this%partner%namespace%get()), & 
+                                                    this%clock, "set") )
 
       if (debug%info) then
         write(message(1), '(a,a,a,a,a)') "Debug: -- Updated '", trim(this%label), "' interaction with '", &

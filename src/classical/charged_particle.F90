@@ -215,8 +215,7 @@ contains
       ! We still need to set its clock, so we set it to be in sync with the particle position.
       call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
       call multisystem_debug_write_marker(partner%namespace, &
-        event_clock_update_t(clock_name="quantity", clock_detail=QUANTITY_LABEL(iq), &
-                             clock = partner%quantities(iq)%clock, action="set") )
+        event_clock_update_t("quantity", QUANTITY_LABEL(iq), partner%quantities(iq)%clock, "set") )
 
     case default
       ! Other quantities should be handled by the parent class
