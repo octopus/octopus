@@ -26,6 +26,7 @@ module multigrid_oct_m
   use derivatives_oct_m
   use global_oct_m
   use index_oct_m
+  use lalg_basic_oct_m
   use io_function_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -65,8 +66,8 @@ module multigrid_oct_m
     multigrid_test_interpolation
 
   integer, parameter, public :: &
-    INJECTION  = 1,             &
-    FULLWEIGHT = 2
+    INJECTION     = 1,          &
+    FULLWEIGHT    = 2
 
   type multigrid_level_t
     ! Components are public by default
@@ -437,6 +438,57 @@ contains
 
   end function multigrid_number_of_levels
 
+  !---------------------------------------------------------------------------------
+  subroutine multigrid_build_stencil(dim, weight, shift)
+    integer,             intent(in)    :: dim
+    FLOAT,               intent(inout) :: weight(:)
+    integer,             intent(inout) :: shift(:,:)
+
+    integer :: nn, di, dj, dk, dd
+
+    PUSH_SUB(multigrid_build_stencil)
+
+    ASSERT(ubound(weight, dim=1) == 3**dim)
+    ASSERT(ubound(shift, dim=1) == dim)
+    ASSERT(ubound(shift, dim=2) == 3**dim)
+
+    nn = 0
+    select case(dim)
+    case(1)
+      do di = -1, 1
+        dd = abs(di)
+        nn = nn + 1
+        weight(nn) = M_HALF**dd
+        shift(1,nn) = di
+      end do
+    case(2)
+      do di = -1, 1
+        do dj = -1, 1
+          dd = abs(di)+abs(dj)
+          nn = nn + 1
+          weight(nn) = M_HALF**dd
+          shift(1,nn) = di
+          shift(2,nn) = dj
+        end do
+      end do
+    case(3)
+      do di = -1, 1
+        do dj = -1, 1
+          do dk = -1, 1
+            dd = abs(di)+abs(dj)+abs(dk)
+            nn = nn + 1
+            weight(nn) = M_HALF**dd
+            shift(1,nn) = di
+            shift(2,nn) = dj
+            shift(3,nn) = dk
+          end do
+        end do
+      end do
+    end select
+
+    POP_SUB(multigrid_build_stencil)
+  end subroutine multigrid_build_stencil
+
   ! ---------------------------------------------------------
   subroutine multigrid_test_interpolation(mgrid, space)
     type(multigrid_t), intent(in) :: mgrid
@@ -445,19 +497,9 @@ contains
     FLOAT, allocatable :: guess0(:), res0(:), guess1(:)
     type(mesh_t), pointer :: mesh0, mesh1
     FLOAT :: delta, xx(3,2), alpha, beta, rr
-    integer :: nn, ip, ierr, order
+    integer :: nn, ip, ierr
 
     PUSH_SUB(multigrid_test_interpolation)
-
-    !%Variable InterpolationTestOrder
-    !%Type integer
-    !%Default 1
-    !%Section Utilities::oct-test
-    !%Description
-    !% This variable controls the order of the grid interpolation 
-    !% used in the corresponding unit test.
-    !%End
-    call parse_variable(global_namespace, 'InterpolationTestOrder', 1, order)
 
     message(1) = 'Info: Testing the grid interpolation.'
     message(2) = ''
@@ -467,7 +509,7 @@ contains
     mesh1 => mgrid%level(1)%mesh
 
     SAFE_ALLOCATE(guess0(1:mesh0%np_part))
-    SAFE_ALLOCATE(res0(1:mesh0%np))
+    SAFE_ALLOCATE(res0(1:mesh0%np_part))
     SAFE_ALLOCATE(guess1(1:mesh1%np_part))
 
     alpha = CNST(4.0)*mesh0%spacing(1)
@@ -493,8 +535,10 @@ contains
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_target", global_namespace, &
       space, mesh0, guess0, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_target", global_namespace, &
-      space, mesh0, guess0, unit_one, ierr)
+    if(space%dim > 2) then
+      call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_target", global_namespace, &
+        space, mesh0, guess0, unit_one, ierr)
+    end if
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_target", global_namespace, &
       space, mesh0, guess0, unit_one, ierr)
 
@@ -505,34 +549,38 @@ contains
     ! move to level  1
     call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, INJECTION)
     ! back to level 0
-    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_result", global_namespace, &
       space, mesh0, res0, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_result", global_namespace, &
-      space, mesh0, res0, unit_one, ierr)
+    if(space%dim > 2) then
+      call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_result", global_namespace, &
+        space, mesh0, res0, unit_one, ierr)
+    end if
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_result", global_namespace, &
       space, mesh0, res0, unit_one, ierr)
 
-    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
+    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0(1:mesh0%np))
     write(message(1),'(a,e13.6)') 'Interpolation test (abs.) = ', delta
 
-    ! Now we test if the restriction+interpolation combination returns the original result or not
-    ! This allows to test if restriction and interpolation are adjoint operators or not.
+    ! Now we test if the restriction+prolongation combination returns the original result or not
+    ! This allows to test if restriction and prolongation are adjoint operators or not.
 
     ! move to level  1
     call dmultigrid_fine2coarse(mgrid%level(1)%tt, mgrid%level(0)%der, mesh1, guess0, guess1, FULLWEIGHT)
     ! back to level 0
-    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
+    call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "restriction_result", global_namespace, &
       space, mesh0, res0, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisZ'), ".", "restriction_result", global_namespace, &
-      space, mesh0, res0, unit_one, ierr)
+    if(space%dim > 2) then
+      call dio_function_output (io_function_fill_how('AxisZ'), ".", "restriction_result", global_namespace, &
+        space, mesh0, res0, unit_one, ierr)
+    end if
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "restriction_result", global_namespace, &
-      space, mesh0, res0, unit_one, ierr)
+        space, mesh0, res0, unit_one, ierr)
 
-    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
+    delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0(1:mesh0%np))
     write(message(2),'(a,e13.6)')  'Restriction test (abs.) = ', delta
     call messages_info(2)
 

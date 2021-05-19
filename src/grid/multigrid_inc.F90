@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
+!! Copyright (C) 2021 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -17,90 +18,58 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order, set_bc)
+  subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
     type(mesh_t),            intent(in)    :: fine_mesh
     R_TYPE,                  intent(inout) :: f_coarse(:)
     R_TYPE,                  intent(out)   :: f_fine(:)
-    integer, optional,       intent(in)    :: order
-    logical, optional,       intent(in)    :: set_bc
 
-    integer :: idir, order_, ii, ifactor
-    integer :: ipc, ipf, xf(coarse_der%dim), xc(coarse_der%dim), dd(coarse_der%dim)
-    FLOAT, allocatable :: factor(:), points(:)
+    FLOAT, allocatable :: weight(:)
+    integer, allocatable :: shift(:,:)
+    integer :: di, nn, fn, fi(coarse_der%dim), fii(coarse_der%dim) 
 
     PUSH_SUB(X(multigrid_coarse2fine))
 
-    call profiling_in(interp_prof, TOSTRING(X(MG_INTERPOLATION)))
+    call profiling_in(interp_prof, TOSTRING(X(MG_PROLONGATION)))
 
-    ASSERT(ubound(f_coarse, dim = 1) == coarse_der%mesh%np_part)
-    ASSERT(coarse_der%mesh%np == tt%n_coarse)
+    ASSERT(ubound(f_fine, dim = 1) == fine_mesh%np_part)
 
-    order_ = 1
-    if(present(order)) order_ = order
+    ! We get theiinterpolation weights for the N-linear interpolation
+    SAFE_ALLOCATE(weight(3**coarse_der%dim))
+    SAFE_ALLOCATE(shift(coarse_der%dim, 3**coarse_der%dim))
+    call multigrid_build_stencil(coarse_der%dim, weight, shift)
 
-    SAFE_ALLOCATE(points(1:2*order_))
-    SAFE_ALLOCATE(factor(1:2*order_))
+    f_fine = M_ZERO
 
-    do ii = 1, 2*order_
-      points(ii) = ii
-    end do
+    do nn = 1, coarse_der%mesh%np
+      call mesh_local_index_to_coords(coarse_der%mesh, nn, fi)
 
-    call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
-
-    factor = factor/coarse_der%dim
-
-    if(optional_default(set_bc, .true.)) then
-      call boundaries_set(coarse_der%boundaries, f_coarse)
-
-#ifdef HAVE_MPI
-      if(coarse_der%mesh%parallel_in_domains) call X(vec_ghost_update)(coarse_der%mesh%vp, f_coarse)
-#endif
-    end if
-
-    !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
-    do ipf = 1, fine_mesh%np
-      call mesh_local_index_to_coords(fine_mesh, ipf, xf)
-
-      dd = mod(xf, 2)
-
-      if(all(dd == 0)) then ! This point belongs to the coarse grid
-        xc = xf/2
-        ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
-        f_fine(ipf) = f_coarse(ipc)
-        cycle
-      end if
-
-      
-      f_fine(ipf) = M_ZERO
-      
-      do idir = 1, coarse_der%dim
-        ifactor = 1
-        do ii = -order_, order_
-          if(ii == 0) cycle
-          xc = xf + (2*ii - sign(1, ii))*dd
-          xc = xc/2
-          ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
-          f_fine(ipf) = f_fine(ipf) + factor(ifactor)*f_coarse(ipc)
-          ifactor = ifactor + 1
-        end do
+      do di = 1, 3**coarse_der%dim
+        fii = 2*fi + shift(:,di)
+        fn = mesh_local_index_from_coords(fine_mesh, fii)
+        f_fine(fn) = f_fine(fn) + weight(di)*f_coarse(nn)
       end do
-
     end do
 
+    SAFE_DEALLOCATE_A(weight)
+    SAFE_DEALLOCATE_A(shift)
+
+    call profiling_count_operations(coarse_der%mesh%np*3**coarse_der%dim)
     call profiling_out(interp_prof)
     POP_SUB(X(multigrid_coarse2fine))
   end subroutine X(multigrid_coarse2fine)
 
+
   ! ---------------------------------------------------------
-  subroutine X(multigrid_fine2coarse)(tt, fine_der, coarse_mesh, f_fine, f_coarse, method_p)
+  subroutine X(multigrid_fine2coarse)(tt, fine_der, coarse_mesh, f_fine, f_coarse, method_p, set_bc)
     type(transfer_table_t), intent(in)    :: tt
     type(derivatives_t),    intent(in)    :: fine_der
     type(mesh_t),           intent(in)    :: coarse_mesh
     R_TYPE,                 intent(inout) :: f_fine(:)
     R_TYPE,                 intent(out)   :: f_coarse(:)
     integer, optional,      intent(in)    :: method_p
+    logical, optional,      intent(in)    :: set_bc
 
     integer :: method
 
@@ -114,7 +83,7 @@
 
     select case(method)
     case(FULLWEIGHT)
-      call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse)
+      call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse, set_bc)
     case(INJECTION)
       call X(multigrid_injection)(tt, f_fine, f_coarse)
     case default
@@ -154,25 +123,25 @@
     R_TYPE,                 intent(out)   :: f_coarse(:)
     logical, optional,      intent(in)    :: set_bc
 
-    FLOAT :: weight(-1:1,-1:1,-1:1)
-
-    integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
+    integer :: nn, fn, di, fi(fine_der%dim), fii(fine_der%dim)
+    FLOAT, allocatable :: weight(:)
+    integer, allocatable :: shift(:,:)
 
     PUSH_SUB(X(multigrid_restriction))
     call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION)))
 
-    !The following code only works in 3D
-    ASSERT(fine_der%dim == 3)
+    ! We get the interpolation weights for the N-linear interpolation
+    SAFE_ALLOCATE(weight(3**fine_der%dim))
+    SAFE_ALLOCATE(shift(fine_der%dim, 3**fine_der%dim))
+    call multigrid_build_stencil(fine_der%dim, weight, shift)
 
-    do di = -1, 1
-      do dj = -1, 1
-        do dk = -1, 1
-          dd = abs(di) + abs(dj) + abs(dk)
-          weight(di, dj, dk) = CNST(0.5)**dd
-        end do
-      end do
-    end do
+    ! Normalization
+    if(.not. fine_der%mesh%use_curvilinear) then
+      weight = weight * fine_der%mesh%vol_pp(1)/coarse_mesh%vol_pp(1)
+    end if
 
+    ! We need to set the boundary conditions, as we use values of f_fine outside of the 
+    ! np points due to the stencil
     if(optional_default(set_bc, .true.)) then
       call boundaries_set(fine_der%boundaries, f_fine)
 
@@ -181,127 +150,89 @@
 #endif
     end if
 
-    do nn = 1, tt%n_coarse
-      fn = tt%to_coarse(nn)
-      call mesh_local_index_to_coords(fine_der%mesh, fn, fi)
+    do nn = 1, coarse_mesh%np
+      call mesh_local_index_to_coords(coarse_mesh, nn, fi)
 
       f_coarse(nn) = M_ZERO
 
-      do di = -1, 1
-        do dj = -1, 1
-          do dk = -1, 1
-            fn = mesh_local_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
-
-            if(fine_der%mesh%use_curvilinear) then
-              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
-            else
-              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)
-            end if
-
-          end do
-        end do
+      do di = 1, 3**fine_der%dim
+        fii = 2*fi + shift(:,di)
+        fn = mesh_local_index_from_coords(fine_der%mesh, fii)
+        if(fine_der%mesh%use_curvilinear) then
+          f_coarse(nn) = f_coarse(nn) + weight(di)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
+        else
+          f_coarse(nn) = f_coarse(nn) + weight(di)*f_fine(fn)
+        end if
       end do
 
+      ! Normalization
       if(fine_der%mesh%use_curvilinear) then
         f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(nn)
-      else
-        f_coarse(nn) = f_coarse(nn)*fine_der%mesh%vol_pp(1)/coarse_mesh%vol_pp(1)
       end if
     end do
 
-    call profiling_count_operations(tt%n_coarse*(27*3 + 1))
+    SAFE_DEALLOCATE_A(weight)
+
+    call profiling_count_operations(coarse_mesh%np*3**fine_der%dim)
     call profiling_out(restrict_prof)
     POP_SUB(X(multigrid_restriction))
   end subroutine X(multigrid_restriction)
 
   ! ---------------------------------------------------------
-  subroutine X(multigrid_coarse2fine_batch)(tt, coarse_der, fine_mesh, coarseb, fineb, order)
+  subroutine X(multigrid_coarse2fine_batch)(tt, coarse_der, fine_mesh, coarseb, fineb)
     type(transfer_table_t),  intent(in)    :: tt
     type(derivatives_t),     intent(in)    :: coarse_der
     type(mesh_t),            intent(in)    :: fine_mesh
     class(batch_t),          intent(inout) :: coarseb
     class(batch_t),          intent(inout) :: fineb
-    integer, optional,       intent(in)    :: order
 
-    integer :: idir, order_, ii, ifactor, ist
-    integer :: ipc, ipf, xf(coarse_der%dim), xc(coarse_der%dim), dd(coarse_der%dim)
-    FLOAT, allocatable :: factor(:), points(:)
+    integer :: ist, nn, ii, ipf
+    integer :: xf(coarse_der%dim), xc(coarse_der%dim)
+    FLOAT, allocatable :: weight(:)
+    integer, allocatable :: shift(:,:)
     R_TYPE, allocatable :: f_coarse(:), f_fine(:)
-    type(pv_handle_batch_t) :: handle
 
     PUSH_SUB(X(multigrid_coarse2fine_batch))
 
     call profiling_in(interp_prof, TOSTRING(X(MG_INTERPOLATION_BATCH)))
 
     ASSERT(coarseb%nst_linear == fineb%nst_linear)
-
-    order_ = optional_default(order, 1)
-
-    SAFE_ALLOCATE(points(1:2*order_))
-    SAFE_ALLOCATE(factor(1:2*order_))
-
-    do ii = 1, 2*order_
-      points(ii) = ii
-    end do
-
-    call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
-
-    factor = factor/coarse_der%dim
-
-    call boundaries_set(coarse_der%boundaries, coarseb)
-    if(coarse_der%mesh%parallel_in_domains) then
-      call X(ghost_update_batch_start)(coarse_der%mesh%vp, coarseb, handle)
-      call X(ghost_update_batch_finish)(handle)
-    end if
-
     ASSERT(fineb%status() == coarseb%status())
 
     select case(fineb%status())
     case(BATCH_PACKED)
+
+      ! We get the interpolation weights for the N-linear interpolation
+      SAFE_ALLOCATE(weight(3**coarse_der%dim))
+      SAFE_ALLOCATE(shift(coarse_der%dim, 3**coarse_der%dim))
+      call multigrid_build_stencil(coarse_der%dim, weight, shift)
+
+      call batch_set_zero(fineb)
+
       !We perform a trilinear interpolation, see https://en.wikipedia.org/wiki/Trilinear_interpolation
-      do ipf = 1, fine_mesh%np
-        call mesh_local_index_to_coords(fine_mesh, ipf, xf)
+      do nn = 1, coarse_der%mesh%np
+        call mesh_local_index_to_coords(coarse_der%mesh, nn, xf)
 
-        dd = mod(xf, 2)
-
-        if(all(dd == 0)) then ! This point belongs to the coarse grid
-          xc = xf/2
-          ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
+        do ii = 1, 3**coarse_der%dim
+          xc = 2*xf + shift(:,ii)
+          ipf = mesh_local_index_from_coords(fine_mesh, xc)
           do ist = 1, coarseb%nst_linear
-            fineb%X(ff_pack)(ist, ipf) = coarseb%X(ff_pack)(ist, ipc)
+            fineb%X(ff_pack)(ist, ipf) = fineb%X(ff_pack)(ist, ipf) + weight(ii) * coarseb%X(ff_pack)(ist, nn)
           end do
-          cycle
-        end if
-
-        do ist = 1, coarseb%nst_linear
-          fineb%X(ff_pack)(ist, ipf) = M_ZERO
         end do
-
-        do idir = 1, coarse_der%dim
-          ifactor = 1
-          do ii = -order_, order_
-            if(ii == 0) cycle
-            xc = xf + (2*ii - sign(1, ii))*dd
-            xc = xc/2
-            ipc = mesh_local_index_from_coords(coarse_der%mesh, xc)
-            do ist = 1, coarseb%nst_linear
-              fineb%X(ff_pack)(ist, ipf) = fineb%X(ff_pack)(ist, ipf) + factor(ifactor) * coarseb%X(ff_pack)(ist, ipc)
-            end do
-            ifactor = ifactor + 1
-          end do
-          dd(idir) = -dd(idir)
-        end do
-
       end do
 
+      SAFE_DEALLOCATE_A(weight)
+      SAFE_DEALLOCATE_A(shift)
+
     case(BATCH_DEVICE_PACKED, BATCH_NOT_PACKED)
-      SAFE_ALLOCATE(f_coarse(1:coarse_der%mesh%np_part))
-      SAFE_ALLOCATE(f_fine(1:fine_mesh%np))
+      SAFE_ALLOCATE(f_coarse(1:coarse_der%mesh%np))
+      SAFE_ALLOCATE(f_fine(1:fine_mesh%np_part))
       do ist = 1, coarseb%nst_linear
-        call batch_get_state(coarseb, ist, coarse_der%mesh%np_part, f_coarse)
+        call batch_get_state(coarseb, ist, coarse_der%mesh%np, f_coarse)
         call batch_get_state(fineb, ist, fine_mesh%np, f_fine)
 
-        call X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order=order, set_bc = .false.) 
+        call X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine) 
 
         call batch_set_state(fineb, ist, fine_mesh%np, f_fine)
       end do
@@ -311,6 +242,7 @@
 
     end select
 
+    call profiling_count_operations(coarse_der%mesh%np*3**coarse_der%dim)
     call profiling_out(interp_prof)
     POP_SUB(X(multigrid_coarse2fine_batch))
   end subroutine X(multigrid_coarse2fine_batch)
@@ -364,26 +296,15 @@
     class(batch_t),         intent(inout) :: fineb
     class(batch_t),         intent(inout) :: coarseb
 
-    FLOAT :: weight(-1:1,-1:1,-1:1)
-    integer :: nn, fn, di, dj, dk, dd, fi(3)
+    integer :: nn, fn, di, fi(fine_der%dim), fii(fine_der%dim)
     R_TYPE, allocatable :: f_coarse(:), f_fine(:)
     integer :: ist
+    FLOAT, allocatable   :: weight(:)
+    integer, allocatable :: shift(:,:)
     type(pv_handle_batch_t) :: handle
 
     PUSH_SUB(X(multigrid_restriction_batch))
     call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION_BATCH)))
-
-    !The following code only works in 3D
-    ASSERT(fine_der%dim == 3)
-
-    do di = -1, 1
-      do dj = -1, 1
-        do dk = -1, 1
-          dd = abs(di) + abs(dj) + abs(dk)
-          weight(di, dj, dk) = CNST(0.5)**dd
-        end do
-      end do
-    end do
 
     call boundaries_set(fine_der%boundaries, fineb)
     if(fine_der%mesh%parallel_in_domains) then
@@ -395,51 +316,59 @@
 
     select case(fineb%status())
     case(BATCH_PACKED)
-      do nn = 1, tt%n_coarse
-        fn = tt%to_coarse(nn)
-        call mesh_local_index_to_coords(fine_der%mesh, fn, fi)
+      ! We get the interpolation weights for the N-linear interpolation
+      SAFE_ALLOCATE(weight(3**fine_der%dim))
+      SAFE_ALLOCATE(shift(fine_der%dim, 3**fine_der%dim))
+      call multigrid_build_stencil(fine_der%dim, weight, shift)
+
+      ! Normalization
+      if(.not. fine_der%mesh%use_curvilinear) then
+        weight = weight * fine_der%mesh%vol_pp(1)/coarse_mesh%vol_pp(1)
+      end if
+
+      do nn = 1, coarse_mesh%np
+        call mesh_local_index_to_coords(coarse_mesh, nn, fi)
+  
         do ist = 1, coarseb%nst_linear
           coarseb%X(ff_pack)(ist, nn) = M_ZERO
         end do
 
-        do di = -1, 1
-          do dj = -1, 1
-            do dk = -1, 1
-              fn = mesh_local_index_from_coords(fine_der%mesh, [fi(1) + di, fi(2) + dj, fi(3) + dk])
-
-              if(fine_der%mesh%use_curvilinear) then
-                f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
-                do ist = 1, coarseb%nst_linear
-                  coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn) &
-                           + weight(di, dj, dk)*fine_der%mesh%vol_pp(fn)*fineb%X(ff_pack)(ist, fn)
-                end do
-              else
-                do ist = 1, coarseb%nst_linear
-                  coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn) &
-                           + weight(di, dj, dk)*fineb%X(ff_pack)(ist, fn)
-                end do
-              end if
-
+        if(fine_der%mesh%use_curvilinear) then
+          do di = 1, 3**fine_der%dim
+            fii = 2*fi + shift(:,di)
+            fn = mesh_local_index_from_coords(fine_der%mesh, fii)
+            do ist = 1, coarseb%nst_linear
+              coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn) &
+                     + weight(di)*fine_der%mesh%vol_pp(fn)*fineb%X(ff_pack)(ist, fn)
             end do
           end do
-        end do
 
-        if(fine_der%mesh%use_curvilinear) then
+          ! Normalization
           do ist = 1, coarseb%nst_linear
             coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn)/coarse_mesh%vol_pp(nn)
           end do
-        else
-          do ist = 1, coarseb%nst_linear
-            coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn)*fine_der%mesh%vol_pp(1)/coarse_mesh%vol_pp(1)
-          end do
-        end if
-      end do
 
+        else
+
+          do di = 1, 3**fine_der%dim
+            fii = 2*fi + shift(:,di)
+            fn = mesh_local_index_from_coords(fine_der%mesh, fii)
+            do ist = 1, coarseb%nst_linear
+              coarseb%X(ff_pack)(ist, nn) = coarseb%X(ff_pack)(ist, nn) &
+                    + weight(di)*fineb%X(ff_pack)(ist, fn)
+            end do
+          end do
+
+        end if
+  
+      end do
+ 
     case(BATCH_DEVICE_PACKED, BATCH_NOT_PACKED)            
       SAFE_ALLOCATE(f_coarse(1:coarse_mesh%np))
       SAFE_ALLOCATE(f_fine(1:fine_der%mesh%np_part))
       do ist = 1, coarseb%nst_linear
         call batch_get_state(coarseb, ist, coarse_mesh%np, f_coarse)
+        ! We set the boundary points on fineb, so we copy them
         call batch_get_state(fineb, ist, fine_der%mesh%np_part, f_fine)            
 
         call X(multigrid_restriction)(tt, fine_der, coarse_mesh, f_fine, f_coarse, set_bc = .false.)
@@ -450,7 +379,7 @@
       SAFE_DEALLOCATE_A(f_fine)
     end select
 
-    call profiling_count_operations(tt%n_coarse*(27*3 + 1))
+    call profiling_count_operations(coarse_mesh%np*3**fine_der%dim)
     call profiling_out(restrict_prof)
     POP_SUB(X(multigrid_restriction_batch))
   end subroutine X(multigrid_restriction_batch)
