@@ -25,7 +25,6 @@ module system_linear_medium_oct_m
   use derivatives_oct_m
   use global_oct_m
   use interaction_oct_m
-  use interactions_factory_oct_m
   use iso_c_binding
   use linear_medium_em_field_oct_m
   use messages_oct_m

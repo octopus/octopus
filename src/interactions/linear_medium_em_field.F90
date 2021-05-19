@@ -19,27 +19,15 @@
 
 module linear_medium_em_field_oct_m
   use clock_oct_m
-  use ghost_interaction_oct_m
   use global_oct_m
   use grid_oct_m
-  use iihash_oct_m
-  use interaction_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
-  use io_function_oct_m
-  use linked_list_oct_m
-  use lorentz_force_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use quantity_oct_m
-  use string_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
