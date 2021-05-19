@@ -25,6 +25,7 @@ module system_linear_medium_oct_m
   use derivatives_oct_m
   use global_oct_m
   use interaction_oct_m
+  use interactions_factory_oct_m
   use iso_c_binding
   use linear_medium_em_field_oct_m
   use messages_oct_m
@@ -85,6 +86,7 @@ module system_linear_medium_oct_m
 
   contains
     procedure :: init_interaction => system_linear_medium_init_interaction
+    procedure :: init_interaction_as_partner => system_linear_medium_init_interaction_as_partner
     procedure :: initial_conditions => system_linear_medium_initial_conditions
     procedure :: do_td_operation => system_linear_medium_do_td
     procedure :: iteration_info => system_linear_medium_iteration_info
@@ -323,6 +325,27 @@ contains
   end subroutine system_linear_medium_init_interaction
 
   ! ---------------------------------------------------------
+  subroutine system_linear_medium_init_interaction_as_partner(partner, interaction)
+    class(system_linear_medium_t),       intent(in)    :: partner
+    class(interaction_t),                intent(inout) :: interaction
+
+    integer :: n_points, n_global_points
+    integer, allocatable :: tmp(:)
+
+    PUSH_SUB(system_linear_medium_init_interaction_as_partner)
+
+    select type (interaction)
+    type is (linear_medium_em_field_t)
+       ! Nothing to do for the moment
+    class default
+      message(1) = "Trying to initialize an unsupported interaction by a linear medium."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_linear_medium_init_interaction_as_partner)
+  end subroutine system_linear_medium_init_interaction_as_partner
+
+  ! ---------------------------------------------------------
   subroutine system_linear_medium_initial_conditions(this, from_scratch)
     class(system_linear_medium_t), intent(inout) :: this
     logical,                 intent(in)    :: from_scratch
@@ -521,7 +544,6 @@ contains
           call messages_info(3)
           SAFE_DEALLOCATE_A(tmp)
         end if
-
       end if
     class default
       message(1) = "Unsupported interaction."
