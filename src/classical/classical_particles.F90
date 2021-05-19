@@ -27,7 +27,6 @@ module classical_particles_oct_m
   use interaction_oct_m
   use gravity_oct_m
   use lorentz_force_oct_m
-  use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
