@@ -520,7 +520,7 @@ contains
     !%Description
     !% Linear medium electric susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, ep_factor, unit_one)
+    call parse_variable(namespace, 'MediumpsilonFactor', M_ONE, ep_factor, unit_one)
 
     !%Variable MediumMuFactor
     !%Type float
@@ -1049,8 +1049,6 @@ contains
       end if
     end do
     do idim = 1, 3
-      SAFE_ALLOCATE(bc%medium(idim)%aux_ep(1:ip_in, st%dim))
-      SAFE_ALLOCATE(bc%medium(idim)%aux_mu(1:ip_in, st%dim))
       SAFE_ALLOCATE(bc%medium(idim)%points_map(1:ip_in_max))
       SAFE_ALLOCATE(bc%medium(idim)%bdry_map(1:ip_bd_max))
     end do
@@ -1282,13 +1280,7 @@ contains
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     do idim = 1, 3
-      SAFE_ALLOCATE(bc%medium(idim)%aux_ep(ip_in_max,gr%sb%dim))
-      SAFE_ALLOCATE(bc%medium(idim)%aux_mu(ip_in_max,gr%sb%dim))
-      SAFE_ALLOCATE(bc%medium(idim)%ep(ip_in_max))
-      SAFE_ALLOCATE(bc%medium(idim)%mu(ip_in_max))
-      SAFE_ALLOCATE(bc%medium(idim)%sigma_e(ip_in_max))
-      SAFE_ALLOCATE(bc%medium(idim)%sigma_m(ip_in_max))
-      SAFE_ALLOCATE(bc%medium(idim)%c(ip_in_max))
+      call single_medium_box_allocate(bc%medium(idim), ip_in_max)
       SAFE_ALLOCATE(tmp(gr%mesh%np_part))
       SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
       bc%medium(idim)%aux_ep = M_ZERO

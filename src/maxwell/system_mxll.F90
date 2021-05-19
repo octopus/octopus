@@ -56,6 +56,7 @@ module system_mxll_oct_m
   use sort_oct_m
   use space_oct_m
   use system_oct_m
+  use system_linear_medium_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
   use electrons_oct_m
@@ -716,17 +717,11 @@ contains
       class is (linear_medium_em_field_t)
         if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
           iint = iint + 1
+          call single_medium_box_allocate(this%hm%medium_boxes(iint), interaction%partner_points_number)
+          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%points_map(interaction%partner_points_number))
+
           n_points = interaction%partner_points_number
           this%hm%medium_boxes(iint)%points_number = n_points
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%ep(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%mu(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%c(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%sigma_e(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%sigma_m(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%points_map(n_points))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%aux_ep(n_points,3))
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%aux_mu(n_points,3))
-
           this%hm%medium_boxes(iint)%points_map(1:n_points) = interaction%partner_points_map(1:n_points)
           this%hm%medium_boxes(iint)%ep(1:n_points) = interaction%partner_ep(1:n_points)
           this%hm%medium_boxes(iint)%mu(1:n_points) = interaction%partner_mu(1:n_points)

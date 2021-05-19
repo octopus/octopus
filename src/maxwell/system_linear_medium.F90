@@ -49,6 +49,7 @@ module system_linear_medium_oct_m
     system_linear_medium_t,    &
     system_linear_medium_init, &
     single_medium_box_t,       &
+    single_medium_box_allocate,&
     single_medium_box_end
 
   integer, parameter :: &
@@ -563,7 +564,7 @@ contains
     type(system_linear_medium_t),  intent(inout)      :: this
     type(grid_t),        intent(in)         :: gr
 
-    integer :: il, ip, ip_in, n_points, ip_bd, ipp, idim
+    integer :: il, ip, ip_in, ip_bd, ipp, idim
     integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
@@ -636,15 +637,7 @@ contains
     !  end if
     !end do
 
-    n_points = this%medium_box%points_number
-    SAFE_ALLOCATE(this%medium_box%aux_ep(n_points,1:3))
-    SAFE_ALLOCATE(this%medium_box%aux_mu(n_points,1:3))
-    SAFE_ALLOCATE(this%medium_box%c(n_points))
-    SAFE_ALLOCATE(this%medium_box%ep(n_points))
-    SAFE_ALLOCATE(this%medium_box%mu(n_points))
-    SAFE_ALLOCATE(this%medium_box%sigma_e(n_points))
-    SAFE_ALLOCATE(this%medium_box%sigma_m(n_points))
-
+    call single_medium_box_allocate(this%medium_box, this%medium_box%points_number)
 
     do ip_in = 1, this%medium_box%points_number
       ip = this%medium_box%points_map(ip_in)
@@ -798,6 +791,30 @@ contains
     POP_SUB(get_points_map_from_file)
 
   end subroutine get_points_map_from_file
+
+  ! ---------------------------------------------------------
+  !> Allocation of medium_box components
+  subroutine single_medium_box_allocate(medium_box, n_points)
+    type(single_medium_box_t),   intent(inout)    :: medium_box
+    integer,                     intent(in)       :: n_points
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_allocate)
+
+    call profiling_in(prof, 'MEDIUM_BOX_ALLOC')
+    SAFE_ALLOCATE(medium_box%aux_ep(n_points,1:3))
+    SAFE_ALLOCATE(medium_box%aux_mu(n_points,1:3))
+    SAFE_ALLOCATE(medium_box%c(n_points))
+    SAFE_ALLOCATE(medium_box%ep(n_points))
+    SAFE_ALLOCATE(medium_box%mu(n_points))
+    SAFE_ALLOCATE(medium_box%sigma_e(n_points))
+    SAFE_ALLOCATE(medium_box%sigma_m(n_points))
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_allocate)
+
+  end subroutine single_medium_box_allocate
 
   ! ---------------------------------------------------------
   !> Deallocation of medium_box components
