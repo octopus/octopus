@@ -49,11 +49,11 @@ program photoelectron_spectrum
   implicit none
 
   type pesoutput_t
-    logical              :: what(MAX_OUTPUT_TYPES)
-    integer(8)           :: how(0:MAX_OUTPUT_TYPES)
-    integer              :: output_interval(0:MAX_OUTPUT_TYPES)   
-    FLOAT       :: pol(3)
-    FLOAT       :: pvec(3)        
+    logical             :: what(MAX_OUTPUT_TYPES)
+    integer(8)          :: how(0:MAX_OUTPUT_TYPES)
+    integer             :: output_interval(0:MAX_OUTPUT_TYPES)   
+    FLOAT               :: pol(3)
+    FLOAT               :: pvec(3)        
   end type pesoutput_t  
 
   integer              :: ierr, integrate
@@ -252,7 +252,7 @@ program photoelectron_spectrum
   end if
   
   !%Variable PhotoelectronSpectrumOutput
-  !%Type integer
+  !%Type block
   !%Default none
   !%Section Utilities::oct-photoelectron_spectrum
   !%Description
@@ -261,7 +261,22 @@ program photoelectron_spectrum
   !% laser field polarization vector), theta is the inclination angle measured from 
   !% vec (from 0 to \pi), and phi is the azimuthal angle on a plane perpendicular to 
   !% vec (from 0 to 2\pi).
-  !% Example: <tt>energy_tot + velocity_map</tt>
+  !% Each option must be in a separate row. Optionally individual output formats can be defined
+  !% for each row or they can be read separately from <tt>OutputFormat</tt> variable
+  !% in the input file.
+  !%
+  !% Example (minimal):
+  !% <br><br><tt>%PhotoelectronSpectrumOutput
+  !% <br>&nbsp;&nbsp;energy_tot
+  !% <br>&nbsp;&nbsp;velocity_map
+  !% <br>%<br></tt>
+  !%
+  !% Example (with OutputFormat):
+  !% <br><br><tt>%PhotoelectronSpectrumOutput
+  !% <br>&nbsp;&nbsp;arpes        | vtk
+  !% <br>&nbsp;&nbsp;velocity_map | ncdf
+  !% <br>%<br></tt>
+  !%
   !%Option energy_tot 1
   !% Output the energy-resolved photoelectron spectrum: E.
   !%Option energy_angle 2
@@ -278,7 +293,7 @@ program photoelectron_spectrum
   !% Ionization probability integrated on spherical cuts: (theta, phi).
   !%Option velocity_map 6
   !% Full momentum-resolved ionization probability: (px, py, pz).     
-  !% The output format can be controlled with <tt>OutputHow<\tt> and can be vtk, ncdf or ascii.  
+  !% The output format can be controlled with <tt>OutputHow</tt> and can be vtk, ncdf or ascii.  
   !%Option arpes 7
   !% Full ARPES for semi-periodic systems (vtk).
   !%Option arpes_cut 8

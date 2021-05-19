@@ -92,15 +92,21 @@ contains
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
-    !%Type integer
+    !%Type block
     !%Default none
     !%Section Output
     !%Description
     !% Specifies what matrix elements to print.
-    !% Enabled only if <tt>Output</tt> includes <tt>matrix_elements</tt>.
+    !% Enabled only if <tt>Output</tt> block includes <tt>matrix_elements</tt>.
     !% The output files go into the <tt>static</tt> directory, except when
     !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used.
-    !% Example: "momentum + ks_multipoles"
+    !%
+    !% Example:
+    !% <br><br><tt>%OutputMatrixElements
+    !% <br>&nbsp;&nbsp;momentum
+    !% <br>&nbsp;&nbsp;ks_multipoles
+    !% <br>%<br></tt>
+    !%
     !% It is possible to specify only compute the matrix elements for some of the states
     !% using the variables <tt>OutptMEStart</tt> and <tt>OutputMEEnd</tt>.
     !%Option momentum 1

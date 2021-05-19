@@ -25,7 +25,7 @@
     PUSH_SUB(output_mxll_init)
 
     !%Variable MaxwellOutput
-    !%Type integer
+    !%Type block
     !%Default none
     !%Section Output
     !%Description
@@ -33,6 +33,17 @@
     !% Maxwell run.
     !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
     !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% Each option must be in a separate row. Optionally individual output formats and output intervals can be defined
+    !% for each row or they can be read separately from <tt>OutputFormat</tt> and <tt>MaxwellOutputInterval</tt> variables
+    !% in the input file.
+    !%
+    !% Example:
+    !% <br><br><tt>%MaxwellOutput
+    !% <br>&nbsp;&nbsp;electric_field
+    !% <br>&nbsp;&nbsp;magnetic_field
+    !% <br>%<br></tt>
+    !% This block supports all the formats of the <tt>Output</tt> block.
+    !% See <tt>Output</tt>.
     !%Option electric_field 1
     !% Output of the electric field
     !%Option magnetic_field 2
@@ -90,6 +101,8 @@
     !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
     !% (Output of restart files is instead controlled by <tt>MaxwellRestartWriteInterval</tt>.)
     !% Must be >= 0. If it is 0, then no output is written. 
+    !% This variable can also be defined inside the <tt>MaxwellOutput</tt> block.
+    !% See <tt>MaxwellOutput</tt>.
     !%End
 
     outp%what = .false.

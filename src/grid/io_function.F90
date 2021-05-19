@@ -144,7 +144,11 @@ contains
     !%Default none
     !%Section Output
     !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+    !% Specifies what to print. 
+    !% Each output must be in a separate row. Optionally individual output formats and output intervals can be defined
+    !% for each row or they can be read separately from <tt>OutputFormat</tt> and <tt>OutputInterval</tt> variables
+    !% in the input file.
+    !% The output files are written at the end of the run into the output directory for the
     !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
     !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
     !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
@@ -154,7 +158,39 @@ contains
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>density + potential</tt>
+    !%
+    !% Example (minimal):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density
+    !% <br>&nbsp;&nbsp;potential
+    !% <br>%<br></tt>
+    !%
+    !% Example (with OutputFormat):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | cube + axis_z
+    !% <br>&nbsp;&nbsp;potential | cube
+    !% <br>%<br></tt>
+    !%
+    !% Example (with OutputFormat, incomplete):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | cube + axis_z
+    !% <br>&nbsp;&nbsp;potential
+    !% <br>%<br></tt>
+    !%
+    !% Example (tagged):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | "output_format" | cube + axis_z | "output_interval" | 50
+    !% <br>&nbsp;&nbsp;potential | "output_format" | cube          | "output_interval" | 20
+    !% <br>%<br></tt>
+    !%
+    !% Example (tagged, incomplete):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | "output_format"   | cube + axis_z 
+    !% <br>&nbsp;&nbsp;potential | "output_interval" | 20
+    !% <br>%<br></tt>
+    !% Missing information for the incomplete blocks will be parsed form the out-of-block
+    !% definitions. It is also possible to mix the order of columns in the tagged format. 
+    !% See <tt>OutputFormat</tt>, and <tt>OutputInterval</tt>.
     !%Option potential 1
     !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
     !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
@@ -298,7 +334,9 @@ contains
     !%Default 0
     !%Section Output
     !%Description
-    !% Describes the format of the output files (see <tt>Output</tt>).
+    !% Describes the format of the output files.
+    !% This variable can also be defined inside the <tt>Output</tt> block.
+    !% See <tt>Output</tt>.
     !% Example: <tt>axis_x + plane_x + dx</tt>
     !%Option axis_x bit(0)
     !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
@@ -398,6 +436,8 @@ contains
     !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
     !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
     !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
+    !% This variable can also be defined inside the <tt>Output</tt> block.
+    !% See <tt>Output</tt>.
     !%End
 
 
