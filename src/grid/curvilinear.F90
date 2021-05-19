@@ -178,7 +178,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x(1:sb%dim) = matmul(latt%rlattice_primitive(1:sb%dim,1:sb%dim), chi(1:sb%dim))
+      x(1:sb%dim) = latt%red_to_cart(chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(sb, cv%gygi, cv%rs, chi, x)
     case(CURV_METHOD_BRIGGS)
@@ -204,7 +204,7 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      chi(1:sb%dim) = matmul(x(1:sb%dim), latt%klattice_primitive)
+      chi(1:sb%dim) = latt%cart_to_red(x(1:sb%dim))
     case(CURV_METHOD_GYGI)
       call curv_gygi_x2chi(sb, cv%gygi, x, chi)
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)

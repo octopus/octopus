@@ -672,10 +672,10 @@ contains
           end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%latt%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
-              x(1:dim) = matmul(mesh%latt%rlattice_primitive(1:dim,1:dim), x(1:dim))
+            x(1:dim) = mesh%latt%red_to_cart(x(1:dim))
         end if
-                         
-! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
+
+        ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
         do j = 1, dim
           x(j) = x(j)*sqrt(masses(j))
         end do

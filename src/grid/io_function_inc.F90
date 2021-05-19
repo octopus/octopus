@@ -1448,7 +1448,7 @@ contains
         do i2 =1 , cube%rs_n_global(2)
           do i3 =1 , cube%rs_n_global(3)
             pnt(1:3) =(/cube%Lrs(i1, 1),cube%Lrs(i2, 2),cube%Lrs(i3, 3)/)
-            points(i1,i2,i3, 1:3) = matmul(mesh%latt%rlattice_primitive(1:3,1:3), pnt(1:3))
+            points(i1,i2,i3, 1:3) = mesh%latt%red_to_cart(pnt(1:3))
           end do
         end do
       end do

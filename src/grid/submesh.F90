@@ -737,7 +737,7 @@ contains
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi = matmul(sm%x(ip,:), sm%mesh%latt%klattice_primitive)
+      chi = sm%mesh%latt%cart_to_red(sm%x(ip,:))
       
       do idir = 1, space%dim
         db(idir) = max(db(idir), nint(abs(chi(idir))/sm%mesh%spacing(idir) + M_HALF))
@@ -764,16 +764,16 @@ contains
 
     !The center of the submesh does not belong to the mesh
     !So we first need to find the closest grid point, and center the cube to it
-    chi = matmul(sm%center, sm%mesh%latt%klattice_primitive)
+    chi = sm%mesh%latt%cart_to_red(sm%center)
     do idir = 1, space%dim
       shift(idir) = nint(chi(idir)/sm%mesh%spacing(idir))*sm%mesh%spacing(idir)
     end do
-    shift = matmul(sm%mesh%latt%rlattice_primitive, shift)
+    shift = sm%mesh%latt%red_to_cart(shift)
     shift = shift - sm%center
 
     do ip = 1, sm%np
       !TODO: should be curvilinear_x2chi here instead
-      chi = matmul(sm%x(ip,:) - shift, sm%mesh%latt%klattice_primitive)
+      chi = sm%mesh%latt%cart_to_red(sm%x(ip,:) - shift)
       do idir = 1, space%dim
         sm%cube_map%map(idir, ip) = nint(chi(idir)/sm%mesh%spacing(idir))
       end do
