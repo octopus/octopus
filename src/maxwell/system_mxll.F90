@@ -179,8 +179,6 @@ contains
 
     call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
     call this%supported_interactions%add(LINEAR_MEDIUM_EM_FIELD)
-    this%quantities(GRID)%required = .true.
-    this%quantities(GRID)%protected = .true.
 
     call profiling_out(prof)
 
@@ -523,10 +521,6 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    case (GRID)
-      ! The grid does not change with time, no need to update it
-      ! We still need to set its clock.
-      this%quantities(GRID)%clock = this%quantities(GRID)%clock + CLOCK_TICK
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)

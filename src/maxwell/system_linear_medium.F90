@@ -586,12 +586,6 @@ contains
 
       call get_points_map_from_file(this%filename, gr%mesh, this%medium_box%points_number,&
            this%global_points_number, tmp_points_map) 
-      SAFE_ALLOCATE(this%medium_box%points_map(this%medium_box%points_number))
-
-      this%medium_box%points_map = 0
-      this%medium_box%bdry_map = 0
-
-      this%medium_box%points_map(:) = tmp_points_map(1:this%medium_box%points_number)
 
     else
 
@@ -617,16 +611,16 @@ contains
       this%medium_box%points_number = ip_in
       this%medium_box%bdry_number = ip_bd
 
-      SAFE_ALLOCATE(this%medium_box%points_map(this%medium_box%points_number))
       SAFE_ALLOCATE(this%medium_box%bdry_map(this%medium_box%bdry_number))
-      this%medium_box%points_map = 0
       this%medium_box%bdry_map = 0
-      this%medium_box%points_map = tmp_points_map(1:this%medium_box%points_number)
       this%medium_box%bdry_map = tmp_bdry_map(1:this%medium_box%bdry_number)
 
     end if
-
-    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
+   
+    SAFE_ALLOCATE(this%medium_box%points_map(this%medium_box%points_number))
+    this%medium_box%points_map = 0
+    this%medium_box%points_map(:) = tmp_points_map(1:this%medium_box%points_number)
+    call single_medium_box_allocate(this%medium_box, this%medium_box%points_number)
 
     ! TODO: add some check that medium boxes do not overlap (now they are different systems), like this:
     !do ip_in = 1, this%points_number - 1
@@ -637,11 +631,13 @@ contains
     !  end if
     !end do
 
-    call single_medium_box_allocate(this%medium_box, this%medium_box%points_number)
+    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     do ip_in = 1, this%medium_box%points_number
       ip = this%medium_box%points_map(ip_in)
       if (this%edge_profile == OPTION__LINEARMEDIUMEDGEPROFILE__SMOOTH) then
+        ASSERT(allocated(this%medium_box%bdry_map))
+ 
         xx(1:3) = gr%mesh%x(ip,1:3)
         dd_min = M_HUGE
 
@@ -674,7 +670,7 @@ contains
     end do
 
     tmp(:) = P_ep
-    do  ip_in = 1, this%medium_box%points_number
+    do ip_in = 1, this%medium_box%points_number
       ip = this%medium_box%points_map(ip_in)
       tmp(ip)= this%medium_box%ep(ip_in)
     end do
@@ -696,7 +692,6 @@ contains
     end do
 
     !TODO: add print information about the medium box
-
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
@@ -748,7 +743,7 @@ contains
   subroutine get_points_map_from_file(filename, mesh, n_points, global_points_number, tmp_map, scale_factor)
     character(len=256),       intent(in)    :: filename
     type(mesh_t),             intent(in)    :: mesh
-    integer,                  intent(out) :: n_points
+    integer,                  intent(out)   :: n_points
     integer,                  intent(out)   :: global_points_number
     integer,                  intent(inout) :: tmp_map(:)
     FLOAT, optional,          intent(in)    :: scale_factor
