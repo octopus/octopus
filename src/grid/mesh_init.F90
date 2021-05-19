@@ -879,12 +879,9 @@ contains
     end if
 
     if (space%dim == 3) then
-      mesh%surface_element(1) = sqrt(abs(sum(dcross_product(mesh%latt%rlattice_primitive(1:3, 2), &
-                                                            mesh%latt%rlattice_primitive(1:3, 3))**2)))
-      mesh%surface_element(2) = sqrt(abs(sum(dcross_product(mesh%latt%rlattice_primitive(1:3, 3), &
-                                                            mesh%latt%rlattice_primitive(1:3, 1))**2)))
-      mesh%surface_element(3) = sqrt(abs(sum(dcross_product(mesh%latt%rlattice_primitive(1:3, 1), &
-                                                            mesh%latt%rlattice_primitive(1:3, 2))**2)))
+      mesh%surface_element(1) = norm2(dcross_product(mesh%latt%rlattice(:, 2), mesh%latt%rlattice(:, 3)))
+      mesh%surface_element(2) = norm2(dcross_product(mesh%latt%rlattice(:, 3), mesh%latt%rlattice(:, 1)))
+      mesh%surface_element(3) = norm2(dcross_product(mesh%latt%rlattice(:, 1), mesh%latt%rlattice(:, 2)))
     else
       mesh%surface_element(1:space%dim) = M_ZERO
     end if
