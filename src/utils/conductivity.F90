@@ -142,8 +142,8 @@
 
       do
         read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime, &
-          ((ions%atom(ii)%x(jj), jj = 1, 3), ii = 1, ions%natoms), &
-          ((ions%atom(ii)%v(jj), jj = 1, 3), ii = 1, ions%natoms)
+          ((ions%pos(jj, ii), jj = 1, 3), ii = 1, ions%natoms), &
+          ((ions%vel(jj, ii), jj = 1, 3), ii = 1, ions%natoms)
 
         curtime = units_to_atomic(units_out%time, curtime)
 
@@ -161,7 +161,7 @@
           ivel = 1
           do ii = 1, ions%natoms
             do jj = 1, ions%space%dim
-              velocities(ivel, ntime) = units_to_atomic(units_out%velocity, ions%atom(ii)%v(jj))
+              velocities(ivel, ntime) = units_to_atomic(units_out%velocity, ions%vel(jj, ii))
               ivel = ivel + 1
             end do
           end do
@@ -321,7 +321,7 @@
          do jj = 1, space%dim
            velcm(jj) = velcm(jj) + velocities(ivel, iter)/TOFLOAT(ions%natoms)
            current(jj) = current(jj) + &
-             species_mass(ions%atom(ii)%species)/ions%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
+             ions%mass(ii)/ions%latt%rcell_volume*(velocities(ivel, iter) - vel0(jj))
            ivel = ivel + 1
          end do
        end do

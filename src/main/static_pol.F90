@@ -570,10 +570,10 @@ contains
         do iatom = 1, sys%ions%natoms
           if(isign == 1) then
           ! temporary assignment for use in next cycle when isign == 2
-            Born_charges%charge(ii, 1:sys%space%dim, iatom) = sys%ions%atom(iatom)%f(1:sys%space%dim)
+            Born_charges%charge(ii, 1:sys%space%dim, iatom) = sys%ions%tot_force(:, iatom)
           else
             Born_charges%charge(ii, 1:sys%space%dim, iatom) = &
-              (sys%ions%atom(iatom)%f(1:sys%space%dim) - Born_charges%charge(ii, 1:sys%space%dim, iatom)) &
+              (sys%ions%tot_force(:, iatom) - Born_charges%charge(ii, 1:sys%space%dim, iatom)) &
               / (M_TWO*e_field)
             Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%ions%atom(iatom)%species)
             ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,

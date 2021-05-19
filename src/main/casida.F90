@@ -787,7 +787,7 @@ contains
       else
         SAFE_ALLOCATE(cas%zmat_save(1:cas%n_pairs, 1:cas%n_pairs))
       end if
-      SAFE_ALLOCATE(cas%forces(1:sys%ions%natoms, 1:cas%space_dim, 1:cas%n_pairs))
+      SAFE_ALLOCATE(cas%forces(1:cas%space_dim, 1:sys%ions%natoms, 1:cas%n_pairs))
     end if
 
     if(cas%qcalc) then

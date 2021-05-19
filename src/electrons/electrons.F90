@@ -147,7 +147,7 @@ contains
 
     ! Sanity check for atomic coordinates
     do iatom = 1, sys%ions%natoms
-      if (.not. sys%gr%sb%contains_point(sys%ions%atom(iatom)%x)) then
+      if (.not. sys%gr%sb%contains_point(sys%ions%pos(:, iatom))) then
         if (sys%space%periodic_dim /= sys%space%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because contains_point is too strict with atoms close to

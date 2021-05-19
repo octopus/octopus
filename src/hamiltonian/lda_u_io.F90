@@ -364,20 +364,20 @@ contains
     iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
-      SAFE_ALLOCATE(mm(1:ions%natoms, 1:mesh%sb%dim))
-      mm(1:ions%natoms, 1:mesh%sb%dim) = M_ZERO
+      SAFE_ALLOCATE(mm(1:mesh%sb%dim, 1:ions%natoms))
+      mm = M_ZERO
       !We compute the magnetization vector for each orbital set
       do ios = 1, this%norbsets
         ia = this%orbsets(ios)%iatom
         do im = 1, this%orbsets(ios)%norbs
           if (states_are_real(st)) then
-            mm(ia, 3) = mm(ia, 3) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios) 
+            mm(3, ia) = mm(3, ia) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios) 
           else
-            mm(ia, 3) = mm(ia, 3) + TOFLOAT(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
+            mm(3, ia) = mm(3, ia) + TOFLOAT(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
             !Spinors
             if(this%nspins /= this%spin_channels) then
-              mm(ia, 1) = mm(ia, 1) + 2*TOFLOAT(this%zn(im,im,3,ios))
-              mm(ia, 2) = mm(ia, 2) - 2*aimag(this%zn(im,im,3,ios))
+              mm(1, ia) = mm(1, ia) + 2*TOFLOAT(this%zn(im,im,3,ios))
+              mm(2, ia) = mm(2, ia) - 2*aimag(this%zn(im,im,3,ios))
             end if
           end if  
         end do !im

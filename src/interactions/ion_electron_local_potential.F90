@@ -61,6 +61,7 @@ module ion_electron_local_potential_oct_m
     ! This is a temporary change here
     type(distributed_t), pointer, public :: atoms_dist
     type(atom_t), pointer, public :: atom(:)
+    FLOAT, pointer, public :: pos(:,:)
     type(lattice_vectors_t), pointer :: latt
 
     ! Temporary pointer to namespace
@@ -121,8 +122,8 @@ contains
     SAFE_ALLOCATE(this%potential(1:mesh%np, 1:1))
 
     this%have_density = .false.
-    do ia = 1, ions%natoms
-      if(local_potential_has_density(ions%space, ions%atom(ia))) then
+    do ia = 1, ions%nspecies
+      if(local_potential_has_density(ions%space, ions%species(ia))) then
         this%have_density = .true.
         exit
       end if
@@ -131,6 +132,7 @@ contains
     this%atoms_dist => ions%atoms_dist
     this%atom => ions%atom
     this%space => ions%space
+    this%pos => ions%pos
     this%latt => ions%latt
 
     this%namespace => namespace
@@ -166,11 +168,11 @@ contains
       ! (for all-electron species or pseudopotentials in periodic
       ! systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(this%space, this%atom(ia))) then
+      if(local_potential_has_density(this%space, this%atom(ia)%species)) then
         
         SAFE_ALLOCATE(rho(1:this%mesh%np))
         call species_get_long_range_density(this%atom(ia)%species, this%namespace, this%space, this%latt, &
-          this%atom(ia)%x(1:this%space%dim), this%mesh, rho)
+          this%pos(:, ia), this%mesh, rho)
         call lalg_axpy(this%mesh%np, M_ONE, rho, density)
         SAFE_DEALLOCATE_A(rho)
 
@@ -178,7 +180,7 @@ contains
 
         SAFE_ALLOCATE(vl(1:this%mesh%np))
         call species_get_local(this%atom(ia)%species, this%namespace, this%space, this%latt, &
-          this%atom(ia)%x(1:this%space%dim), this%mesh, vl)
+          this%pos(:, ia), this%mesh, vl)
         call lalg_axpy(this%mesh%np, M_ONE, vl, this%potential(:,1))
         SAFE_DEALLOCATE_A(vl)
 
@@ -191,7 +193,7 @@ contains
 
         radius = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold) + this%mesh%spacing(1)
 
-        call submesh_init(sphere, this%space, this%mesh, this%latt, this%atom(ia)%x(1:this%space%dim), radius)
+        call submesh_init(sphere, this%space, this%mesh, this%latt, this%pos(:, ia), radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         do ip = 1, sphere%np

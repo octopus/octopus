@@ -317,7 +317,7 @@ subroutine output_etsf_geometry_write(ions, symm, ncid, namespace)
   do i = 1, ions%natoms
     ! this is only valid if the primitive vectors are along the x, y, and z directions.
     do idir = 1, 3
-      geometry%reduced_atom_positions(idir, i) = (ions%atom(i)%x(idir) - offset(idir))/geometry%primitive_vectors(idir, idir)
+      geometry%reduced_atom_positions(idir, i) = (ions%pos(idir, i) - offset(idir))/geometry%primitive_vectors(idir, idir)
     end do
   end do
 

@@ -1211,10 +1211,9 @@ contains
       if(ion_dynamics_ions_move(ions_dyn)  .and. kick%delta_strength /= M_ZERO) then
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
           do iatom = 1, ions%natoms
-            ions%atom(iatom)%v(1:ions%space%dim) = ions%atom(iatom)%v(1:ions%space%dim) + &
-                 kick%delta_strength * kick%pol(1:ions%space%dim, kick%pol_dir) * &
-                 P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / &
-                 species_mass(ions%atom(iatom)%species)
+            ions%vel(:, iatom) = ions%vel(:, iatom) + &
+              kick%delta_strength * kick%pol(1:ions%space%dim, kick%pol_dir) * &
+              P_PROTON_CHARGE * species_zval(ions%atom(iatom)%species) / ions%mass(iatom)
           end do
         end if
       end if

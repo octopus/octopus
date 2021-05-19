@@ -186,7 +186,7 @@ contains
 
     type(lattice_iterator_t) :: latt_iter
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ip 
-    FLOAT :: rr, rr2, rr6, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
+    FLOAT :: rr, rr6, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
     FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
@@ -237,13 +237,12 @@ contains
         jspecies = species_index(ions%atom(jatom)%species)
                 
         do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-          x_j = ions%atom(jatom)%x(1:ions%space%dim) + latt_iter%get(jcopy)
+          x_j = ions%pos(:, jatom) + latt_iter%get(jcopy)
 
           do iatom = 1, ions%natoms
             ispecies = species_index(ions%atom(iatom)%species) 
-            rr2 =  sum((x_j - ions%atom(iatom)%x(1:ions%space%dim))**2)
-            rr =  sqrt(rr2)
-            rr6 = rr2**3
+            rr =  norm2(x_j - ions%pos(:, iatom))
+            rr6 = rr**6
 
             if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
 
@@ -276,7 +275,7 @@ contains
       SAFE_ALLOCATE(zatom(1:ions%natoms))
 
       do iatom = 1, ions%natoms
-        coordinates(:, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
+        coordinates(:, iatom) = ions%pos(:, iatom)
         zatom(iatom) = int(species_z(ions%atom(iatom)%species))
 
       end do
@@ -325,7 +324,7 @@ contains
     type(lattice_iterator_t) :: latt_iter
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(ions%space%dim) 
+    FLOAT :: rr, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(ions%space%dim) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
     type(profile_t), save :: prof
 
@@ -383,12 +382,11 @@ contains
       jspecies = species_index(ions%atom(jatom)%species)
 
       do jcopy = 1, latt_iter%n_cells ! one of the periodic copy is the initial atom  
-        x_j = ions%atom(jatom)%x(1:ions%space%dim) + latt_iter%get(jcopy)
+        x_j = ions%pos(:, jatom) + latt_iter%get(jcopy)
         do iatom = 1, ions%natoms
           ispecies = species_index(ions%atom(iatom)%species)
-          rr2 =  sum((x_j - ions%atom(iatom)%x(1:ions%space%dim))**2)
-          rr  =  sqrt(rr2)
-          rr6 = rr2**3
+          rr =  norm2(x_j - ions%pos(:, iatom))
+          rr6 = rr**6
 
           if(rr < TOL_HIRSHFELD) cycle !To avoid self interaction
 
@@ -408,7 +406,7 @@ contains
 
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
           deabdrab = c6ab(iatom, jatom)*(this%damping/(this%sr*r0ab(iatom, jatom))*dee - CNST(6.0)*ff/rr)/rr6
-          force_vdw(:, iatom) = force_vdw(:, iatom) + M_HALF*deabdrab*(ions%atom(iatom)%x(1:ions%space%dim) - x_j)/rr
+          force_vdw(:, iatom) = force_vdw(:, iatom) + M_HALF*deabdrab*(ions%pos(:, iatom) - x_j)/rr
         end do
       end do
     end do

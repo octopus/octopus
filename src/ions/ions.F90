@@ -124,7 +124,6 @@ contains
 
     type(read_coords_info) :: xyz
     integer :: ia, ierr
-    logical :: move
     character(len=100)  :: function_name
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
@@ -157,9 +156,11 @@ contains
     ions%natoms = xyz%n
     SAFE_ALLOCATE(ions%atom(1:ions%natoms))
     do ia = 1, ions%natoms
-      move=.true.
-      if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
-      call atom_init(ions%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
+      call atom_init(ions%atom(ia), xyz%atom(ia)%label)
+      ions%pos(:,ia) = xyz%atom(ia)%x(1:ions%space%dim)
+      if (bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) then
+        ions%fixed(ia) = .not. xyz%atom(ia)%move
+      end if
     end do
 
     if (allocated(xyz%latvec)) then
@@ -173,7 +174,7 @@ contains
     ! Convert coordinates to Cartesian in case we have reduced coordinates
     if (xyz%source == READ_COORDS_REDUCED) then
       do ia = 1, ions%natoms
-        ions%atom(ia)%x(1:ions%space%dim) = ions%latt%red_to_cart(ions%atom(ia)%x(1:ions%space%dim))
+        ions%pos(:, ia) = ions%latt%red_to_cart(ions%pos(:, ia))
       end do
     end if
 
@@ -205,6 +206,11 @@ contains
     call ions_fold_atoms_into_cell(ions)
     call ions_init_species(ions, print_info=print_info)
     call distributed_nullify(ions%atoms_dist, ions%natoms)
+
+    ! Set the masses. This needs to be done after initializing the species.
+    do ia = 1, ions%natoms
+      ions%mass(ia) = species_mass(ions%atom(ia)%species)
+    end do
 
     ! Check that atoms are not too close
     if (ions%natoms > 1) then
@@ -383,6 +389,8 @@ contains
 
     PUSH_SUB(ions_copy)
 
+    call classical_particles_copy(ions_out, ions_in)
+
     ions_out%latt = ions_in%latt
 
     ions_out%natoms = ions_in%natoms
@@ -531,12 +539,13 @@ contains
     logical,          optional, intent(in) :: append
     character(len=*), optional, intent(in) :: comment
 
-    integer :: iatom, iunit
+    integer :: iatom, idim, iunit
     character(len=6) position
+    character(len=19) :: frmt
 
     if ( .not. mpi_grp_is_root(mpi_world)) return
 
-    PUSH_SUB(atom_write_xyz)
+    PUSH_SUB(ions_write_xyz)
 
     position = 'asis'
     if (present(append)) then
@@ -550,8 +559,11 @@ contains
     else
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length_xyz_file))
     end if
+
+    write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", this%space%dim,"f12.6)"
     do iatom = 1, this%natoms
-      call atom_write_xyz(this%atom(iatom), this%space%dim, iunit)
+      write(unit=iunit, fmt=frmt) this%atom(iatom)%label, &
+        (units_from_atomic(units_out%length_xyz_file, this%pos(idim, iatom)), idim=1, this%space%dim)
     end do
     call io_close(iunit)
 
@@ -565,7 +577,7 @@ contains
       call io_close(iunit)
     end if
 
-    POP_SUB(atom_write_xyz)
+    POP_SUB(ions_write_xyz)
   end subroutine ions_write_xyz
 
   ! ---------------------------------------------------------
@@ -574,7 +586,9 @@ contains
     character(len=*),           intent(in)    :: fname
     character(len=*), optional, intent(in)    :: comment
 
-    integer :: iatom, iunit
+    integer :: iatom, idir, iunit
+    character(len=19) :: frmt, dum
+    FLOAT :: tmp(this%space%dim)
 
     PUSH_SUB(ions_read_xyz)
 
@@ -586,8 +600,11 @@ contains
     else
       read(iunit, *)  
     end if
+    write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", this%space%dim, "f12.6)"
     do iatom = 1, this%natoms
-      call atom_read_xyz(this%atom(iatom), this%space%dim, iunit)
+      read(unit=iunit, fmt=frmt) dum, (tmp(idir), idir=1, this%space%dim)
+
+      this%pos(:, iatom) = units_to_atomic(units_out%length_xyz_file, tmp)
     end do
     call io_close(iunit)
 
@@ -613,7 +630,7 @@ contains
     PUSH_SUB(ions_fold_atoms_into_cell)
 
     do iatom = 1, this%natoms
-      this%atom(iatom)%x(1:this%space%dim) = this%latt%fold_into_cell(this%atom(iatom)%x(1:this%space%dim))
+      this%pos(:, iatom) = this%latt%fold_into_cell(this%pos(:, iatom))
     end do
 
     POP_SUB(ions_fold_atoms_into_cell)
@@ -640,7 +657,7 @@ contains
       do jatom = iatom + 1, this%natoms
         call atom_get_species(this%atom(iatom), species)
         if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
-        xx = abs(this%atom(iatom)%x(1:this%space%dim) - this%atom(jatom)%x(1:this%space%dim))
+        xx = abs(this%pos(:, iatom) - this%pos(:, jatom))
         if (this%space%is_periodic()) then
           xx = this%latt%cart_to_red(xx)
           do idir = 1, this%space%periodic_dim
@@ -708,7 +725,7 @@ contains
       if (present(mask)) then
         if (.not. mask(ia)) cycle
       end if
-      dipole = dipole + species_zval(this%atom(ia)%species)*this%atom(ia)%x(1:this%space%dim)
+      dipole = dipole + species_zval(this%atom(ia)%species)*this%pos(:, ia)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -735,9 +752,9 @@ contains
         if (.not. mask(ia)) cycle
       end if
       if (.not. optional_default(pseudo, .false.)) then
-        mass = species_mass(this%atom(ia)%species)
+        mass = this%mass(ia)
       end if
-      pos = pos + mass*this%atom(ia)%x(1:this%space%dim)
+      pos = pos + mass*this%pos(:, ia)
       total_mass = total_mass + mass
     end do
     pos = pos/total_mass
@@ -758,9 +775,9 @@ contains
     vel = M_ZERO
     total_mass = M_ZERO
     do iatom = 1, this%natoms
-      mass = species_mass(this%atom(iatom)%species)
+      mass = this%mass(iatom)
       total_mass = total_mass + mass
-      vel = vel + mass*this%atom(iatom)%v(1:this%space%dim)
+      vel = vel + mass*this%vel(:, iatom)
     end do
     vel = vel/total_mass
 
@@ -773,16 +790,16 @@ contains
     FLOAT :: pos(this%space%dim)
 
     FLOAT :: xmin(this%space%dim), xmax(this%space%dim)
-    integer  :: i, j
+    integer  :: iatom, idir
 
     PUSH_SUB(ions_center)
 
     xmin =  M_HUGE
     xmax = -M_HUGE
-    do i = 1, this%natoms
-      do j = 1, this%space%dim
-        if (this%atom(i)%x(j) > xmax(j)) xmax(j) = this%atom(i)%x(j)
-        if (this%atom(i)%x(j) < xmin(j)) xmin(j) = this%atom(i)%x(j)
+    do iatom = 1, this%natoms
+      do idir = 1, this%space%dim
+        if (this%pos(idir, iatom) > xmax(idir)) xmax(idir) = this%pos(idir, iatom)
+        if (this%pos(idir, iatom) < xmin(idir)) xmin(idir) = this%pos(idir, iatom)
       end do
     end do
 
@@ -796,19 +813,19 @@ contains
     class(ions_t),     intent(in)  :: this
     FLOAT,             intent(out) :: x(this%space%dim), x2(this%space%dim)
 
-    integer  :: i, j
+    integer  :: iatom, jatom
     FLOAT :: rmax, r, r2
 
     PUSH_SUB(ions_axis_large)
 
     ! first get the further apart atoms
     rmax = -M_HUGE
-    do i = 1, this%natoms
-      do j = 1, this%natoms/2 + 1
-        r = norm2(this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim))
+    do iatom = 1, this%natoms
+      do jatom = 1, this%natoms/2 + 1
+        r = norm2(this%pos(:, iatom) - this%pos(:, jatom))
         if (r > rmax) then
           rmax = r
-          x = this%atom(i)%x(1:this%space%dim) - this%atom(j)%x(1:this%space%dim)
+          x = this%pos(:, iatom) - this%pos(:, jatom)
         end if
       end do
     end do
@@ -816,12 +833,12 @@ contains
 
     ! now let us find out what is the second most important axis
     rmax = -M_HUGE
-    do i = 1, this%natoms
-      r2 = sum(x * this%atom(i)%x(1:this%space%dim))
-      r = norm2(this%atom(i)%x(1:this%space%dim) - r2*x)
+    do iatom = 1, this%natoms
+      r2 = sum(x * this%pos(:, iatom))
+      r = norm2(this%pos(:, iatom) - r2*x)
       if (r > rmax) then
         rmax = r
-        x2 = this%atom(i)%x(1:this%space%dim) - r2*x
+        x2 = this%pos(:, iatom) - r2*x
       end if
     end do
 
@@ -846,12 +863,10 @@ contains
     tinertia = M_ZERO
     mass = M_ONE
     do iatom = 1, this%natoms
-      if (.not.pseudo) mass = species_mass(this%atom(iatom)%species)
+      if (.not.pseudo) mass = this%mass(iatom)
       do ii = 1, this%space%dim
-        do jj = 1, this%space%dim
-          tinertia(ii, jj) = tinertia(ii, jj) - mass*this%atom(iatom)%x(ii)*this%atom(iatom)%x(jj)
-        end do
-        tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(this%atom(iatom)%x(:)**2)
+        tinertia(ii, :) = tinertia(ii, :) - mass*this%pos(ii, iatom)*this%pos(:, iatom)
+        tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(this%pos(:, iatom)**2)
       end do
     end do
 
@@ -891,7 +906,7 @@ contains
     PUSH_SUB(ions_translate)
 
     do iatom = 1, this%natoms
-      this%atom(iatom)%x(1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim) - xx
+      this%pos(:, iatom) = this%pos(:, iatom) - xx
     end do
     do iatom = 1, this%ncatoms
       this%catom(iatom)%x(1:this%space%dim) = this%catom(iatom)%x(1:this%space%dim) - xx
@@ -968,8 +983,8 @@ contains
     ! now transform the coordinates
     ! it is written in this way to avoid what I consider a bug in the Intel compiler
     do iatom = 1, this%natoms
-      f2 = this%atom(iatom)%x(1:this%space%dim)
-      this%atom(iatom)%x(1:this%space%dim) = matmul(m1, f2)
+      f2 = this%pos(:, iatom)
+      this%pos(:, iatom) = matmul(m1, f2)
     end do
 
     do iatom = 1, this%ncatoms
@@ -1075,13 +1090,9 @@ contains
     class(ions_t),     intent(in)    :: this
     FLOAT,             intent(inout) :: q(:, :)
 
-    integer :: iatom
-
     PUSH_SUB(ions_get_positions)
 
-    do iatom = 1, this%natoms
-      q(iatom, 1:this%space%dim) = this%atom(iatom)%x(1:this%space%dim)
-    end do
+    q = this%pos
 
     POP_SUB(ions_get_positions)
   end subroutine ions_get_positions
@@ -1091,13 +1102,9 @@ contains
     class(ions_t),     intent(inout) :: this
     FLOAT,             intent(in)    :: q(:, :)
 
-    integer :: iatom
-
     PUSH_SUB(ions_get_positions)
 
-    do iatom = 1, this%natoms
-      this%atom(iatom)%x(1:this%space%dim) = q(iatom, 1:this%space%dim)
-    end do
+    this%pos = q
 
     POP_SUB(ions_get_positions)
   end subroutine ions_set_positions
@@ -1144,7 +1151,7 @@ contains
       
       do iatom = 1, this%natoms
         do icopy = 1, latt_iter%n_cells
-          pos = units_from_atomic(units_out%length, this%atom(iatom)%x(1:this%space%dim) + latt_iter%get(icopy))
+          pos = units_from_atomic(units_out%length, this%pos(:, iatom) + latt_iter%get(icopy))
           write(iunit, '(a, 99f12.6)') this%atom(iatom)%label, pos
         end do
       end do

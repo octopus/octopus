@@ -410,7 +410,7 @@ contains
       vib%dyn_matrix(:,:) = M_ZERO
 
       do iatom = 1, natoms
-        xi(1:ndim) = ions%atom(iatom)%x(1:ndim)
+        xi(1:ndim) = ions%pos(:, iatom)
 
         do idir = 1, ndim
 
@@ -419,7 +419,7 @@ contains
 
             do jdir = 1, ndim         
 
-              xj(1:ndim) = ions%atom(jatom)%x(1:ndim)
+              xj(1:ndim) = ions%pos(:, jatom)
               r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
 
               term = species_zval(ions%atom(iatom)%species) * species_zval(ions%atom(jatom)%species) &
@@ -558,12 +558,12 @@ contains
     iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
-    SAFE_ALLOCATE(forces(1:ions%natoms, 1:ions%space%dim))
+    SAFE_ALLOCATE(forces(1:ions%space%dim, 1:ions%natoms))
     do imat = 1, this%num_modes
       do jmat = 1, this%num_modes
         iatom = vibrations_get_atom(this, jmat)
         idir  = vibrations_get_dir (this, jmat)
-        forces(iatom, idir) = this%normal_mode(jmat, imat)
+        forces(idir, iatom) = this%normal_mode(jmat, imat)
       end do
       call write_xsf_geometry(iunit, ions, mesh, forces = forces, index = imat)
     end do

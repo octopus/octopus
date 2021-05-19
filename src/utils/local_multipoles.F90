@@ -514,14 +514,14 @@ contains
           if (radius < M_EPSILON) then
             radius = species_def_rsize(ions%atom(ia)%species)
           end if
-          call minimum_box%add_box(box_sphere_t(space%dim, ions%atom(ia)%x(1:space%dim), radius))
+          call minimum_box%add_box(box_sphere_t(space%dim, ions%pos(:, ia), radius))
         end if
       end do
       domain%box => minimum_box
 
       ic = 0
       do ia = 1, ions%natoms
-        if (domain%box%contains_point(ions%atom(ia)%x) .and. .not. loct_isinstringlist(ia, domain%clist)) then
+        if (domain%box%contains_point(ions%pos(:, ia)) .and. .not. loct_isinstringlist(ia, domain%clist)) then
           ic = ic + 1
           if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(ions%atom(ia)%species)), ia, &
             ' is inside the union box BUT not in list: ', trim(domain%clist)
@@ -790,7 +790,7 @@ contains
     SAFE_ALLOCATE(ffs(1:mesh%np))
     do ia = 1, ions%natoms
       call species_get_long_range_density(ions%atom(ia)%species, ions%namespace, ions%space, ions%latt, &
-        ions%atom(ia)%x(1:ions%space%dim), mesh, ffs)
+        ions%pos(:, ia), mesh, ffs)
       do is = 1, ubound(ff2, dim=2)
         ff2(1:mesh%np, is) = ff2(1:mesh%np, is) - ffs(1:mesh%np)
       end do
@@ -825,7 +825,7 @@ contains
       SAFE_ALLOCATE(ion_map(ions%natoms))
       ion_map = 0
       do ia = 1, ions%natoms
-        ion_map(ia) = basins%map(mesh_nearest_point(mesh, ions%atom(ia)%x, dmin, rankmin))
+        ion_map(ia) = basins%map(mesh_nearest_point(mesh, ions%pos(:, ia), dmin, rankmin))
       end do
 
       do ip = 1, mesh%np
@@ -833,8 +833,7 @@ contains
         if (all(ion_map(:) /= basins%map(ip)) ) then
           ! Assign lonely pair to ion in a atomic radii distance
           do ia = 1, ions%natoms
-            dd = sum((mesh%x(ip, 1:ions%space%dim) - ions%atom(ia)%x(1:ions%space%dim))**2)
-            dd = sqrt(dd)
+            dd = norm2(mesh%x(ip, :) - ions%pos(:, ia))
             if (dd <= species_vdw_radius(ions%atom(ia)%species)) basins%map(ip) = ion_map(ia)
           end do
         end if
@@ -885,7 +884,7 @@ contains
     do ia = 1, ions%natoms
       if (.not. loct_isinstringlist(ia, domain%clist)) cycle
       ib = ib + 1
-      xi(1:ions%space%dim) = ions%atom(ia)%x(1:ions%space%dim)
+      xi(1:ions%space%dim) = ions%pos(:, ia)
       ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
       domain_map(ib) = basins%map(ix)
     end do
@@ -912,7 +911,7 @@ contains
     integer              :: ia, ix
     integer, allocatable :: mask_tmp(:)
     integer              :: rankmin
-    FLOAT                :: dmin
+    FLOAT                :: dmin, xi(MAX_DIM)
 
     PUSH_SUB(local_ions_mask)
 
@@ -920,7 +919,8 @@ contains
     mask_tmp = 0
 
     do ia = 1, ions%natoms
-      ix = mesh_nearest_point(mesh, ions%atom(ia)%x, dmin, rankmin )
+      xi(1:ions%space%dim) = ions%pos(:, ia)
+      ix = mesh_nearest_point(mesh, xi, dmin, rankmin )
       if (rankmin /= mesh%mpi_grp%rank) cycle
       if (mesh_mask(ix)) mask_tmp(ia) = 1
     end do

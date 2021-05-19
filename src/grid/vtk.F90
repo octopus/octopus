@@ -72,6 +72,8 @@ contains
     integer, allocatable :: idata(:, :)
     character(len=MAX_PATH_LEN) :: fullname
 
+    ASSERT(ions%space%dim == 3)
+
     ascii_ = optional_default(ascii, .true.)
 
     fullname = trim(filename)//".vtk"
@@ -94,13 +96,13 @@ contains
 
     if(ascii_) then
       do iatom = 1, ions%natoms
-        write(iunit, '(3f12.6)') ions%atom(iatom)%x(1:3)
+        write(iunit, '(3f12.6)') ions%pos(1:3, iatom)
       end do
     else
       call io_close(iunit)
       SAFE_ALLOCATE(data(1:3, 1:ions%natoms))
       do iatom = 1, ions%natoms
-        data(1:3, iatom) = ions%atom(iatom)%x(1:3)
+        data(1:3, iatom) = ions%pos(1:3, iatom)
       end do
       call io_binary_write(io_workpath(fullname, namespace), 3*ions%natoms, data, &
         ierr, nohead = .true., fendian = is_little_endian())

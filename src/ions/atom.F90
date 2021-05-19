@@ -17,9 +17,6 @@ module atom_oct_m
     atom_set_species,                     &
     atom_get_species,                     &
     atom_same_species,                    &
-    atom_distance,                        &
-    atom_write_xyz,                       &
-    atom_read_xyz,                        &
     atom_classical_init,                  &
     atom_classical_end,                   &
     atom_classical_get_label,             &
@@ -30,11 +27,7 @@ module atom_oct_m
     !private
     character(len=LABEL_LEN)  :: label = ""
     type(species_t), pointer  :: species  =>null() !< pointer to species
-    FLOAT, dimension(MAX_DIM) :: x     = M_ZERO !< position of atom in real space
-    FLOAT, dimension(MAX_DIM) :: v     = M_ZERO !< velocity of atom in real space
-    FLOAT, dimension(MAX_DIM) :: f     = M_ZERO !< force on atom in real space
     integer, dimension(MAX_DIM) :: c   = 0      !< Constrain on te atom (0 or 1)
-    logical                   :: move  = .true. !< should I move this atom in the optimization mode
 
     !Components of the force
     FLOAT, dimension(MAX_DIM) :: f_ii     = M_ZERO !< Ion-Ion part
@@ -64,21 +57,16 @@ module atom_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine atom_init(this, label, x, species, move)
+  subroutine atom_init(this, label, species)
     type(atom_t),                      intent(out) :: this
     character(len=*),                  intent(in)  :: label
-    FLOAT, dimension(:),               intent(in)  :: x
     type(species_t), target, optional, intent(in)  :: species
-    logical,                 optional, intent(in)  :: move
 
     PUSH_SUB(atom_init)
 
     this%label = trim(adjustl(label))
     this%species  =>null()
     if(present(species))this%species=>species
-    this%x     = x
-    this%v     = M_ZERO
-    this%f     = M_ZERO
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
@@ -86,9 +74,6 @@ contains
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
     this%f_u       = M_ZERO
-
-    this%move  = .true.
-    if(present(move))this%move=move
 
     POP_SUB(atom_init)
   end subroutine atom_init
@@ -99,9 +84,6 @@ contains
 
     this%label = ""
     this%species  =>null()
-    this%x     = M_ZERO
-    this%v     = M_ZERO
-    this%f     = M_ZERO
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
@@ -109,8 +91,6 @@ contains
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    
     this%f_u       = M_ZERO
-
-    this%move  = .true.
 
   end subroutine atom_end
 
@@ -170,64 +150,6 @@ contains
     is=(atom_get_label(this)==species_label(species))
 
   end function atom_same_species_as
-
-  ! ---------------------------------------------------------
-  elemental function atom_distance(this_1, this_2) result(dst)
-    type(atom_t), intent(in) :: this_1
-    type(atom_t), intent(in) :: this_2
-
-    FLOAT :: dst
-
-    dst=sqrt(sum((this_1%x-this_2%x)**2))
-
-  end function atom_distance
-
-  ! ---------------------------------------------------------
-  subroutine atom_write_xyz(this, dim, unit)
-    type(atom_t),      intent(in) :: this
-    integer, optional, intent(in) :: dim
-    integer,           intent(in) :: unit
-
-    character(len=19) :: frmt
-    integer           :: i, dim_
-
-    PUSH_SUB(atom_write_xyz)
-
-    dim_=MAX_DIM
-    if(present(dim))dim_=dim
-    write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
-    write(unit=unit, fmt=frmt) this%label, (units_from_atomic(units_out%length_xyz_file, this%x(i)), i=1, dim_)
-
-    POP_SUB(atom_write_xyz)
-
-  end subroutine atom_write_xyz
-
-    ! ---------------------------------------------------------
-  subroutine atom_read_xyz(this, dim, unit)
-    type(atom_t),      intent(inout) :: this
-    integer, optional, intent(in) :: dim
-    integer,           intent(in) :: unit
-
-    character(len=19)          :: frmt, dum
-    integer                    :: i, dim_
-    FLOAT, dimension(MAX_DIM)  :: tmp
- 
-
-    PUSH_SUB(atom_read_xyz)
-
-    dim_=MAX_DIM
-    if(present(dim))dim_=dim
-    write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
-    read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
-
-    do i = 1, dim_
-      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
-    end do
- 
-    POP_SUB(atom_read_xyz)
-
-  end subroutine atom_read_xyz
-
 
   ! ---------------------------------------------------------
   pure subroutine atom_classical_init(this, label, x, charge)

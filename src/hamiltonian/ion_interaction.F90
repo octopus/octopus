@@ -128,13 +128,14 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, space, latt, atom, natoms, catom, ncatoms, lsize, energy, force, &
+  subroutine ion_interaction_calculate(this, space, latt, atom, natoms, pos, catom, ncatoms, lsize, energy, force, &
     energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
     type(atom_t),             intent(in)    :: atom(:)
     integer,                  intent(in)    :: natoms
+    FLOAT,                    intent(in)    :: pos(1:space%dim,1:natoms)
     type(atom_classical_t),   intent(in)    :: catom(:)
     integer,                  intent(in)    :: ncatoms
     FLOAT,                    intent(in)    :: lsize(:)
@@ -143,7 +144,7 @@ contains
     FLOAT, optional,          intent(out)   :: energy_components(:)
     FLOAT, optional,          intent(out)   :: force_components(:, :, :)
     
-    FLOAT, allocatable:: r(:), f(:)
+    FLOAT :: r(space%dim), f(space%dim)
     FLOAT :: rr, dd, zi, zj
     integer :: iatom, jatom, natom, iindex, jindex
     type(species_t), pointer :: spci, spcj
@@ -151,9 +152,6 @@ contains
 
     PUSH_SUB(ion_interaction_calculate)
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
-
-    SAFE_ALLOCATE(r(1:space%dim))
-    SAFE_ALLOCATE(f(1:space%dim))
 
     if(present(energy_components)) then
       ASSERT(ubound(energy_components, dim = 1) == ION_NUM_COMPONENTS)
@@ -179,7 +177,7 @@ contains
         energy = energy + &
           M_PI*species_zval(spci)**2/latt%rcell_volume*(lsize(3) - species_jthick(spci)/M_THREE)
       else
-        call ion_interaction_periodic(this, space, latt, atom, natoms, energy, force, energy_components, force_components)
+        call ion_interaction_periodic(this, space, latt, atom, natoms, pos, energy, force, energy_components, force_components)
       end if
 
     else
@@ -205,7 +203,7 @@ contains
           
           spcj => atom(jatom)%species
 
-          r(1:space%dim) = atom(iatom)%x(1:space%dim) - atom(jatom)%x(1:space%dim)
+          r = pos(:, iatom) - pos(:, jatom)
 
           rr = sqrt(sum(r**2))
           iindex = species_index(spci)
@@ -215,8 +213,8 @@ contains
           !the force
           dd = zi*zj/rr
           f(1:space%dim) = (dd/rr**2)*r(1:space%dim)
-          force(1:space%dim,iatom) = force(1:space%dim,iatom) + f(1:space%dim)
-          force(1:space%dim,jatom) = force(1:space%dim,jatom) - f(1:space%dim)
+          force(1:space%dim,iatom) = force(1:space%dim,iatom) + f
+          force(1:space%dim,jatom) = force(1:space%dim,jatom) - f
           !energy
           energy=energy + dd
           
@@ -226,14 +224,14 @@ contains
       do iatom = this%dist%start, this%dist%end
 
         do jatom = 1, ncatoms
-          r(1:space%dim) = atom(iatom)%x(1:space%dim) - catom(jatom)%x(1:space%dim)
-          rr = sqrt(sum(r**2))
+          r = pos(:, iatom) - catom(jatom)%x(1:space%dim)
+          rr = norm2(r)
 
           zi = species_zval(atom(iatom)%species)
           zj = catom(jatom)%charge
           !the force
           dd = zi*zj/rr
-          force(1:space%dim,iatom) = force(1:space%dim,iatom) + (dd/rr*2)*r(1:space%dim)
+          force(1:space%dim,iatom) = force(1:space%dim,iatom) + (dd/rr*2)*r
           !energy
           energy = energy + dd
           
@@ -245,9 +243,6 @@ contains
       
     end if
 
-    SAFE_DEALLOCATE_A(r)
-    SAFE_DEALLOCATE_A(f)
-    
     call profiling_out(ion_ion_prof)
     
     POP_SUB(ion_interaction_calculate)
@@ -255,18 +250,19 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, energy, force, energy_components, force_components)
+  subroutine ion_interaction_periodic(this, space, latt, atom, natoms, pos, energy, force, energy_components, force_components)
     type(ion_interaction_t),   intent(in)    :: this
     type(space_t),             intent(in)    :: space
     type(lattice_vectors_t),   intent(in)    :: latt
     type(atom_t),              intent(in)    :: atom(:)
     integer,                   intent(in)    :: natoms
+    FLOAT,                     intent(in)    :: pos(1:space%dim,1:natoms)
     FLOAT,                     intent(out)   :: energy
     FLOAT,                     intent(out)   :: force(:, :) !< (space%dim, natoms)
     FLOAT, optional,           intent(out)   :: energy_components(:)
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
+    FLOAT :: rr, xi(space%dim), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
     integer :: iatom, jatom, icopy
     type(lattice_iterator_t) :: latt_iter
     FLOAT   :: charge
@@ -294,11 +290,11 @@ contains
       zi = species_zval(atom(iatom)%species)
 
       do icopy = 1, latt_iter%n_cells
-        xi(1:space%dim) = atom(iatom)%x(1:space%dim) + latt_iter%get(icopy)
+        xi = pos(:, iatom) + latt_iter%get(icopy)
         
         do jatom = 1,  natoms
           zj = species_zval(atom(jatom)%species)
-          rr = sqrt( sum( (xi(1:space%dim) - atom(jatom)%x(1:space%dim))**2 ) )
+          rr = norm2(xi - pos(:, jatom))
           
           if(rr < CNST(1e-5)) cycle
           if(rr > rcut) cycle
@@ -310,8 +306,7 @@ contains
           
           ! force
           force(1:space%dim, jatom) = force(1:space%dim, jatom) - &
-            zj*zi*(xi(1:space%dim) - atom(jatom)%x(1:space%dim))*&
-            (erfc/rr + M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*rr)**2))/rr**2
+            zj*zi*(xi - pos(:, jatom))*(erfc/rr + M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*rr)**2))/rr**2
         end do
 
       end do
@@ -353,9 +348,9 @@ contains
         force_components(1:space%dim, 1:natoms, ION_COMPONENT_REAL) = M_ZERO
       end if
     case(2)
-      call Ewald_long_2D(this, space, latt, atom, natoms, efourier, force)
+      call Ewald_long_2D(this, space, latt, atom, natoms, pos, efourier, force)
     case(3)
-      call Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
+      call Ewald_long_3D(this, space, latt, atom, natoms, pos, efourier, force, charge)
     end select
 
 
@@ -399,12 +394,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine Ewald_long_3D(this, space, latt, atom, natoms, efourier, force, charge)
+  subroutine Ewald_long_3D(this, space, latt, atom, natoms, pos, efourier, force, charge)
     type(ion_interaction_t),   intent(in)   :: this
     type(space_t),             intent(in)   :: space
     type(lattice_vectors_t),   intent(in)   :: latt
     type(atom_t),              intent(in)   :: atom(:)
     integer,                   intent(in)   :: natoms
+    FLOAT,                     intent(in)    :: pos(1:space%dim,1:natoms)
     FLOAT,                     intent(inout) :: efourier
     FLOAT,                     intent(inout) :: force(:, :) !< (space%dim, natoms)
     FLOAT,                     intent(in)   :: charge
@@ -412,9 +408,9 @@ contains
     FLOAT :: rcut
     integer :: iatom
     integer :: ix, iy, iz, isph, ss, idim
-    FLOAT   :: gg(1:MAX_DIM), gg2, gx
+    FLOAT   :: gg(space%dim), gg2, gx
     FLOAT   :: factor
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
+    CMPLX   :: sumatoms, tmp(space%dim), aa
 
     CMPLX, allocatable :: phase(:)
 
@@ -429,7 +425,7 @@ contains
     ! get a converged value for the cutoff in g
     rcut = huge(rcut)
     do idim = 1, space%dim
-      rcut = min(rcut, sum(latt%klattice(1:space%dim, idim)**2))
+      rcut = min(rcut, sum(latt%klattice(:, idim)**2))
     end do
 
     rcut = sqrt(rcut)
@@ -447,10 +443,8 @@ contains
           
           if(ss == 0 .or. ss > isph**2) cycle
 
-          gg(1:space%dim) = ix*latt%klattice(1:space%dim, 1) &
-                              + iy*latt%klattice(1:space%dim, 2) &
-                              + iz*latt%klattice(1:space%dim, 3)
-          gg2 = sum(gg(1:space%dim)**2)
+          gg = ix*latt%klattice(:, 1) + iy*latt%klattice(:, 2) + iz*latt%klattice(:, 3)
+          gg2 = sum(gg**2)
 
           ! g=0 must be removed from the sum
           if(gg2 < M_EPSILON) cycle
@@ -466,18 +460,17 @@ contains
           sumatoms = M_Z0
           !$omp parallel do private(iatom, gx, aa) reduction(+:sumatoms)
           do iatom = 1, natoms
-            gx = sum(gg(1:space%dim)*atom(iatom)%x(1:space%dim))
+            gx = sum(gg*pos(:,iatom))
             aa = species_zval(atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
-            phase(iatom) = aa 
+            phase(iatom) = aa
             sumatoms = sumatoms + aa
           end do
           
           efourier = efourier + TOFLOAT(factor*sumatoms*conjg(sumatoms))
           
           do iatom = 1, natoms
-            tmp(1:space%dim) = M_ZI*gg(1:space%dim)*phase(iatom)
-            force(1:space%dim, iatom) = force(1:space%dim, iatom) &
-              - factor*TOFLOAT(conjg(tmp(1:space%dim))*sumatoms + tmp(1:space%dim)*conjg(sumatoms))
+            tmp = M_ZI*gg*phase(iatom)
+            force(1:space%dim, iatom) = force(1:space%dim, iatom) - factor*TOFLOAT(conjg(tmp)*sumatoms + tmp*conjg(sumatoms))
           end do
           
         end do
@@ -493,19 +486,20 @@ contains
 
   ! ---------------------------------------------------------
   !> In-Chul Yeh and Max L. Berkowitz, J. Chem. Phys. 111, 3155 (1999).
-  subroutine Ewald_long_2D(this, space, latt, atom, natoms, efourier, force)
+  subroutine Ewald_long_2D(this, space, latt, atom, natoms, pos, efourier, force)
     type(ion_interaction_t),   intent(in)    :: this
     type(space_t),             intent(in)    :: space
     type(lattice_vectors_t),   intent(in)    :: latt
     type(atom_t),              intent(in)    :: atom(:)
     integer,                   intent(in)    :: natoms
+    FLOAT,                     intent(in)    :: pos(1:space%dim,1:natoms)
     FLOAT,                     intent(inout) :: efourier
     FLOAT,                     intent(inout) :: force(:, :) !< (space%dim, natoms)
 
     FLOAT :: rcut
     integer :: iatom, jatom
     integer :: ix, iy, ix_max, iy_max, ss
-    FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
+    FLOAT   :: gg(1:space%dim), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2, coeff
     FLOAT   :: dz_max, dz_ij, erfc1, erfc2, tmp_erf
     FLOAT, allocatable :: force_tmp(:,:)
@@ -522,7 +516,7 @@ contains
       dz_max = M_ZERO
       do iatom = 1, natoms
         do jatom = iatom + 1, natoms
-          dz_max = max(dz_max, abs(atom(iatom)%x(3) - atom(jatom)%x(3)))
+          dz_max = max(dz_max, abs(pos(3, iatom) - pos(3, jatom)))
         end do
       end do
     else
@@ -541,8 +535,8 @@ contains
       end do
     end if
 
-    ix_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 1)**2)))
-    iy_max = ceiling(rcut/sqrt(sum(latt%klattice(1:space%dim, 2)**2)))
+    ix_max = ceiling(rcut/norm2(latt%klattice(:, 1)))
+    iy_max = ceiling(rcut/norm2(latt%klattice(:, 2)))
 
     SAFE_ALLOCATE(force_tmp(1:space%dim, 1:natoms))
     force_tmp = M_ZERO
@@ -554,7 +548,7 @@ contains
       do jatom = 1, natoms
         ! efourier
         if (space%dim == 3) then
-          dz_ij = atom(iatom)%x(3) - atom(jatom)%x(3)
+          dz_ij = pos(3, iatom) - pos(3, jatom)
         else
           dz_ij = M_ZERO
         end if
@@ -584,8 +578,8 @@ contains
         ss = ix**2 + iy**2
         if(ss == 0) cycle
           
-        gg(1:space%dim) = ix*latt%klattice(1:space%dim, 1) + iy*latt%klattice(1:space%dim, 2)
-        gg2 = sum(gg(1:space%dim)**2)
+        gg = ix*latt%klattice(:, 1) + iy*latt%klattice(:, 2)
+        gg2 = sum(gg**2)
 
         ! g=0 must be removed from the sum
         if(gg2 < M_EPSILON) cycle
@@ -595,10 +589,9 @@ contains
         do iatom = this%dist%start, this%dist%end
           do jatom = iatom, natoms
             ! efourier
-            gx = gg(1)*(atom(iatom)%x(1)-atom(jatom)%x(1)) &
-              + gg(2)*(atom(iatom)%x(2)-atom(jatom)%x(2))
+            gx = gg(1)*(pos(1, iatom) - pos(1, jatom)) + gg(2)*(pos(2, iatom) - pos(2, jatom))
             if (space%dim == 3) then
-              dz_ij = atom(iatom)%x(3)-atom(jatom)%x(3)
+              dz_ij = pos(3, iatom) - pos(3, jatom)
             else
               dz_ij = M_ZERO
             end if
@@ -686,12 +679,13 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(space, latt, atom, natoms, catom, ncatoms, lsize, &
+  subroutine ion_interaction_test(space, latt, atom, natoms, pos, catom, ncatoms, lsize, &
                 namespace, mc)
     type(space_t),            intent(in)    :: space
     type(lattice_vectors_t),  intent(in)    :: latt
     type(atom_t),             intent(in)    :: atom(:)
     integer,                  intent(in)    :: natoms
+    FLOAT,                    intent(in)    :: pos(1:space%dim,1:natoms)
     type(atom_classical_t),   intent(in)    :: catom(:)
     integer,                  intent(in)    :: ncatoms
     FLOAT,                    intent(in)    :: lsize(:)
@@ -712,7 +706,7 @@ contains
     SAFE_ALLOCATE(force(1:space%dim, 1:natoms))
     SAFE_ALLOCATE(force_components(1:space%dim, 1:natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, space, latt, atom, natoms, catom, ncatoms, lsize, energy, force, &
+    call ion_interaction_calculate(ion_interaction, space, latt, atom, natoms, pos, catom, ncatoms, lsize, energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')

@@ -1004,7 +1004,6 @@ contains
       CMPLX :: ctmp
       integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
-      FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3)
       integer, allocatable :: atnum(:)
 
@@ -1106,22 +1105,19 @@ contains
            
         case(OPTION__VDWCORRECTION__VDW_D3)
 
-          SAFE_ALLOCATE(coords(1:3, ions%natoms))
           SAFE_ALLOCATE(atnum(ions%natoms))
 
           do iatom = 1, ions%natoms
             atnum(iatom) = nint(species_z(ions%atom(iatom)%species))
-            coords(1:3, iatom) = ions%atom(iatom)%x(1:3)
           end do
           
           if (space%is_periodic()) then
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, ions%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
+            call dftd3_pbc_dispersion(ks%vdw_d3, ions%pos, atnum, ions%latt%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, &
               vdw_stress)
           else
-            call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
+            call dftd3_dispersion(ks%vdw_d3, ions%pos, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
           end if
 
-          SAFE_DEALLOCATE_A(coords)
           SAFE_DEALLOCATE_A(atnum)
           
         case default

@@ -323,7 +323,7 @@ contains
 
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia = 1, ions%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(ions%atom(ia)%label), ions%latt%cart_to_red(ions%atom(ia)%x(1:3))
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(ions%atom(ia)%label), ions%latt%cart_to_red(ions%pos(:, ia))
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '

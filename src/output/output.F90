@@ -1461,7 +1461,7 @@ contains
       SAFE_ALLOCATE(apos(1:3, 1:ions%natoms))
       do iatom = 1, ions%natoms
         atyp(iatom) = species_index(ions%atom(iatom)%species)
-        apos(1:3, iatom) = ions%atom(iatom)%x(1:3)
+        apos(1:3, iatom) = ions%pos(1:3, iatom)
       end do
 
       if(any(hm%kpoints%nik_axis(1:3) == 0)) then

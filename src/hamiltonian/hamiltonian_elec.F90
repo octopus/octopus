@@ -21,7 +21,6 @@
 
 module hamiltonian_elec_oct_m
   use accel_oct_m
-  use atom_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
@@ -66,6 +65,7 @@ module hamiltonian_elec_oct_m
   use scissor_oct_m
   use simul_box_oct_m
   use space_oct_m
+  use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -1368,14 +1368,15 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_elec_apply_atom (hm, namespace, space, latt, atom, mesh, ia, psi, vpsi)
+  subroutine zhamiltonian_elec_apply_atom (hm, namespace, space, latt, species, pos, ia, mesh, psi, vpsi)
     type(hamiltonian_elec_t), intent(in)  :: hm
     type(namespace_t),        intent(in)  :: namespace
     type(space_t),            intent(in)  :: space
     type(lattice_vectors_t),  intent(in)  :: latt
-    type(atom_t),             intent(in)  :: atom
-    type(mesh_t),             intent(in)  :: mesh
+    type(species_t),          intent(in)  :: species
+    FLOAT,                    intent(in)  :: pos(1:space%dim)
     integer,                  intent(in)  :: ia
+    type(mesh_t),             intent(in)  :: mesh
     CMPLX,                    intent(in)  :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
     CMPLX,                    intent(out) :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
 
@@ -1385,7 +1386,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, space, latt, mesh, atom, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, space, latt, mesh, species, pos, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:mesh%np, idim) = vlocal(1:mesh%np) * psi(1:mesh%np, idim)

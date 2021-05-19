@@ -158,17 +158,15 @@ contains
     end if
 
     if(ion_dynamics_ions_move(ions_dyn)) then
-      do iatom = 1, ions%natoms
-        pos0(1:ions%space%dim, iatom) = ions%atom(iatom)%x(1:ions%space%dim)
-        vel0(1:ions%space%dim, iatom) = ions%atom(iatom)%v(1:ions%space%dim)
-      end do
+      pos0 = ions%pos
+      vel0 = ions%vel
       posfinal = pos0
       velfinal = vel0
 
       if(propagate_chi) then
         do iatom = 1, ions%natoms
           pos0t(1:ions%space%dim, iatom) = q(iatom, 1:ions%space%dim)
-          vel0t(1:ions%space%dim, iatom) = p(iatom, 1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+          vel0t(1:ions%space%dim, iatom) = p(iatom, 1:ions%space%dim) / ions%mass(iatom)
         end do
         posfinalt = pos0t
         velfinalt = vel0t
@@ -299,10 +297,8 @@ contains
 
     call density_calc(st, gr, st%rho)
     if(ion_dynamics_ions_move(ions_dyn)) then
-      do iatom = 1, ions%natoms
-        ions%atom(iatom)%x(1:ions%space%dim) = posfinal(:, iatom)
-        ions%atom(iatom)%v(1:ions%space%dim) = velfinal(:, iatom)
-      end do
+      ions%pos = posfinal
+      ions%vel = velfinal
       call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, st, time)
       !call forces_calculate(gr, namespace, ions, hm, stphi, time, dt)
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
@@ -310,7 +306,7 @@ contains
       if(propagate_chi) then
         do iatom = 1, ions%natoms
           q(iatom, 1:ions%space%dim) = posfinalt(1:ions%space%dim, iatom)
-          p(iatom, 1:ions%space%dim) = species_mass(ions%atom(iatom)%species) * velfinalt(1:ions%space%dim, iatom)
+          p(iatom, 1:ions%space%dim) = ions%mass(iatom) * velfinalt(1:ions%space%dim, iatom)
         end do
       end if
     end if
@@ -357,10 +353,8 @@ contains
       FLOAT, intent(in) :: tau
 
       if(ion_dynamics_ions_move(ions_dyn)) then
-        do iatom = 1, ions%natoms
-          ions%atom(iatom)%x(1:ions%space%dim) = pos(:, iatom)
-          ions%atom(iatom)%v(1:ions%space%dim) = vel(:, iatom)
-        end do
+        ions%pos = pos
+        ions%vel = vel
         call hamiltonian_elec_epot_generate(hm, namespace,  space, gr, ions, stphi, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
@@ -380,13 +374,13 @@ contains
       call forces_calculate(gr, namespace, ions, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, ions%natoms
         posk(:, iatom) = dt * vel(:, iatom)
-        velk(:, iatom) = dt * ions%atom(iatom)%f(1:ions%space%dim) / species_mass(ions%atom(iatom)%species)
+        velk(:, iatom) = dt * ions%tot_force(:, iatom) / ions%mass(iatom)
       end do
       if(propagate_chi) then
         call forces_costate_calculate(gr, namespace, ions, hm, stphi, stchi, coforce, transpose(post))
         do iatom = 1, ions%natoms
           poskt(:, iatom) = dt * velt(:, iatom)
-          velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(ions%atom(iatom)%species)
+          velkt(:, iatom) = dt * coforce(iatom, :) / ions%mass(iatom)
         end do
       end if
     end subroutine f_ions

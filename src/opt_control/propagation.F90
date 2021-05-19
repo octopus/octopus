@@ -146,7 +146,6 @@ contains
     type(td_write_t)           :: write_handler
     FLOAT, allocatable :: x_initial(:,:)
     logical :: vel_target_ = .false.
-    integer :: iatom
     type(states_elec_t), pointer :: psi
 
     FLOAT :: init_time, final_time
@@ -188,13 +187,10 @@ contains
       call target_init_propagation(tg)
     
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
-       SAFE_ALLOCATE(x_initial(1:sys%ions%natoms, 1:sys%gr%sb%dim))
-       vel_target_ = .true.
-       do iatom = 1, sys%ions%natoms
-          sys%ions%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-          sys%ions%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-          x_initial(iatom, 1:sys%gr%sb%dim) = sys%ions%atom(iatom)%x(1:sys%gr%sb%dim)
-       end do
+      SAFE_ALLOCATE_SOURCE_A(x_initial, sys%ions%pos)
+      vel_target_ = .true.
+      sys%ions%vel = M_ZERO
+      sys%ions%tot_force = M_ZERO
     end if
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%ions)
@@ -257,9 +253,7 @@ contains
     call messages_info(1)
 
     if(vel_target_) then
-       do iatom = 1, sys%ions%natoms
-          sys%ions%atom(iatom)%x(1:sys%gr%sb%dim) = x_initial(iatom, 1:sys%gr%sb%dim)
-       end do
+      sys%ions%pos = x_initial
        SAFE_DEALLOCATE_A(x_initial)
     end if
 
@@ -599,7 +593,7 @@ contains
     q => opt_control_point_q(qcchi)
     p => opt_control_point_p(qcchi)
     SAFE_ALLOCATE(qtildehalf(1:sys%ions%natoms, 1:sys%ions%space%dim))
-    SAFE_ALLOCATE(qinitial(1:sys%ions%natoms, 1:sys%ions%space%dim))
+    SAFE_ALLOCATE(qinitial(1:sys%ions%space%dim, 1:sys%ions%natoms))
 
     call propagator_elec_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham

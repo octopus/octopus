@@ -1635,15 +1635,15 @@ contains
     call write_iter_start(out_coords)
 
     do iatom = 1, ions%natoms
-      tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%atom(iatom)%x(1:ions%space%dim))
+      tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%pos(:, iatom))
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     do iatom = 1, ions%natoms
-      tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%atom(iatom)%v(1:ions%space%dim))
+      tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%vel(:, iatom))
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     do iatom = 1, ions%natoms
-      tmp(1:ions%space%dim) = units_from_atomic(units_out%force, ions%atom(iatom)%f(1:ions%space%dim))
+      tmp(1:ions%space%dim) = units_from_atomic(units_out%force, ions%tot_force(:, iatom))
       call write_iter_double(out_coords, tmp, ions%space%dim)
     end do
     call write_iter_nl(out_coords)
@@ -1714,18 +1714,18 @@ contains
     select case (which)
       case (COORDINATES)
         do iatom = 1, ions%natoms
-          tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%atom(iatom)%x(1:ions%space%dim))
+          tmp(1:ions%space%dim) = units_from_atomic(units_out%length, ions%pos(:, iatom))
           call write_iter_double(out_coords, tmp, ions%space%dim)
         end do
       case (VELOCITIES)
         do iatom = 1, ions%natoms
-           tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%atom(iatom)%v(1:ions%space%dim))
-           call write_iter_double(out_coords, tmp, ions%space%dim)
+          tmp(1:ions%space%dim) = units_from_atomic(units_out%velocity, ions%vel(:, iatom))
+          call write_iter_double(out_coords, tmp, ions%space%dim)
         end do
       case (FORCES)
         do iatom = 1, ions%natoms
-           tmp(1:ions%space%dim) = units_from_atomic(units_out%force, ions%atom(iatom)%f(1:ions%space%dim))
-           call write_iter_double(out_coords, tmp, ions%space%dim)
+          tmp(1:ions%space%dim) = units_from_atomic(units_out%force, ions%tot_force(:, iatom))
+          call write_iter_double(out_coords, tmp, ions%space%dim)
         end do
     end select
        

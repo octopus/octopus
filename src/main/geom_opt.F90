@@ -182,9 +182,9 @@ contains
       imass = 1
       do iatom = 1, sys%ions%natoms
         if(g_opt%fixed_atom == iatom) cycle
-        if(.not. g_opt%ions%atom(iatom)%move) cycle
+        if (g_opt%ions%fixed(iatom)) cycle
         if (g_opt%fire_mass <= M_ZERO) then
-          mass(imass:imass + 2) = species_mass(sys%ions%atom(iatom)%species)
+          mass(imass:imass + 2) = sys%ions%mass(iatom)
         else
           mass(imass:imass + 2) = g_opt%fire_mass  ! Mass of H
         end if
@@ -282,7 +282,7 @@ contains
 
       !Check if atoms are allowed to move and redifine g_opt%size
       do iatom = 1, g_opt%ions%natoms
-        if (.not. g_opt%ions%atom(iatom)%move) then
+        if (g_opt%ions%fixed(iatom)) then
           g_opt%size = g_opt%size  - g_opt%dim
         end if
       end do
@@ -623,7 +623,7 @@ contains
 
     ! Some atoms might have moved outside the simulation box. We stop if this happens.
     do iatom = 1, g_opt%ions%natoms
-      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%ions%atom(iatom)%x)) then
+      if (.not. g_opt%syst%gr%sb%contains_point(g_opt%syst%ions%pos(:, iatom))) then
         if (g_opt%syst%space%periodic_dim /= g_opt%syst%space%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because contains_point is too strict with atoms close to
@@ -653,8 +653,8 @@ contains
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO
       do iatom = 1, g_opt%ions%natoms
-        if(.not.g_opt%ions%atom(iatom)%move) cycle
-        objective = objective + sum(g_opt%ions%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
+        if (g_opt%ions%fixed(iatom)) cycle
+        objective = objective + sum(g_opt%ions%tot_force(:, iatom)**2)
       end do
       objective = sqrt(objective)
     else
@@ -782,10 +782,10 @@ contains
     icoord = 1
     do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle
-      if(.not. gopt%ions%atom(iatom)%move) cycle
+      if (gopt%ions%fixed(iatom)) cycle
       do idir = 1, gopt%dim
-        coords(icoord) = gopt%ions%atom(iatom)%x(idir)
-        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%ions%atom(gopt%fixed_atom)%x(idir)
+        coords(icoord) = gopt%ions%pos(idir, iatom)
+        if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%ions%pos(idir, gopt%fixed_atom)
         icoord = icoord + 1
       end do
     end do
@@ -806,14 +806,16 @@ contains
     icoord = 1
     do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle
-      if(.not. gopt%ions%atom(iatom)%move) cycle
+      if (gopt%ions%fixed(iatom)) cycle
       do idir = 1, gopt%dim
         if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) then
-          grad(icoord) = -gopt%ions%atom(iatom)%f(idir)
+          grad(icoord) = -gopt%ions%tot_force(idir, iatom)
         else
           grad(icoord) = M_ZERO
         end if
-        if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%ions%atom(gopt%fixed_atom)%f(idir)
+        if (gopt%fixed_atom /= 0) then
+          grad(icoord) = grad(icoord) + gopt%ions%tot_force(idir, gopt%fixed_atom)
+        end if
         icoord = icoord + 1
       end do
     end do
@@ -834,12 +836,12 @@ contains
     icoord = 1
     do iatom = 1, gopt%ions%natoms
       if(gopt%fixed_atom == iatom) cycle      
-      if(.not. gopt%ions%atom(iatom)%move) cycle
+      if (gopt%ions%fixed(iatom)) cycle
       do idir = 1, gopt%dim
         if(abs(gopt%ions%atom(iatom)%c(idir)) <= M_EPSILON) &
-          gopt%ions%atom(iatom)%x(idir) = coords(icoord)
+          gopt%ions%pos(idir, iatom) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
-          gopt%ions%atom(iatom)%x(idir) = gopt%ions%atom(iatom)%x(idir) + gopt%ions%atom(gopt%fixed_atom)%x(idir)
+          gopt%ions%pos(idir, iatom) = gopt%ions%pos(idir, iatom) + gopt%ions%pos(idir, gopt%fixed_atom)
         end if
         icoord = icoord + 1
       end do

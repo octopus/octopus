@@ -62,7 +62,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, ions, psi, spin_channel
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   
-  call submesh_init(sphere, ions%space, mesh, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), radius)
+  call submesh_init(sphere, ions%space, mesh, ions%latt, ions%pos(:, iatom), radius)
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
@@ -184,7 +184,7 @@ subroutine X(lcao_wf)(this, st, gr, ions, hm, namespace, start)
 
     do n2 = n1, this%norbs
       jatom = this%atom(n2)
-      dist2 = sum((ions%atom(iatom)%x(1:MAX_DIM) - ions%atom(jatom)%x(1:MAX_DIM))**2)
+      dist2 = sum((ions%pos(:, iatom) - ions%pos(:, jatom))**2)
 
       ! Note that here we are making an approximation for the Hamiltonian matrix, 
       ! as the nonlocal part of the pseudopotential, or any nonlocal operator
@@ -500,8 +500,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, ions, start)
     norbs = species_niwfs(ions%atom(iatom)%species)
 
     ! initialize the radial grid
-    call submesh_init(this%sphere(iatom), ions%space, gr%mesh, ions%latt, ions%atom(iatom)%x(1:ions%space%dim), &
-      this%radius(iatom))
+    call submesh_init(this%sphere(iatom), ions%space, gr%mesh, ions%latt, ions%pos(:, iatom), this%radius(iatom))
     dof = dof + this%sphere(iatom)%np*this%mult*norbs
   end do
 
@@ -648,7 +647,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, ions, hm, namespace, start)
           ! we only calculate the upper triangle
           if(jatom < iatom) cycle
 
-          dist2 = sum((ions%atom(iatom)%x(1:MAX_DIM) - ions%atom(jatom)%x(1:MAX_DIM))**2)
+          dist2 = sum((ions%pos(:, iatom) - ions%pos(:, jatom))**2)
 
           ! FIXME: this is only correct for KS DFT, but not Hartree-Fock or generalized KS
           if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle

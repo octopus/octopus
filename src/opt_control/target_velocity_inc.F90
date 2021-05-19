@@ -133,7 +133,8 @@
       do iatom = 1, ions%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom), iatom, vl)
+        call epot_local_potential(ep, namespace, ions%space, ions%latt, gr%mesh, ions%atom(iatom)%species, &
+          ions%pos(:, iatom), iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         do ist = 1, gr%mesh%np
           do jst=1, gr%sb%dim
@@ -212,7 +213,7 @@
 
     SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
     do i = 1, ions%natoms
-      x(i, 1:ions%space%dim) = ions%atom(i)%v(1:ions%space%dim)
+      x(i, :) = ions%vel(:, i)
     end do
 
     f_re = M_ZERO
@@ -251,7 +252,7 @@
 
     SAFE_ALLOCATE(x(1:ions%natoms, 1:ions%space%dim))
     do ip = 1, ions%natoms
-      x(ip, 1:ions%space%dim) = ions%atom(ip)%v(1:ions%space%dim)
+      x(ip, :) = ions%vel(:, ip)
     end do
 
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
@@ -264,7 +265,7 @@
         call parse_array(temp_string, x, 'v')
         call conv_to_C_string(temp_string)
         call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
-        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_mass(ions%atom(ist)%species)
+        tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/ions%mass(ist)
       end do
     end do
 
@@ -297,13 +298,13 @@
     opsi = M_z0
     ! WARNING This does not work for spinors.
     do iatom = 1, ions%natoms
-      ions%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+      ions%tot_force(:, iatom) = hm%ep%fii(1:gr%sb%dim, iatom)
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
             call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
-            ions%atom(iatom)%f(idim) = ions%atom(iatom)%f(idim) &
+            ions%tot_force(idim, iatom) = ions%tot_force(idim, iatom) &
               + TOFLOAT(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
           end do
         end do
@@ -315,8 +316,7 @@
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
     do iatom = 1, ions%natoms
-       ions%atom(iatom)%v(1:MAX_DIM) = ions%atom(iatom)%v(1:MAX_DIM) + &
-         ions%atom(iatom)%f(1:MAX_DIM) * dt / species_mass(ions%atom(iatom)%species)
+      ions%vel(:, iatom) = ions%vel(:, iatom) + ions%tot_force(:, iatom) * dt / ions%mass(iatom)
     end do
 
     POP_SUB(target_tdcalc_velocity)

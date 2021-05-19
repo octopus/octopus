@@ -685,9 +685,9 @@ contains
         pcm%n_spheres = pcm%n_spheres + 1
 
         !> These coordinates are already in atomic units (Bohr)
-        pcm%spheres(pcm%n_spheres)%x = ions%atom(ia)%x(1)
-        pcm%spheres(pcm%n_spheres)%y = ions%atom(ia)%x(2)
-        pcm%spheres(pcm%n_spheres)%z = ions%atom(ia)%x(3)
+        pcm%spheres(pcm%n_spheres)%x = ions%pos(1, ia)
+        pcm%spheres(pcm%n_spheres)%y = ions%pos(2, ia)
+        pcm%spheres(pcm%n_spheres)%z = ions%pos(3, ia)
 
         vdw_radius = pcm_get_vdw_radius(ions%atom(ia)%species, pcm_vdw_type, namespace)
         pcm%spheres(pcm%n_spheres)%r = vdw_radius*pcm%scale_r     
@@ -715,9 +715,9 @@ contains
         if (mpi_grp_is_root(mpi_world)) & 
           write(pcm%info_unit,'(A1,2X,I3,7X,A2,3X,F14.8,2X,F14.8,2X,F14.8,4X,F14.8)')'#', pcm%n_spheres, &
           ions%atom(ia)%label,          &
-          ions%atom(ia)%x(1)*P_a_B,     &
-          ions%atom(ia)%x(2)*P_a_B,     &
-          ions%atom(ia)%x(3)*P_a_B,     &
+          ions%pos(1, ia)*P_a_B,     &
+          ions%pos(2, ia)*P_a_B,     &
+          ions%pos(3, ia)*P_a_B,     &
           pcm%spheres(pcm%n_spheres)%r*P_a_B
       end do
 
@@ -824,7 +824,7 @@ contains
 
       do ia = 1, ions%natoms
         write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') ions%atom(ia)%label,      &
-          ions%atom(ia)%x*P_a_B
+          ions%pos(:, ia)*P_a_B
       end do
 
       call io_close(cav_unit_test)
@@ -1408,7 +1408,7 @@ contains
     type(pcm_tessera_t), intent(in)  :: tess(:)    !< (1:n_tess)
     integer,             intent(in)  :: n_tess
 
-    FLOAT   :: diff(1:PCM_DIM_SPACE), dist, z_ia
+    FLOAT   :: dist, z_ia
     integer :: ik, ia
 
     PUSH_SUB(pcm_v_nuclei_cav)
@@ -1418,8 +1418,7 @@ contains
     do ik = 1, n_tess
       do ia = 1, ions%natoms
 
-        diff = ions%atom(ia)%x(1:PCM_DIM_SPACE) - tess(ik)%point
-        dist = sqrt(dot_product(diff, diff))
+        dist = norm2(ions%pos(1:PCM_DIM_SPACE, ia) - tess(ik)%point)
 
         z_ia = species_zval(ions%atom(ia)%species)
 
@@ -1445,7 +1444,6 @@ contains
     FLOAT, optional,  intent(out) :: E_int_e_ext
     FLOAT, optional,  intent(out) :: E_int_n_ext 
 
-    FLOAT   :: diff(1:PCM_DIM_SPACE)
     FLOAT   :: dist, z_ia
     integer :: ik, ia
     type(species_t), pointer :: spci 
@@ -1467,8 +1465,6 @@ contains
       E_int_n_ext = M_ZERO
     end if
 
-    diff = M_ZERO
-
     do ik = 1, pcm%n_tesserae
 
       E_int_ee = E_int_ee + pcm%v_e(ik)*pcm%q_e(ik)
@@ -1478,9 +1474,7 @@ contains
 
       do ia = 1, ions%natoms
 
-        diff = ions%atom(ia)%x(1:PCM_DIM_SPACE) - pcm%tess(ik)%point
-        dist = dot_product(diff, diff)
-        dist = sqrt(dist)
+        dist = norm2(ions%pos(1:PCM_DIM_SPACE, ia) - pcm%tess(ik)%point)
 
         spci => ions%atom(ia)%species
         z_ia = -species_zval(spci)
