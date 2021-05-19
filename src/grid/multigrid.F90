@@ -492,11 +492,11 @@ contains
     end do
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_target", global_namespace, &
-      mesh0, guess0, unit_one, ierr)
+      space, mesh0, guess0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_target", global_namespace, &
-      mesh0, guess0, unit_one, ierr)
+      space, mesh0, guess0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_target", global_namespace, &
-      mesh0, guess0, unit_one, ierr)
+      space, mesh0, guess0, unit_one, ierr)
 
     ! We start by testing the interpolation scheme. For this, we generate a function on the fine grid
     ! and we inject it on the coarse grid. Then we interpolate it back to the fine grid and we compare
@@ -508,11 +508,11 @@ contains
     call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "interpolation_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisZ'), ".", "interpolation_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "interpolation_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
 
     delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
     write(message(1),'(a,e13.6)') 'Interpolation test (abs.) = ', delta
@@ -526,11 +526,11 @@ contains
     call dmultigrid_coarse2fine(mgrid%level(1)%tt, mgrid%level(1)%der, mesh0, guess1, res0, order = order)
 
     call dio_function_output (io_function_fill_how('AxisX'), ".", "restriction_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisZ'), ".", "restriction_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
     call dio_function_output (io_function_fill_how('PlaneZ'), ".", "restriction_result", global_namespace, &
-      mesh0, res0, unit_one, ierr)
+      space, mesh0, res0, unit_one, ierr)
 
     delta = dmf_nrm2(mesh0, guess0(1:mesh0%np)-res0)
     write(message(2),'(a,e13.6)')  'Restriction test (abs.) = ', delta
