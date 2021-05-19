@@ -38,7 +38,7 @@ dist_share_DATA = \
 	03-magnetic.05-gs-spinors.inp                  \
 	03-magnetic.06-td-spinors.inp                  \
 	05-output.test                                 \
-	05-output.01-gs-set1.inp                            \
+	05-output.01-gs-set1.inp                       \
 	05-output.02-gs.inp                            \
 	05-output.03-convert.inp                       \
 	05-output.04-convert-op.inp                    \

@@ -37,10 +37,10 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
 
   PUSH_SUB(output_states)
 
-  if(outp%what_now(OPTION__OUTPUT__DENSITY, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__DENSITY, iter)) then
     fn_unit = units_out%length**(-space%dim)
     do is = 1, st%d%nspin
-      if(st%d%nspin == 1) then
+      if (st%d%nspin == 1) then
         write(fname, '(a)') 'density'
       else
         write(fname, '(a,i1)') 'density-sp', is
@@ -50,7 +50,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     end do
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__POL_DENSITY, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__POL_DENSITY, iter)) then
     fn_unit = units_out%length**(1 - space%dim)
     SAFE_ALLOCATE(polarization(1:gr%mesh%np, 1:space%dim))
 
@@ -61,7 +61,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
         end do
       end do
 
-      if(st%d%nspin == 1) then
+      if (st%d%nspin == 1) then
         write(fname, '(a)') 'dipole_density'
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
@@ -74,7 +74,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     SAFE_DEALLOCATE_A(polarization)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__WFS, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__WFS, iter)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
 
     if (states_are_real(st)) then
@@ -119,10 +119,10 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__WFS_SQMOD, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__WFS_SQMOD, iter)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
-    if(states_are_complex(st)) then
+    if (states_are_complex(st)) then
       SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
     end if
     do ist = st%st_start, st%st_end
@@ -160,7 +160,7 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__KINETIC_ENERGY_DENSITY, iter)) then
     fn_unit = units_out%energy * units_out%length**(-space%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, hm%kpoints, .false., kinetic_energy_density = elf)
@@ -179,17 +179,17 @@ subroutine output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__DOS, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__DOS, iter)) then
     call dos_init(dos, namespace, st, hm%kpoints)
     call dos_write_dos(dos, trim(dir), st, gr%sb, ions, gr%mesh, hm, namespace)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__TPA, iter)) then
+  if (outp%what_now(OPTION__OUTPUT__TPA, iter)) then
     call states_elec_write_tpa(trim(dir), namespace, gr, st)
   end if
 
-  if(outp%what_now(OPTION__OUTPUT__MMB_DEN, iter) .or. outp%what_now(OPTION__OUTPUT__MMB_WFS, iter)) then
-    if(states_are_real(st)) then
+  if (outp%what_now(OPTION__OUTPUT__MMB_DEN, iter) .or. outp%what_now(OPTION__OUTPUT__MMB_WFS, iter)) then
+    if (states_are_real(st)) then
       call doutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)
     else
       call zoutput_modelmb(outp, namespace, space, trim(dir), gr, st, ions)

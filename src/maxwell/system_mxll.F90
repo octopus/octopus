@@ -639,15 +639,15 @@ contains
 
     reached_output_interval = .false.
     do iout = 1, OUT_MAXWELL_MAX
-      if(this%outp%output_interval(iout) > 0) then
-        if(mod(this%clock%get_tick(), this%outp%output_interval(iout)) == 0) then
+      if (this%outp%output_interval(iout) > 0) then
+        if (mod(this%clock%get_tick(), this%outp%output_interval(iout)) == 0) then
           reached_output_interval = .true.
           exit
         end if
       end if
     end do
 
-    if(reached_output_interval .or. stopping) then
+    if (reached_output_interval .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%space, this%gr, this%st, this%hm, this%ions, &
         this%outp, this%clock)
     end if

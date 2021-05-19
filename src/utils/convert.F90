@@ -130,11 +130,11 @@ contains
     !% files, it should be one space ' '.
     !%End
     call parse_variable(global_namespace, 'ConvertFilename', 'density', basename)
-    if(basename == " ") basename = ""
+    if (basename == " ") basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
-    if(length > 4) then
-      if(basename(length-3:length) == '.obf') then
+    if (length > 4) then
+      if (basename(length-3:length) == '.obf') then
         basename = trim(basename(1:length-4))
       end if
     end if
@@ -308,7 +308,7 @@ contains
          "' from ", c_start, " to ", c_end, " every ", c_step
     call messages_info(1)
  
-    if(subtract_file) then
+    if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(ref_folder), mesh = mesh)
@@ -326,7 +326,7 @@ contains
     ! Initialize the restart directory from <tt>ConvertFolder</tt> value.
     ! This directory has to have the files 'grid' and 'lxyz.obf'
     ! and the files that are going to be converged, must be inside this folder
-    if(iterate_folder) then
+    if (iterate_folder) then
       ! Delete the last / and find the previous /, if any
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
@@ -338,14 +338,14 @@ contains
                       dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
-      if(iterate_folder) then
+      if (iterate_folder) then
         ! Delete the last / and add the corresponding folder number
         write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),ii,"/"
         write(filename, '(a,a,a)') trim(folder), trim(basename)
         out_name = trim(basename)
       else
         folder = ""
-        if(c_start /= c_end) then
+        if (c_start /= c_end) then
           ! Here, we are only considering 10 character long filenames.
           ! Subtract the initial part given at 'ConvertFilename' from the format and pad
           ! with zeros.
@@ -365,25 +365,25 @@ contains
         call drestart_read_mesh_function(restart, space, trim(filename), mesh, read_ff, ierr)
       end if
 
-      if(ierr /= 0) then
+      if (ierr /= 0) then
         write(message(1), '(a,a)') "Error reading the file ", filename
         write(message(2), '(a,i4)') "Error code: ",ierr
         write(message(3), '(a)') "Skipping...."
         call messages_warning(3)
         cycle
       end if
-      if(subtract_file) then
+      if (subtract_file) then
         read_ff(:) = read_ff(:) - read_rff(:) 
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
       do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
-        if(outp%how(output_i) /= 0) then
+        if (outp%how(output_i) /= 0) then
           call dio_function_output(outp%how(output_i), trim(restart_folder)//trim(folder), & 
            trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
         end if
       end do
-      if(outp%what(OPTION__OUTPUT__POTENTIAL)) then
+      if (outp%what(OPTION__OUTPUT__POTENTIAL)) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how(OPTION__OUTPUT__POTENTIAL), trim(restart_folder)//trim(folder), &
@@ -729,7 +729,7 @@ contains
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
-          if(outp%how(output_i) /= 0) then
+          if (outp%how(output_i) /= 0) then
             call dio_function_output(0_8, trim(filename), & 
             trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
             units_out%length**(-space%dim), ierr, ions = ions)
@@ -739,12 +739,12 @@ contains
       call restart_end(restart)
     else
       ! write the output files
-      if(any(outp%how /= OPTION__OUTPUTFORMAT__BINARY)) then
+      if (any(outp%how /= OPTION__OUTPUTFORMAT__BINARY)) then
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
           do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
-            if((outp%how(output_i) /= 0) .and. (outp%how(output_i) /= OPTION__OUTPUTFORMAT__BINARY)) then
+            if ((outp%how(output_i) /= 0) .and. (outp%how(output_i) /= OPTION__OUTPUTFORMAT__BINARY)) then
               call dio_function_output(outp%how(output_i), trim(filename), & 
                 trim('density'), namespace, space, mesh, read_rff, &
                 units_out%length**(-space%dim), ierr, ions = ions)
@@ -848,8 +848,8 @@ contains
       call parse_block_string(blk, i_op-1, 2, filename)
       ! Delete the extension if present
       length = len_trim(filename)
-      if(length > 4) then
-        if(filename(length-3:length) == '.obf') then
+      if (length > 4) then
+        if (filename(length-3:length) == '.obf') then
           filename = trim(filename(1:length-4))
         end if
       end if
@@ -887,7 +887,7 @@ contains
     !      and units of the conversion.
     units = units_out%length**(-space%dim)
     do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
-      if(outp%how(output_i) /= 0) then
+      if (outp%how(output_i) /= 0) then
         call dio_function_output(outp%how(output_i), trim(out_folder), trim(out_filename), namespace, space, mesh, & 
           scalar_ff, units, ierr, ions = ions)
       end if

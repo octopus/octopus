@@ -172,13 +172,13 @@ contains
     
     call io_function_read_what_how_when(namespace, space, outp%what, outp%how, outp%output_interval)
 
-    if(outp%what(OPTION__OUTPUT__WFS_FOURIER)) then
+    if (outp%what(OPTION__OUTPUT__WFS_FOURIER)) then
       call messages_experimental("Wave-functions in Fourier space")
     end if
 
     ! cannot calculate the ELF in 1D
-    if(outp%what(OPTION__OUTPUT__ELF) .or. outp%what(OPTION__OUTPUT__ELF_BASINS)) then
-       if(space%dim /= 2 .and. space%dim /= 3) then
+    if (outp%what(OPTION__OUTPUT__ELF) .or. outp%what(OPTION__OUTPUT__ELF_BASINS)) then
+       if (space%dim /= 2 .and. space%dim /= 3) then
          outp%what(OPTION__OUTPUT__ELF) = .false.
          outp%what(OPTION__OUTPUT__ELF_BASINS) = .false.
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
@@ -187,21 +187,21 @@ contains
     end if
 
 
-    if(outp%what(OPTION__OUTPUT__MMB_WFS)) then
+    if (outp%what(OPTION__OUTPUT__MMB_WFS)) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(outp%what(OPTION__OUTPUT__XC_TORQUE)) then
-      if(st%d%ispin /= SPINORS) then
+    if (outp%what(OPTION__OUTPUT__XC_TORQUE)) then
+      if (st%d%ispin /= SPINORS) then
         write(message(1), '(a)') 'The output xc_torque can only be computed for spinors.'
         call messages_fatal(1, namespace=namespace)
       end if
-      if(space%dim /= 3) then
+      if (space%dim /= 3) then
         write(message(1), '(a)') 'The output xc_torque can only be computed in the 3D case.'
         call messages_fatal(1, namespace=namespace)
       end if
     end if
-    if(outp%what(OPTION__OUTPUT__MMB_DEN)) then
+    if (outp%what(OPTION__OUTPUT__MMB_DEN)) then
       call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -210,10 +210,10 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(outp%what(OPTION__OUTPUT__ENERGY_DENSITY)) call messages_experimental("'Output = energy_density'")
-    if(outp%what(OPTION__OUTPUT__HEAT_CURRENT)) call messages_experimental("'Output = heat_current'")
+    if (outp%what(OPTION__OUTPUT__ENERGY_DENSITY)) call messages_experimental("'Output = energy_density'")
+    if (outp%what(OPTION__OUTPUT__HEAT_CURRENT)) call messages_experimental("'Output = heat_current'")
     
-    if(outp%what(OPTION__OUTPUT__WFS) .or. outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
+    if (outp%what(OPTION__OUTPUT__WFS) .or. outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -230,8 +230,8 @@ contains
       call parse_variable(namespace, 'OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
-      if(.not. outp%what(OPTION__OUTPUT__J_FLOW)) then
+    if (parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
+      if (.not. outp%what(OPTION__OUTPUT__J_FLOW)) then
         outp%what(OPTION__OUTPUT__J_FLOW) = .true.
         call parse_variable(namespace, 'OutputInterval', 50, outp%output_interval(OPTION__OUTPUT__J_FLOW))
       end if
@@ -352,18 +352,18 @@ contains
       call parse_block_end(blk)
     end if
 
-    if(outp%what(OPTION__OUTPUT__MATRIX_ELEMENTS)) then
+    if (outp%what(OPTION__OUTPUT__MATRIX_ELEMENTS)) then
       call output_me_init(outp%me, namespace, space, st, nst)
     else
       outp%me%what = .false.
     end if
 
-    if(outp%what(OPTION__OUTPUT__BERKELEYGW)) then
+    if (outp%what(OPTION__OUTPUT__BERKELEYGW)) then
       call output_berkeleygw_init(nst, namespace, outp%bgw, space%periodic_dim)
     end if
 
     ! required for output_hamiltonian()
-    if(outp%what(OPTION__OUTPUT__POTENTIAL_GRADIENT) .and. .not. outp%what(OPTION__OUTPUT__POTENTIAL)) then
+    if (outp%what(OPTION__OUTPUT__POTENTIAL_GRADIENT) .and. .not. outp%what(OPTION__OUTPUT__POTENTIAL)) then
       outp%what(OPTION__OUTPUT__POTENTIAL) = .true.
       outp%output_interval(OPTION__OUTPUT__POTENTIAL) = outp%output_interval(OPTION__OUTPUT__POTENTIAL_GRADIENT)
     end if
@@ -391,12 +391,12 @@ contains
     !% controlled by <tt>OutputInterval</tt>.)
     !%End
     call parse_variable(namespace, 'RestartWriteInterval', 50, outp%restart_write_interval)
-    if(outp%restart_write_interval <= 0) then
+    if (outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if(outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
+    if (outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
      call v_ks_calculate_current(ks, .true.) 
     end if
 
@@ -412,7 +412,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
-    if(any(outp%what) .and. any(outp%output_interval > 0)) then
+    if (any(outp%what) .and. any(outp%output_interval > 0)) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
@@ -450,13 +450,13 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(any(outp%what)) then
+    if (any(outp%what)) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
     end if
 
-    if(outp%what_now(OPTION__OUTPUT__MESH_R, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__MESH_R, iter)) then
       do idir = 1, space%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how(OPTION__OUTPUT__MESH_R), dir, fname, namespace, space, &
@@ -468,74 +468,74 @@ contains
     call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, iter, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
 
-    if(outp%what_now(OPTION__OUTPUT__J_FLOW, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__J_FLOW, iter)) then
       call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
     end if
 
-    if(outp%what_now(OPTION__OUTPUT__GEOMETRY, iter)) then
-      if(bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+    if (outp%what_now(OPTION__OUTPUT__GEOMETRY, iter)) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", ions, gr%mesh, namespace)
       end if
-      if(bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XYZ) /= 0) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call ions%write_xyz(trim(dir)//'/geometry')
         if(ions%space%is_periodic()) then
           call ions%write_crystal(dir)
         end if
       end if
-      if(bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__VTK) /= 0) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', ions, namespace)
       end if     
     end if
 
-    if(outp%what_now(OPTION__OUTPUT__FORCES, iter)) then
-      if(bitand(outp%how(OPTION__OUTPUT__FORCES), OPTION__OUTPUTFORMAT__BILD) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__FORCES, iter)) then
+      if (bitand(outp%how(OPTION__OUTPUT__FORCES), OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", ions, namespace)
       else
         call write_xsf_geometry_file(dir, "forces", ions, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
-    if(outp%what_now(OPTION__OUTPUT__MATRIX_ELEMENTS, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__MATRIX_ELEMENTS, iter)) then
       call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
     do iout = lbound(outp%how, 1), ubound(outp%how, 1)
-      if(bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+      if (bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
         call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions, iter)
         exit
       end if
     end do
 
-    if(outp%what_now(OPTION__OUTPUT__BERKELEYGW, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__BERKELEYGW, iter)) then
       call output_berkeleygw(outp%bgw, namespace, space, dir, st, gr, ks, hm, ions)
     end if
     
-    if(outp%what_now(OPTION__OUTPUT__ENERGY_DENSITY, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__ENERGY_DENSITY, iter)) then
       call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
     end if
 
-    if(hm%lda_u_level /= DFT_U_NONE) then
-      if(outp%what_now(OPTION__OUTPUT__OCC_MATRICES, iter))&
+    if (hm%lda_u_level /= DFT_U_NONE) then
+      if (outp%what_now(OPTION__OUTPUT__OCC_MATRICES, iter))&
         call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
-      if(outp%what_now(OPTION__OUTPUT__EFFECTIVEU, iter))&
+      if (outp%what_now(OPTION__OUTPUT__EFFECTIVEU, iter))&
         call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
-      if(outp%what_now(OPTION__OUTPUT__MAGNETIZATION, iter))&
+      if (outp%what_now(OPTION__OUTPUT__MAGNETIZATION, iter))&
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
-      if(outp%what_now(OPTION__OUTPUT__LOCAL_ORBITALS, iter))&
+      if (outp%what_now(OPTION__OUTPUT__LOCAL_ORBITALS, iter))&
         call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
 
-      if(outp%what_now(OPTION__OUTPUT__KANAMORIU, iter))&
+      if (outp%what_now(OPTION__OUTPUT__KANAMORIU, iter))&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     
-    if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK &
            .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
-      if(ks%oep%level == XC_OEP_FULL) then
-        if(ks%oep%has_photons) then
-          if(outp%what_now(OPTION__OUTPUT__PHOTON_CORRELATOR, iter)) then
+      if (ks%oep%level == XC_OEP_FULL) then
+        if (ks%oep%has_photons) then
+          if (outp%what_now(OPTION__OUTPUT__PHOTON_CORRELATOR, iter)) then
             write(fname, '(a)') 'photon_correlator'
             call dio_function_output(outp%how(OPTION__OUTPUT__PHOTON_CORRELATOR), dir, trim(fname), namespace, space, &
               gr%mesh, ks%oep%pt%correlator(:,1), units_out%length, ierr, ions = ions)
@@ -579,13 +579,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(outp%what_now(OPTION__OUTPUT__ELF, iter) .or. outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__ELF, iter) .or. outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) then
       ASSERT(space%dim /= 1)
 
       call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
-      if(outp%what_now(OPTION__OUTPUT__ELF, iter)) then
+      if (outp%what_now(OPTION__OUTPUT__ELF, iter)) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how(OPTION__OUTPUT__ELF), dir, trim(fname), namespace, space, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, ions = ions, grp = mpi_grp)
@@ -601,12 +601,12 @@ contains
         end if
       end if
 
-      if(outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) &
+      if (outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) &
         call out_basins(f_loc(:,1), "elf_rs_basins", outp%how(OPTION__OUTPUT__ELF_BASINS))
     end if
 
     ! Now Bader analysis
-    if(outp%what_now(OPTION__OUTPUT__BADER, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__BADER, iter)) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         if(st%d%nspin == 1) then
@@ -628,7 +628,7 @@ contains
     end if
 
     ! Now the pressure
-    if(outp%what_now(OPTION__OUTPUT__EL_PRESSURE, iter)) then
+    if (outp%what_now(OPTION__OUTPUT__EL_PRESSURE, iter)) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how(OPTION__OUTPUT__EL_PRESSURE), dir, "el_pressure", namespace, space, gr%mesh, &
         f_loc(:,1), unit_one, ierr, ions = ions, grp = mpi_grp)
@@ -1362,7 +1362,7 @@ contains
               end if
             else
               if(.not.this%basis%submesh) then
-                if(states_are_real(st)) then
+                if (states_are_real(st)) then
                   call dio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 else
@@ -1370,7 +1370,7 @@ contains
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 end if
               else
-                if(states_are_real(st)) then
+                if (states_are_real(st)) then
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
                   call dio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, &
@@ -1401,10 +1401,10 @@ contains
 
     output_needs_current = .false.
 
-    if(outp%what(OPTION__OUTPUT__CURRENT) &
+    if (outp%what(OPTION__OUTPUT__CURRENT) &
      .or. outp%what(OPTION__OUTPUT__HEAT_CURRENT) &
      .or. outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
-      if(.not. states_are_real) then
+      if (.not. states_are_real) then
         output_needs_current = .true.
       else
         message(1) = 'No current density output for real states since it is identically zero.'
@@ -1425,8 +1425,8 @@ contains
     logical :: write_now
 
     write_now = .false.
-    if((what_id > 0) .and. (this%output_interval(what_id) > 0)) then
-      if(this%what(what_id) .and. (iter == -1 .or. mod(iter, this%output_interval(what_id)) == 0)) then
+    if ((what_id > 0) .and. (this%output_interval(what_id) > 0)) then
+      if (this%what(what_id) .and. (iter == -1 .or. mod(iter, this%output_interval(what_id)) == 0)) then
         write_now = .true.
       end if
     end if

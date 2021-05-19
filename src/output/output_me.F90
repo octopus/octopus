@@ -129,18 +129,18 @@ contains
     call io_function_read_what_how_when(namespace, space, this%what, how, output_interval, &
     'OutputMatrixElements')
 
-    if(st%parallel_in_states) then
-      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) &
+    if (st%parallel_in_states) then
+      if (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) &
         call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.", &
         namespace=namespace)
-      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) &
+      if (this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) &
         call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.", &
         namespace=namespace)
     end if
 
-    if(space%dim /= 2 .and. space%dim /= 3) this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM) = .false.
+    if (space%dim /= 2 .and. space%dim /= 3) this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM) = .false.
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
@@ -212,17 +212,17 @@ contains
     
     PUSH_SUB(output_me)
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__MOMENTUM)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__MOMENTUM)) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, space, gr, namespace, hm%kpoints)
     end if
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__ANG_MOMENTUM)) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
       call output_me_out_ang_momentum(fname, st, gr, namespace, hm%kpoints)
     end if
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__KS_MULTIPOLES)) then
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
@@ -270,7 +270,7 @@ contains
       end do
     end if
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__DIPOLE)) then
       ASSERT(.not. st%parallel_in_states)
       ! The content of each file should be clear from the header of each file.
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -285,13 +285,13 @@ contains
     end if
 
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__ONE_BODY)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__ONE_BODY)) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization", &
+      if (st%parallel_in_states) call messages_not_implemented("OutputMatrixElements=one_body with states parallelization", &
         namespace=namespace)
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization", &
+      if (st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization", &
         namespace=namespace)
       if (family_is_mgga_with_exc(hm%xc)) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA", namespace=namespace)
@@ -325,12 +325,12 @@ contains
 
     end if
 
-    if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) .or. this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)) then
+    if (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) .or. this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-        if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
+        if (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
         if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
         if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
         ! how to do this properly? states_matrix
@@ -344,7 +344,7 @@ contains
         write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k2|n2-k2, n2-k1)'
       end if
 
-      if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
+      if (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
         if(states_are_real(st)) then
           id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
         else
@@ -384,7 +384,7 @@ contains
                      iindex, jindex, kindex, lindex, ztwoint, exc_k = (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K)))
         end if
 
-        if(this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
+        if (this%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY)) then
           do ll = 1, id
             write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
           enddo

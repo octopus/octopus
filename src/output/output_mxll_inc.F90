@@ -110,7 +110,7 @@
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'MaxwellOutputIterDir', "output_iter", outp%iter_dir)
-    if(any(outp%what) .and. maxval(outp%output_interval) > 0) then
+    if (any(outp%what) .and. maxval(outp%output_interval) > 0) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
@@ -129,23 +129,23 @@
       call messages_fatal(1, namespace=namespace)
     end if
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD)) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD)) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD)) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD)) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_CURRENT)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_CURRENT)) then
       outp%wfs_list = trim("1-3")
     end if
 
@@ -170,7 +170,7 @@
 
     PUSH_SUB(output_mxll)
 
-    if(any(outp%what)) then
+    if (any(outp%what)) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
@@ -218,7 +218,7 @@
     PUSH_SUB(output_states_mxll)
 
     ! Electric field
-    if(outp%what(OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD)) then
       fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_electric_field_state(st%rs_state, mesh, dtmp, st%ep, mesh%np)
@@ -231,7 +231,7 @@
     end if
 
     ! Magnetic field
-    if(outp%what(OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD)) then
       fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_magnetic_field_state(st%rs_state, mesh, st%rs_sign, dtmp, st%mu, mesh%np)
@@ -262,7 +262,7 @@
     PUSH_SUB(output_energy_density_mxll)
 
     ! Maxell energy density
-    if(outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY)) then
       call dio_function_output(outp%how(OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY), dir, "maxwell_energy_density", &
         namespace, space, mesh, hm%energy%energy_density(:), units_out%energy/units_out%length**3, ierr, ions = ions)
     end if
@@ -290,7 +290,7 @@
     PUSH_SUB(output_poynting_vector)
 
     ! Maxwell Poynting vector
-    if(outp%what(OPTION__MAXWELLOUTPUT__POYNTING_VECTOR)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__POYNTING_VECTOR)) then
       fn_unit = units_out%energy/(units_out%time*units_out%length**2)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%dim))
       call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, dtmp, st%ep, st%mu)
@@ -324,7 +324,7 @@
     PUSH_SUB(output_transverse_rs_state)
 
     ! transverse component of the electric field
-    if(outp%what(OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD)) then
       fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_electric_field_state(st%rs_state_trans, mesh, dtmp, st%ep(1:mesh%np), mesh%np)
@@ -337,7 +337,7 @@
     end if
 
     ! transverse component of the magnetic field
-    if(outp%what(OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD)) then
       fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_magnetic_field_state(st%rs_state_trans, mesh, st%rs_sign, dtmp, st%ep(1:mesh%np), mesh%np)
@@ -371,7 +371,7 @@
     PUSH_SUB(output_longitudinal_rs_state)
 
     ! longitudinal component of the electric field
-    if(outp%what(OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD)) then
       fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_electric_field_state(st%rs_state_long, mesh, dtmp, st%ep(1:mesh%np), mesh%np)
@@ -384,7 +384,7 @@
     end if
 
     ! longitudinal component of the magnetic field
-    if(outp%what(OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD)) then
       fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:mesh%np, 1:st%dim))
       call get_magnetic_field_state(st%rs_state_long, mesh, st%rs_sign, dtmp, st%mu(1:mesh%np), mesh%np)
@@ -417,7 +417,7 @@
     PUSH_SUB(output_divergence_rs_state)
 
     ! divergence of the electric field
-    if(outp%what(OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD)) then
       fn_unit = units_out%length**(-space%dim)
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
@@ -431,7 +431,7 @@
     end if
 
     ! divergence of the magnetic field
-    if(outp%what(OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD)) then
       ! unit does not matter, should be zero
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%dim))
@@ -467,7 +467,7 @@
     PUSH_SUB(output_vector_potential)
 
     ! Maxwell vector potential
-    if(outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL)) then
       fn_unit = unit_one
       do idim = 1, space%dim
         write(fname, '(2a)') 'vector_potential-', index2axis(idim)
@@ -537,7 +537,7 @@
     PUSH_SUB(output_external_current_density)
 
      ! Maxwell current density
-    if(outp%what(OPTION__MAXWELLOUTPUT__EXTERNAL_CURRENT)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__EXTERNAL_CURRENT)) then
       if (hm%current_density_ext_flag) then
         fn_unit = (unit_one/units_out%time)/(units_out%length**2)      !< test both if its the same
         SAFE_ALLOCATE(ztmp(1:mesh%np, 1:st%dim))
@@ -576,7 +576,7 @@
     PUSH_SUB(output_charge_density_mxll)
 
     ! charge density calculated by the divergence of the electric field
-    if(outp%what(OPTION__MAXWELLOUTPUT__CHARGE_DENSITY)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__CHARGE_DENSITY)) then
       fn_unit = units_out%length**(-space%dim)
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
@@ -613,7 +613,7 @@
 
     PUSH_SUB(output_medium_variables_electric)
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_ELECTRIC)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_ELECTRIC)) then
       fn_unit = units_out%length**(1 - space%dim)
       SAFE_ALLOCATE(polarization_mx_gr(1:mesh%np, 1:st%dim))
       SAFE_ALLOCATE(E_field(1:mesh%np, 1:st%dim))
@@ -667,7 +667,7 @@
 
     PUSH_SUB(output_medium_variables_magnetic)
 
-    if(outp%what(OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_MAGNETIC)) then
+    if (outp%what(OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_MAGNETIC)) then
       fn_unit = units_out%length**(1 - space%dim)
       SAFE_ALLOCATE(magnetization_mx_gr(1:mesh%np, 1:st%dim))
       SAFE_ALLOCATE(B_field(1:mesh%np, 1:st%dim))

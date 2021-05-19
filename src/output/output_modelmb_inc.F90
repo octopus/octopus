@@ -80,7 +80,7 @@ subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
 
   SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
-  if(outp%what(OPTION__OUTPUT__MMB_DEN)) then
+  if (outp%what(OPTION__OUTPUT__MMB_DEN)) then
     call modelmb_density_matrix_init(dirname, namespace, st, denmat)
   end if
 
@@ -101,15 +101,15 @@ subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
       "  ", mm, st%eigenval(mm,1), st%mmb_proj(mm), trim(youngstring)
 
     symmetries_satisfied = .true.
-    if(st%mmb_proj(mm) < CNST(1.e-6)) then
+    if (st%mmb_proj(mm) < CNST(1.e-6)) then
       symmetries_satisfied = .false.
     end if
 
-    if(outp%what(OPTION__OUTPUT__MMB_DEN) .and. symmetries_satisfied) then
+    if (outp%what(OPTION__OUTPUT__MMB_DEN) .and. symmetries_satisfied) then
       call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     end if
 
-    if(outp%what(OPTION__OUTPUT__MMB_WFS) .and. symmetries_satisfied) then
+    if (outp%what(OPTION__OUTPUT__MMB_WFS) .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-space%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how(OPTION__OUTPUT__MMB_WFS), trim(dirname), trim(filename), namespace, space, &
@@ -122,7 +122,7 @@ subroutine X(output_modelmb) (outp, namespace, space, dir, gr, st, ions)
 
   SAFE_DEALLOCATE_A(wf)
 
-  if(outp%what(OPTION__OUTPUT__MMB_DEN)) then
+  if (outp%what(OPTION__OUTPUT__MMB_DEN)) then
     call modelmb_density_matrix_end(denmat)
   end if
 

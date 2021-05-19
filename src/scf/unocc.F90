@@ -334,13 +334,13 @@ contains
       end if 
 
       do what_it = lbound(sys%outp%output_interval, 1), ubound(sys%outp%output_interval, 1)
-        if(sys%outp%what_now(what_it, iter)) then
+        if (sys%outp%what_now(what_it, iter)) then
             output_iter = .true.
             exit
         end if
       end do
 
-      if(output_iter .and. sys%outp%duringscf) then
+      if (output_iter .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%namespace, sys%space, dirname, sys%gr, sys%ions, iter, sys%st, sys%hm, sys%ks)
       end if

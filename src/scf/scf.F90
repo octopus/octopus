@@ -604,7 +604,7 @@ contains
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
+    if (scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
       vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
@@ -667,7 +667,7 @@ contains
       end do
 
       !Used for computing the imperfect convegence contribution to the forces
-      if(scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
+      if (scf%calc_force .or. (outp%duringscf .and. outp%what(OPTION__OUTPUT__FORCES))) then
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       end if
       
@@ -722,7 +722,7 @@ contains
       call energy_calc_total(namespace, space, hm, gr, st, iunit = 0)
 
       ! compute forces only if requested
-      if(outp%duringscf .and. outp%what_now(OPTION__OUTPUT__FORCES, iter) &
+      if (outp%duringscf .and. outp%what_now(OPTION__OUTPUT__FORCES, iter) &
          .and. gs_run_ ) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, vhxc_old=vhxc_old)
       end if
@@ -862,7 +862,7 @@ contains
         exit
       end if
 
-      if(any(outp%what) .and. outp%duringscf .and. gs_run_) then
+      if (any(outp%what) .and. outp%duringscf .and. gs_run_) then
           do what_i = lbound(outp%what, 1), ubound(outp%what, 1)
             if (outp%what_now(what_i, iter)) then
               write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
@@ -887,9 +887,9 @@ contains
       end if
 
       select case(scf%mix_field)
-        case(OPTION__MIXFIELD__POTENTIAL)
+        case (OPTION__MIXFIELD__POTENTIAL)
           call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
-        case(OPTION__MIXFIELD__DENSITY)
+        case (OPTION__MIXFIELD__DENSITY)
           call mixfield_set_vin(scf%mixfield, rhoin)
       end select
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)

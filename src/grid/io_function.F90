@@ -108,15 +108,15 @@ contains
   ! ---------------------------------------------------------
   subroutine io_function_read_what_how_when(namespace, space, what, how, output_interval, &
     what_tag_in, how_tag_in, output_interval_tag_in, ignore_error)
-    type(namespace_t), intent(in)  :: namespace
-    type(space_t),     intent(in)  :: space
-    logical,           intent(inout) :: what(MAX_OUTPUT_TYPES)
-    integer(8),        intent(out) :: how(0:MAX_OUTPUT_TYPES)
-    integer,           intent(out) :: output_interval(0:MAX_OUTPUT_TYPES) 
-    character(len=*), optional, intent(in):: what_tag_in
-    character(len=*), optional, intent(in):: how_tag_in
-    character(len=*), optional, intent(in):: output_interval_tag_in
-    logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
+    type(namespace_t), intent(in)           :: namespace
+    type(space_t),     intent(in)           :: space
+    logical,           intent(inout)        :: what(MAX_OUTPUT_TYPES)
+    integer(8),        intent(out)          :: how(0:MAX_OUTPUT_TYPES)
+    integer,           intent(out)          :: output_interval(0:MAX_OUTPUT_TYPES) 
+    character(len=*),  optional, intent(in) :: what_tag_in
+    character(len=*),  optional, intent(in) :: how_tag_in
+    character(len=*),  optional, intent(in) :: output_interval_tag_in
+    logical, optional, intent(in)           :: ignore_error !> Ignore error check. Used when called from some external utility.
 
     type(block_t) :: blk
     integer :: ncols, nrows, iout, column_index, what_i
@@ -405,13 +405,13 @@ contains
       OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW, OPTION__OUTPUT__OCC_MATRICES, &
       OPTION__OUTPUT__EFFECTIVEU, OPTION__OUTPUT__MAGNETIZATION, OPTION__OUTPUT__KANAMORIU /)
 
-    if(parse_block(namespace, what_tag, blk) == 0) then
+    if (parse_block(namespace, what_tag, blk) == 0) then
       nrows = parse_block_n(blk)
       do iout = 0, nrows - 1
         ncols = max(ncols , parse_block_cols(blk, iout))
       end do
 
-      if(ncols == 1) then
+      if (ncols == 1) then
         !new format, Type 0
         !%Output
         !  density
@@ -419,22 +419,22 @@ contains
         !%
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
-          if(.not. varinfo_valid_option(what_tag, what_i)) then
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          if(what_i > 0) then
+          if (what_i > 0) then
             what(what_i) = .true.
             call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
-            if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+            if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
               .or. (what_tag /= 'Output')) then
               call parse_variable(namespace, how_tag, 0, how(what_i))
-              if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+              if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
                 call messages_input_error(namespace, how_tag)
               end if
             end if
           end if
         end do
-      else if(ncols == 2) then
+      else if (ncols == 2) then
         !new format, Type 1
         !%Output
         !  density | cube + axis_z
@@ -443,17 +443,17 @@ contains
 
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
-          if(.not. varinfo_valid_option(what_tag, what_i)) then
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          if(what_i > 0) then 
+          if (what_i > 0) then 
             what(what_i) = .true.
             call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
-            if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+            if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
               .or. (what_tag /= 'Output')) then
               call parse_block_integer(blk, iout - 1, 1, how(what_i))
-              if(how(what_i) == 0) call parse_variable(namespace, how_tag, 0, how(what_i))
-              if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+              if (how(what_i) == 0) call parse_variable(namespace, how_tag, 0, how(what_i))
+              if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
                 call messages_input_error(namespace, how_tag)
               end if
             end if
@@ -475,36 +475,36 @@ contains
         !%
         do iout = 1, nrows
           call parse_block_integer(blk, iout - 1, 0, what_i)
-          if(.not. varinfo_valid_option(what_tag, what_i)) then
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
             call messages_input_error(namespace, what_tag)
           end if
-          if(what_i > 0) then
+          if (what_i > 0) then
             what(what_i) = .true.
             do column_index = 0, 1  
               call parse_block_string(blk, iout - 1, 1 + column_index * 2, output_column_marker)
-              if(output_column_marker == 'output_interval') then
+              if (output_column_marker == 'output_interval') then
                 call parse_block_integer(blk, iout - 1, 2 + column_index * 2, output_interval(what_i))
-              else if(output_column_marker == 'output_format') then
-                if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+              else if (output_column_marker == 'output_format') then
+                if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
                   .or. (what_tag /= 'Output')) then
                   call parse_block_integer(blk, iout - 1, 2 + column_index * 2, how(what_i))
-                  if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                  if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
                     call messages_input_error(namespace, how_tag)
                   end if
                 end if
-              else if(len_trim(output_column_marker) /= 0) then
+              else if (len_trim(output_column_marker) /= 0) then
                 ! Unknown output_column_marker
                 call messages_input_error(namespace, what_tag)
               else
                 ! no output_column_marker -> full output info is not in this block
-                if(output_interval(what_i) == 0) then
+                if (output_interval(what_i) == 0) then
                   call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
                 end if
-                if(how(what_i) == 0) then
-                  if(((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+                if (how(what_i) == 0) then
+                  if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
                     .or. (what_tag /= 'Output')) then
                     call parse_variable(namespace, how_tag, 0, how(what_i))
-                    if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                    if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
                       call messages_input_error(namespace, how_tag)
                     end if
                   end if
@@ -526,63 +526,63 @@ contains
 
     
     do what_i = lbound(what, 1), ubound(what, 1)
-      if(what_tag == 'Output') then
-        if(what(what_i) .and. (.not. any(what_no_how == what_i))) then
-          if(.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+      if (what_tag == 'Output') then
+        if (what(what_i) .and. (.not. any(what_no_how == what_i))) then
+          if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
             call messages_input_error(namespace, how_tag)
           end if
 
-          if(how(what_i) == 0 .and. .not. optional_default(ignore_error, .false.)) then
+          if (how(what_i) == 0 .and. .not. optional_default(ignore_error, .false.)) then
             write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
             call messages_fatal(1, only_root_writes = .true.)
           end if
 
           ! some modes are not available in some circumstances
-          if(space%dim == 1) then
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
+          if (space%dim == 1) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
               message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
               message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
               message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
               call messages_fatal(1)
             end if
           end if
 
-          if(space%dim <= 2) then
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
+          if (space%dim <= 2) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
               message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
               message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
               message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
               message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
               message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
               message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__DX) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__DX) /= 0) then
               message(1) = "OutputFormat = dx not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
-            if(bitand(how(what_i), OPTION__OUTPUTFORMAT__CUBE) /= 0) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__CUBE) /= 0) then
               message(1) = "OutputFormat = cube not available with Dimensions <= 2."
               call messages_fatal(1)
             end if
@@ -607,7 +607,7 @@ contains
         end if
       end if
 
-      if(output_interval(what_i) < 0) then
+      if (output_interval(what_i) < 0) then
         message(1) = "OutputInterval must be >= 0."
         call messages_fatal(1, namespace=namespace)
       end if
@@ -661,7 +661,7 @@ contains
     FLOAT, allocatable :: forces(:,:), center(:,:)
     character(len=20) frmt
 
-    if(.not. mpi_grp_is_root(mpi_world)) return
+    if (.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_bild_forces_file)
 

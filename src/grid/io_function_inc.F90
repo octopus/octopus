@@ -598,7 +598,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
   R_TYPE,           target,   intent(in)  :: ff(:, :)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
-  type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  type(mpi_grp_t),  optional, intent(in)  :: grp  !< the group that shares the same data, must contain the domains group
   integer,          optional, intent(in)  :: root !< which process is going to write the data
 
   integer :: ivd
@@ -616,7 +616,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
   ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
 
   root_ = optional_default(root, 0)
-  if(present(grp)) then
+  if (present(grp)) then
     call mpi_grp_copy(grp_, grp)
   else
 #ifdef HAVE_MPI
@@ -629,7 +629,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
 
   i_am_root = grp%rank == root_
 
-  if(kpt%parallel) then
+  if (kpt%parallel) then
     SAFE_ALLOCATE(ff_global(1:kpoints%reduced%npoints, 1:space%dim))
     ff_global(1:kpoints%reduced%npoints, 1:space%dim) = R_TOTYPE(M_ZERO)   
  
@@ -641,8 +641,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
     ff_global => ff
   end if
 
-  if(i_am_root) then
-    if(how /= 0) then !perhaps there is nothing left to do
+  if (i_am_root) then
+    if (how /= 0) then !perhaps there is nothing left to do
       do ivd = 1, space%dim
         full_fname = trim(fname)//'-'//index2axis(ivd)
         
@@ -654,13 +654,13 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, space, kp
   end if
 
 #ifdef HAVE_MPI
-  if(grp_%comm /= MPI_COMM_NULL .and. grp_%comm /= 0 ) then
+  if (grp_%comm /= MPI_COMM_NULL .and. grp_%comm /= 0 ) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
   end if
 #endif
   
-  if(kpt%parallel) then
+  if (kpt%parallel) then
     SAFE_DEALLOCATE_P(ff_global)
   else
     nullify(ff_global)
@@ -1497,23 +1497,23 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, kpoints,
 
   np_max = kpoints%reduced%npoints
 
-  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Output_KPT with format binary") 
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Output_KPT with format axis x")
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Output_KPT with format axis y")
-  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Output_KPT with format axis z")
-  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
-  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
-  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Output_KPT with format dx")
-  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Output_KPT with format xcrysden")
-  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Output_KPT with format cube")
+  if (bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Output_KPT with format binary") 
+  if (bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Output_KPT with format axis x")
+  if (bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Output_KPT with format axis y")
+  if (bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Output_KPT with format axis z")
+  if (bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if (bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if (bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if (bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Output_KPT with format dx")
+  if (bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Output_KPT with format xcrysden")
+  if (bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Output_KPT with format cube")
 
-  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Output_KPT with format matlab")
+  if (bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Output_KPT with format matlab")
 
 #if defined(HAVE_NETCDF)
-  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Output_KPT with format netcdf")
+  if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Output_KPT with format netcdf")
 #endif
-  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Output_KPT with format vtk")
+  if (bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Output_KPT with format vtk")
 
   POP_SUB(X(io_function_output_global_BZ))
   call profiling_out(write_prof)

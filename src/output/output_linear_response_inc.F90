@@ -47,7 +47,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
-    if(outp%what(OPTION__OUTPUT__DENSITY)) then
+    if (outp%what(OPTION__OUTPUT__DENSITY)) then
       fn_unit = units_out%length**(-space%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -60,7 +60,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
       end do
     end if
 
-    if(outp%what(OPTION__OUTPUT__POL_DENSITY)) then
+    if (outp%what(OPTION__OUTPUT__POL_DENSITY)) then
       fn_unit = units_out%length**(1 - space%dim)
       SAFE_ALLOCATE(tmp(1:mesh%np))
       do is = 1, st%d%nspin
@@ -78,8 +78,8 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    if(outp%what(OPTION__OUTPUT__CURRENT)) then
-      if(states_are_complex(st)) then
+    if (outp%what(OPTION__OUTPUT__CURRENT)) then
+      if (states_are_complex(st)) then
         fn_unit = units_out%time**(-1) * units_out%length**(-space%dim)
         do is = 1, st%d%nspin
           do idir2 = 1, space%dim
@@ -98,14 +98,14 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
       end if
     end if
 
-    if(space%dim==3) then
-      if(outp%what(OPTION__OUTPUT__ELF)) call lr_elf('lr_elf_D','lr_elf')
+    if (space%dim==3) then
+      if (outp%what(OPTION__OUTPUT__ELF)) call lr_elf('lr_elf_D','lr_elf')
     end if
 
   end if ! isigma == 1
 
 
-  if(outp%what(OPTION__OUTPUT__WFS)) then
+  if (outp%what(OPTION__OUTPUT__WFS)) then
     fn_unit = sqrt(units_out%length**(-space%dim))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -136,7 +136,7 @@ subroutine X(output_lr) (outp, namespace, space, dir, st, mesh, lr, idir, isigma
     end do
   end if
 
-  if(outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
+  if (outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
     fn_unit = units_out%length**(-space%dim)
     SAFE_ALLOCATE(dtmp(1:mesh%np_part))
     do ist = st%st_start, st%st_end

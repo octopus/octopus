@@ -355,7 +355,7 @@
     
     call io_mkdir(trim(dir), namespace)
 
-    if(tg%density_weight > M_ZERO) then
+    if (tg%density_weight > M_ZERO) then
       call dio_function_output(outp%how(0), trim(dir), 'density_target', namespace, space, mesh, &
         tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
