@@ -730,6 +730,7 @@ contains
           this%hm%medium_boxes(iint)%points_map(1:n_points) = interaction%partner_points_map(1:n_points)
           this%hm%medium_boxes(iint)%ep(1:n_points) = interaction%partner_ep(1:n_points)
           this%hm%medium_boxes(iint)%mu(1:n_points) = interaction%partner_mu(1:n_points)
+          this%hm%medium_boxes(iint)%c(1:n_points) = interaction%partner_c(1:n_points)
           this%hm%medium_boxes(iint)%sigma_e(1:n_points) = interaction%partner_sigma_e(1:n_points)
           this%hm%medium_boxes(iint)%sigma_m(1:n_points) = interaction%partner_sigma_m(1:n_points)
           this%hm%medium_boxes(iint)%aux_ep(1:n_points,1:3) = interaction%partner_aux_ep(1:n_points,1:3)

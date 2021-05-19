@@ -522,6 +522,8 @@ contains
 
     PUSH_SUB(set_medium_rs_state)
 
+    ASSERT(allocated(st%ep) .and. allocated(st%mu))
+
     call profiling_in(prof, 'SET_MEDIUM_RS_STATE')
 
     if (hm%calc_medium_box) then
