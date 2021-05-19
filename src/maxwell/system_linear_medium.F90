@@ -82,7 +82,7 @@ module system_linear_medium_oct_m
      FLOAT              :: sigma_m_factor !< magnetic conductivity before applying edge4 profile
      integer            :: global_points_number
      character(len=256) :: filename
-     logical            :: check_medium_points
+     logical            :: check_medium_points = .false.
 
   contains
     procedure :: init_interaction => system_linear_medium_init_interaction
@@ -298,13 +298,9 @@ contains
 
     call this%supported_interactions_as_partner%add(LINEAR_MEDIUM_EM_FIELD)
     this%quantities(PERMITTIVITY)%required = .true.
-    this%quantities(PERMITTIVITY)%protected = .true.
     this%quantities(PERMEABILITY)%required = .true.
-    this%quantities(PERMEABILITY)%protected = .true.
     this%quantities(E_CONDUCTIVITY)%required = .true.
-    this%quantities(E_CONDUCTIVITY)%protected = .true.
     this%quantities(M_CONDUCTIVITY)%required = .true.
-    this%quantities(M_CONDUCTIVITY)%protected = .true.
 
     call profiling_out(prof)
 
@@ -352,19 +348,13 @@ contains
     case (EXPMID_START)
       ! Empty for the moment
     case (EXPMID_FINISH)
-      ! Empty for the momen
+      ! Empty for the moment
     case (EXPMID_PREDICT_DT_2)
-      this%quantities(PERMITTIVITY)%clock = this%quantities(PERMITTIVITY)%clock + CLOCK_TICK
-      this%quantities(PERMEABILITY)%clock = this%quantities(PERMEABILITY)%clock + CLOCK_TICK
-      this%quantities(E_CONDUCTIVITY)%clock = this%quantities(E_CONDUCTIVITY)%clock + CLOCK_TICK
-      this%quantities(M_CONDUCTIVITY)%clock = this%quantities(M_CONDUCTIVITY)%clock + CLOCK_TICK
+      ! Empty for the moment
     case (UPDATE_HAMILTONIAN)
       ! Empty for the moment
     case (EXPMID_PREDICT_DT)
-      this%quantities(PERMITTIVITY)%clock = this%quantities(PERMITTIVITY)%clock + CLOCK_TICK
-      this%quantities(PERMEABILITY)%clock = this%quantities(PERMEABILITY)%clock + CLOCK_TICK
-      this%quantities(E_CONDUCTIVITY)%clock = this%quantities(E_CONDUCTIVITY)%clock + CLOCK_TICK
-      this%quantities(M_CONDUCTIVITY)%clock = this%quantities(M_CONDUCTIVITY)%clock + CLOCK_TICK
+      ! Empty for the moment
     case default
       message(1) = "Unsupported TD operation."
       call messages_fatal(1, namespace=this%namespace)
@@ -454,6 +444,8 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
+!    case (PERMITTIVITY, PERMEABILITY, E_CONDUCTIVITY, M_CONDUCTIVITY)
+!      this%quantities(iq)%clock = this%quantities(iq)%clock + CLOCK_TICK
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -473,6 +465,8 @@ contains
     ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
+    case (PERMITTIVITY, PERMEABILITY, E_CONDUCTIVITY, M_CONDUCTIVITY)
+      partner%quantities(iq)%clock = partner%quantities(iq)%clock + CLOCK_TICK
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
