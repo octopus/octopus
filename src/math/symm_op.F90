@@ -20,6 +20,7 @@
 
 module symm_op_oct_m
   use global_oct_m
+  use lattice_vectors_oct_m
   use messages_oct_m
 
   implicit none
@@ -84,12 +85,12 @@ module symm_op_oct_m
 
 contains
  
-  subroutine symm_op_init(this, rot, rlattice, klattice, dim, trans)
-    type(symm_op_t),     intent(out) :: this
-    integer,             intent(in)  :: rot(:, :)
-    FLOAT,               intent(in)  :: rlattice(:, :), klattice(:, :)
-    integer,             intent(in)  :: dim
-    FLOAT, optional,     intent(in)  :: trans(:)
+  subroutine symm_op_init(this, rot, latt, dim, trans)
+    type(symm_op_t),         intent(out) :: this
+    integer,                 intent(in)  :: rot(:, :)
+    type(lattice_vectors_t), intent(in)  :: latt
+    integer,                 intent(in)  :: dim
+    FLOAT, optional,         intent(in)  :: trans(:)
 
     integer :: idim
 
@@ -121,11 +122,9 @@ contains
     !This is a proper rotation matrix
     !R_{cart} = A*R_{red}*A^{-1}
     !Where A is the matrix containing the lattice vectors as column
-    !Note: here we use the fact that transpose(klattice) is the inverse of rlattice
-    !      (with a factor 2 \pi)
     this%rot_cart = M_ZERO
-    this%rot_cart(1:dim, 1:dim)  = matmul(rlattice(1:dim, 1:dim), &
-                    matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
+    this%rot_cart(1:dim, 1:dim)  = matmul(latt%rlattice(1:dim, 1:dim), &
+                    matmul(rot(1:dim, 1:dim), latt%rlattice_inverse(1:dim, 1:dim)))
     do idim = dim+1,3
       this%rot_cart(idim,idim) = M_ONE
     end do
@@ -134,7 +133,7 @@ contains
     this%trans_cart(1:3) = M_ZERO
     if(present(trans)) then
       this%trans_red(1:dim) = trans(1:dim)
-      this%trans_cart(1:dim) = matmul(rlattice(1:dim,1:dim),trans(1:dim))
+      this%trans_cart(1:dim) = latt%red_to_cart(trans(1:dim))
     end if
 
     !We check that the rotation matrix in cartesian space is indeed a rotation matrix

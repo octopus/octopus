@@ -319,9 +319,7 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), ions%latt%rlattice(1:dim4syms,1:dim4syms), &
-                              ions%latt%klattice(1:dim4syms,1:dim4syms), dim4syms, &
-                              TOFLOAT(translation(1:3, iop)))
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), ions%latt, dim4syms, TOFLOAT(translation(1:3, iop)))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
          .and. .not. symm_op_has_translation(tmpop, TOFLOAT(SYMPREC))) then
@@ -384,8 +382,7 @@ contains
       
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
-      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  ions%latt%rlattice, ions%latt%klattice, dim4syms)
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), ions%latt, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       
