@@ -44,7 +44,7 @@ module lattice_vectors_oct_m
     FLOAT, allocatable :: rlattice          (:,:)  !< lattice vectors
     FLOAT, allocatable :: klattice_primitive(:,:)  !< reciprocal-lattice primitive vectors
     FLOAT, allocatable :: klattice          (:,:)  !< reciprocal-lattice vectors
-    FLOAT, allocatable, private :: rlattice_inverse(:,:)
+    FLOAT, allocatable :: rlattice_inverse(:,:)    !< the inverse of rlattice. This is the transpose of klattice, whitout any 2Pi factor.
     FLOAT :: alpha, beta, gamma                    !< the angles defining the cell
     FLOAT :: rcell_volume                          !< the volume of the cell defined by the lattice vectors in real spac
     logical :: nonorthogonal = .false.
