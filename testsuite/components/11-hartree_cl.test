@@ -1,12 +1,9 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Hartree OpenCL
+Test       : Hartree GPU
 Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
-
-# FIXME: will this work in parallel?
-Processors: 1
 
 Precision : 0.005
 Input: 11-hartree_cl.01-fft.inp
@@ -14,4 +11,9 @@ if (available clamdfft); then
     match ;      FFT OpenCL ;          GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0000004372307
 else
     match ; Error clfft missing ; GREPCOUNT(err, 'ccelerated FFT') ; 1
+endif
+if (available cuda); then
+    match ;      FFT Cuda ;          GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0000004372307
+else
+    match ; Error cuda missing ; GREPCOUNT(err, 'ccelerated FFT') ; 1
 endif
