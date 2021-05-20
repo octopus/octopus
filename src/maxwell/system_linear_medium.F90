@@ -326,7 +326,8 @@ contains
         write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(partner%filename), ":"
         call messages_info(1)
         call get_points_map_from_file(partner%filename, interaction%system_gr%mesh, n_points, n_global_points, tmp, CNST(0.99))
-        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', interaction%medium_box%global_points_number
+        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', &
+             interaction%medium_box%global_points_number
         write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', n_global_points
         write(message(3), '(a)') ""
         call messages_info(3)
