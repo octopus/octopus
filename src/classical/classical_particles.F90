@@ -25,11 +25,6 @@ module classical_particles_oct_m
   use force_interaction_oct_m
   use global_oct_m
   use interaction_oct_m
-  use gravity_oct_m
-  use lorentz_force_oct_m
-  use interactions_factory_oct_m
-  use io_oct_m
-  use iso_c_binding
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -44,7 +39,6 @@ module classical_particles_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use write_iter_oct_m
 
   implicit none
 

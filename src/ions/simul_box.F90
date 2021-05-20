@@ -20,7 +20,6 @@
 #include "global.h"
 
 module simul_box_oct_m
-  use atom_oct_m
   use box_oct_m
   use box_cylinder_oct_m
   use box_hypercube_oct_m

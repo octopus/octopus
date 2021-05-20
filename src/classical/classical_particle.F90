@@ -23,12 +23,10 @@ module classical_particle_oct_m
   use algorithm_oct_m
   use classical_particles_oct_m
   use clock_oct_m
-  use force_interaction_oct_m
   use global_oct_m
   use interaction_oct_m
-  use gravity_oct_m
-  use lorentz_force_oct_m
   use interactions_factory_oct_m
+  use gravity_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -36,10 +34,6 @@ module classical_particle_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_beeman_oct_m
-  use propagator_exp_mid_oct_m
-  use propagator_oct_m
-  use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m

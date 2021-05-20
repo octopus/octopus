@@ -22,13 +22,11 @@ module charged_particle_oct_m
   use algorithm_oct_m
   use classical_particle_oct_m
   use clock_oct_m
+  use coulomb_force_oct_m
   use global_oct_m
   use interaction_oct_m
-  use coulomb_force_oct_m
-  use lorentz_force_oct_m
   use interactions_factory_oct_m
-  use io_oct_m
-  use iso_c_binding
+  use lorentz_force_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -37,7 +35,6 @@ module charged_particle_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m
-  use write_iter_oct_m
 
   implicit none
 
