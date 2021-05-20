@@ -430,11 +430,6 @@ contains
   subroutine system_linear_medium_output_write(this)
     class(system_linear_medium_t), intent(inout) :: this
 
-    integer :: idir, iat, iout
-    character(len=50) :: aux
-    character(1) :: out_label(2)
-    FLOAT :: tmp(MAX_DIM)
-
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     PUSH_SUB(system_linear_medium_output_write)
@@ -526,7 +521,7 @@ contains
     type(single_medium_box_t),   intent(inout) :: medium_box
     type(grid_t),                intent(in)    :: gr
 
-    integer :: il, ip, ip_in, ip_bd, ipp, idim
+    integer :: ip, ip_in, ip_bd, ipp, idim
     integer, allocatable :: tmp_points_map(:), tmp_bdry_map(:)
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)

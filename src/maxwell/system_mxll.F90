@@ -698,7 +698,7 @@ contains
     class(system_mxll_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter
-    integer :: iint, n_points
+    integer :: iint
     
     PUSH_SUB(system_mxll_update_interactions_finish)
 
