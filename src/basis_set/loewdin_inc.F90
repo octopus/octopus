@@ -70,7 +70,7 @@
            os2 => basis%orbsets(ios2)
            ns = os2%sphere%np
 
-           if (os%sphere%mesh%sb%periodic_dim > 0) then
+           if (allocated(os%phase)) then
  #ifdef R_TCOMPLEX
           ! if(abs(overlap(ind2, ind)) < CNST(1e-6)) cycle
              do is = 1, ns
@@ -130,7 +130,7 @@
       iorb2 = basis%global2os(2, ind2)
       os2 => basis%orbsets(ios2)
 
-      if (os%sphere%mesh%sb%periodic_dim > 0) then
+      if (allocated(os%phase) .and. .not. os%submesh) then
  #ifdef R_TCOMPLEX
         overlap(ind,ind2) = M_Z0
         do idim = 1, os%ndim
