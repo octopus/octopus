@@ -33,9 +33,9 @@ module system_mxll_oct_m
   use ions_oct_m
   use iso_c_binding
   use lattice_vectors_oct_m
+  use linear_medium_em_field_oct_m
   use loct_oct_m
   use lorentz_force_oct_m
-  use linear_medium_em_field_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -56,7 +56,6 @@ module system_mxll_oct_m
   use sort_oct_m
   use space_oct_m
   use system_oct_m
-  use system_linear_medium_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
   use electrons_oct_m
@@ -711,20 +710,7 @@ contains
       class is (linear_medium_em_field_t)
         if (allocated(this%hm%medium_boxes) .and. .not. this%hm%medium_boxes_initialized) then
           iint = iint + 1
-          call single_medium_box_allocate(this%hm%medium_boxes(iint), interaction%partner_points_number)
-          SAFE_ALLOCATE(this%hm%medium_boxes(iint)%points_map(interaction%partner_points_number))
-
-          n_points = interaction%partner_points_number
-          this%hm%medium_boxes(iint)%points_number = n_points
-          this%hm%medium_boxes(iint)%points_map(1:n_points) = interaction%partner_points_map(1:n_points)
-          this%hm%medium_boxes(iint)%ep(1:n_points) = interaction%partner_ep(1:n_points)
-          this%hm%medium_boxes(iint)%mu(1:n_points) = interaction%partner_mu(1:n_points)
-          this%hm%medium_boxes(iint)%c(1:n_points) = interaction%partner_c(1:n_points)
-          this%hm%medium_boxes(iint)%sigma_e(1:n_points) = interaction%partner_sigma_e(1:n_points)
-          this%hm%medium_boxes(iint)%sigma_m(1:n_points) = interaction%partner_sigma_m(1:n_points)
-          this%hm%medium_boxes(iint)%aux_ep(1:n_points,1:3) = interaction%partner_aux_ep(1:n_points,1:3)
-          this%hm%medium_boxes(iint)%aux_mu(1:n_points,1:3) = interaction%partner_aux_mu(1:n_points,1:3)
-
+          this%hm%medium_boxes(iint) = interaction%medium_box
         end if
       end select
     end do

@@ -30,6 +30,7 @@ module hamiltonian_mxll_oct_m
   use hamiltonian_abst_oct_m
   use hamiltonian_elec_oct_m
   use math_oct_m
+  use linear_medium_em_field_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_oct_m
@@ -41,7 +42,6 @@ module hamiltonian_mxll_oct_m
   use profiling_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
-  use system_linear_medium_oct_m
   use states_mxll_oct_m
 
   implicit none
@@ -65,7 +65,6 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_apply_packed,              &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field
-
 
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     integer                        :: dim

@@ -28,6 +28,7 @@ module maxwell_boundary_op_oct_m
   use io_oct_m
   use io_function_oct_m
   use ions_oct_m
+  use linear_medium_em_field_oct_m
   use maxwell_function_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
@@ -38,7 +39,6 @@ module maxwell_boundary_op_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use string_oct_m
-  use system_linear_medium_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use simul_box_oct_m
@@ -55,7 +55,6 @@ module maxwell_boundary_op_oct_m
     bc_mxll_t,                 &
     inner_and_outer_points_mapping,  &
     surface_grid_points_mapping
-
 
   type pml_t
     FLOAT                :: width

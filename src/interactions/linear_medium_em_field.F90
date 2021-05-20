@@ -32,23 +32,33 @@ module linear_medium_em_field_oct_m
   implicit none
 
   private
-  public ::               &
-    linear_medium_em_field_t
+  public ::                    &
+    linear_medium_em_field_t,  &
+    single_medium_box_t,       &
+    single_medium_box_allocate,&
+    single_medium_box_end
+
+  type single_medium_box_t
+    FLOAT, allocatable            :: ep(:) !< permitivity of the linear media
+    FLOAT, allocatable            :: mu(:) !< permeability of the linear media
+    FLOAT, allocatable            :: c(:) !< speed of light in the linear media
+    FLOAT, allocatable            :: sigma_e(:) !< electric conductivy of (lossy) medium
+    FLOAT, allocatable            :: sigma_m(:) !< magnetic conductivy of (lossy) medium
+    integer                       :: points_number
+    integer                       :: global_points_number
+    integer, allocatable          :: points_map(:)
+    integer                       :: bdry_number
+    integer, allocatable          :: bdry_map(:)
+    FLOAT, allocatable            :: aux_ep(:,:) !< auxiliary array for the epsilon derivative profile
+    FLOAT, allocatable            :: aux_mu(:,:) !< auxiliary array for the softened mu profile
+  end type single_medium_box_t
 
   type, extends(interaction_with_partner_t) :: linear_medium_em_field_t
     private
 
     type(grid_t), pointer, public    :: system_gr !< pointer to grid of the Maxwell system
 
-    FLOAT, allocatable, public       :: partner_ep(:) !< permitivity of the linear medium
-    FLOAT, allocatable, public       :: partner_mu(:) !< permeability of the linear medium
-    FLOAT, allocatable, public       :: partner_c(:) !< speed of light in the linear medium
-    FLOAT, allocatable, public       :: partner_sigma_e(:) !< permeability of the linear medium
-    FLOAT, allocatable, public       :: partner_sigma_m(:) !< permeability of the linear medium
-    integer, public                  :: partner_points_number !< number of points of linear medium
-    integer, allocatable, public     :: partner_points_map(:) !< points map of linear medium
-    FLOAT, allocatable, public       :: partner_aux_ep(:,:) !< auxiliary array for storing the epsilon derivative profile
-    FLOAT, allocatable, public       :: partner_aux_mu(:,:) !< auxiliary array for storing the softened mu profile
+    type(single_medium_box_t), public :: medium_box
 
     logical, public :: allocated_partner_arrays
 
@@ -124,6 +134,59 @@ contains
     POP_SUB(linear_medium_em_field_calculate)
   end subroutine linear_medium_em_field_calculate
 
+
+  ! ---------------------------------------------------------
+  !> Allocation of medium_box components
+  subroutine single_medium_box_allocate(medium_box, n_points)
+    type(single_medium_box_t),   intent(inout)    :: medium_box
+    integer,                     intent(in)       :: n_points
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_allocate)
+
+    call profiling_in(prof, 'MEDIUM_BOX_ALLOC')
+    SAFE_ALLOCATE(medium_box%aux_ep(n_points,1:3))
+    SAFE_ALLOCATE(medium_box%aux_mu(n_points,1:3))
+    SAFE_ALLOCATE(medium_box%c(n_points))
+    SAFE_ALLOCATE(medium_box%ep(n_points))
+    SAFE_ALLOCATE(medium_box%mu(n_points))
+    SAFE_ALLOCATE(medium_box%sigma_e(n_points))
+    SAFE_ALLOCATE(medium_box%sigma_m(n_points))
+    SAFE_ALLOCATE(medium_box%points_map(n_points))
+    medium_box%points_map = 0
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_allocate)
+
+  end subroutine single_medium_box_allocate
+
+  ! ---------------------------------------------------------
+  !> Deallocation of medium_box components
+  subroutine single_medium_box_end(medium_box)
+    type(single_medium_box_t),   intent(inout)    :: medium_box
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_end)
+
+    call profiling_in(prof, 'MEDIUM_BOX_END')
+
+    SAFE_DEALLOCATE_A(medium_box%points_map)
+    SAFE_DEALLOCATE_A(medium_box%bdry_map)
+    SAFE_DEALLOCATE_A(medium_box%aux_ep)
+    SAFE_DEALLOCATE_A(medium_box%aux_mu)
+    SAFE_DEALLOCATE_A(medium_box%c)
+    SAFE_DEALLOCATE_A(medium_box%ep)
+    SAFE_DEALLOCATE_A(medium_box%mu)
+    SAFE_DEALLOCATE_A(medium_box%sigma_e)
+    SAFE_DEALLOCATE_A(medium_box%sigma_m)
+
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_end)
+
+  end subroutine single_medium_box_end
 
 end module linear_medium_em_field_oct_m
 
