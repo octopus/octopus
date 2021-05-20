@@ -317,7 +317,21 @@ contains
 
     select type (interaction)
     type is (linear_medium_em_field_t)
-       ! Nothing to do for the moment
+      call generate_medium_box(partner, interaction%medium_box, interaction%system_gr)
+      interaction%allocated_partner_arrays = .true.
+
+      if (partner%check_medium_points) then
+        SAFE_ALLOCATE(tmp(interaction%system_gr%mesh%np))
+        n_global_points = 0
+        write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(partner%filename), ":"
+        call messages_info(1)
+        call get_points_map_from_file(partner%filename, interaction%system_gr%mesh, n_points, n_global_points, tmp, CNST(0.99))
+        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', interaction%medium_box%global_points_number
+        write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', n_global_points
+        write(message(3), '(a)') ""
+        call messages_info(3)
+        SAFE_DEALLOCATE_A(tmp)
+      end if
     class default
       message(1) = "Trying to initialize an unsupported interaction by a linear medium."
       call messages_fatal(1)
@@ -483,30 +497,11 @@ contains
     class(system_linear_medium_t),          intent(inout) :: partner
     class(interaction_t),                 intent(inout) :: interaction
 
-    integer :: n_points, n_global_points
-    integer, allocatable :: tmp(:)
-
     PUSH_SUB(system_linear_medium_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (linear_medium_em_field_t)
-      if (.not. interaction%allocated_partner_arrays) then
-        call generate_medium_box(partner, interaction%medium_box, interaction%system_gr)
-        interaction%allocated_partner_arrays = .true.
-
-        if (partner%check_medium_points) then
-          SAFE_ALLOCATE(tmp(interaction%system_gr%mesh%np))
-          n_global_points = 0
-          write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(partner%filename), ":"
-          call messages_info(1)
-          call get_points_map_from_file(partner%filename, interaction%system_gr%mesh, n_points, n_global_points, tmp, CNST(0.99))
-          write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', interaction%medium_box%global_points_number
-          write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', n_global_points
-          write(message(3), '(a)') ""
-          call messages_info(3)
-          SAFE_DEALLOCATE_A(tmp)
-        end if
-      end if
+      ! No need to copy anything
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
