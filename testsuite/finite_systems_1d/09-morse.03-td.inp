@@ -63,7 +63,13 @@ TheoryLevel = independent_particles
 # The following calculation corresponds with Fig. 1 (C), of G. K. Paramonov, Chem. Phys. 177, 169 (1993).
 # The figure should be perfectly reproduced if the calculation is done until 1 picosecond.
 
-TDOutput = energy + laser + multipoles + td_occup + populations
+%TDOutput 
+ energy 
+ laser 
+ multipoles 
+ td_occup 
+ populations
+%
 
 # The whole run should go up to 1 picosecond, but in order to have a short
 # test we only do a small fraction of that.

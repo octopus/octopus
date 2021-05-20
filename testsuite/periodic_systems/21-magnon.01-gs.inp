@@ -48,5 +48,7 @@ GuessMagnetDensity = user_defined
 %
 LCAOStart = lcao_full
 
-Output = xc_torque
+%Output 
+  xc_torque
+%
 OutputFormat = axis_x

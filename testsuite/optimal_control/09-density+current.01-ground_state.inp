@@ -32,8 +32,10 @@ ExtraStates= 1
 
 
 # Output
-Output= density + wfs
-OutputFormat= axis_x
+%Output
+ wfs     | axis_x
+ density | axis_x
+%
 
 DisableAccel = yes
 

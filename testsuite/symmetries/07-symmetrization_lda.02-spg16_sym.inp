@@ -26,7 +26,10 @@ KPointsUseSymmetries = yes
 "H" | 1.7000000000E-01 | 8.5000000000E-01 | 8.9000000000E-01
 %
 
-Output = bader + density
+%Output 
+ bader   | axis_x
+ density
+%
 OutputFormat = axis_x
 
 SCFCalculatePartialCharges = yes

@@ -5,7 +5,12 @@ UnitsOutput = eV_Angstrom
 Radius = 4*angstrom      # 5*angstrom in tutorial
 Spacing = 0.3*angstrom   # 0.15*angstrom in tutorial
 
-Output = wfs + density + elf + potential
+%Output 
+ wfs
+ density 
+ elf
+ potential
+%
 OutputFormat = cube + xcrysden + dx + axis_x + plane_z
 
 XYZCoordinates = "benzene.xyz"

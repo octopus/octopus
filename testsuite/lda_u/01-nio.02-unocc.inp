@@ -54,6 +54,8 @@ ExtraStatesToConverge = 1
 MaximumIter = 20
 
 AOTruncation = ao_box
-OutputLDA_U = occ_matrices
+%Output
+  occ_matrices
+%
 
 StatesPack = yes

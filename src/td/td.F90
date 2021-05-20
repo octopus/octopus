@@ -442,7 +442,7 @@ contains
 
       ions%kinetic_energy = ion_dynamics_kinetic_energy(ions)
     else
-      if (bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if (outp%what(OPTION__OUTPUT__FORCES)) then
         call forces_calculate(gr, namespace, ions, hm, st, ks, t = td%iter*td%dt, dt = td%dt)
       end if
     end if
@@ -630,6 +630,8 @@ contains
     logical,                  intent(inout) :: from_scratch
 
     integer :: ierr
+    integer(8) :: what_it
+    logical :: output_iter
 
     PUSH_SUB(td_check_point)
 
@@ -639,10 +641,18 @@ contains
     call messages_info(1)
     etime = loct_clock()
 
-    if ((outp%output_interval > 0 .and. mod(iter, outp%output_interval) == 0) .or. iter == td%max_iter .or. stopping) then ! output
+    output_iter = .false.
+    do what_it = lbound(outp%output_interval, 1), ubound(outp%output_interval, 1)
+      if (outp%what_now(what_it, iter)) then
+        output_iter = .true.
+        exit
+      end if
+    end do
+
+    if (output_iter .or. iter == td%max_iter .or. stopping) then ! output
       ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
       if (st%modelmbparticles%nparticle > 0) then
-        call modelmb_sym_all_states (gr, st)
+        call modelmb_sym_all_states(gr, st)
       end if
       call td_write_output(namespace, space, gr, st, hm, ks, outp, ions, iter, td%dt)
     end if
@@ -966,7 +976,7 @@ contains
       end if
     end if
     call propagator_elec_run_zero_iter(hm, gr, td%tr)
-    if (outp%output_interval > 0) then
+    if (any(outp%output_interval > 0)) then
       call td_write_data(td%write_handler)
       call td_write_output(namespace, space, gr, st, hm, ks, outp, ions, 0)
     end if

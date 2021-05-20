@@ -92,9 +92,14 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #-----------------------------
 # Output
 #---------------------------- 
-Output=  wfs + density
-OutputFormat= axis_x
-TDOutput = laser + td_occup
+%Output
+ wfs     | axis_x
+ density | axis_x
+%
+%TDOutput 
+ laser 
+ td_occup
+% 
 
 DisableAccel = yes
 

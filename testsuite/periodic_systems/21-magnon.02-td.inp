@@ -54,4 +54,7 @@ TDPropagationTime = 10
 RestartWriteInterval = 100
 SpiralBoundaryCondition = yes
 
-TDOutput = total_magnetization + energy
+%TDOutput 
+ total_magnetization 
+ energy
+%

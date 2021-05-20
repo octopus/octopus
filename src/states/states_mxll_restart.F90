@@ -273,8 +273,7 @@ contains
       !call messages_print_stress(stdout, namespace=namespace)
 
     else
-      message(1) = "'UserDefineInitialdStates' has to be specified as block."
-      call messages_fatal(1, namespace=namespace)
+      call messages_variable_is_block(namespace, 'UserDefineInitialdStates')
     end if
 
     call profiling_out(prof)

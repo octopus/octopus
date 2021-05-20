@@ -28,7 +28,7 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
+subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions, iter)
   type(output_t),         intent(in) :: outp
   type(namespace_t),      intent(in) :: namespace
   type(space_t),          intent(in) :: space
@@ -37,6 +37,7 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   type(grid_t),           intent(in) :: gr
   type(kpoints_t),        intent(in) :: kpoints
   type(ions_t),           intent(in) :: ions
+  integer,                intent(in) :: iter
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
@@ -65,7 +66,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
 
   ! geometry
-  if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+  if (outp%what_now(OPTION__OUTPUT__GEOMETRY, iter) &
+    .and. bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_geometry_dims(ions, gr%symm, geometry_dims, geometry_flags)
@@ -81,7 +83,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   end if
 
   ! density
-  if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if (outp%what_now(OPTION__OUTPUT__DENSITY, iter) &
+  .and. bitand(outp%how(OPTION__OUTPUT__DENSITY), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(ions, gr%symm, density_dims, density_flags)
@@ -103,7 +106,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   end if
 
   ! wave-functions
-  if (bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if (outp%what_now(OPTION__OUTPUT__WFS, iter) &
+  .and. bitand(outp%how(OPTION__OUTPUT__WFS), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states", namespace=namespace)
@@ -136,7 +140,8 @@ subroutine output_etsf(outp, namespace, space, dir, st, gr, kpoints, ions)
   end if
 
   ! wave-functions in fourier space
-  if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+  if (outp%what_now(OPTION__OUTPUT__WFS_FOURIER, iter) &
+  .and. bitand(outp%how(OPTION__OUTPUT__WFS_FOURIER), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
 
     if (st%parallel_in_states) then
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)

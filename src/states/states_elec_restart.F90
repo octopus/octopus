@@ -1254,8 +1254,7 @@ contains
       call messages_print_stress(stdout, namespace=namespace)
 
     else
-      message(1) = "'UserDefinedStates' has to be specified as block."
-      call messages_fatal(1, namespace=namespace)
+      call messages_variable_is_block(namespace, 'UserDefinedStates')
     end if
 
     POP_SUB(states_elec_read_user_def_orbitals)
@@ -1482,7 +1481,7 @@ contains
         call states_elec_end(stin)
 
       else
-        call messages_input_error(namespace, trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
+        call messages_variable_is_block(namespace, trim(block_name))
       end if
 
     end if

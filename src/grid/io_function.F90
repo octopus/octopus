@@ -56,36 +56,36 @@ module io_function_oct_m
   implicit none
 
   private
-  public ::                       &
-    io_function_read_how,         &
-    io_function_fill_how,         &
-    write_bild_forces_file,       &
-    write_canonicalized_xyz_file, &
-    write_xsf_geometry,           &
-    write_xsf_geometry_file,      &
-    dio_function_input,           &
-    zio_function_input,           &
-    dio_function_output,          &
-    zio_function_output,          &
-    io_function_output_vector,    &
-    dio_function_output_global,   &
-    zio_function_output_global,   &
-    io_function_output_vector_BZ, &
+  public ::                         &
+    io_function_read_what_how_when, &
+    io_function_fill_how,           &
+    write_bild_forces_file,         &
+    write_canonicalized_xyz_file,   &
+    write_xsf_geometry,             &
+    write_xsf_geometry_file,        &
+    dio_function_input,             &
+    zio_function_input,             &
+    dio_function_output,            &
+    zio_function_output,            &
+    io_function_output_vector,      &
+    dio_function_output_global,     &
+    zio_function_output_global,     &
+    io_function_output_vector_BZ,   &
     io_function_output_global_BZ
 
 #if defined(HAVE_NETCDF)
- public ::                        &
-    dout_cf_netcdf,               &
+ public ::                          &
+    dout_cf_netcdf,                 &
     zout_cf_netcdf
 #endif
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
-  integer, parameter, private ::  &
-    DOUTPUT_KIND      =    1,     &
+  integer, parameter, private ::    &
+    DOUTPUT_KIND      =    1,       &
     ZOUTPUT_KIND      =   -1
 
   !> index to label mapping
-  character(len=3), parameter ::  &
+  character(len=3), parameter ::    &
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type(profile_t), save :: read_prof, write_prof
@@ -106,26 +106,239 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(namespace, space, how, ignore_error)
-    type(namespace_t), intent(in)  :: namespace
-    type(space_t),     intent(in)  :: space
-    integer(8),        intent(out) :: how
-    logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
+  subroutine io_function_read_what_how_when(namespace, space, what, how, output_interval, &
+    what_tag_in, how_tag_in, output_interval_tag_in, ignore_error)
+    type(namespace_t), intent(in)           :: namespace
+    type(space_t),     intent(in)           :: space
+    logical,           intent(inout)        :: what(MAX_OUTPUT_TYPES)
+    integer(8),        intent(out)          :: how(0:MAX_OUTPUT_TYPES)
+    integer,           intent(out)          :: output_interval(0:MAX_OUTPUT_TYPES) 
+    character(len=*),  optional, intent(in) :: what_tag_in
+    character(len=*),  optional, intent(in) :: how_tag_in
+    character(len=*),  optional, intent(in) :: output_interval_tag_in
+    logical, optional, intent(in)           :: ignore_error !> Ignore error check. Used when called from some external utility.
 
-    PUSH_SUB(io_function_read_how)
+    type(block_t) :: blk
+    integer :: ncols, nrows, iout, column_index, what_i
+    integer(8) :: what_no_how(10)       !> these kinds of Output do not have a how
+    character(len=80) :: what_tag
+    character(len=80) :: how_tag
+    character(len=80) :: output_interval_tag
+    character(len=80) :: output_column_marker
+    PUSH_SUB(io_function_read_what_how_when)
 
     how = 0_8
+    output_interval = 0_8
+    ncols = 0
+    what_tag = optional_default(what_tag_in, 'Output')
+    how_tag = optional_default(how_tag_in, 'OutputFormat')
+    output_interval_tag = optional_default(output_interval_tag_in, 'OutputInterval')
     
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
+    call messages_obsolete_variable(namespace, 'Output_KPT', 'Output')
+    call messages_obsolete_variable(namespace, 'OutputLDA_U' , 'Output')
+    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     
+    !%Variable Output
+    !%Type block
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print. 
+    !% Each output must be in a separate row. Optionally individual output formats and output intervals can be defined
+    !% for each row or they can be read separately from <tt>OutputFormat</tt> and <tt>OutputInterval</tt> variables
+    !% in the input file.
+    !% The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !%
+    !% Example (minimal):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density
+    !% <br>&nbsp;&nbsp;potential
+    !% <br>%<br></tt>
+    !%
+    !% Example (with OutputFormat):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | cube + axis_z
+    !% <br>&nbsp;&nbsp;potential | cube
+    !% <br>%<br></tt>
+    !%
+    !% Example (with OutputFormat, incomplete):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | cube + axis_z
+    !% <br>&nbsp;&nbsp;potential
+    !% <br>%<br></tt>
+    !%
+    !% Example (tagged):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | "output_format" | cube + axis_z | "output_interval" | 50
+    !% <br>&nbsp;&nbsp;potential | "output_format" | cube          | "output_interval" | 20
+    !% <br>%<br></tt>
+    !%
+    !% Example (tagged, incomplete):
+    !% <br><br><tt>%Output
+    !% <br>&nbsp;&nbsp;density   | "output_format"   | cube + axis_z 
+    !% <br>&nbsp;&nbsp;potential | "output_interval" | 20
+    !% <br>%<br></tt>
+    !% Missing information for the incomplete blocks will be parsed form the out-of-block
+    !% definitions. It is also possible to mix the order of columns in the tagged format. 
+    !% See <tt>OutputFormat</tt>, and <tt>OutputInterval</tt>.
+    !%Option potential 1
+    !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
+    !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
+    !% <tt>vh</tt> for the Hartree potential, <tt>vks</tt> for the local part of the Kohn-Sham potential, and
+    !% <tt>vxc-</tt> for the exchange-correlation potentials. For <tt>vks</tt> and <tt>vxc</tt>,
+    !% a suffix for spin is added in the spin-polarized case.
+    !%Option density 2
+    !% Outputs density. The output file is called <tt>density-</tt>, or <tt>lr_density-</tt> in linear response.
+    !%Option wfs 3
+    !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
+    !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
+    !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
+    !%Option wfs_sqmod 4
+    !% Outputs modulus squared of the wavefunctions. 
+    !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
+    !%Option geometry 5
+    !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
+    !% If <tt>OutputFormat = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
+    !% file <tt>crystal.xyz</tt> is written with a supercell geometry if the system is periodic;
+    !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
+    !% in the file <tt>geometry_classical.xyz</tt>.
+    !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
+    !%Option current 6
+    !% Outputs the total current density. The output file is called <tt>current-</tt>.
+    !% For linear response, the filename is <tt>lr_current-</tt>.
+    !%Option ELF 7
+    !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
+    !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,
+    !% as <tt>lr_elf_D-</tt>. Only in 2D and 3D.
+    !%Option ELF_basins 8
+    !% Outputs basins of attraction of the ELF. The output file is called
+    !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
+    !%Option Bader 9
+    !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
+    !% and regions subject to electrophilic or nucleophilic attack.
+    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory</i> (Oxford Univ. Press, Oxford, 1990).
+    !%Option el_pressure 10
+    !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
+    !%Option matrix_elements 11
+    !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
+    !% be controlled by the <tt>OutputMatrixElements</tt> variable.
+    !%Option pol_density 12
+    !% Outputs dipole-moment density <tt>dipole_density-</tt>, or polarizability density <tt>alpha_density-</tt>
+    !% in linear response. If <tt>ResponseMethod = finite_differences</tt>, the hyperpolarizability density
+    !% <tt>beta_density-</tt> is also printed.
+    !%Option mesh_r 13
+    !% Outputs values of the coordinates over the grid. Files
+    !% will be called <tt>mesh_r-</tt> followed by the direction.
+    !%Option kinetic_energy_density 14
+    !% Outputs kinetic-energy density, defined as:
+    !%
+    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
+    !%  \left| \vec{\nabla} \phi_{i\sigma}(\vec{r}) \right|^2\,. </math>
+    !%
+    !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
+    !% or if you are using spinors. For spin-unpolarized calculations, you
+    !% get the total kinetic-energy density. The previous expression assumes full 
+    !% or null occupations. If fractional occupation numbers, each term in the sum
+    !% is weighted by the occupation. Also, if we are working with an infinite 
+    !% system, all <i>k</i>-points are summed up, with their corresponding weights. The
+    !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
+    !% energy density is produced (runs in spin-polarized and spinors mode), or
+    !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
+    !%Option dos 15
+    !% Outputs density of states. See <tt>DOSEnergyMax</tt>, <tt>DOSEnergyMin</tt>, <tt>DOSEnergyPoints</tt>,
+    !% and <tt>DOSGamma</tt>.
+    !%Option tpa 16
+    !% Outputs transition-potential approximation (TPA) matrix elements, using <math>\vec{q}</math>-vector specified
+    !% by <tt>MomentumTransfer</tt>.
+    !%Option forces 17
+    !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
+    !% a vector associated with each atom, which can be visualized with XCrySDen.
+    !%Option wfs_fourier 18
+    !% (Experimental) Outputs wavefunctions in Fourier space. This is
+    !% only implemented for the ETSF file format output. The file will
+    !% be called <tt>wfs-pw-etsf.nc</tt>.  
+    !%Option xc_density 19
+    !% Outputs the XC density, which is the charge density that
+    !% generates the XC potential. (This is <math>-1/4\pi</math> times
+    !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
+    !%Option PES_wfs 20
+    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
+    !% plus the orbital number.
+    !%Option PES_density 21
+    !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
+    !% spin-polarized calculation is performed. 
+    !%Option PES 22
+    !% Outputs the time-dependent photoelectron spectrum.
+    !%Option BerkeleyGW 23
+    !% Output for a run with <a href=http://www.berkeleygw.org>BerkeleyGW</a>.
+    !% See <tt>Output::BerkeleyGW</tt> for further specification.
+    !%Option delta_perturbation 24
+    !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
+    !%Option external_td_potential 25
+    !% Outputs the (scalar) time-dependent potential.
+    !%Option mmb_wfs 26
+    !% Triggers the ModelMB wavefunctions to be output for each state.
+    !%Option mmb_den 27
+    !% Triggers the ModelMB density matrix to be output for each state, and the particles
+    !% specified by the <tt>DensitytoCalc</tt> block. Calculates, and outputs, the reduced density
+    !% matrix. For the moment the trace is made over the second dimension, and
+    !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
+    !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
+    !%Option potential_gradient 28
+    !% Prints the gradient of the potential.
+    !%Option energy_density 29
+    !% Outputs the total energy density to a file called
+    !% <tt>energy_density</tt>.
+    !%Option heat_current 30
+    !% Outputs the total heat current density. The output file is
+    !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator 31
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
+    !%Option J_flow 32
+    !% todo: document J_flow option!
+    !%Option current_kpt 33
+    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+    !%Option density_kpt 34
+    !% Outputs the electronic density resolved in momentum space. 
+    !%Option occ_matrices 35
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU 36
+    !% Outputs the value of the effectiveU for each atoms 
+    !%Option magnetization 37
+    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% on the atoms as a vector associated with each atom, which can be visualized.
+    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+    !%Option local_orbitals 38
+    !% Outputs the localized orbitals that form the correlated subspace
+    !%Option kanamoriU 39
+    !% Outputs the Kanamori interaction parameters U, U`, and J.
+    !% These parameters are not determined self-consistently, but are taken from the 
+    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
+    !%Option xc_torque 40
+    !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
+    !%End
+
     !%Variable OutputFormat
     !%Type flag
     !%Default 0
     !%Section Output
     !%Description
-    !% Describes the format of the output files (see <tt>Output</tt>).
+    !% Describes the format of the output files.
+    !% This variable can also be defined inside the <tt>Output</tt> block.
+    !% See <tt>Output</tt>.
     !% Example: <tt>axis_x + plane_x + dx</tt>
-    !%Option axis_x bit(0) 
+    !%Option axis_x bit(0)
     !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_y bit(1)
@@ -209,84 +422,239 @@ contains
     !% Plain text format regardless of dimensionality. For the moment only employed by the oct-phototoelectron_spectrum
     !% post-processing utility.
     !%End
-    call parse_variable(namespace, 'OutputFormat', 0, how)
-    if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-      call messages_input_error(namespace, 'OutputFormat')
-    end if
 
-    if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
-      write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
-      call messages_fatal(1, only_root_writes = .true.)
-     end if
+    !%Variable OutputInterval
+    !%Type integer
+    !%Default 50
+    !%Section Output
+    !%Description
+    !% The output requested by variable <tt>Output</tt> is written
+    !% to the directory <tt>OutputIterDir</tt>
+    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
+    !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
+    !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
+    !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
+    !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
+    !% This variable can also be defined inside the <tt>Output</tt> block.
+    !% See <tt>Output</tt>.
+    !%End
 
-    ! some modes are not available in some circumstances
-    if (space%dim == 1) then
-      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
-        message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
-        message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
-        message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
-        call messages_fatal(1)
-      end if
-    end if
 
-    if (space%dim <= 2) then
-      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
-        message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
-        message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
-        message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
-        message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
-        message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
-        message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
-        message(1) = "OutputFormat = dx not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-      if(bitand(how, OPTION__OUTPUTFORMAT__CUBE) /= 0) then
-        message(1) = "OutputFormat = cube not available with Dimensions <= 2."
-        call messages_fatal(1)
-      end if
-    end if
+    what_no_how = (/ OPTION__OUTPUT__MATRIX_ELEMENTS, OPTION__OUTPUT__BERKELEYGW, OPTION__OUTPUT__DOS, &
+      OPTION__OUTPUT__TPA, OPTION__OUTPUT__MMB_DEN, OPTION__OUTPUT__J_FLOW, OPTION__OUTPUT__OCC_MATRICES, &
+      OPTION__OUTPUT__EFFECTIVEU, OPTION__OUTPUT__MAGNETIZATION, OPTION__OUTPUT__KANAMORIU /)
 
-#if !defined(HAVE_NETCDF)
-    if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
-      message(1) = 'Octopus was compiled without NetCDF support.'
-      message(2) = 'It is not possible to write output in NetCDF format.'
-      call messages_fatal(2)
-    end if
-#endif
-#if !defined(HAVE_ETSF_IO)
-    if (bitand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      message(1) = 'Octopus was compiled without ETSF_IO support.'
-      message(2) = 'It is not possible to write output in ETSF format.'
-      call messages_fatal(2)
-    end if
-#endif
+    if (parse_block(namespace, what_tag, blk) == 0) then
+      nrows = parse_block_n(blk)
+      do iout = 0, nrows - 1
+        ncols = max(ncols , parse_block_cols(blk, iout))
+      end do
 
-    POP_SUB(io_function_read_how)
-  end subroutine io_function_read_how
+      if (ncols == 1) then
+        !new format, Type 0
+        !%Output
+        !  density
+        !  wfs
+        !%
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          if (what_i > 0) then
+            what(what_i) = .true.
+            call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+            if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+              .or. (what_tag /= 'Output')) then
+              call parse_variable(namespace, how_tag, 0, how(what_i))
+              if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                call messages_input_error(namespace, how_tag)
+              end if
+            end if
+          end if
+        end do
+      else if (ncols == 2) then
+        !new format, Type 1
+        !%Output
+        !  density | cube + axis_z
+        !  wfs     | cube
+        !%
+
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          if (what_i > 0) then 
+            what(what_i) = .true.
+            call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+            if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+              .or. (what_tag /= 'Output')) then
+              call parse_block_integer(blk, iout - 1, 1, how(what_i))
+              if (how(what_i) == 0) call parse_variable(namespace, how_tag, 0, how(what_i))
+              if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                call messages_input_error(namespace, how_tag)
+              end if
+            end if
+          end if
+        end do
+
+      else 
+        !new format, Type 2 (tagged)
+        !%Output
+        !  density | "output_interval" | 10   | "output_format"   | cube + axis_z
+        !  wfs     | "output_format"   | cube | "output_interval" | 50
+        !%
+        !
+        ! OR
+        !
+        !%Output
+        !  density | "output_interval" | 10   | "output_format" | cube + axis_z
+        !  wfs     | "output_format"   | cube
+        !%
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_i)
+          if (.not. varinfo_valid_option(what_tag, what_i)) then
+            call messages_input_error(namespace, what_tag)
+          end if
+          if (what_i > 0) then
+            what(what_i) = .true.
+            do column_index = 0, 1  
+              call parse_block_string(blk, iout - 1, 1 + column_index * 2, output_column_marker)
+              if (output_column_marker == 'output_interval') then
+                call parse_block_integer(blk, iout - 1, 2 + column_index * 2, output_interval(what_i))
+              else if (output_column_marker == 'output_format') then
+                if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+                  .or. (what_tag /= 'Output')) then
+                  call parse_block_integer(blk, iout - 1, 2 + column_index * 2, how(what_i))
+                  if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                    call messages_input_error(namespace, how_tag)
+                  end if
+                end if
+              else if (len_trim(output_column_marker) /= 0) then
+                ! Unknown output_column_marker
+                call messages_input_error(namespace, what_tag)
+              else
+                ! no output_column_marker -> full output info is not in this block
+                if (output_interval(what_i) == 0) then
+                  call parse_variable(namespace, output_interval_tag, 50, output_interval(what_i))
+                end if
+                if (how(what_i) == 0) then
+                  if (((what_tag == 'Output') .and. (.not. any(what_no_how == what_i)))&
+                    .or. (what_tag /= 'Output')) then
+                    call parse_variable(namespace, how_tag, 0, how(what_i))
+                    if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+                      call messages_input_error(namespace, how_tag)
+                    end if
+                  end if
+                end if
+              end if
+            end do
+          end if
+        end do
+      end if
+      call parse_block_end(blk)
+    else
+
+      call messages_variable_is_block(namespace, what_tag)
+
+      ! Output block does not exist but we may have OutputHow/OutputInterval 
+      call parse_variable(namespace, how_tag, 0, how(0))
+      call parse_variable(namespace, output_interval_tag, 50, output_interval(0))
+    endif
+
+    
+    do what_i = lbound(what, 1), ubound(what, 1)
+      if (what_tag == 'Output') then
+        if (what(what_i) .and. (.not. any(what_no_how == what_i))) then
+          if (.not. varinfo_valid_option(how_tag, how(what_i), is_flag=.true.)) then
+            call messages_input_error(namespace, how_tag)
+          end if
+
+          if (how(what_i) == 0 .and. .not. optional_default(ignore_error, .false.)) then
+            write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
+            call messages_fatal(1, only_root_writes = .true.)
+          end if
+
+          ! some modes are not available in some circumstances
+          if (space%dim == 1) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
+              message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
+              message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
+              message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
+              call messages_fatal(1)
+            end if
+          end if
+
+          if (space%dim <= 2) then
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
+              message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
+              message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
+              message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+              message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+              message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+              message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__DX) /= 0) then
+              message(1) = "OutputFormat = dx not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+            if (bitand(how(what_i), OPTION__OUTPUTFORMAT__CUBE) /= 0) then
+              message(1) = "OutputFormat = cube not available with Dimensions <= 2."
+              call messages_fatal(1)
+            end if
+          end if
+
+  #if !defined(HAVE_NETCDF)
+          if (bitand(how(what_i), OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+            message(1) = 'Octopus was compiled without NetCDF support.'
+            message(2) = 'It is not possible to write output in NetCDF format.'
+            call messages_fatal(2)
+          end if
+  #endif
+  #if !defined(HAVE_ETSF_IO)
+          if (bitand(how(what_i), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+            message(1) = 'Octopus was compiled without ETSF_IO support.'
+            message(2) = 'It is not possible to write output in ETSF format.'
+            call messages_fatal(2)
+          end if
+  #endif
+
+
+        end if
+      end if
+
+      if (output_interval(what_i) < 0) then
+        message(1) = "OutputInterval must be >= 0."
+        call messages_fatal(1, namespace=namespace)
+      end if
+    end do
+  
+    POP_SUB(io_function_read_what_how_when)
+  end subroutine io_function_read_what_how_when
 
   ! -------------------------------------------------------------------
   !> Use this function to quickly plot functions for debugging purposes:
@@ -333,7 +701,7 @@ contains
     FLOAT, allocatable :: forces(:,:), center(:,:)
     character(len=20) frmt
 
-    if( .not. mpi_grp_is_root(mpi_world)) return
+    if (.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_bild_forces_file)
 
@@ -428,7 +796,7 @@ contains
     FLOAT, allocatable :: forces(:,:)
     logical :: write_forces_
 
-    if( .not. mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_xsf_geometry_file)
 

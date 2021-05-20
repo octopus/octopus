@@ -18,4 +18,7 @@ DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 SkipSOrbitals = no
 AOThreshold = 0.05
-OutputLDA_U = occ_matrices + effectiveU
+%Output
+  occ_matrices
+  effectiveU
+%

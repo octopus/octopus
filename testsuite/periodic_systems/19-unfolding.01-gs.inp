@@ -38,8 +38,10 @@ ConvRelDens = 1e-8
 EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
 
-Output = geometry + dos
-OutputFormat = xyz
+%Output
+ geometry | xyz
+ dos
+%
 
 FilterPotentials = filter_none
 

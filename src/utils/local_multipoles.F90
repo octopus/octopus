@@ -69,7 +69,7 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
-  integer, parameter    :: BADER = 512
+  integer, parameter         :: BADER = 9  ! should be = OPTION__OUTPUT__BADER
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
@@ -147,7 +147,7 @@ contains
 
     default_dt = M_ZERO
     call parse_variable(global_namespace, 'TDTimeStep', default_dt, dt, unit = units_inp%time)
-    if (dt <= M_ZERO) then
+    if (dt < M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file.'
       call messages_info(2)
@@ -162,11 +162,11 @@ contains
     !% fragmented into domains.
     !%End
     call parse_variable(global_namespace, 'LDFilename', 'density', basename)
-    if ( basename == " " ) basename = ""
+    if (basename == " ") basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
-    if ( length > 4) then
-      if ( basename(length-3:length) == '.obf' ) then
+    if (length > 4) then
+      if (basename(length-3:length) == '.obf') then
         basename = trim(basename(1:length-4))
       end if
     end if

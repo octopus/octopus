@@ -29,8 +29,12 @@ ExtraStates = 4
 ConvRelDens = 1e-7
 EigensolverTolerance = 1e-8
 
-Output = matrix_elements
-OutputMatrixElements = dipole
+%Output 
+ matrix_elements
+%
+%OutputMatrixElements
+  dipole
+%
 OutputMEStart = 2
 OutputMEEnd = 7
 

@@ -105,8 +105,9 @@ EigenSolver = cg
 EigenSolverTolerance = 1e-6
 EigenSolverMaxIter = 25
 
-Output = wfs
-OutputFormat = axis_x
+%Output 
+ wfs | axis_x
+% 
 
 mu=0.7896
 meff = 1.0

@@ -36,5 +36,8 @@ t0 = tau0
   "envelope_cos" | tdf_cosinoidal | amplitude | tau0 | t0
 %
 
-TDOutput = laser + multipoles
+%TDOutput
+ laser
+ multipoles
+%
 StatesPack = yes

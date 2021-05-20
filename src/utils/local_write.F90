@@ -124,7 +124,7 @@ contains
     !% If set, <tt>octopus</tt> outputs the different components of the potential
     !% to the folder <tt>ld.general/potential</tt>. 
     !% The output format is set by the <tt>LDOutputFormat</tt> input variable.
-    !%Option energy 128
+    !%Option energy 8
     !% If set, <tt>octopus</tt> outputs the different components of the energy of the local domains
     !% to the folder <tt>ld.general/energy</tt>.
     !%End

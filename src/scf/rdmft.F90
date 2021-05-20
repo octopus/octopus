@@ -292,6 +292,7 @@ contains
 
     type(states_elec_t) :: states_save
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
+    integer(8) :: what_i
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv
@@ -447,11 +448,15 @@ contains
       endif
 
       ! write output for iterations if requested
-      if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, space, dirname, gr, ions, st, hm, ks)
-        call scf_write_static(dirname, "info")
+      if (any(outp%what) .and. outp%duringscf) then
+        do what_i = lbound(outp%what, 1), ubound(outp%what, 1)
+          if (outp%what_now(what_i, iter)) then
+            write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
+            call output_all(outp, namespace, space, dirname, gr, ions, iter, st, hm, ks)
+            call scf_write_static(dirname, "info")
+            exit
+          end if
+        end do
       end if
 
       if (conv) exit
@@ -469,7 +474,7 @@ contains
     end if
 
     call scf_write_static(STATIC_DIR, "info")
-    call output_all(outp, namespace, space, STATIC_DIR, gr, ions, st, hm, ks)
+    call output_all(outp, namespace, space, STATIC_DIR, gr, ions, -1, st, hm, ks)
 
     POP_SUB(scf_rdmft) 
 

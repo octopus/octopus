@@ -30,8 +30,9 @@ InvertKSmethod = two_particle
 
 InvertKSTargetDensity = "static/density.y=0,z=0"
 
-Output = potential
-OutputFormat = axis_x
+%Output
+ potential | axis_x
+% 
 
 FilterPotentials = filter_none
 StatesPack = yes

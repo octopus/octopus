@@ -31,7 +31,12 @@ BoxShape = parallelepiped
 ExtraStates = 2
 
 ExperimentalFeatures = yes
-Output = wfs + wfs_fourier + density + geometry
+%Output 
+ wfs         | "output_format" | etsf + netcdf
+ wfs_fourier | "output_format" | etsf + netcdf
+ density     | "output_format" | etsf + netcdf
+ geometry
+%
 OutputFormat = etsf + netcdf
 OutputWfsNumber = "3-4"
 

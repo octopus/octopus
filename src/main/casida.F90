@@ -381,8 +381,9 @@ contains
     !%End
     call parse_variable(sys%namespace, 'CasidaTransitionDensities', "0", cas%trandens)
 
-    if (cas%trandens /= "0") then
-      call io_function_read_how(sys%namespace, sys%space, sys%outp%how)
+    if (cas%trandens /= "0") then 
+      call io_function_read_what_how_when(sys%namespace, sys%space, sys%outp%what,&
+        sys%outp%how, sys%outp%output_interval)
     end if
 
     !%Variable CasidaMomentumTransfer
@@ -612,7 +613,7 @@ contains
         do iatom = 1, sys%ions%natoms
           do idir = 1, cas%space_dim
             write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
-            if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
+            if (cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
             call restart_rm(cas%restart_dump, restart_filename)
 
             write(restart_filename,'(a,i6.6,a,i1)') 'lr_hmat1_', iatom, '_', idir

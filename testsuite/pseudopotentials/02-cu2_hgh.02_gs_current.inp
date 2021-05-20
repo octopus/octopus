@@ -21,8 +21,9 @@ SmearingFunction = fermi_dirac
  10.0 | 0.0 | 0.0
 %
 
-Output = current
-OutputFormat = axis_z
+%Output 
+ current | axis_z
+%
 
 ConvRelDens = 1e-6
 StatesPack = yes

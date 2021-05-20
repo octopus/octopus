@@ -10,12 +10,12 @@ Spacing = 0.5*angstrom
   "H" | 0 | 0 | 0
 %
 
-OutputFormat = dx
-Output = density
-ConvertFolder = 'restart/gs'
-ConvertFilename = 'density'
-ConvertIterateFolder = no
-
-ConvertStart = 1
-ConvertEnd   = 1
+%Output
+ density | dx
+% 
+ConvertHow = operation
+%ConvertScalarOperation
+ 'rho' | 'restart/gs' | 'density.obf' | '2.0*rho'
+ 'rho' | 'restart/gs' | 'density.obf' | '0.5*rho'
+%
 StatesPack = yes

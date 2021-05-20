@@ -29,8 +29,10 @@ BoxShape = parallelepiped
 
 KPointsUseSymmetries = no
 
-Output = density + forces
-OutputFormat = xcrysden
+%Output 
+ density | xcrysden
+ forces  | xcrysden
+%
 
 FilterPotentials = filter_none
 

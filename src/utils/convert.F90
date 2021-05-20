@@ -130,11 +130,11 @@ contains
     !% files, it should be one space ' '.
     !%End
     call parse_variable(global_namespace, 'ConvertFilename', 'density', basename)
-    if ( basename == " " ) basename = ""
+    if (basename == " ") basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
-    if ( length > 4) then
-      if ( basename(length-3:length) == '.obf' ) then
+    if (length > 4) then
+      if (basename(length-3:length) == '.obf') then
         basename = trim(basename(1:length-4))
       end if
     end if
@@ -293,7 +293,7 @@ contains
     character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
     type(restart_t)          :: restart
-    integer                  :: ierr, ii, folder_index
+    integer                  :: ierr, ii, folder_index, output_i
     character(MAX_PATH_LEN)  :: filename, out_name, folder, frmt, restart_folder
     FLOAT, allocatable       :: read_ff(:), read_rff(:), pot(:)
 
@@ -345,7 +345,7 @@ contains
         out_name = trim(basename)
       else
         folder = ""
-        if ( c_start /= c_end ) then
+        if (c_start /= c_end) then
           ! Here, we are only considering 10 character long filenames.
           ! Subtract the initial part given at 'ConvertFilename' from the format and pad
           ! with zeros.
@@ -377,13 +377,16 @@ contains
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
+      do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
+        if (outp%how(output_i) /= 0) then
+          call dio_function_output(outp%how(output_i), trim(restart_folder)//trim(folder), & 
            trim(out_name), namespace, space, mesh, read_ff, units_out%length**(-space%dim), ierr, ions = ions)
-      
-      if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
+        end if
+      end do
+      if (outp%what(OPTION__OUTPUT__POTENTIAL)) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
-        call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
+        call dio_function_output(outp%how(OPTION__OUTPUT__POTENTIAL), trim(restart_folder)//trim(folder), &
              trim(out_name), namespace, space, mesh, pot, units_out%energy, ierr, ions = ions)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
@@ -419,7 +422,7 @@ contains
     character(len=*),  intent(inout) :: ref_name       !< Reference file name 
     character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
-    integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
+    integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info, output_i
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count, t_point
     logical                 :: optimize(1:3)
     integer                 :: folder_index
@@ -725,20 +728,28 @@ contains
     if(mesh%parallel_in_domains) then
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
-        call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
-           units_out%length**(-space%dim), ierr, ions = ions)
+        do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
+          if (outp%how(output_i) /= 0) then
+            call dio_function_output(0_8, trim(filename), & 
+            trim('density'), namespace, space, mesh, point_tmp(:, i_energy), &
+            units_out%length**(-space%dim), ierr, ions = ions)
+          end if
+        end do
       end do
       call restart_end(restart)
     else
       ! write the output files
-      if (outp%how /= OPTION__OUTPUTFORMAT__BINARY ) then
+      if (any(outp%how /= OPTION__OUTPUTFORMAT__BINARY)) then
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
-          call dio_function_output(outp%how, trim(filename), & 
-             trim('density'), namespace, space, mesh, read_rff, &
-             units_out%length**(-space%dim), ierr, ions = ions)
+          do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
+            if ((outp%how(output_i) /= 0) .and. (outp%how(output_i) /= OPTION__OUTPUTFORMAT__BINARY)) then
+              call dio_function_output(outp%how(output_i), trim(filename), & 
+                trim('density'), namespace, space, mesh, read_rff, &
+                units_out%length**(-space%dim), ierr, ions = ions)
+            end if
+          end do
         end do
       end if
     end if
@@ -769,7 +780,7 @@ contains
     type(multicomm_t), intent(in)   :: mc
     type(output_t)  ,  intent(in)   :: outp           !< Output object; Decides the kind, what and where to output
 
-    integer             :: ierr, ip, i_op, length, n_operations
+    integer             :: ierr, ip, i_op, length, n_operations, output_i
     type(block_t)       :: blk
     type(restart_t)     :: restart 
     type(unit_t)        :: units
@@ -837,8 +848,8 @@ contains
       call parse_block_string(blk, i_op-1, 2, filename)
       ! Delete the extension if present
       length = len_trim(filename)
-      if ( length > 4) then
-        if ( filename(length-3:length) == '.obf' ) then
+      if (length > 4) then
+        if (filename(length-3:length) == '.obf') then
           filename = trim(filename(1:length-4))
         end if
       end if
@@ -875,8 +886,12 @@ contains
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-space%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, space, mesh, & 
-      scalar_ff, units, ierr, ions = ions)
+    do output_i = lbound(outp%how, 1), ubound(outp%how, 1)
+      if (outp%how(output_i) /= 0) then
+        call dio_function_output(outp%how(output_i), trim(out_folder), trim(out_filename), namespace, space, mesh, & 
+          scalar_ff, units, ierr, ions = ions)
+      end if
+    end do
 
     SAFE_DEALLOCATE_A(tmp_ff)
     SAFE_DEALLOCATE_A(scalar_ff)

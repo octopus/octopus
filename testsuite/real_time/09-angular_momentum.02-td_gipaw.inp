@@ -26,7 +26,11 @@ TDMaxSteps = 100
 TDPolarizationDirection = 1
 TDDeltaStrength = 0.1
 
-TDOutput = energy + angular + multipoles
+%TDOutput
+ energy 
+ angular 
+ multipoles
+%
 MagneticGaugeCorrection = gipaw
 TDMultipoleLmax = 2
 

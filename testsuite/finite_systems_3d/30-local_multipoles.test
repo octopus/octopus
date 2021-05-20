@@ -30,7 +30,7 @@ match ;  H3 - End Arrow    ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bl
 Precision: 6.00e-15
 match ;  Restart ld           ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6) ; 6.0
 Precision: 5.12e-13
-match ;  C  - Restart shape   ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 512.0
+match ;  C  - Restart shape   ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 9.0
 Precision: 1.00e-15
 match ;  H1 - Restart shape   ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3) ; 1.0
 Precision: 1.00e-15
@@ -213,7 +213,7 @@ match ;  H2-4 End Arrow   z  ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000
 Precision: 6.00e-15
 match ;   Restart ld            ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6) ; 6.0
 Precision: 5.12e-13
-match ;   C  - Restart shape    ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 512.0
+match ;   C  - Restart shape    ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 9.0
 Precision: 1.00e-15
 match ;   H1 - Restart shape    ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3) ; 1.0
 Precision: 1.00e-15

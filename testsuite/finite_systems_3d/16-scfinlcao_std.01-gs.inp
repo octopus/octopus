@@ -30,8 +30,10 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 
 SCFinLCAO = yes
 ExperimentalFeatures = yes
-Output = geometry + density
-OutputFormat = matlab + plane_z
+%Output 
+ geometry | matlab + plane_z
+ density  | matlab + plane_z
+%
 
 SCFCalculatePartialCharges = yes
 

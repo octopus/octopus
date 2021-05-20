@@ -26,8 +26,10 @@ KPointsUseTimeReversal = no
 
 XCFunctional = mgga_x_rpp09 + lda_c_pz
 
-Output = bader + density
-OutputFormat = axis_x
+%Output 
+ bader   | axis_x
+ density | axis_x
+%
 
 SCFCalculatePartialCharges = yes
 StatesPack = yes

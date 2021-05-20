@@ -40,7 +40,12 @@ FromScratch = yes
 
 TDMaxSteps = 150
 TDEnergyUpdateIter = 5
-TDOutput = energy + geometry + total_current + gauge_field
+%TDOutput 
+ energy 
+ geometry 
+ total_current 
+ gauge_field
+%
 
 # test code path without CUDA-aware MPI for this test
 CudaAwareMPI = no

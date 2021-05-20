@@ -11,8 +11,9 @@ ExtraStates = 3
   "Na" |  1.54*angstrom | 0 | 0
 %
 
-Output = pol_density
-OutputFormat = xcrysden
+%Output 
+ pol_density | xcrysden
+% 
 
 
 Debug = trace

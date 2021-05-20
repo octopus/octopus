@@ -29,8 +29,10 @@ TheoryLevel = independent_particles
 "doublewell" | 0
 %
 
-Output = potential + wfs
-OutputFormat = axis_x
+%Output
+ wfs       | axis_x
+ potential | axis_x
+%
 
 
 StatesPack = yes

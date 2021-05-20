@@ -1387,10 +1387,10 @@ contains
       PUSH_SUB(em_resp_output.out_wfn_and_densities)
 
       do idir = 1, space%dim
-        if(states_are_complex(st)) then 
+        if (states_are_complex(st)) then 
 
-          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
-            if(em_vars%nsigma == 1) then
+          if (space%dim == 3 .and. outp%what(OPTION__OUTPUT__ELF)) then
+            if (em_vars%nsigma == 1) then
               call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
               call zlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
@@ -1402,8 +1402,8 @@ contains
           end do
         else
 
-          if(space%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
-            if(em_vars%nsigma == 1) then
+          if (space%dim == 3 .and. outp%what(OPTION__OUTPUT__ELF)) then
+            if (em_vars%nsigma == 1) then
               call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor))
             else
               call dlr_calc_elf(st, gr, hm%kpoints, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))

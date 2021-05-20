@@ -33,8 +33,11 @@ P_c = 137.036
   0 | 0 | P_c*0.0001
 %
 
-Output = density + current + potential
-OutputFormat = axis_y
+%Output 
+ density   | "output_format" | axis_y
+ current   | "output_format" | axis_y
+ potential | "output_format" | axis_y
+%
 FlushMessages = yes
 
 %CurrentThroughPlane

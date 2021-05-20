@@ -125,7 +125,7 @@
           end do
           call parse_block_end(blk)
         else
-          call messages_input_error(namespace, 'OCTTargetDensityFromState', 'Has to be specified as block.')
+          call messages_variable_is_block(namespace, 'OCTTargetDensityFromState')
         end if
 
       else
@@ -354,12 +354,12 @@
     PUSH_SUB(target_output_density)
     
     call io_mkdir(trim(dir), namespace)
-    if(outp%how /= 0) then
-      if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, space, mesh, &
-          tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
-      end if
+
+    if (tg%density_weight > M_ZERO) then
+      call dio_function_output(outp%how(0), trim(dir), 'density_target', namespace, space, mesh, &
+        tg%rho, units_out%length**(-space%dim), ierr, ions = ions)
     end if
+
 
     POP_SUB(target_output_density)
   end subroutine target_output_density

@@ -47,6 +47,10 @@ k=1.0
 "electron"      | 1 | 3
 %
 
-Output = mmb_den + mmb_wfs + density
-OutputFormat = plane_z + axis_x
+%Output 
+ mmb_den
+ mmb_wfs | plane_z + axis_x
+ density | plane_z + axis_x
+%
+
 StatesPack = yes

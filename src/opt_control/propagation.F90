@@ -111,7 +111,7 @@ contains
     logical, intent(in) :: zbr98
     logical, intent(in) :: gradients
 
-    ASSERT(.not. (zbr98 .and. gradients) )
+    ASSERT(.not. (zbr98 .and. gradients))
 
     PUSH_SUB(propagation_mod_init)
 
@@ -206,7 +206,7 @@ contains
     end if
 
     init_time = loct_clock()
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
+    if (mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     ii = 1
     do istep = 1, td%max_iter
@@ -234,17 +234,17 @@ contains
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm, sys%ions, sys%hm%ep%kick, &
+        call td_write_iter(write_handler, sys%namespace, sys%space, sys%outp, sys%gr, psi, sys%hm,  sys%ions, sys%hm%ep%kick, &
           td%dt, istep)
-        ii = ii + 1 
-        if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
-          if(istep == td%max_iter) sys%outp%output_interval = ii - 1
+        ii = ii + 1
+        if (any(ii == sys%outp%output_interval + 1) .or. istep == td%max_iter) then ! output
+          if (istep == td%max_iter) sys%outp%output_interval = ii - 1
           ii = istep
           call td_write_data(write_handler) 
         end if
       end if
 
-      if( (mod(istep, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
+      if ((mod(istep, 100) == 0) .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
     if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
@@ -374,9 +374,9 @@ contains
     ! the first two iterations are done self-consistently nonetheless.
     call propagator_elec_remove_scf_prop(tr_chi)
 
-    aux_fwd_propagation = ( target_mode(tg) == oct_targetmode_td .or. &
+    aux_fwd_propagation = (target_mode(tg) == oct_targetmode_td .or. &
                            (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. &
-                            .not.sys%ks%frozen_hxc ) )
+                            .not.sys%ks%frozen_hxc))
     if(aux_fwd_propagation) then
       call states_elec_copy(psi2, psi)
       call controlfunction_copy(par_prev, par)
@@ -436,8 +436,8 @@ contains
     call density_calc(psi, sys%gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%space, sys%hm, psi, sys%ions)
 
-    if( target_mode(tg) == oct_targetmode_td .or. &
-        (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
+    if (target_mode(tg) == oct_targetmode_td .or. &
+        (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc))) then
       call states_elec_end(psi2)
       call controlfunction_end(par_prev)
     end if
@@ -727,7 +727,7 @@ contains
         call messages_warning(1)
       end if
 
-      if( (mod(i, 100) == 0 ).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter-i, td%max_iter)
+      if ((mod(i, 100) == 0).and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter-i, td%max_iter)
     end do
     if(mpi_grp_is_root(mpi_world)) then
       call loct_progress_bar(td%max_iter, td%max_iter)
@@ -834,7 +834,7 @@ contains
       call states_elec_end(inh)
     end if
 
-    if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if (hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not. ks%frozen_hxc)) then
       call density_calc(st, gr, st%rho)
       call oct_exchange_set(hm%oct_exchange, st, gr%mesh)
     end if
@@ -872,7 +872,7 @@ contains
 
     PUSH_SUB(update_hamiltonian_elec_psi)
 
-    if(target_mode(tg) == oct_targetmode_td) then
+    if (target_mode(tg) == oct_targetmode_td) then
       call hamiltonian_elec_remove_inh(hm)
     end if
 
@@ -880,7 +880,7 @@ contains
       call hamiltonian_elec_remove_inh(hm)
     end if
 
-    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not. ks%frozen_hxc)) then
       call oct_exchange_remove(hm%oct_exchange)
     end if
 
@@ -891,7 +891,7 @@ contains
         call controlfunction_to_h_val(par, hm%ext_lasers, j+1)
       end if
     end do
-    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if (hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not. ks%frozen_hxc)) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, namespace, space, hm, st, ions)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, space)
@@ -943,7 +943,7 @@ contains
       end do
 
       ! The quadratic part should only be computed if necessary.
-      if(laser_kind(hm%ext_lasers%lasers(j)) == E_FIELD_MAGNETIC ) then
+      if (laser_kind(hm%ext_lasers%lasers(j)) == E_FIELD_MAGNETIC) then
 
         dq(j) = M_z0
         do ik = 1, psi%d%nik
@@ -1094,7 +1094,7 @@ contains
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
     do j = 1, prop%number_checkpoints
-      prop%iter(j+1) = nint( TOFLOAT(niter_)/(prop%number_checkpoints+1) * j)
+      prop%iter(j+1) = nint(TOFLOAT(niter_)/(prop%number_checkpoints+1) * j)
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 
@@ -1153,7 +1153,7 @@ contains
        call restart_close_dir(prop%restart_load)
        prev_overlap = zstates_elec_mpdotp(namespace, mesh, stored_st, stored_st)
        overlap = zstates_elec_mpdotp(namespace, mesh, stored_st, psi)
-       if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
+       if (abs(overlap - prev_overlap) > WARNING_THRESHOLD) then
           write(message(1), '(a,es13.4)') &
             "Forward-backward propagation produced an error of", abs(overlap-prev_overlap)
           write(message(2), '(a,i8)') "Iter = ", iter

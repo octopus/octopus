@@ -51,6 +51,7 @@ int parse_block_end    (sym_block **blk);
 int parse_block_n      (const sym_block *blk);
 int parse_block_cols   (const sym_block *blk, int l);
 int parse_block_int    (const sym_block *blk, int l, int col, int *r);
+int parse_block_int8   (const sym_block *blk, int l, int col, int64_t *r);
 int parse_block_double (const sym_block *blk, int l, int col, double *r);
 int parse_block_complex(const sym_block *blk, int l, int col, gsl_complex *r);
 int parse_block_string (const sym_block *blk, int l, int col, char **r);

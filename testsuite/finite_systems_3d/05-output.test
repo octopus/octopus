@@ -5,7 +5,71 @@ Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
-Input: 05-output.01-gs.inp
+Input: 05-output.01-gs-set1.inp
+# Test files count on different output interval
+
+# v0.xsf vh.xsf vks.xsf vxc.xsf
+match ; timestep 2  potential files              ; SHELL(ls -A  output_iter/scf.0002/ | wc -l) ; 4
+
+# density.xsf
+match ; timestep 3  density files                ; SHELL(ls -A  output_iter/scf.0003/ | wc -l) ; 1
+
+# wf-st0001.xsf
+match ; timestep 5  wfs files                    ; SHELL(ls -A  output_iter/scf.0005/ | wc -l) ; 1
+
+# sqm-wf-st0001.xsf
+match ; timestep 7  wfs_sqmod files              ; SHELL(ls -A  output_iter/scf.0007/ | wc -l) ; 1
+
+# geometry.xsf
+match ; timestep 11 geometry files               ; SHELL(ls -A  output_iter/scf.0011/ | wc -l) ; 1
+
+
+match ; timestep 13 current files                ; SHELL(ls -A  output_iter/scf.0013/ | wc -l) ; 0
+
+# elf_rs.xsf
+match ; timestep 17 ELF files                    ; SHELL(ls -A  output_iter/scf.0017/ | wc -l) ; 1
+
+# elf_rs_basins.info elf_rs_basins.xsf
+match ; timestep 19 ELF_basins files             ; SHELL(ls -A  output_iter/scf.0019/ | wc -l) ; 2
+
+# bader_basins.info bader_basins.xsf bader.xsf
+match ; timestep 23 Bader files                  ; SHELL(ls -A  output_iter/scf.0023/ | wc -l) ; 3
+
+# el_pressure.xsf
+match ; timestep 29 el_pressure files            ; SHELL(ls -A  output_iter/scf.0029/ | wc -l) ; 1
+
+# ks_me_momentum
+match ; timestep 31 matrix_elements files        ; SHELL(ls -A  output_iter/scf.0031/ | wc -l) ; 1
+
+# dipole_density-x.xsf dipole_density-y.xsf dipole_density-z.xsf
+match ; timestep 37 pol_density files            ; SHELL(ls -A  output_iter/scf.0037/ | wc -l) ; 3
+
+# mesh_r-x.xsf mesh_r-y.xsf mesh_r-z.xsf
+match ; timestep 41 mesh_r files                 ; SHELL(ls -A  output_iter/scf.0041/ | wc -l) ; 3
+
+# tau.xsf
+match ; timestep 43 kinetic_energy_density files ; SHELL(ls -A  output_iter/scf.0043/ | wc -l) ; 1
+
+# dos-0001.dat total-dos.dat total-dos-efermi.dat
+match ; timestep 47 dos files                    ; SHELL(ls -A  output_iter/scf.0047/ | wc -l) ; 3
+
+
+match ; timestep 53 tpa files                    ; SHELL(ls -A  output_iter/scf.0053/ | wc -l) ; 0
+
+#  forces.xsf
+match ; timestep 59 forces files                 ; SHELL(ls -A  output_iter/scf.0059/ | wc -l) ; 1
+
+
+match ; timestep 61 wfs_fourier files            ; SHELL(ls -A  output_iter/scf.0061/ | wc -l) ; 0
+
+#  nxc.xsf
+match ; timestep 67 xc_density files             ; SHELL(ls -A  output_iter/scf.0067/ | wc -l) ; 1
+
+
+match ; timestep 71 PES_wfs files                ; SHELL(ls -A  output_iter/scf.0071/ | wc -l) ; 0
+
+
+Input: 05-output.02-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -11.99584633
 
@@ -103,17 +167,16 @@ match ; wf-st0001 plane_x  36 value ; LINEFIELD(static/wf-st0001.x\=0, 36, 3 ) ;
 match ; wf-st0001 plane_x  78 value ; LINEFIELD(static/wf-st0001.x\=0, 78, 3 ) ;  8.79657172129439E-002
 match ; wf-st0001 plane_x 328 value ; LINEFIELD(static/wf-st0001.x\=0,328, 3 ) ;  1.91798194418790E-002
 
-
 # Convert the density from obf to dx format and check it. This utility runs in parallel.
 Program : oct-convert
-Input : 05-output.02-convert.inp
+Input : 05-output.03-convert.inp
 match ; Convert to dx (header)     ; GREPFIELD(restart/gs/density.dx, 'origin', 2, 0) ; -5.000000
 match ; Convert to dx (line 513)   ; LINEFIELD(restart/gs/density.dx, 671, 1) ; 0.000097681638760
 match ; Convert to dx (line 29355) ; LINEFIELD(restart/gs/density.dx, 9048, 1) ; 0.000002915649324
 
 # Convert the density from obf to dx by performing two scalar operations. This utility runs in parallel.
 Program : oct-convert
-Input : 05-output.03-convert-op.inp
+Input : 05-output.04-convert-op.inp
 Precision: 3e-09
 match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244202526628
 match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.279592822e-06

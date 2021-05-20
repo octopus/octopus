@@ -37,9 +37,11 @@ ConvEigenError = yes
 ConvRelDens = 1e-9
 EigensolverTolerance = 1e-9
 
-Output = geometry + dos
+%Output
+ geometry
+ dos
+%
 OutputFormat = xyz
-
 StatesPack = yes
 
 DOSComputePDOS = yes

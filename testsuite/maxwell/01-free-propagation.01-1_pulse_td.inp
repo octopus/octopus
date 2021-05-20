@@ -50,7 +50,11 @@
 
 # ----- Maxwell output variables ------------------------------------------------------------------
 
- MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
+ %MaxwellOutput 
+  electric_field 
+  magnetic_field 
+  maxwell_energy_density
+ %
 
  MaxwellOutputInterval = 50
  MaxwellTDOutput       = maxwell_energy + maxwell_fields

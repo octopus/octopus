@@ -98,8 +98,7 @@
       call parse_block_end(blk)
       call density_calc(tg%st, gr, tg%st%rho)
     else
-      message(1) = '"OCTTargetUserdefined" has to be specified as block.'
-      call messages_fatal(1)
+      call messages_variable_is_block(namespace, 'OCTTargetUserdefined')
     end if
 
     SAFE_DEALLOCATE_A(zpsi)
@@ -130,7 +129,7 @@
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm)
+    call output_states(outp, namespace, space, trim(dir), tg%st, gr, ions, hm, -1)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

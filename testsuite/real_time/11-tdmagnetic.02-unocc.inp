@@ -37,8 +37,9 @@ P_c = 137.036
 0 | 0 | magfield*P_c
 %
 
-Output = wfs
-OutputFormat = axis_x
+%Output 
+ wfs | axis_x
+%
 
 
 

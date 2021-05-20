@@ -131,15 +131,13 @@ module output_oct_m
   type output_t
     private
     !> General output variables:
-    integer(8), public :: what                !< what to output
-    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
-    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
-    integer(8), public :: how                 !< how to output
+    logical, public    :: what(MAX_OUTPUT_TYPES)             !< what to output
+    integer(8), public :: how(0:MAX_OUTPUT_TYPES)              !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer, public :: output_interval     !< output every iter
+    integer, public :: output_interval(0:MAX_OUTPUT_TYPES)     !< output every iter
     integer, public :: restart_write_interval
     logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
@@ -149,11 +147,11 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
+
+  contains
+    procedure :: what_now
   
   end type output_t
-
-  integer(8), parameter, public ::              &
-    OPTION__OUTPUT__J_FLOW          =     32768
   
 contains
 
@@ -168,178 +166,42 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how, what_no_how_u
 
     PUSH_SUB(output_init)
+    outp%what = .false.
+    
+    call io_function_read_what_how_when(namespace, space, outp%what, outp%how, outp%output_interval)
 
-    !%Variable Output
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>density + potential</tt>
-    !%Option potential  bit(0)
-    !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
-    !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
-    !% <tt>vh</tt> for the Hartree potential, <tt>vks</tt> for the local part of the Kohn-Sham potential, and
-    !% <tt>vxc-</tt> for the exchange-correlation potentials. For <tt>vks</tt> and <tt>vxc</tt>,
-    !% a suffix for spin is added in the spin-polarized case.
-    !%Option density bit(1)
-    !% Outputs density. The output file is called <tt>density-</tt>, or <tt>lr_density-</tt> in linear response.
-    !%Option wfs bit(2)
-    !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
-    !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
-    !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
-    !%Option wfs_sqmod bit(3)
-    !% Outputs modulus squared of the wavefunctions. 
-    !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
-    !%Option geometry bit(4)
-    !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
-    !% If <tt>OutputFormat = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
-    !% file <tt>crystal.xyz</tt> is written with a supercell geometry if the system is periodic;
-    !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
-    !% in the file <tt>geometry_classical.xyz</tt>.
-    !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
-    !%Option current bit(5)
-    !% Outputs the total current density. The output file is called <tt>current-</tt>.
-    !% For linear response, the filename is <tt>lr_current-</tt>.
-    !%Option ELF bit(6)
-    !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
-    !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,
-    !% as <tt>lr_elf_D-</tt>. Only in 2D and 3D.
-    !%Option ELF_basins bit(7)
-    !% Outputs basins of attraction of the ELF. The output file is called
-    !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
-    !%Option Bader bit(9)
-    !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
-    !% and regions subject to electrophilic or nucleophilic attack.
-    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory</i> (Oxford Univ. Press, Oxford, 1990).
-    !%Option el_pressure bit(10)
-    !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
-    !%Option matrix_elements bit(11)
-    !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
-    !% be controlled by the <tt>OutputMatrixElements</tt> variable.
-    !%Option pol_density bit(12)
-    !% Outputs dipole-moment density <tt>dipole_density-</tt>, or polarizability density <tt>alpha_density-</tt>
-    !% in linear response. If <tt>ResponseMethod = finite_differences</tt>, the hyperpolarizability density
-    !% <tt>beta_density-</tt> is also printed.
-    !%Option mesh_r bit(13)
-    !% Outputs values of the coordinates over the grid. Files
-    !% will be called <tt>mesh_r-</tt> followed by the direction.
-    !%Option kinetic_energy_density bit(14)
-    !% Outputs kinetic-energy density, defined as:
-    !%
-    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
-    !%  \left| \vec{\nabla} \phi_{i\sigma}(\vec{r}) \right|^2\,. </math>
-    !%
-    !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
-    !% or if you are using spinors. For spin-unpolarized calculations, you
-    !% get the total kinetic-energy density. The previous expression assumes full 
-    !% or null occupations. If fractional occupation numbers, each term in the sum
-    !% is weighted by the occupation. Also, if we are working with an infinite 
-    !% system, all <i>k</i>-points are summed up, with their corresponding weights. The
-    !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
-    !% energy density is produced (runs in spin-polarized and spinors mode), or
-    !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
-    !%Option dos bit(16)
-    !% Outputs density of states. See <tt>DOSEnergyMax</tt>, <tt>DOSEnergyMin</tt>, <tt>DOSEnergyPoints</tt>,
-    !% and <tt>DOSGamma</tt>.
-    !%Option tpa bit(17)
-    !% Outputs transition-potential approximation (TPA) matrix elements, using <math>\vec{q}</math>-vector specified
-    !% by <tt>MomentumTransfer</tt>.
-    !%Option forces bit(18)
-    !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
-    !% a vector associated with each atom, which can be visualized with XCrySDen.
-    !%Option wfs_fourier bit(19)
-    !% (Experimental) Outputs wavefunctions in Fourier space. This is
-    !% only implemented for the ETSF file format output. The file will
-    !% be called <tt>wfs-pw-etsf.nc</tt>.  
-    !%Option xc_density bit(20)
-    !% Outputs the XC density, which is the charge density that
-    !% generates the XC potential. (This is <math>-1/4\pi</math> times
-    !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
-    !%Option PES_wfs bit(21)
-    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
-    !% plus the orbital number.
-    !%Option PES_density bit(22)
-    !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
-    !% spin-polarized calculation is performed. 
-    !%Option PES bit(23)
-    !% Outputs the time-dependent photoelectron spectrum.
-    !%Option BerkeleyGW bit(24)
-    !% Output for a run with <a href=http://www.berkeleygw.org>BerkeleyGW</a>.
-    !% See <tt>Output::BerkeleyGW</tt> for further specification.
-    !%Option delta_perturbation bit(25)
-    !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
-    !%Option external_td_potential bit(26)
-    !% Outputs the (scalar) time-dependent potential.
-    !%Option mmb_wfs bit(28)
-    !% Triggers the ModelMB wavefunctions to be output for each state.
-    !%Option mmb_den bit(29)
-    !% Triggers the ModelMB density matrix to be output for each state, and the particles
-    !% specified by the <tt>DensitytoCalc</tt> block. Calculates, and outputs, the reduced density
-    !% matrix. For the moment the trace is made over the second dimension, and
-    !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
-    !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option potential_gradient bit(31)
-    !% Prints the gradient of the potential.
-    !%Option energy_density bit(32)
-    !% Outputs the total energy density to a file called
-    !% <tt>energy_density</tt>.
-    !%Option heat_current bit(33)
-    !% Outputs the total heat current density. The output file is
-    !% called <tt>heat_current-</tt>.
-    !%Option photon_correlator bit(34)
-    !% Outputs the electron-photon correlation function. The output file is
-    !% called <tt>photon_correlator</tt>.
-    !%Option xc_torque bit(35)
-    !% Outputs the exchange-correlation torque. Only for the spinor case and in the 3D case.
-    !%End
-    call parse_variable(namespace, 'Output', 0, outp%what)
-
-    if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+    if (outp%what(OPTION__OUTPUT__WFS_FOURIER)) then
       call messages_experimental("Wave-functions in Fourier space")
     end if
 
     ! cannot calculate the ELF in 1D
-    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if (outp%what(OPTION__OUTPUT__ELF) .or. outp%what(OPTION__OUTPUT__ELF_BASINS)) then
        if (space%dim /= 2 .and. space%dim /= 3) then
-         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
+         outp%what(OPTION__OUTPUT__ELF) = .false.
+         outp%what(OPTION__OUTPUT__ELF_BASINS) = .false.
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1, namespace=namespace)
        end if
     end if
 
-    if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error(namespace, 'Output')
-    end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+    if (outp%what(OPTION__OUTPUT__MMB_WFS)) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__XC_TORQUE) /= 0) then
-      if(st%d%ispin /= SPINORS) then
+    if (outp%what(OPTION__OUTPUT__XC_TORQUE)) then
+      if (st%d%ispin /= SPINORS) then
         write(message(1), '(a)') 'The output xc_torque can only be computed for spinors.'
         call messages_fatal(1, namespace=namespace)
       end if
-      if(space%dim /= 3) then
+      if (space%dim /= 3) then
         write(message(1), '(a)') 'The output xc_torque can only be computed in the 3D case.'
         call messages_fatal(1, namespace=namespace)
       end if
     end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+    if (outp%what(OPTION__OUTPUT__MMB_DEN)) then
       call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -348,10 +210,10 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
-    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
+    if (outp%what(OPTION__OUTPUT__ENERGY_DENSITY)) call messages_experimental("'Output = energy_density'")
+    if (outp%what(OPTION__OUTPUT__HEAT_CURRENT)) call messages_experimental("'Output = heat_current'")
     
-    if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
+    if (outp%what(OPTION__OUTPUT__WFS) .or. outp%what(OPTION__OUTPUT__WFS_SQMOD)) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -368,8 +230,11 @@ contains
       call parse_variable(namespace, 'OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
-      outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
+    if (parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
+      if (.not. outp%what(OPTION__OUTPUT__J_FLOW)) then
+        outp%what(OPTION__OUTPUT__J_FLOW) = .true.
+        call parse_variable(namespace, 'OutputInterval', 50, outp%output_interval(OPTION__OUTPUT__J_FLOW))
+      end if
 
       !%Variable CurrentThroughPlane
       !%Type block
@@ -487,70 +352,22 @@ contains
       call parse_block_end(blk)
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if (outp%what(OPTION__OUTPUT__MATRIX_ELEMENTS)) then
       call output_me_init(outp%me, namespace, space, st, nst)
     else
-      outp%me%what = 0
+      outp%me%what = .false.
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if (outp%what(OPTION__OUTPUT__BERKELEYGW)) then
       call output_berkeleygw_init(nst, namespace, outp%bgw, space%periodic_dim)
     end if
 
-    !%Variable OutputLDA_U
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print, related to LDA+U. 
-    !% The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>occ_matrices + effectiveU</tt>
-    !%Option occ_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U
-    !%Option effectiveU bit(1)
-    !% Outputs the value of the effectiveU for each atoms 
-    !%Option magnetization bit(2)
-    !% Outputs file containing structure and magnetization of the localized subspace 
-    !% on the atoms as a vector associated with each atom, which can be visualized.
-    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
-    !%Option local_orbitals bit(3)
-    !% Outputs the localized orbitals that form the correlated subspace
-    !%Option kanamoriU bit(4)
-    !% Outputs the Kanamori interaction parameters U, U`, and J.
-    !% These parameters are not determined self-consistently, but are taken from the 
-    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
-    !%End
-    call parse_variable(namespace, 'OutputLDA_U', 0_8, outp%what_lda_u)
-
-    !%Variable OutputInterval
-    !%Type integer
-    !%Default 50
-    !%Section Output
-    !%Description
-    !% The output requested by variable <tt>Output</tt> is written
-    !% to the directory <tt>OutputIterDir</tt>
-    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
-    !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
-    !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
-    !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
-    !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
-    !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
-    !%End
-    call parse_variable(namespace, 'OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
-    if(outp%output_interval < 0) then
-      message(1) = "OutputInterval must be >= 0."
-      call messages_fatal(1, namespace=namespace)
+    ! required for output_hamiltonian()
+    if (outp%what(OPTION__OUTPUT__POTENTIAL_GRADIENT) .and. .not. outp%what(OPTION__OUTPUT__POTENTIAL)) then
+      outp%what(OPTION__OUTPUT__POTENTIAL) = .true.
+      outp%output_interval(OPTION__OUTPUT__POTENTIAL) = outp%output_interval(OPTION__OUTPUT__POTENTIAL_GRADIENT)
     end if
+ 
 
     !%Variable OutputDuringSCF
     !%Type logical
@@ -574,45 +391,12 @@ contains
     !% controlled by <tt>OutputInterval</tt>.)
     !%End
     call parse_variable(namespace, 'RestartWriteInterval', 50, outp%restart_write_interval)
-    if(outp%restart_write_interval <= 0) then
+    if (outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
       call messages_fatal(1, namespace=namespace)
     end if
 
-    ! these kinds of Output do not have a how
-    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
-    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
-      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
-
-    !%Variable Output_KPT
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>current_kpt</tt>
-    !%Option current_kpt  bit(0)
-    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
-    !%Option density_kpt bit(1)
-    !% Outputs the electronic density resolved in momentum space. 
-    !%End
-    call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
-
-    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error(namespace, 'Output_KPT')
-    end if
-
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+    if (outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
      call v_ks_calculate_current(ks, .true.) 
     end if
 
@@ -628,17 +412,10 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
+    if (any(outp%what) .and. any(outp%output_interval > 0)) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
-
-    ! we are using a what that has a how.
-    if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(namespace, space, outp%how)
-    else
-      outp%how = 0
-    end if
 
     ! At this point, we don`t know whether the states will be real or complex.
     ! We therefore pass .false. to states_are_real, and need to check for real states later.
@@ -654,94 +431,103 @@ contains
   end subroutine output_init
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, namespace, space, dir, gr, ions, st, hm, ks)
+  subroutine output_all(outp, namespace, space, dir, gr, ions, iter, st, hm, ks)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
     character(len=*),         intent(in)    :: dir
     type(grid_t),             intent(in)    :: gr
     type(ions_t),             intent(in)    :: ions
+    integer,                  intent(in)    :: iter
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(v_ks_t),             intent(inout) :: ks
 
-    integer :: idir, ierr
+    integer :: idir, ierr, iout
     character(len=80) :: fname
     type(profile_t), save :: prof
     
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
+    if (any(outp%what)) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir, namespace)
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__MESH_R, iter)) then
       do idir = 1, space%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
-        call dio_function_output(outp%how, dir, fname, namespace, space, gr%mesh, gr%mesh%x(:,idir), &
-          units_out%length, ierr, ions = ions)
+        call dio_function_output(outp%how(OPTION__OUTPUT__MESH_R), dir, fname, namespace, space, &
+          gr%mesh, gr%mesh%x(:,idir), units_out%length, ierr, ions = ions)
       end do
     end if
     
-    call output_states(outp, namespace, space, dir, st, gr, ions, hm)
-    call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, st%st_kpt_mpi_grp)
-    call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
-    call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
+    call output_states(outp, namespace, space, dir, st, gr, ions, hm, iter)
+    call output_hamiltonian(outp, namespace, space, dir, hm, st, gr%der, ions, gr, iter, st%st_kpt_mpi_grp)
+    call output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
 
-    if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+    if (outp%what_now(OPTION__OUTPUT__J_FLOW, iter)) then
+      call output_current_flow(outp, namespace, dir, gr, st, hm%kpoints)
+    end if
+
+    if (outp%what_now(OPTION__OUTPUT__GEOMETRY, iter)) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", ions, gr%mesh, namespace)
       end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call ions%write_xyz(trim(dir)//'/geometry')
         if(ions%space%is_periodic()) then
           call ions%write_crystal(dir)
         end if
       end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
+      if (bitand(outp%how(OPTION__OUTPUT__GEOMETRY), OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', ions, namespace)
       end if     
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__FORCES, iter)) then
+      if (bitand(outp%how(OPTION__OUTPUT__FORCES), OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", ions, namespace)
       else
         call write_xsf_geometry_file(dir, "forces", ions, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__MATRIX_ELEMENTS, iter)) then
       call output_me(outp%me, namespace, space, dir, st, gr, ions, hm)
     end if
 
-    if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions)
-    end if
+    do iout = lbound(outp%how, 1), ubound(outp%how, 1)
+      if (bitand(outp%how(iout), OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+        call output_etsf(outp, namespace, space, dir, st, gr, hm%kpoints, ions, iter)
+        exit
+      end if
+    end do
 
-    if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__BERKELEYGW, iter)) then
       call output_berkeleygw(outp%bgw, namespace, space, dir, st, gr, ks, hm, ions)
     end if
     
-    call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
+    if (outp%what_now(OPTION__OUTPUT__ENERGY_DENSITY, iter)) then
+      call output_energy_density(outp, namespace, space, dir, hm, ks, st, ions, gr)
+    end if
 
-    if(hm%lda_u_level /= DFT_U_NONE) then
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+    if (hm%lda_u_level /= DFT_U_NONE) then
+      if (outp%what_now(OPTION__OUTPUT__OCC_MATRICES, iter))&
         call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+      if (outp%what_now(OPTION__OUTPUT__EFFECTIVEU, iter))&
         call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+      if (outp%what_now(OPTION__OUTPUT__MAGNETIZATION, iter))&
         call lda_u_write_magnetization(dir, hm%lda_u, ions, gr%mesh, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
+      if (outp%what_now(OPTION__OUTPUT__LOCAL_ORBITALS, iter))&
         call output_dftu_orbitals(outp, dir, namespace, space, hm%lda_u, st, gr%mesh, ions, allocated(hm%hm_base%phase))
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+      if (outp%what_now(OPTION__OUTPUT__KANAMORIU, iter))&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
     
@@ -749,10 +535,10 @@ contains
            .and. ks%theory_level /= GENERALIZED_KOHN_SHAM_DFT) then
       if (ks%oep%level == XC_OEP_FULL) then
         if (ks%oep%has_photons) then
-          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+          if (outp%what_now(OPTION__OUTPUT__PHOTON_CORRELATOR, iter)) then
             write(fname, '(a)') 'photon_correlator'
-            call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, ks%oep%pt%correlator(:,1), &
-              units_out%length, ierr, ions = ions)
+            call dio_function_output(outp%how(OPTION__OUTPUT__PHOTON_CORRELATOR), dir, trim(fname), namespace, space, &
+              gr%mesh, ks%oep%pt%correlator(:,1), units_out%length, ierr, ions = ions)
           end if
         end if
       end if
@@ -766,7 +552,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions)
+  subroutine output_localization_funct(outp, namespace, space, dir, st, hm, gr, ions, iter)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
     type(space_t),            intent(in)    :: space
@@ -775,6 +561,7 @@ contains
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
     type(ions_t),             intent(in)    :: ions
+    integer,                  intent(in)    :: iter
 
     FLOAT, allocatable :: f_loc(:,:)
     character(len=256) :: fname
@@ -782,7 +569,7 @@ contains
     type(mpi_grp_t) :: mpi_grp
 
     PUSH_SUB(output_localization_funct)
-    
+
     mpi_grp = st%dom_st_kpt_mpi_grp
 
     ! if SPIN_POLARIZED, the ELF contains one extra channel: the total ELF
@@ -792,34 +579,34 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__ELF, iter) .or. outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) then
       ASSERT(space%dim /= 1)
 
       call elf_calc(st, gr, hm%kpoints, f_loc)
       
       ! output ELF in real space
-      if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+      if (outp%what_now(OPTION__OUTPUT__ELF, iter)) then
         write(fname, '(a)') 'elf_rs'
-        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
+        call dio_function_output(outp%how(OPTION__OUTPUT__ELF), dir, trim(fname), namespace, space, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, ions = ions, grp = mpi_grp)
         ! this quantity is dimensionless
 
         if(st%d%ispin /= UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
-            call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
+            call dio_function_output(outp%how(OPTION__OUTPUT__ELF), dir, trim(fname), namespace, space, gr%mesh, &
               f_loc(:, is), unit_one, ierr, ions = ions, grp = mpi_grp)
             ! this quantity is dimensionless
           end do
         end if
       end if
 
-      if(bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
-        call out_basins(f_loc(:,1), "elf_rs_basins")
+      if (outp%what_now(OPTION__OUTPUT__ELF_BASINS, iter)) &
+        call out_basins(f_loc(:,1), "elf_rs_basins", outp%how(OPTION__OUTPUT__ELF_BASINS))
     end if
 
     ! Now Bader analysis
-    if(bitand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__BADER, iter)) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         if(st%d%nspin == 1) then
@@ -827,7 +614,7 @@ contains
         else
           write(fname, '(a,i1)') 'bader-sp', is
         end if
-        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
+        call dio_function_output(outp%how(OPTION__OUTPUT__BADER), dir, trim(fname), namespace, space, gr%mesh, &
           f_loc(:,is), units_out%length**(-2 - space%dim), ierr, &
           ions = ions, grp = mpi_grp)
 
@@ -836,14 +623,14 @@ contains
         else
           write(fname, '(a,i1)') 'bader_basins-sp', is
         end if
-        call out_basins(f_loc(:,1), fname)
+        call out_basins(f_loc(:,1), fname, outp%how(OPTION__OUTPUT__BADER))
       end do
     end if
 
     ! Now the pressure
-    if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
+    if (outp%what_now(OPTION__OUTPUT__EL_PRESSURE, iter)) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call dio_function_output(outp%how, dir, "el_pressure", namespace, space, gr%mesh, &
+      call dio_function_output(outp%how(OPTION__OUTPUT__EL_PRESSURE), dir, "el_pressure", namespace, space, gr%mesh, &
         f_loc(:,1), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
     end if
@@ -854,9 +641,10 @@ contains
 
   contains
     ! ---------------------------------------------------------
-    subroutine out_basins(ff, filename)
+    subroutine out_basins(ff, filename, output_how)
       FLOAT,            intent(in)    :: ff(:)
       character(len=*), intent(in)    :: filename
+      integer(8),       intent(in)    :: output_how
 
       character(len=256) :: fname
       type(basins_t)     :: basins
@@ -867,7 +655,7 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
-      call dio_function_output(outp%how, dir, trim(filename), namespace, space, gr%mesh, &
+      call dio_function_output(output_how, dir, trim(filename), namespace, space, gr%mesh, &
         TOFLOAT(basins%map), unit_one, ierr, ions = ions, grp = mpi_grp)
       ! this quantity is dimensionless
 
@@ -952,56 +740,54 @@ contains
 
     PUSH_SUB(output_energy_density)
    
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-space%dim)
-      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
+    fn_unit = units_out%energy*units_out%length**(-space%dim)
+    SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
-      ! the kinetic energy density
-      call states_elec_calc_quantities(gr%der, st, hm%kpoints, .true., kinetic_energy_density = energy_density)
+    ! the kinetic energy density
+    call states_elec_calc_quantities(gr%der, st, hm%kpoints, .true., kinetic_energy_density = energy_density)
 
-      ! the external potential energy density
-      do is = 1, st%d%nspin
-        do ip = 1, gr%mesh%np
-          energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-        end do
+    ! the external potential energy density
+    do is = 1, st%d%nspin
+      do ip = 1, gr%mesh%np
+        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
       end do
+    end do
 
-      ! the hartree energy density
-      do is = 1, st%d%nspin
-        do ip = 1, gr%mesh%np
-          energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-        end do
+    ! the hartree energy density
+    do is = 1, st%d%nspin
+      do ip = 1, gr%mesh%np
+        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
       end do
+    end do
 
-      ! the XC energy density
-      SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
-      SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
+    ! the XC energy density
+    SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
+    SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
 
-      call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, &
-        ex_density = ex_density, ec_density = ec_density)
-      do is = 1, st%d%nspin
-        do ip = 1, gr%mesh%np
-          energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-        end do
+    call xc_get_vxc(gr%der, ks%xc, st, hm%kpoints, hm%psolver, namespace, space, st%rho, st%d%ispin, &
+      ex_density = ex_density, ec_density = ec_density)
+    do is = 1, st%d%nspin
+      do ip = 1, gr%mesh%np
+        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end do
+    end do
 
-      SAFE_DEALLOCATE_A(ex_density)
-      SAFE_DEALLOCATE_A(ec_density)
+    SAFE_DEALLOCATE_A(ex_density)
+    SAFE_DEALLOCATE_A(ec_density)
 
-      select case(st%d%ispin)
-      case(UNPOLARIZED)
-        write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
-          energy_density(:,1), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
-      case(SPIN_POLARIZED, SPINORS)
-        do is = 1, 2
-          write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), namespace, space, gr%mesh, &
-            energy_density(:, is), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
-        end do
-      end select
-      SAFE_DEALLOCATE_A(energy_density)
-    end if
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      write(fname, '(a)') 'energy_density'
+      call dio_function_output(outp%how(OPTION__OUTPUT__ENERGY_DENSITY), dir, trim(fname), namespace, space, gr%mesh, &
+        energy_density(:,1), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+    case(SPIN_POLARIZED, SPINORS)
+      do is = 1, 2
+        write(fname, '(a,i1)') 'energy_density-sp', is
+        call dio_function_output(outp%how(OPTION__OUTPUT__ENERGY_DENSITY), dir, trim(fname), namespace, space, gr%mesh, &
+          energy_density(:, is), unit_one, ierr, ions = ions, grp = st%dom_st_kpt_mpi_grp)
+      end do
+    end select
+    SAFE_DEALLOCATE_A(energy_density)
  
     POP_SUB(output_energy_density)
   end subroutine output_energy_density
@@ -1509,9 +1295,9 @@ contains
   logical function output_need_exchange(outp) result(need_exx)
     type(output_t),         intent(in)    :: outp
 
-    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
-           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
-           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+    need_exx =(outp%what(OPTION__OUTPUT__BERKELEYGW) &
+      .or. outp%me%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) &
+      .or. outp%me%what(OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K))
   end function output_need_exchange
 
 
@@ -1566,31 +1352,34 @@ contains
             end if
             if(has_phase) then
               if(.not. this%basis%submesh) then
-               call zio_function_output(outp%how, dir, fname, namespace, space, mesh, &
-                  os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, ions = ions)
+                call zio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, &
+                  mesh, os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, ions = ions)
               else
                tmp = M_Z0
-               call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
-               call zio_function_output(outp%how, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
+                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
+                call zio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, &
+                  mesh, tmp, fn_unit, ierr, ions = ions)
               end if
             else
               if(.not.this%basis%submesh) then
                 if (states_are_real(st)) then
-                  call dio_function_output(outp%how, dir, fname, namespace, space, mesh, &
+                  call dio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 else
-                  call zio_function_output(outp%how, dir, fname, namespace, space, mesh, &
+                  call zio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, mesh, &
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, ions = ions)
                 end if
               else
                 if (states_are_real(st)) then
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                  call dio_function_output(outp%how, dir, fname, namespace, space, mesh, dtmp, fn_unit, ierr, ions = ions)
+                  call dio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, &
+                    mesh, dtmp, fn_unit, ierr, ions = ions)
                 else
                   tmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                  call zio_function_output(outp%how, dir, fname, namespace, space, mesh, tmp, fn_unit, ierr, ions = ions)
+                  call zio_function_output(outp%how(OPTION__OUTPUT__LOCAL_ORBITALS), dir, fname, namespace, space, &
+                   mesh, tmp, fn_unit, ierr, ions = ions)
                 end if
               end if
             end if
@@ -1612,10 +1401,10 @@ contains
 
     output_needs_current = .false.
 
-    if( bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 &
-     .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
-     .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-      if(.not. states_are_real) then
+    if (outp%what(OPTION__OUTPUT__CURRENT) &
+     .or. outp%what(OPTION__OUTPUT__HEAT_CURRENT) &
+     .or. outp%what(OPTION__OUTPUT__CURRENT_KPT)) then
+      if (.not. states_are_real) then
         output_needs_current = .true.
       else
         message(1) = 'No current density output for real states since it is identically zero.'
@@ -1627,6 +1416,22 @@ contains
   end function
 
   ! ---------------------------------------------------------
+
+  function what_now(this, what_id, iter) result(write_now)
+    class(output_t), intent(in) :: this
+    integer(8),      intent(in) :: what_id
+    integer,         intent(in) :: iter
+
+    logical :: write_now
+
+    write_now = .false.
+    if ((what_id > 0) .and. (this%output_interval(what_id) > 0)) then
+      if (this%what(what_id) .and. (iter == -1 .or. mod(iter, this%output_interval(what_id)) == 0)) then
+        write_now = .true.
+      end if
+    end if
+
+  end function what_now
 
 #include "output_etsf_inc.F90"
 

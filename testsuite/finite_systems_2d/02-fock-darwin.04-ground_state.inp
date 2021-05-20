@@ -143,8 +143,9 @@ EigenSolverMaxIter = 25
 
 ConvRelDens  = 1.0e-7
 
-Output = wfs
-OutputFormat = axis_x
+%Output 
+ wfs | axis_x
+% 
 
 # First, we express lambda in meV*nm
 lambda=0.0
