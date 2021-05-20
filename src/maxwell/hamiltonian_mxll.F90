@@ -213,7 +213,7 @@ contains
     if (hm%operator == FARADAY_AMPERE_GAUSS) then
       hm%dim = hm%dim+1
     else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      ! TODO: this hm%operator should also be selected automatically if there is a linear medium system present 
+      ! TODO: define this operator automatically if there is a linear medium system present 
       hm%dim = 2*hm%dim
       hm%calc_medium_box = .true.
     end if
@@ -445,14 +445,14 @@ contains
       do idir = 1, 3
         if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
             (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
-          call apply_medium_box_2(hm%bc%medium(idir))
+          call apply_medium_box(hm%bc%medium(idir))
         end if
       end do
 
       if (hm%calc_medium_box .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
         do il = 1, size(hm%medium_boxes)
-          call apply_medium_box_2(hm%medium_boxes(il))
+          call apply_medium_box(hm%medium_boxes(il))
         end do
       end if
     end if
@@ -592,13 +592,13 @@ contains
         POP_SUB(hamiltonian_mxll_apply_batch.apply_constant_boundary)
       end subroutine apply_constant_boundary
 
-      subroutine apply_medium_box_2(medium)
+      subroutine apply_medium_box(medium)
         type(single_medium_box_t),  intent(in) :: medium
 
         integer :: ifield
         type(profile_t), save :: prof_medium_box
 
-        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_medium_box_2)
+        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
         call profiling_in(prof_medium_box, "MEDIUM_BOX")
         !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
         !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, ifield, coeff_real, coeff_imag)
@@ -637,8 +637,8 @@ contains
           end select
         end do
         call profiling_out(prof_medium_box)
-        POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box_2)
-      end subroutine apply_medium_box_2
+        POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
+      end subroutine apply_medium_box
 
   end subroutine hamiltonian_mxll_apply_batch
 

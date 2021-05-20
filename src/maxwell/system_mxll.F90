@@ -325,7 +325,6 @@ contains
 
     this%energy_update_iter = 1
 
-    write(*,*)'should have it by now'
     call propagator_mxll_init(this%gr, this%namespace, this%st, this%hm, this%tr_mxll)
     call states_mxll_allocate(this%st, this%gr%mesh)
     call external_current_init(this%st, this%namespace, this%gr%mesh)

@@ -399,16 +399,7 @@ contains
   subroutine system_linear_medium_iteration_info(this)
     class(system_linear_medium_t), intent(in) :: this
 
-    integer :: idir
-    character(len=20) :: fmt
-
     PUSH_SUB(system_linear_medium_iteration_info)
-
-    write(message(1),'(2X,A,1X,A)') "Linear medium system:", trim(this%namespace%get())
-
-    write(message(2),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
-    write(message(3),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
-    call messages_info(3)
 
     POP_SUB(system_linear_medium_iteration_info)
   end subroutine system_linear_medium_iteration_info
@@ -461,8 +452,6 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-!    case (PERMITTIVITY, PERMEABILITY, E_CONDUCTIVITY, M_CONDUCTIVITY)
-!      this%quantities(iq)%clock = this%quantities(iq)%clock + CLOCK_TICK
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -591,14 +580,7 @@ contains
     call single_medium_box_allocate(medium_box, medium_box%points_number)
     medium_box%points_map(:) = tmp_points_map(1:medium_box%points_number)
 
-    ! TODO: add some check that medium boxes do not overlap (now they are different systems), like this:
-    !do ip_in = 1, this%points_number - 1
-    !  if (any(this%points_map(ip_in+1:) == this%points_map(ip_in)) .or. &
-    !      any(this%points_map(:, il+1:) == this%points_map(ip_in, il))) then
-    !    message(1) = 'Linear medium boxes overlap.'
-    !    call messages_fatal(1, namespace=namespace)
-    !  end if
-    !end do
+    ! TODO: add some check that medium boxes do not overlap (now they are different systems)
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
