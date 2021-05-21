@@ -82,7 +82,6 @@ module simul_box_oct_m
     
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
 
-    integer :: periodic_dim
   contains
     procedure :: contains_points => simul_box_contains_points
     procedure :: write_info => simul_box_write_info
@@ -113,7 +112,6 @@ contains
     call ions%grid_defaults(def_h, def_rsize)
 
     sb%dim = space%dim
-    sb%periodic_dim = space%periodic_dim
 
     sb%latt => ions%latt
 
@@ -543,7 +541,6 @@ contains
     sbout%lsize          = sbin%lsize
     sbout%latt          => sbin%latt
     sbout%dim            = sbin%dim
-    sbout%periodic_dim   = sbin%periodic_dim
 
     POP_SUB(simul_box_copy)
   end subroutine simul_box_copy
