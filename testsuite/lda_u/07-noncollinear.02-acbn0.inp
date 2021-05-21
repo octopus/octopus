@@ -40,7 +40,7 @@ PseudopotentialSet=hgh_lda
  "O"  | 0.5 | 0.5 | 0.75
 %
 
-Spacing = 0.5
+Spacing = 0.4
 
 FromScratch = no
 
